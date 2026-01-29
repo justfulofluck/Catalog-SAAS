@@ -1,0 +1,7 @@
+{
+  "name": "CatalogStudio SaaS",
+  "description": "A high-performance product catalog builder with a multi-page drag-and-drop editor, product management, and high-fidelity PDF export.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
