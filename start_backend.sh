@@ -14,4 +14,4 @@ if [ ! -d "catalog" ]; then
 fi
 
 source catalog/bin/activate
-python manage.py runserver
+python manage.py runserver 0.0.0.0:8050
