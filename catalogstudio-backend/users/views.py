@@ -56,11 +56,10 @@ class PasswordResetRequestView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        from django.contrib.auth.tokens import default_token_generator
-        from django.utils.http import urlsafe_base64_encode
-        from django.utils.encoding import force_bytes
         from django.contrib.auth import get_user_model
+        from .models import PasswordResetOTP
         from .utils_email import send_notification
+        import random
 
         User = get_user_model()
         email = request.data.get('email')
@@ -68,24 +67,75 @@ class PasswordResetRequestView(APIView):
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return Response({'message': 'If an account exists, a reset link has been sent.'})
+            # Security: allow flow to "succeed" even if email not found
+            return Response({'message': 'If an account exists, an OTP has been sent.'})
 
-        token = default_token_generator.make_token(user)
-        uid = urlsafe_base64_encode(force_bytes(user.pk))
+        # Generate 6-digit OTP
+        otp_code = f"{random.randint(100000, 999999)}"
         
-        reset_link = f"http://localhost:5173/reset-password?uid={uid}&token={token}"
+        # Save to DB
+        PasswordResetOTP.objects.create(user=user, otp_code=otp_code)
         
-        subject = "Reset Your Password - CatalogStudio"
+        subject = "Reset Password Code - CatalogStudio"
         body = f"""
-        <p>Hello {user.name or user.username},</p>
-        <p>You requested a password reset. Click the link below to set a new password:</p>
-        <a href="{reset_link}">{reset_link}</a>
-        <p>If you didn't ask for this, please ignore this email.</p>
+        <p>Your verification code is: <strong>{otp_code}</strong></p>
+        <p>This code triggers a password reset. It is valid for <strong>60 seconds</strong>.</p>
         """
         
         send_notification(user.email, subject, body)
         
-        return Response({'message': 'If an account exists, a reset link has been sent.'})
+        return Response({'message': 'OTP sent to email.'})
+
+class PasswordResetVerifyView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        from django.contrib.auth import get_user_model
+        from django.utils import timezone
+        from .models import PasswordResetOTP
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+        import datetime
+
+        User = get_user_model()
+        email = request.data.get('email')
+        otp_code = request.data.get('otp')
+
+        if not email or not otp_code:
+            return Response({'error': 'Email and OTP are required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(email=email)
+            # Find the latest unused OTP for this user
+            otp_record = PasswordResetOTP.objects.filter(
+                user=user, 
+                otp_code=otp_code, 
+                is_used=False
+            ).latest('created_at')
+
+        except (User.DoesNotExist, PasswordResetOTP.DoesNotExist):
+            return Response({'error': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check Expiration (60 seconds)
+        now = timezone.now()
+        diff = now - otp_record.created_at
+        if diff.total_seconds() > 60:
+            return Response({'error': 'OTP Expired'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark OTP as used
+        otp_record.is_used = True
+        otp_record.save()
+
+        # Generate standard Django Reset Token
+        token = default_token_generator.make_token(user)
+        uid = urlsafe_base64_encode(force_bytes(user.pk))
+
+        return Response({
+            'message': 'OTP Verified',
+            'uid': uid,
+            'token': token
+        })
 
 class PasswordResetConfirmView(APIView):
     permission_classes = [AllowAny]
