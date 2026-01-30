@@ -50,43 +50,20 @@ const CreateProductForm: React.FC = () => {
     setFormData(prev => ({ ...prev, price: newPrice.toFixed(2) }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX_WIDTH = 400;
-          const MAX_HEIGHT = 400;
-          let width = img.width;
-          let height = img.height;
+      try {
+        const { addMedia } = useStore.getState();
+        const newItem = await addMedia(file);
 
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width;
-              width = MAX_WIDTH;
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height;
-              height = MAX_HEIGHT;
-            }
-          }
-
-          canvas.width = width;
-          canvas.height = height;
-          const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, width, height);
-
-          // Compress to JPEG at 60% to ensure it fits in localStorage
-          const resizedBase64 = canvas.toDataURL('image/jpeg', 0.6);
-          setFormData(prev => ({ ...prev, image: resizedBase64 }));
-        };
-        img.src = event.target?.result as string;
-      };
-      reader.readAsDataURL(file);
+        if (newItem && newItem.url) {
+          setFormData(prev => ({ ...prev, image: newItem.url }));
+          success("Product image uploaded successfully");
+        }
+      } catch (error) {
+        console.error("Image upload failed:", error);
+      }
     }
   };
 

@@ -58,8 +58,13 @@ const App: React.FC = () => {
     editorTab,
     setEditorTab,
     isEditorSidebarMinimized,
-    setIsEditorSidebarMinimized
+    setIsEditorSidebarMinimized,
+    checkAuth
   } = useStore();
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(false);

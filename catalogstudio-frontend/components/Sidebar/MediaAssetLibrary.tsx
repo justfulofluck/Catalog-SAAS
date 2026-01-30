@@ -46,31 +46,16 @@ const MediaAssetLibrary: React.FC = () => {
     setDraggingItem(null);
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const url = event.target?.result as string;
-        const mediaId = `upload-sid-${Date.now()}`;
+      // 1. Upload to backend
+      const newItem = await addMedia(file);
 
-        const newItem: MediaItem = {
-          id: mediaId,
-          name: file.name,
-          type: 'image',
-          url,
-          thumbnailUrl: url,
-          createdAt: new Date().toISOString(),
-          size: `${(file.size / 1024).toFixed(1)} KB`
-        };
-
-        // 1. Save to global organizational media pool
-        addMedia(newItem);
-
-        // 2. Automatically place on current page for better UX
+      // 2. Automatically place on current page if upload successful
+      if (newItem) {
         handleAddMedia(newItem);
-      };
-      reader.readAsDataURL(file);
+      }
     }
     // Clear input so same file can be uploaded again if deleted
     if (fileInputRef.current) fileInputRef.current.value = '';

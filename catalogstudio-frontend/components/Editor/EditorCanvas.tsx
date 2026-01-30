@@ -472,6 +472,10 @@ const EditorCanvas: React.FC = () => {
 
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
+
+        // Upload to backend
+        addMedia(file);
+
         const reader = new FileReader();
         reader.onload = (event) => {
           const url = event.target?.result as string;
@@ -496,16 +500,6 @@ const EditorCanvas: React.FC = () => {
               zIndex: 60
             });
           }
-
-          addMedia({
-            id: `upload-${Date.now()}-${i}`,
-            name: file.name,
-            type: 'image',
-            url,
-            thumbnailUrl: url,
-            createdAt: new Date().toISOString(),
-            size: `${(file.size / 1024).toFixed(1)} KB`
-          });
         };
         reader.readAsDataURL(file);
       }

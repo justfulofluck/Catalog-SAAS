@@ -113,21 +113,17 @@ const MediaLibraryView: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleUploadSubmit = () => {
+  const handleUploadSubmit = async () => {
     if (!uploadData.name) return;
 
-    addMedia({
-      id: `m-${Date.now()}`,
-      name: uploadData.name,
-      type: 'image',
-      url: uploadData.url || 'https://picsum.photos/seed/default/400/400',
-      thumbnailUrl: uploadData.url || 'https://picsum.photos/seed/default/400/400',
-      createdAt: new Date().toISOString(),
-      size: uploadData.file ? `${(uploadData.file.size / 1024 / 1024).toFixed(2)} MB` : 'N/A'
-    });
-
-    success("Asset uploaded successfully");
-    setIsUploadOpen(false);
+    if (uploadType === 'file' && uploadData.file) {
+      await addMedia(uploadData.file);
+      success("Asset uploaded successfully");
+      setIsUploadOpen(false);
+    } else {
+      // URL upload not yet supported by backend
+      alert("Only file uploads are supported in the current version.");
+    }
   };
 
   return (

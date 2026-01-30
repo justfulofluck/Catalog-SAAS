@@ -44,42 +44,20 @@ const CreateCategoryForm: React.FC = () => {
     setTimeout(() => setView('category-list'), 600);
   };
 
-  const handleImageUpload = (file: File) => {
+  const handleImageUpload = async (file: File) => {
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 400;
-        const MAX_HEIGHT = 400;
-        let width = img.width;
-        let height = img.height;
+    try {
+      const { addMedia } = useStore.getState();
+      const newItem = await addMedia(file);
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            height = MAX_HEIGHT;
-          }
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        ctx?.drawImage(img, 0, 0, width, height);
-
-        const resizedBase64 = canvas.toDataURL('image/jpeg', 0.8); // Compress to JPEG at 80% quality
-        setFormData(prev => ({ ...prev, thumbnail: resizedBase64 }));
-      };
-      img.src = e.target?.result as string;
-    };
-    reader.readAsDataURL(file);
+      if (newItem && newItem.url) {
+        setFormData(prev => ({ ...prev, thumbnail: newItem.url }));
+        success("Thumbnail uploaded successfully");
+      }
+    } catch (error) {
+      console.error("Thumbnail upload failed:", error);
+    }
   };
 
   return (

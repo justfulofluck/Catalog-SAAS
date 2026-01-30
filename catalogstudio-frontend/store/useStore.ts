@@ -52,7 +52,10 @@ interface State {
   editorTab: 'products' | 'media' | 'templates' | 'layers' | 'effects';
   isEditorSidebarMinimized: boolean;
 
-  login: (email: string, name?: string) => void;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<boolean>;
+  checkAuth: () => Promise<void>;
+  fetchInventory: () => Promise<void>;
   logout: () => void;
   setView: (view: View) => void;
   setDashboardExiting: (exiting: boolean) => void;
@@ -67,17 +70,17 @@ interface State {
 
   updateUser: (updates: Partial<User>) => void;
 
-  addProduct: (product: Product) => void;
-  updateProduct: (id: string, updates: Partial<Product>) => void;
-  removeProduct: (id: string) => void;
+  addProduct: (product: Product) => Promise<void>;
+  updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
+  removeProduct: (id: string) => Promise<void>;
   reorderProducts: (newOrderIds: string[]) => void;
 
-  addCategory: (category: Category) => void;
-  updateCategory: (id: string, updates: Partial<Category>) => void;
-  removeCategory: (id: string) => void;
+  addCategory: (category: Category) => Promise<void>;
+  updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
+  removeCategory: (id: string) => Promise<void>;
 
-  addMedia: (item: MediaItem) => void;
-  removeMedia: (id: string) => void;
+  addMedia: (file: File) => Promise<MediaItem | undefined>;
+  removeMedia: (id: string) => Promise<void>;
   removeMediaBatch: (ids: string[]) => void;
 
   // Catalog Management
@@ -147,18 +150,7 @@ interface State {
   removeSavedColor: (color: string) => void;
 }
 
-const INITIAL_MEDIA: MediaItem[] = [
-  {
-    id: 'm1',
-    name: 'Modern Interior Hero',
-    type: 'image',
-    url: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=800',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&q=80&w=200',
-    size: '1.2 MB',
-    dimensions: '1920x1080',
-    createdAt: new Date().toISOString()
-  }
-];
+const INITIAL_MEDIA: MediaItem[] = [];
 
 export const useStore = create<State>()(persist((set, get) => ({
   user: null,
@@ -174,22 +166,33 @@ export const useStore = create<State>()(persist((set, get) => ({
   editorTab: 'products',
   isEditorSidebarMinimized: false,
 
-  products: INITIAL_PRODUCTS.map((p, idx) => ({
-    ...p,
-    categoryId: idx % 2 === 0 ? 'cat1' : (idx % 3 === 0 ? 'cat2' : 'cat3')
-  })),
-  categories: [
-    { id: 'cat1', name: 'Furniture', productCount: 3, color: '#337ab7', rank: 1, description: 'Premium modern and nordic furniture.', thumbnail: CATEGORY_THUMBNAILS['Furniture'] },
-    { id: 'cat2', name: 'Lighting', productCount: 2, color: '#38bdf8', rank: 2, description: 'Designer lamps and lighting solutions.', thumbnail: CATEGORY_THUMBNAILS['Lighting'] },
-    { id: 'cat3', name: 'Accessories', productCount: 1, color: '#10b981', rank: 3, description: 'Handcrafted home decor and accessories.', thumbnail: CATEGORY_THUMBNAILS['Accessories'] },
-    { id: 'cat4', name: 'Business Essentials', productCount: 0, color: '#6366f1', rank: 4, description: 'Classification for company inventory assets.', thumbnail: CATEGORY_THUMBNAILS['Business Essentials'] },
-    { id: 'cat5', name: 'Personalized Printings', productCount: 0, color: '#94a3b8', rank: 5, description: 'Classification for company inventory assets.', thumbnail: CATEGORY_THUMBNAILS['Personalized Printings'] }
-  ],
+  products: [],
+  categories: [],
   mediaItems: INITIAL_MEDIA,
   activeCategoryId: null,
   editingProductId: null,
   viewingProductId: null,
   editingCategoryId: null,
+
+  // ... (keep catalog definitions) ...
+
+  fetchInventory: async () => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const [catRes, prodRes, mediaRes] = await Promise.all([
+        api.get('/categories/'),
+        api.get('/products/'),
+        api.get('/media/')
+      ]);
+      set({
+        categories: catRes.data,
+        products: prodRes.data,
+        mediaItems: mediaRes.data
+      });
+    } catch (error) {
+      console.error('Failed to fetch inventory:', error);
+    }
+  },
 
   catalog: {
     id: 'cat-001',
@@ -274,22 +277,72 @@ export const useStore = create<State>()(persist((set, get) => ({
     });
   },
 
-  login: (email, name) => {
-    const displayName = name || email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
-    set({
-      isAuthenticated: true,
-      user: { id: 'u1', name: displayName || 'Designer', email, avatar: (displayName || 'D').charAt(0) },
-      currentView: 'dashboard',
-      sessionStartTime: Date.now()
-    });
+  login: async (email, password) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const response = await api.post('/auth/login/', { username: email, password });
+      const { token, user } = response.data;
+
+      localStorage.setItem('auth_token', token);
+      set({
+        isAuthenticated: true,
+        user,
+        currentView: 'dashboard',
+        sessionStartTime: Date.now()
+      });
+      get().fetchInventory();
+      return true;
+    } catch (error) {
+      console.error('Login failed:', error);
+      return false;
+    }
   },
 
-  logout: () => set({
-    isAuthenticated: false,
-    user: null,
-    currentView: 'dashboard',
-    sessionStartTime: null
-  }),
+  register: async (name, email, password) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const response = await api.post('/auth/register/', {
+        username: email, // Using email as username
+        email,
+        password,
+        name
+      });
+      return true;
+    } catch (error) {
+      console.error('Registration failed:', error);
+      return false;
+    }
+  },
+
+  checkAuth: async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const { default: api } = await import('../utils/api');
+      const response = await api.get('/auth/me/');
+      set({
+        isAuthenticated: true,
+        user: response.data,
+        sessionStartTime: Date.now()
+      });
+      get().fetchInventory(); // Fetch data after auth check
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      localStorage.removeItem('auth_token');
+      set({ isAuthenticated: false, user: null });
+    }
+  },
+
+  logout: () => {
+    localStorage.removeItem('auth_token');
+    set({
+      isAuthenticated: false,
+      user: null,
+      currentView: 'dashboard',
+      sessionStartTime: null
+    });
+  },
 
   setView: (view) => set({ currentView: view }),
   setDashboardExiting: (exiting) => set({ isDashboardExiting: exiting }),
@@ -306,52 +359,76 @@ export const useStore = create<State>()(persist((set, get) => ({
     user: state.user ? { ...state.user, ...updates } : null
   })),
 
-  addProduct: (product) => set((state) => ({
-    products: [product, ...state.products]
-  })),
+  addProduct: async (product) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const response = await api.post('/products/', product);
+      set((state) => ({
+        products: [response.data, ...state.products]
+      }));
+    } catch (error) {
+      console.error('Failed to add product:', error);
+    }
+  },
 
-  updateProduct: (id, updates) => set((state) => {
-    const updatedProducts = state.products.map(p => p.id === id ? { ...p, ...updates } : p);
+  updateProduct: async (id, updates) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const response = await api.patch(`/products/${id}/`, updates);
+      set((state) => {
+        const updatedProducts = state.products.map((p) => (p.id === id ? response.data : p));
 
-    const updatedPages = state.catalog.pages.map(page => {
-      // DYNAMIC MULTI-PRODUCT ISOLATION: Skip sync for pages with 2+ products
-      // This allows manual overrides on complex layouts while keeping single-product pages automated.
-      const pCount = page.elements.filter(el =>
-        el.type === 'product-block' || el.id.includes('slot') || el.id.includes('-img')
-      ).length;
+        const updatedPages = state.catalog.pages.map(page => {
+          // DYNAMIC MULTI-PRODUCT ISOLATION: Skip sync for pages with 2+ products
+          // This allows manual overrides on complex layouts while keeping single-product pages automated.
+          const pCount = page.elements.filter(el =>
+            el.type === 'product-block' || el.id.includes('slot') || el.id.includes('-img')
+          ).length;
 
-      if (pCount >= 2) {
-        return page;
-      }
-
-      return {
-        ...page,
-        elements: page.elements.map(el => {
-          if (el.productId === id) {
-            if (el.type === 'text') {
-              const p = updatedProducts.find(prod => prod.id === id)!;
-              const isPrice = el.id.includes('price') || el.id.includes('txt-p') || (el.text && (el.text.includes('$') || el.text.includes('₹') || el.text.toLowerCase().includes('price')));
-              if (isPrice) {
-                return { ...el, text: `${p.currency}${p.price.toFixed(2)}` };
-              }
-              return { ...el, text: updates.name || el.text };
-            }
-            if (el.type === 'image' && updates.image) return { ...el, src: updates.image };
+          if (pCount >= 2) {
+            return page;
           }
-          return el;
-        })
-      };
-    });
 
-    return {
-      products: updatedProducts,
-      catalog: { ...state.catalog, pages: updatedPages }
-    };
-  }),
+          return {
+            ...page,
+            elements: page.elements.map(el => {
+              if (el.productId === id) {
+                if (el.type === 'text') {
+                  const p = updatedProducts.find(prod => prod.id === id)!;
+                  const isPrice = el.id.includes('price') || el.id.includes('txt-p') || (el.text && (el.text.includes('$') || el.text.includes('₹') || el.text.toLowerCase().includes('price')));
+                  if (isPrice) {
+                    return { ...el, text: `${p.currency}${p.price.toFixed(2)}` };
+                  }
+                  return { ...el, text: updates.name || el.text };
+                }
+                if (el.type === 'image' && updates.image) return { ...el, src: updates.image };
+              }
+              return el;
+            })
+          };
+        });
 
-  removeProduct: (id) => set((state) => ({
-    products: state.products.filter(p => p.id !== id)
-  })),
+        return {
+          products: updatedProducts,
+          catalog: { ...state.catalog, pages: updatedPages }
+        };
+      });
+    } catch (error) {
+      console.error('Failed to update product:', error);
+    }
+  },
+
+  removeProduct: async (id) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      await api.delete(`/products/${id}/`);
+      set((state) => ({
+        products: state.products.filter((p) => p.id !== id)
+      }));
+    } catch (error) {
+      console.error('Failed to delete product:', error);
+    }
+  },
 
   reorderProducts: (newOrderIds) => set((state) => {
     const remainingProducts = state.products.filter(p => !newOrderIds.includes(p.id));
@@ -360,26 +437,75 @@ export const useStore = create<State>()(persist((set, get) => ({
     return { products: updatedProducts };
   }),
 
-  addCategory: (category) => set((state) => ({
-    categories: [...state.categories, category]
-  })),
+  addCategory: async (category) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const response = await api.post('/categories/', category);
+      set((state) => ({
+        categories: [...state.categories, response.data]
+      }));
+    } catch (error) {
+      console.error('Failed to add category:', error);
+    }
+  },
 
-  updateCategory: (id, updates) => set((state) => ({
-    categories: state.categories.map(c => c.id === id ? { ...c, ...updates } : c)
-  })),
+  updateCategory: async (id, updates) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const response = await api.patch(`/categories/${id}/`, updates);
+      set((state) => ({
+        categories: state.categories.map((c) => (c.id === id ? response.data : c))
+      }));
+    } catch (error) {
+      console.error('Failed to update category:', error);
+    }
+  },
 
-  removeCategory: (id) => set((state) => ({
-    categories: state.categories.filter(c => c.id !== id),
-    products: state.products.map(p => p.categoryId === id ? { ...p, categoryId: undefined } : p)
-  })),
+  removeCategory: async (id) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      await api.delete(`/categories/${id}/`);
+      set((state) => ({
+        categories: state.categories.filter((c) => c.id !== id),
+        products: state.products.map(p => p.categoryId === id ? { ...p, categoryId: undefined } : p)
+      }));
+    } catch (error) {
+      console.error('Failed to delete category:', error);
+    }
+  },
 
-  addMedia: (item) => set((state) => ({
-    mediaItems: [item, ...state.mediaItems]
-  })),
+  addMedia: async (file: File) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('name', file.name);
 
-  removeMedia: (id) => set((state) => ({
-    mediaItems: state.mediaItems.filter(m => m.id !== id)
-  })),
+      const response = await api.post('/media/', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      set((state) => ({
+        mediaItems: [response.data, ...state.mediaItems]
+      }));
+      return response.data;
+    } catch (error) {
+      console.error('Failed to upload media:', error);
+      return undefined;
+    }
+  },
+
+  removeMedia: async (id) => {
+    try {
+      const { default: api } = await import('../utils/api');
+      await api.delete(`/media/${id}/`);
+      set((state) => ({
+        mediaItems: state.mediaItems.filter(m => m.id !== id)
+      }));
+    } catch (error) {
+      console.error('Failed to delete media:', error);
+    }
+  },
 
   removeMediaBatch: (ids) => set((state) => ({
     mediaItems: state.mediaItems.filter(m => !ids.includes(m.id))

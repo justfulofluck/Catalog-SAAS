@@ -82,7 +82,8 @@ class PasswordResetRequestView(APIView):
         <p>This code triggers a password reset. It is valid for <strong>60 seconds</strong>.</p>
         """
         
-        send_notification(user.email, subject, body)
+        if not send_notification(user.email, subject, body):
+            return Response({'error': 'Failed to send OTP email.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
         return Response({'message': 'OTP sent to email.'})
 
