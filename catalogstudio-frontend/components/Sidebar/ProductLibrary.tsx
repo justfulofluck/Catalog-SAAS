@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Package, Search, X, Layers, GripVertical, Trash2 } from 'lucide-react';
 import Sortable from 'sortablejs';

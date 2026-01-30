@@ -1,17 +1,194 @@
-
-import React, { useState, useEffect } from 'react';
-import { Plus, ChevronRight, FolderOpen, ArrowLeft, Trash2, Edit2, LayoutList, Package, Search, ExternalLink, Info, ArrowUp, ArrowDown, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, ChevronRight, FolderOpen, ArrowLeft, Trash2, Edit2, LayoutList, Package, Search, ExternalLink, Info, ArrowUp, ArrowDown, ChevronDown, GripVertical, Image as ImageIcon, DollarSign } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import Sortable from 'sortablejs';
 
 import { CATEGORY_THUMBNAILS } from '../../constants';
+import { Product, Category } from '../../types';
 
 import ConfirmationModal from '../../components/Shared/ConfirmationModal';
+
+interface CategoryItemProps {
+  category: Category;
+  isActive: boolean;
+  onClick: (id: string) => void;
+  onEdit: (e: React.MouseEvent, id: string) => void;
+  onDelete: (e: React.MouseEvent, id: string) => void;
+  products: Product[];
+  reorderProducts: (ids: string[]) => void;
+  onEditProduct: (id: string) => void;
+  uiTheme: 'light' | 'dark';
+}
+
+const CategoryItem: React.FC<CategoryItemProps> = ({
+  category, isActive, onClick, onEdit, onDelete, products, reorderProducts, onEditProduct, uiTheme
+}) => {
+  const listRef = useRef<HTMLDivElement>(null);
+  const sortableInstance = useRef<Sortable | null>(null);
+
+  useEffect(() => {
+    if (isActive && listRef.current) {
+      sortableInstance.current = Sortable.create(listRef.current, {
+        animation: 150,
+        handle: '.product-drag-handle',
+        ghostClass: 'sortable-ghost',
+        dragClass: 'sortable-drag',
+        onEnd: () => {
+          if (listRef.current) {
+            const newOrder = Array.from(listRef.current.children).map(
+              (el) => (el as HTMLElement).dataset.id!
+            );
+            // This reorders ONLY the visible products in this category
+            // We need to pass valid IDs to the store
+            if (newOrder.length > 0) {
+              reorderProducts(newOrder);
+            }
+          }
+        }
+      });
+    }
+
+    return () => {
+      if (sortableInstance.current) {
+        sortableInstance.current.destroy();
+        sortableInstance.current = null;
+      }
+    };
+  }, [isActive, reorderProducts]);
+
+  return (
+    <div
+      onClick={() => onClick(category.id)}
+      className={`group flex flex-col transition-all cursor-pointer relative rounded-2xl border overflow-hidden ${isActive
+        ? 'bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900 shadow-xl shadow-indigo-100 dark:shadow-none'
+        : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-none'
+        }`}
+    >
+      {/* Main Card Content */}
+      <div className="flex items-center gap-6 p-6 relative z-10">
+        {/* Ranking Color Strip */}
+        <div
+          className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-lg transition-all ${isActive ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'}`}
+          style={{ backgroundColor: category.color || '#4f46e5' }}
+        />
+
+        {/* Thumbnail/Icon */}
+        <div className={`w-16 h-16 ml-3 rounded-2xl flex items-center justify-center transition-all overflow-hidden border shrink-0 ${isActive ? 'bg-slate-50 dark:bg-slate-800 shadow-inner' : 'bg-slate-50 dark:bg-slate-800 group-hover:bg-slate-100 dark:group-hover:bg-slate-700'}`}>
+          {category.thumbnail || CATEGORY_THUMBNAILS[category.name] ? (
+            <img src={category.thumbnail || CATEGORY_THUMBNAILS[category.name]} alt={category.name} className="w-full h-full object-cover" />
+          ) : (
+            <FolderOpen size={24} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'} />
+          )}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-3 mb-1">
+            <h3 className={`text-lg font-black transition-colors truncate ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`}>
+              {category.name}
+            </h3>
+            <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+              Rank #{category.rank}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-slate-500 dark:text-slate-400 truncate max-w-xl">
+            {category.description || "Classification for company inventory assets."}
+          </p>
+        </div>
+
+        {/* Stats & Navigation */}
+        <div className="flex items-center gap-8 shrink-0 mr-4">
+          <div className={`transition-transform duration-300 ${isActive ? 'rotate-180' : ''} text-slate-400`}>
+            <ChevronDown size={20} />
+          </div>
+
+          <div className="text-right w-16">
+            <div className="text-xl font-black text-slate-800 dark:text-white leading-none">
+              {products.length}
+            </div>
+            <div className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">Assets</div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={(e) => onEdit(e, category.id)}
+              className="p-3 text-slate-400 hover:text-[#337ab7] dark:hover:text-indigo-400 hover:bg-blue-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100 dark:hover:border-indigo-800 hover:scale-110 active:scale-95 z-20"
+              title="Edit Category"
+            >
+              <Edit2 size={16} />
+            </button>
+            <button
+              onClick={(e) => onDelete(e, category.id)}
+              className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all shadow-sm border border-transparent hover:border-red-100 dark:hover:border-red-900/30 hover:scale-110 active:scale-95 z-20"
+              title="Delete Category"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Expandable Product List */}
+      {isActive && (
+        <div className="bg-slate-50/50 dark:bg-black/20 border-t border-slate-100 dark:border-slate-800 animate-expand origin-top">
+          <div ref={listRef} className="p-4 pl-24 pr-8 space-y-2">
+            {products.length === 0 ? (
+              <div className="py-8 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl">
+                <Package size={24} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">No products in this category</p>
+              </div>
+            ) : (
+              products.map((product) => (
+                <div
+                  key={product.id}
+                  data-id={product.id}
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center gap-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors group/product shadow-sm"
+                >
+                  <div className="product-drag-handle p-2 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing">
+                    <GripVertical size={16} />
+                  </div>
+
+                  <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border border-slate-100 dark:border-slate-700 shrink-0">
+                    {product.image ? (
+                      <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <ImageIcon size={14} className="text-slate-300" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{product.name}</h4>
+                    <p className="text-[10px] font-medium text-slate-400 truncate">{product.sku}</p>
+                  </div>
+
+                  <div className="flex items-center gap-6 mr-4">
+                    <div className="text-right">
+                      <span className="text-xs font-black text-slate-600 dark:text-slate-400">{product.currency}{product.price}</span>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onEditProduct(product.id); }}
+                      className="p-2 opacity-0 group-hover/product:opacity-100 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/50 rounded-lg transition-all"
+                    >
+                      <Edit2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const CategoryListView: React.FC = () => {
 
   const {
     categories, products, setView, activeCategoryId, setActiveCategoryId,
-    setEditingCategoryId, removeCategory, setEditingProductId
+    setEditingCategoryId, removeCategory, setEditingProductId, reorderProducts, uiTheme
   } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -22,15 +199,14 @@ const CategoryListView: React.FC = () => {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-  // Set first category as active if none is selected
-  useEffect(() => {
-    if (!activeCategoryId && categories.length > 0) {
-      setActiveCategoryId(categories[0].id);
-    }
-  }, [categories, activeCategoryId, setActiveCategoryId]);
+  // Auto-select effect removed to allow fully collapsed state
 
   const handleCategoryClick = (catId: string) => {
-    setActiveCategoryId(catId);
+    if (activeCategoryId === catId) {
+      setActiveCategoryId(null);
+    } else {
+      setActiveCategoryId(catId);
+    }
   };
 
   const handleEditCategory = (e: React.MouseEvent, catId: string) => {
@@ -57,14 +233,6 @@ const CategoryListView: React.FC = () => {
     setEditingProductId(productId);
     setView('edit-product');
   };
-
-  const activeCategory = categories.find(c => c.id === activeCategoryId);
-  const filteredProducts = products.filter(p => {
-    const matchesCategory = p.categoryId === activeCategoryId;
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
 
   const sortedCategories = [...categories].sort((a, b) => {
     let comparison = 0;
@@ -97,23 +265,23 @@ const CategoryListView: React.FC = () => {
             padding-top: 0;
             padding-bottom: 0;
             margin-bottom: 0;
-            transform: scale(0.98);
+            transform: scaleY(0.9);
           }
           100% {
-            max-height: 200px;
+            max-height: 500px; /* Increased max-height for list */
             opacity: 1;
-            padding-top: 1.5rem;
-            padding-bottom: 1.5rem;
-            transform: scale(1);
+            padding-top: 0; /* Handled by inner padding */
+            padding-bottom: 0;
+            transform: scaleY(1);
           }
         }
         .animate-expand {
-          animation: expand-in 0.5s ease-in-out forwards;
+          animation: expand-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
 
       {/* Navbar-like Header */}
-      <div className="px-8 py-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div className="px-8 py-6 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between z-20 relative">
         <div className="flex flex-col gap-2">
           <button
             onClick={() => setView('dashboard')}
@@ -183,8 +351,8 @@ const CategoryListView: React.FC = () => {
       </div>
 
       {/* Main Content - Full Width List */}
-      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-        <div className="flex flex-col gap-3">
+      <div className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-0">
+        <div className="flex flex-col gap-4">
           {categories.length === 0 ? (
             <div className="py-24 text-center bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 border-dashed">
               <FolderOpen size={48} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
@@ -198,69 +366,18 @@ const CategoryListView: React.FC = () => {
             </div>
           ) : (
             sortedCategories.map((cat, idx) => (
-              <div
+              <CategoryItem
                 key={cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-                style={{ animationDelay: `${idx * 150}ms`, animationFillMode: 'both' }}
-                className={`group flex items-center gap-6 p-6 transition-all cursor-pointer relative animate-expand rounded-2xl border ${activeCategoryId === cat.id ? 'bg-white dark:bg-slate-900 border-indigo-200 dark:border-indigo-900 shadow-xl shadow-indigo-100 dark:shadow-none' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-lg hover:shadow-slate-200/50 dark:hover:shadow-none'}`}
-              >
-                {/* Ranking Color Strip */}
-                <div
-                  className={`absolute left-0 top-6 bottom-6 w-1 rounded-r-lg transition-all ${activeCategoryId === cat.id ? 'opacity-100' : 'opacity-40 group-hover:opacity-100'}`}
-                  style={{ backgroundColor: cat.color || '#4f46e5' }}
-                />
-
-                {/* Thumbnail/Icon */}
-                <div className={`w-16 h-16 ml-3 rounded-2xl flex items-center justify-center transition-all overflow-hidden border shrink-0 ${activeCategoryId === cat.id ? 'bg-slate-50 dark:bg-slate-800 shadow-inner' : 'bg-slate-50 dark:bg-slate-800 group-hover:bg-slate-100 dark:group-hover:bg-slate-700'}`}>
-                  {cat.thumbnail || CATEGORY_THUMBNAILS[cat.name] ? (
-                    <img src={cat.thumbnail || CATEGORY_THUMBNAILS[cat.name]} alt={cat.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <FolderOpen size={24} className={activeCategoryId === cat.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'} />
-                  )}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-3 mb-1">
-                    <h3 className={`text-lg font-black transition-colors truncate ${activeCategoryId === cat.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`}>
-                      {cat.name}
-                    </h3>
-                    <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                      Rank #{cat.rank || idx + 1}
-                    </span>
-                  </div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400 truncate max-w-2xl">
-                    {cat.description || "Classification for company inventory assets."}
-                  </p>
-                </div>
-
-                {/* Stats & Navigation */}
-                <div className="flex items-center gap-8 shrink-0 mr-4">
-                  <div className="text-right">
-                    <div className="text-xl font-black text-slate-800 dark:text-white leading-none">
-                      {products.filter(p => p.categoryId === cat.id).length}
-                    </div>
-                    <div className="text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">Assets</div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={(e) => handleEditCategory(e, cat.id)}
-                      className="p-3 text-slate-400 hover:text-[#337ab7] dark:hover:text-indigo-400 hover:bg-blue-50 dark:hover:bg-indigo-900/20 rounded-xl transition-all shadow-sm border border-transparent hover:border-blue-100 dark:hover:border-indigo-800 hover:scale-110 active:scale-95"
-                      title="Edit Category"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={(e) => handleDeleteCategory(e, cat.id)}
-                      className="p-3 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-all shadow-sm border border-transparent hover:border-red-100 dark:hover:border-red-900/30 hover:scale-110 active:scale-95"
-                      title="Delete Category"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              </div>
+                category={cat}
+                isActive={activeCategoryId === cat.id}
+                onClick={handleCategoryClick}
+                onEdit={handleEditCategory}
+                onDelete={handleDeleteCategory}
+                products={products.filter(p => p.categoryId === cat.id)}
+                reorderProducts={reorderProducts}
+                onEditProduct={handleEditProduct}
+                uiTheme={uiTheme}
+              />
             ))
           )}
         </div>
@@ -278,5 +395,6 @@ const CategoryListView: React.FC = () => {
     </div>
   );
 };
+
 
 export default CategoryListView;

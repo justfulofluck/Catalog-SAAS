@@ -11,6 +11,7 @@ import { useStore } from '../../store/useStore';
 import { FONTS } from '../../constants';
 import { CardTheme } from '../../types';
 import AdvancedColorPicker from './AdvancedColorPicker';
+import { applyStyleToSelection } from '../../utils/textStyleSelection';
 
 const PropertyPanel: React.FC = () => {
   const {
@@ -126,7 +127,9 @@ const PropertyPanel: React.FC = () => {
         const selection = window.getSelection();
         const activeEl = document.activeElement as HTMLElement;
         if (selection && selection.rangeCount > 0 && selection.toString().length > 0) {
-          document.execCommand('foreColor', false, workingSolid);
+          // Robustly apply solid color, explicitly removing any gradient properties
+          const css = `color: ${workingSolid}; -webkit-text-fill-color: initial; background: none; text-shadow: none;`;
+          applyStyleToSelection(css);
           activeEl.dispatchEvent(new Event('input', { bubbles: true }));
         } else {
           const cleanText = stripRichTextColors(selectedElement.text || 'Text');
@@ -141,6 +144,15 @@ const PropertyPanel: React.FC = () => {
         workingGradType === 'diagonal' ? `linear-gradient(to bottom right, ${workingGrad1}, ${workingGrad2})` :
           workingGradType === 'radial' ? `radial-gradient(circle, ${workingGrad1}, ${workingGrad2})` :
             `linear-gradient(to right, ${workingGrad1}, ${workingGrad2})`;
+
+      if (selectedElement?.type === 'text') {
+        const css = `background: ${gradString}; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: inline;`;
+        if (applyStyleToSelection(css)) {
+          setPickerOpen(false);
+          return;
+        }
+      }
+
       handleBatchUpdate({ fill: gradString });
     }
     setPickerOpen(false);
@@ -248,6 +260,15 @@ const PropertyPanel: React.FC = () => {
 
                 <button
                   onClick={() => {
+                    // Mark the selection so EffectsPanel can find it
+                    if (selectedElement?.type === 'text') {
+                      // We use a specific ID to track the selection across tab switches
+                      applyStyleToSelection('', 'id="temp-effect-target"');
+                      const activeEl = document.activeElement as HTMLElement;
+                      if (activeEl) {
+                        activeEl.dispatchEvent(new Event('input', { bubbles: true }));
+                      }
+                    }
                     setEditorTab('effects');
                   }}
                   className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl border transition-all ${editorTab === 'effects' ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : (uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-indigo-200')}`}
