@@ -312,7 +312,7 @@ const EffectsPanel: React.FC = () => {
                         )}
 
                         {activeEffectStyle === 'background' && (
-                            <div className="grid grid-cols-2 gap-4">
+                            <>
                                 <div className="space-y-2.5">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Padding</span>
                                     <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
@@ -325,13 +325,14 @@ const EffectsPanel: React.FC = () => {
                                             }}
                                             className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
                                         />
+                                        <span className="text-[11px] font-black text-indigo-500 w-8 text-right shrink-0">{tempEffectSpread}px</span>
                                     </div>
                                 </div>
                                 <div className="space-y-2.5">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Radius</span>
                                     <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
                                         <input
-                                            type="range" min="0" max="20" value={tempEffectRoundness}
+                                            type="range" min="0" max="50" value={tempEffectRoundness}
                                             onChange={(e) => {
                                                 const val = parseInt(e.target.value);
                                                 setTempEffectRoundness(val);
@@ -339,9 +340,10 @@ const EffectsPanel: React.FC = () => {
                                             }}
                                             className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
                                         />
+                                        <span className="text-[11px] font-black text-indigo-500 w-8 text-right shrink-0">{tempEffectRoundness}px</span>
                                     </div>
                                 </div>
-                            </div>
+                            </>
                         )}
 
                         {activeEffectStyle !== 'lift' && (

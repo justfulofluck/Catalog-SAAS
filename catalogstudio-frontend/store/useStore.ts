@@ -311,22 +311,35 @@ export const useStore = create<State>()(persist((set, get) => ({
   updateProduct: (id, updates) => set((state) => {
     const updatedProducts = state.products.map(p => p.id === id ? { ...p, ...updates } : p);
 
-    const updatedPages = state.catalog.pages.map(page => ({
-      ...page,
-      elements: page.elements.map(el => {
-        if (el.productId === id) {
-          if (el.type === 'text') {
-            if (el.id.includes('txt-n')) return { ...el, text: updates.name || el.text };
-            if (el.id.includes('txt-p')) {
+    const updatedPages = state.catalog.pages.map(page => {
+      // DYNAMIC MULTI-PRODUCT ISOLATION: Skip sync for pages with 2+ products
+      // This allows manual overrides on complex layouts while keeping single-product pages automated.
+      const pCount = page.elements.filter(el =>
+        el.type === 'product-block' || el.id.includes('slot') || el.id.includes('-img')
+      ).length;
+
+      if (pCount >= 2) {
+        return page;
+      }
+
+      return {
+        ...page,
+        elements: page.elements.map(el => {
+          if (el.productId === id) {
+            if (el.type === 'text') {
               const p = updatedProducts.find(prod => prod.id === id)!;
-              return { ...el, text: `${p.currency}${p.price.toFixed(2)}` };
+              const isPrice = el.id.includes('price') || el.id.includes('txt-p') || (el.text && (el.text.includes('$') || el.text.includes('₹') || el.text.toLowerCase().includes('price')));
+              if (isPrice) {
+                return { ...el, text: `${p.currency}${p.price.toFixed(2)}` };
+              }
+              return { ...el, text: updates.name || el.text };
             }
+            if (el.type === 'image' && updates.image) return { ...el, src: updates.image };
           }
-          if (el.type === 'image' && updates.image) return { ...el, src: updates.image };
-        }
-        return el;
-      })
-    }));
+          return el;
+        })
+      };
+    });
 
     return {
       products: updatedProducts,
@@ -1253,6 +1266,7 @@ export const useStore = create<State>()(persist((set, get) => ({
     mediaItems: state.mediaItems,
     savedCatalogs: state.savedCatalogs,
     savedColors: state.savedColors,
+    isPropertyPanelOpen: state.isPropertyPanelOpen,
     // Add other persistent fields as needed, avoiding non-serializable data or huge stacks if performance is an issue
   })
 }));

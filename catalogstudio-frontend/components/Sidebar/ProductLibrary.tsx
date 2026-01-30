@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Package, Search, X, Layers, GripVertical, Trash2 } from 'lucide-react';
 import Sortable from 'sortablejs';
@@ -5,12 +6,16 @@ import { useStore } from '../../store/useStore';
 import { Product, CanvasElement } from '../../types';
 
 const ProductLibrary: React.FC = () => {
-  const { products, addElement, currentPageIndex, catalog, reorderProducts, removeProductFromCanvas, setDraggingItem, uiTheme } = useStore();
+  const {
+    products, addElement, updateElement, currentPageIndex, catalog,
+    reorderProducts, removeProductFromCanvas, setDraggingItem, uiTheme,
+    selectedElementIds
+  } = useStore();
+
   const [search, setSearch] = useState('');
-  const [isVisible, setIsVisible] = useState(false);
   const sortableRef = useRef<HTMLDivElement>(null);
 
-  // Filter to show all products available in the publication's category, satisfying the 'stay in list' requirement
+  // Filter products based on category and search
   const availableCategoryAssets = products.filter(p =>
     p.categoryId === catalog.selectedCategoryId &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
@@ -34,68 +39,129 @@ const ProductLibrary: React.FC = () => {
     }
   }, [availableCategoryAssets.length, catalog.selectedCategoryId]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
   const handleAddProduct = (product: Product) => {
-    const timestamp = Date.now();
     const currentPage = catalog.pages[currentPageIndex];
 
-    // Improved slot detection: find anything with 'slot' in its ID
-    const slots = currentPage.elements.filter(el => el.id.includes('slot'));
+    /**
+     * SEALED ROW REFLECTION:
+     * Prevents the "shared variable" issue by ensuring each product slot (img1, img2, etc.)
+     * ONLY communicates with text elements that share its EXACT row index and template prefix.
+     * This turns each product row into an independent "data island" with 100% precision.
+     */
+    const smartReflect = (base: any) => {
+      const getCenter = (e: any) => ({ x: e.x + (e.width / 2), y: e.y + (e.height / 2) });
+      const baseCenter = getCenter(base);
 
-    // Find slot IDs that are already "occupied" by a product
-    const occupiedSlotIdentifiers = new Set(
-      currentPage.elements
-        .filter(el => el.productId)
-        .map(el => {
-          const parts = el.id.split('-');
-          const slotPartIndex = parts.findIndex(p => p === 'slot');
-          if (slotPartIndex !== -1 && slotPartIndex + 1 < parts.length) {
-            return `slot-${parts[slotPartIndex + 1]}`;
-          }
-          return null;
-        })
-        .filter(Boolean)
-    );
+      // Breakdown: "rim-p7-img1" -> prefix: "rim-p7", index: "1"
+      const getMeta = (id: string) => {
+        const parts = id.split('-');
+        if (parts.length < 2) return { prefix: id, index: null };
+        const lastPart = parts[parts.length - 1];
+        const match = lastPart.match(/(\d+)$/);
+        const index = match ? match[0] : null;
+        // Prefix is the first two parts, e.g., "rim-p7"
+        const prefix = parts.slice(0, 2).join('-');
+        return { prefix, index };
+      };
 
-    // Filter slots to find the first one not already used
-    const targetSlot = slots.find(s => {
-      const sParts = s.id.split('-');
-      const slotPartIndex = sParts.findIndex(p => p === 'slot');
-      if (slotPartIndex !== -1 && slotPartIndex + 1 < sParts.length) {
-        const id = `slot-${sParts[slotPartIndex + 1]}`;
-        return !occupiedSlotIdentifiers.has(id);
+      const baseMeta = getMeta(base.id);
+
+      // DYNAMIC MULTI-PRODUCT ISOLATION: 
+      // If a page contains 2 or more products or slots, disable automated reflection.
+      // This ensures complex layouts always favor manual entry as requested.
+      const productCount = currentPage.elements.filter(el =>
+        el.type === 'product-block' || el.id.includes('slot') || el.id.includes('-img')
+      ).length;
+
+      if (productCount >= 2) {
+        return;
       }
-      return true; // if we can't determine, assume available
-    });
 
-    let x = 100, y = 100, width = 250, height = 320; // Increased height for the unified card
-    let slotTag = '';
+      currentPage.elements.forEach(el => {
+        if (el.type !== 'text') return;
 
-    if (targetSlot) {
-      x = targetSlot.x;
-      y = targetSlot.y;
-      width = targetSlot.width;
-      height = targetSlot.height;
-      const sParts = targetSlot.id.split('-');
-      const sIdx = sParts.findIndex(p => p === 'slot');
-      slotTag = sIdx !== -1 ? `slot-${sParts[sIdx + 1]}` : `slot-${timestamp}`;
-    } else {
-      slotTag = `slot-${timestamp}`;
+        // Detect if this text element is a Price or Name
+        const isPrice = el.id.includes('price') || (el.text && (el.text.includes('$') || el.text.includes('₹')));
+        const isName = el.id.includes('name') || el.id.includes('title');
+
+        if (!isPrice && !isName) return;
+
+        const elMeta = getMeta(el.id);
+        const elCenter = getCenter(el);
+        const dist = Math.sqrt(Math.pow(elCenter.x - baseCenter.x, 2) + Math.pow(elCenter.y - baseCenter.y, 2));
+
+        let isMatch = false;
+
+        // RULE 1: STRICT PARITY LOCK
+        // If IDs follow the pattern (prefix-type-index), they MUST match both perfectly.
+        // This stops Product 1 from updating Price 2, even if they are neighbors.
+        if (baseMeta.index && elMeta.index && baseMeta.prefix && elMeta.prefix) {
+          isMatch = (baseMeta.index === elMeta.index) && (baseMeta.prefix === elMeta.prefix);
+        } else if (baseMeta.prefix && elMeta.prefix && baseMeta.prefix === elMeta.prefix) {
+          // RULE 2: PROXIMITY ISOLATION
+          // Only used for templates without numbered rows (e.g. Page 5).
+          // Finds the physically closest product block within the same page prefix.
+          const others = currentPage.elements.filter(o =>
+            o.id !== base.id && (o.type === 'image' || o.type === 'product-block' || o.id.includes('slot'))
+          );
+          isMatch = others.every(o => {
+            const oc = getCenter(o);
+            return Math.sqrt(Math.pow(elCenter.x - oc.x, 2) + Math.pow(elCenter.y - oc.y, 2)) > dist;
+          });
+        }
+
+        if (isMatch && dist < 700) {
+          updateElement(currentPageIndex, el.id, {
+            text: isPrice ? `${product.currency}${product.price.toFixed(2)}` : product.name,
+            productId: product.id
+          });
+        }
+      });
+    };
+
+    // Target Selection Phase
+    let target = null;
+
+    // Check Selection first (Replace Flow)
+    if (selectedElementIds.length === 1) {
+      target = currentPage.elements.find(el => el.id === selectedElementIds[0]);
+      // Only allow replacing slots, product blocks, images, or shapes
+      if (target && !['image', 'product-block', 'shape'].includes(target.type) && !target.id.includes('slot')) {
+        target = null;
+      }
     }
 
-    // Add as a single unified Product Block
-    addElement(currentPageIndex, {
-      id: `product-block-${slotTag}-${timestamp}`,
-      type: 'product-block',
-      x, y, width, height,
-      rotation: 0, opacity: 1,
-      productId: product.id,
-      zIndex: 20
-    });
+    // Check available template slots (Add Flow)
+    if (!target) {
+      target = currentPage.elements.find(el => {
+        const isSlotId = el.id.includes('slot') || el.id.includes('-img');
+        const isUnfilled = (el.type === 'image') || (el.type === 'product-block' && el.cardTheme === 'minimal-image');
+        return isSlotId && isUnfilled;
+      });
+    }
+
+    // Implementation Phase
+    if (target) {
+      updateElement(currentPageIndex, target.id, {
+        type: 'product-block',
+        productId: product.id,
+        // PRESERVE THEME: If it's a template slot (minimal-image), keep it minimal.
+        // If it's a new or general slot, default to classic-stack.
+        cardTheme: target.cardTheme || 'classic-stack'
+      });
+      smartReflect(target);
+    } else {
+      // Fallback: Create a new floating card if no slot is found
+      const timestamp = Date.now();
+      addElement(currentPageIndex, {
+        id: `product-block-add-${timestamp}`,
+        type: 'product-block',
+        x: 100, y: 100, width: 250, height: 320,
+        rotation: 0, opacity: 1,
+        productId: product.id,
+        zIndex: 20
+      });
+    }
   };
 
   const handleDragStart = (e: React.DragEvent, product: Product) => {
@@ -120,7 +186,7 @@ const ProductLibrary: React.FC = () => {
   };
 
   return (
-    <div className={`flex flex-col h-full border-r w-[320px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] transition-all duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] font-sans ${isVisible ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-8'} ${uiTheme === 'dark' ? 'bg-[#0f172a] border-[#0f172a]' : 'bg-white border-slate-200'}`}>
+    <div className={`flex flex-col h-full border-r w-[320px] shrink-0 z-10 font-sans ${uiTheme === 'dark' ? 'bg-[#0f172a] border-[#0f172a]' : 'bg-white border-slate-200'}`}>
       <div className={`p-6 border-b ${uiTheme === 'dark' ? 'bg-[#0f172a] border-[#1e293b]' : 'bg-white border-slate-200'}`}>
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
           <Layers size={14} className="text-indigo-600" />

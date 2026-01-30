@@ -2,7 +2,7 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
 export type PageType = 'cover' | 'interior' | 'index' | 'closing';
 export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star';
-export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay';
+export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
 
 export interface CanvasElement {
   id: string;
