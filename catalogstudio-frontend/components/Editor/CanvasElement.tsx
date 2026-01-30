@@ -179,6 +179,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
       // Adjust crop area based on theme layout
       if (theme === 'classic-stack') targetHeight = element.height * 0.6; // Image takes 60%
       else if (theme === 'split-row') targetWidth = element.width * 0.45;
+      else if (theme === 'minimal-image') { targetWidth = element.width; targetHeight = element.height; }
     }
 
     const containerRatio = targetWidth / targetHeight;
@@ -347,7 +348,32 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   };
 
   const renderProductBlock = () => {
-    if (!linkedProduct) return null;
+    if (!linkedProduct) {
+      return (
+        <Group {...commonProps}>
+          <Rect
+            width={element.width}
+            height={element.height}
+            fill="#f1f5f9"
+            cornerRadius={10}
+            stroke="#cbd5e1"
+            strokeWidth={1}
+            dash={[5, 5]}
+          />
+          <Text
+            text="EMPTY PRODUCT SLOT"
+            width={element.width}
+            height={element.height}
+            fontSize={10}
+            fontFamily="Inter"
+            fontWeight="bold"
+            fill="#94a3b8"
+            align="center"
+            verticalAlign="middle"
+          />
+        </Group>
+      );
+    }
 
     const theme = element.cardTheme || 'classic-stack';
     const showName = element.showName !== false;
@@ -381,6 +407,9 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
       accentColor = "white";
       showGradient = true;
       textPadding = element.width * 0.1;
+    } else if (theme === 'minimal-image') {
+      imgRect = { x: 0, y: 0, width: element.width, height: element.height };
+      textContainer = { x: 0, y: 0, width: 0, height: 0 };
     }
 
     // Dynamic Vertical Flow Positioning to prevent collision
@@ -438,50 +467,52 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
         </Group>
 
         {/* Content Region with Sequential Flow */}
-        <Group x={textContainer.x} y={textContainer.y}>
-          {showName && (
-            <React.Fragment>
+        {theme !== 'minimal-image' && (
+          <Group x={textContainer.x} y={textContainer.y}>
+            {showName && (
+              <React.Fragment>
+                <Text
+                  text={linkedProduct.name}
+                  x={textPadding}
+                  y={currentY}
+                  width={textContainer.width - (textPadding * 2)}
+                  fontSize={titleFontSize}
+                  fontFamily="Inter"
+                  fontWeight="bold"
+                  fill={textColor}
+                  ellipsis={true}
+                  wrap="none"
+                />
+                {(() => { currentY += titleFontSize + lineSpacing; return null; })()}
+              </React.Fragment>
+            )}
+            {showSku && (
+              <React.Fragment>
+                <Text
+                  text={linkedProduct.sku}
+                  x={textPadding}
+                  y={currentY}
+                  fontSize={metaFontSize * 0.8}
+                  fontFamily="Inter"
+                  fontWeight="500"
+                  fill={theme === 'editorial-overlay' ? 'rgba(255,255,255,0.6)' : '#94a3b8'}
+                />
+                {(() => { currentY += (metaFontSize * 0.8) + lineSpacing; return null; })()}
+              </React.Fragment>
+            )}
+            {showPrice && (
               <Text
-                text={linkedProduct.name}
+                text={`${linkedProduct.currency}${linkedProduct.price.toFixed(2)}`}
                 x={textPadding}
-                y={currentY}
-                width={textContainer.width - (textPadding * 2)}
-                fontSize={titleFontSize}
+                y={currentY + lineSpacing} // Sequential y instead of absolute bottom
+                fontSize={metaFontSize}
                 fontFamily="Inter"
-                fontWeight="bold"
-                fill={textColor}
-                ellipsis={true}
-                wrap="none"
+                fontWeight="900"
+                fill={accentColor}
               />
-              {(() => { currentY += titleFontSize + lineSpacing; return null; })()}
-            </React.Fragment>
-          )}
-          {showSku && (
-            <React.Fragment>
-              <Text
-                text={linkedProduct.sku}
-                x={textPadding}
-                y={currentY}
-                fontSize={metaFontSize * 0.8}
-                fontFamily="Inter"
-                fontWeight="500"
-                fill={theme === 'editorial-overlay' ? 'rgba(255,255,255,0.6)' : '#94a3b8'}
-              />
-              {(() => { currentY += (metaFontSize * 0.8) + lineSpacing; return null; })()}
-            </React.Fragment>
-          )}
-          {showPrice && (
-            <Text
-              text={`${linkedProduct.currency}${linkedProduct.price.toFixed(2)}`}
-              x={textPadding}
-              y={currentY + lineSpacing} // Sequential y instead of absolute bottom
-              fontSize={metaFontSize}
-              fontFamily="Inter"
-              fontWeight="900"
-              fill={accentColor}
-            />
-          )}
-        </Group>
+            )}
+          </Group>
+        )}
       </Group>
     );
   };

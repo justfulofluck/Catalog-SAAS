@@ -5,7 +5,7 @@ import {
   ChevronsUp, ChevronsDown, EyeOff, Type,
   Lock, Unlock, Package, Layout, Frame, Check,
   AlignLeft, AlignCenter, AlignRight,
-  Bold, Italic, Underline, Minus, Plus, Sparkles, Columns
+  Bold, Italic, Underline, Minus, Plus, Sparkles, Columns, Image
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { FONTS } from '../../constants';
@@ -199,7 +199,8 @@ const PropertyPanel: React.FC = () => {
   const cardThemes: { id: CardTheme; label: string; icon: any }[] = [
     { id: 'classic-stack', label: 'Stacked', icon: Layout },
     { id: 'split-row', label: 'Split', icon: Columns },
-    { id: 'editorial-overlay', label: 'Overlay', icon: Frame }
+    { id: 'editorial-overlay', label: 'Overlay', icon: Frame },
+    { id: 'minimal-image', label: 'Minimal', icon: Image }
   ];
 
   return (
@@ -246,7 +247,7 @@ const PropertyPanel: React.FC = () => {
               <div className="flex gap-2">
                 <button
                   onClick={() => setPickerOpen(!pickerOpen)}
-                  className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border relative group transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 hover:border-indigo-200'} ${pickerOpen ? 'ring-2 ring-indigo-500' : ''}`}
+                  className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border relative group transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 hover:border-indigo-200'} ${pickerOpen ? 'ring-2 ring-inset ring-indigo-500' : ''}`}
                 >
                   <div
                     className={`w-7 h-7 rounded-lg border-2 shadow-sm relative overflow-hidden shrink-0 ${uiTheme === 'dark' ? 'border-slate-600' : 'border-white'}`}

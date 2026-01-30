@@ -433,11 +433,13 @@ const EditorCanvas: React.FC = () => {
         const data = JSON.parse(jsonData) as any;
         if (data.type === 'image' || data.type === 'product') {
           if (targetId && currentPage.type === 'interior') {
-            // ATOMIC REPLACEMENT: Conform new data to the target's geometry
+            const targetEl = currentPage.elements.find(el => el.id === targetId);
+            // ATOMIC REPLACEMENT: Conform new data to the target's geometry and theme
             updateElement(currentPageIndex, targetId, {
-              type: 'image',
+              type: targetEl?.type === 'product-block' ? 'product-block' : 'image',
               src: data.url,
               productId: data.productId,
+              cardTheme: targetEl?.cardTheme || undefined,
               opacity: 1
             });
           } else {
