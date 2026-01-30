@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   Images,
@@ -141,7 +140,7 @@ const MediaLibraryView: React.FC = () => {
         </div>
         <button
           onClick={handleUploadClick}
-          className="px-6 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95"
+          className="px-6 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
         >
           <Upload size={16} /> Upload Asset
         </button>

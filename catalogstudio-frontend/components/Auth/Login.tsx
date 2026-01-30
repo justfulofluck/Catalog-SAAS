@@ -18,7 +18,7 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     setTimeout(() => {
-      login(email);
+      login(email, name);
       setIsSubmitting(false);
     }, 1200);
   };
@@ -28,7 +28,7 @@ const Login: React.FC = () => {
       className="min-h-screen w-full flex items-center justify-center p-6 font-sans bg-cover bg-center bg-no-repeat bg-fixed"
       style={{ backgroundImage: `url(${SignUpBG})` }}
     >
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 bg-white rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.08)] overflow-hidden min-h-[640px]">
+      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 bg-white rounded-2xl shadow-[0_40px_100px_rgba(79,70,229,0.1)] overflow-hidden min-h-[640px]">
 
         {/* Visual Brand Side */}
         <div className="hidden md:flex flex-col bg-slate-900 p-16 text-white relative overflow-hidden">

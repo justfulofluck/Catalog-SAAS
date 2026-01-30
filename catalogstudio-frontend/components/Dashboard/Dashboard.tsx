@@ -6,7 +6,6 @@ import {
   BookOpen,
   FolderPlus,
   ArrowUpRight,
-  Clock,
   LayoutGrid,
   Zap,
   LayoutTemplate,
@@ -18,36 +17,18 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { GRID_TEMPLATES } from '../../constants';
+import { useToast } from '../../components/Shared/ToastProvider';
 
 const Dashboard: React.FC = () => {
   const { setView, user, products, categories, catalog, setActiveCategoryId, uiTheme, toggleUiTheme, sessionStartTime, isDashboardExiting, isGlobalNavigating, setIsGlobalNavigating, setSidebarExpanded, setViewingProductId } = useStore();
-  const [duration, setDuration] = React.useState(0);
+  const { info } = useToast();
   const [isVisible, setIsVisible] = React.useState(false);
-
-  React.useEffect(() => {
-    // If no session start time (shouldn't happen if logged in), default to now
-    const start = sessionStartTime || Date.now();
-
-    // Initial update
-    setDuration(Math.floor((Date.now() - start) / 1000));
-
-    const interval = setInterval(() => {
-      setDuration(Math.floor((Date.now() - start) / 1000));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [sessionStartTime]);
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsVisible(true), 50);
     return () => clearTimeout(timer);
   }, []);
 
-  const formatDuration = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
 
   const stats = [
     {
@@ -210,26 +191,10 @@ const Dashboard: React.FC = () => {
           <div className="space-y-10">
             <div className="bg-slate-900 dark:bg-indigo-950 rounded-2xl p-10 text-white shadow-2xl relative overflow-hidden group min-h-[380px] flex flex-col">
               <div className="absolute -right-20 -bottom-20 w-80 h-80 bg-indigo-600/20 rounded-full blur-[100px]"></div>
-              <div className="relative z-10 flex-1">
-                <div className="flex items-center gap-5 mb-10">
-                  <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center shrink-0"><Clock size={24} className="text-indigo-400" /></div>
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-white bg-emerald-500 px-2 py-1 rounded mb-2 w-fit leading-none">Active Session</span>
-                    <span className="text-xl font-mono font-black text-white tracking-widest leading-none">{formatDuration(duration)}</span>
-                  </div>
-                </div>
-                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Workspace ID: #{catalog.id.split('-')[1]}</p>
-                <h4 className="text-3xl font-black mb-12 truncate leading-tight">{user?.name || 'John Doe'}</h4>
-                <button onClick={() => {
-                  setSidebarExpanded(false); // Collapse sidebar first
-                  setTimeout(() => {
-                    setIsGlobalNavigating(true);
-                    setTimeout(() => {
-                      setView('editor');
-                      setIsGlobalNavigating(false);
-                    }, 600);
-                  }, 300);
-                }} className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl">Resume Design</button>
+              <div className="relative z-10 flex-1 flex flex-col justify-center">
+                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Username</p>
+                <h4 className="text-3xl font-black mb-12 truncate leading-tight">{user?.name || 'Designer'}</h4>
+                <button onClick={() => info('No Previous Work Found!')} className="w-full py-5 bg-white text-slate-900 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-indigo-50 transition-all shadow-xl">Resume Design</button>
               </div>
             </div>
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl dark:shadow-none p-4 space-y-2">

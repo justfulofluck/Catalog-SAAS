@@ -36,7 +36,6 @@ import {
   Moon,
   Layers
 } from 'lucide-react';
-import DarkModeToggle from './components/Shared/DarkModeToggle';
 import EffectsPanel from './components/Sidebar/EffectsPanel';
 import { PanelLeftClose, Sparkles } from 'lucide-react';
 
@@ -159,9 +158,6 @@ const App: React.FC = () => {
                 </button>
               ))}
             </div>
-            <div className={`mt-auto pb-8 flex justify-center w-full transition-all duration-500 ${isGlobalNavigating ? 'opacity-0 scale-75' : 'animate-fade-in-scale opacity-0'}`} style={{ animationDelay: '600ms' }}>
-              <DarkModeToggle className="scale-75 origin-center" />
-            </div>
           </div>
 
           <div className={`z-30 h-full shrink-0 shadow-2xl transition-all duration-500 ease-[cubic-bezier(0.4,0,0.2,1)] relative
@@ -216,7 +212,7 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div >
     );
   }
 
@@ -319,11 +315,6 @@ const App: React.FC = () => {
         </nav>
 
         <div className="px-4 mt-auto space-y-4">
-
-          {/* Global Dark Mode Toggle */}
-          <div className={`flex ${isSidebarExpanded ? 'justify-start px-4' : 'justify-center'} transition-all duration-300 ${isGlobalNavigating ? 'opacity-0 translate-x-[-10px]' : 'animate-slide-in-left opacity-0'}`} style={{ animationDelay: '350ms' }}>
-            <DarkModeToggle className={!isSidebarExpanded ? 'scale-75 origin-center' : ''} />
-          </div>
 
 
           <button onClick={() => setView('settings')} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all duration-300 ${currentView === 'settings' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'} ${isGlobalNavigating ? 'opacity-0 translate-x-[-10px]' : 'animate-slide-in-left opacity-0'}`} style={{ animationDelay: '400ms' }}>

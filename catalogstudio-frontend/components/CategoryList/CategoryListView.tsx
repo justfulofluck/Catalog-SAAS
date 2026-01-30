@@ -142,7 +142,7 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
                 <div
                   key={product.id}
                   data-id={product.id}
-                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center gap-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors group/product shadow-sm"
+                  className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-xl flex items-center gap-4 hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors group/product shadow-sm relative"
                 >
                   <div className="product-drag-handle p-2 text-slate-300 hover:text-slate-500 cursor-grab active:cursor-grabbing">
                     <GripVertical size={16} />
@@ -158,10 +158,15 @@ const CategoryItem: React.FC<CategoryItemProps> = ({
                     )}
                   </div>
 
-                  <div className="flex-1 min-w-0">
+                  <div className="w-1/3 min-w-0">
                     <h4 className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{product.name}</h4>
-                    <p className="text-[10px] font-medium text-slate-400 truncate">{product.sku}</p>
                   </div>
+
+                  <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full">{product.sku}</p>
+                  </div>
+
+                  <div className="flex-1"></div>
 
                   <div className="flex items-center gap-6 mr-4">
                     <div className="text-right">

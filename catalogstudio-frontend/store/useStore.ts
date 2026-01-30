@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate } from '../types';
@@ -53,7 +52,7 @@ interface State {
   editorTab: 'products' | 'media' | 'templates' | 'layers' | 'effects';
   isEditorSidebarMinimized: boolean;
 
-  login: (email: string) => void;
+  login: (email: string, name?: string) => void;
   logout: () => void;
   setView: (view: View) => void;
   setDashboardExiting: (exiting: boolean) => void;
@@ -275,12 +274,15 @@ export const useStore = create<State>()(persist((set, get) => ({
     });
   },
 
-  login: (email) => set({
-    isAuthenticated: true,
-    user: { id: 'u1', name: 'John Doe', email, avatar: 'JD' },
-    currentView: 'dashboard',
-    sessionStartTime: Date.now()
-  }),
+  login: (email, name) => {
+    const displayName = name || email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+    set({
+      isAuthenticated: true,
+      user: { id: 'u1', name: displayName || 'Designer', email, avatar: (displayName || 'D').charAt(0) },
+      currentView: 'dashboard',
+      sessionStartTime: Date.now()
+    });
+  },
 
   logout: () => set({
     isAuthenticated: false,

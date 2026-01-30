@@ -22,6 +22,7 @@ import {
 import { useStore } from '../../store/useStore';
 import { CURRENCIES } from '../../constants';
 import { useToast } from '../../components/Shared/ToastProvider';
+import DarkModeToggle from '../Shared/DarkModeToggle';
 
 type SettingsTab = 'personal' | 'security' | 'preferences';
 
@@ -243,14 +244,6 @@ const Settings: React.FC = () => {
         </div>
 
         <div className="p-10 space-y-12">
-          <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 p-6 rounded-2xl flex items-start gap-4">
-            <Lock size={20} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-sm font-black text-rose-900 dark:text-rose-100 leading-tight mb-1">Enhanced Security: Multi-Factor Authentication</p>
-              <p className="text-xs text-rose-700 dark:text-rose-400 font-medium">Enabling MFA increases your account resistance against unauthorized access by 99%.</p>
-              <button className="mt-4 px-6 py-2.5 bg-rose-600 dark:bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all">Configure MFA</button>
-            </div>
-          </div>
 
           <form className="space-y-10">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -335,6 +328,15 @@ const Settings: React.FC = () => {
 
               </div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">This currency is applied to all new inventory entries automatically.</p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Interface Theme</label>
+              <div className="relative group p-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl flex items-center justify-between">
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Toggle Appearance</span>
+                <DarkModeToggle />
+              </div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">Select the color mode for your workspace environment.</p>
             </div>
           </div>
         </div>
