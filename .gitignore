@@ -1,0 +1,31 @@
+# General
+.DS_Store
+*.log
+.vscode/
+.idea/
+
+# Environment Variables
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+pnpm-debug.log
+dist/
+build/
+
+# Project Specific
+catalogstudio-backend/media/
+catalogstudio-backend/staticfiles/
+catalogstudio-backend/catalog/
