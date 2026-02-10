@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Your Vite React TypeScript application
+  catalog-app:
+    image: node:18-alpine
+    container_name: catalog-studio-app
+    working_dir: /app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0 --port 3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - VITE_HOST=0.0.0.0
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  # LocalTunnel service for public access
+  public-tunnel:
+    image: node:18-alpine
+    container_name: catalog-public-tunnel
+    command: |
+      sh -c "
+        npm install -g localtunnel &&
+        echo '🌐 Starting LocalTunnel for Catalog Studio...' &&
+        echo '📊 Your public URL will appear below:' &&
+        lt --port 3000 --subdomain catalog-studio-$(date +%s)
+      "
+    volumes:
+      - .:/app
+    networks:
+      - app-network
+    depends_on:
+      - catalog-app
+    restart: unless-stopped
+
+networks:
+  app-network:
+    driver: bridge
