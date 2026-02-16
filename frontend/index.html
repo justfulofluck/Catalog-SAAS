@@ -1,0 +1,111 @@
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CatalogStudio - Pro Catalog Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            borderRadius: {
+              'xl': '10px',
+              '2xl': '10px',
+              '3xl': '10px',
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        background-color: #f3f4f6;
+        overflow: hidden;
+      }
+      
+      /* Standardizing every button and major container to 10px radius */
+      button, 
+      input, 
+      select, 
+      textarea,
+      .rounded-xl, 
+      .rounded-2xl, 
+      .rounded-3xl,
+      [class*="rounded-["],
+      [class*="rounded-full"] {
+        border-radius: 10px !important;
+      }
+
+      /* Exception for actually round status indicators/dots if needed */
+      .w-1.h-1.rounded-full, 
+      .w-2.h-2.rounded-full, 
+      .w-3.h-3.rounded-full,
+      .w-2\.5.h-2\.5.rounded-full {
+        border-radius: 9999px !important;
+      }
+
+      /* Custom scrollbar for a pro look */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #ccc;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #bbb;
+      }
+
+      /* Hide scrollbar utility */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* SortableJS Ghost Class Styling */
+      .sortable-ghost {
+        opacity: 0.3;
+        background: #e2e8f0 !important;
+        border: 2px dashed #6366f1 !important;
+      }
+      .sortable-drag {
+        opacity: 0.9;
+        transform: rotate(2deg) scale(1.02);
+        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "lucide-react": "https://esm.sh/lucide-react@^0.460.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "zustand": "https://esm.sh/zustand@^5.0.9",
+    "react-konva": "https://esm.sh/react-konva@^19.2.1",
+    "use-image": "https://esm.sh/use-image@^1.1.4",
+    "jspdf": "https://esm.sh/jspdf@^2.5.1",
+    "konva": "https://esm.sh/konva@^10.0.12",
+    "sortablejs": "https://esm.sh/sortablejs@1.15.2"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>
