@@ -1,9 +1,8 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  ChevronRight, 
-  Share2, 
-  Download, 
+import {
+  ChevronRight,
+  Share2,
+  Download,
   MoreHorizontal,
   Plus,
   Type,
@@ -35,11 +34,10 @@ import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { ShapeType } from '../../types';
 
 const EditorToolbar: React.FC = () => {
-  const { 
-    zoom, setZoom, addElement, currentPageIndex, catalog, setView, user, 
+  const {
+    zoom, setZoom, addElement, currentPageIndex, catalog, setView, user,
     isPropertyPanelOpen, setIsPropertyPanelOpen,
-    undo, redo, undoStack, redoStack,
-    saveCatalog
+    undo, redo, undoStack, redoStack, uiTheme, toggleUiTheme
   } = useStore();
   const [isExporting, setIsExporting] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
@@ -73,6 +71,7 @@ const EditorToolbar: React.FC = () => {
       fontFamily: 'Inter',
       fontWeight: isHeading ? '800' : '400',
       fill: '#1e293b',
+      textAlign: 'left',
       zIndex: 10
     });
   };
@@ -112,10 +111,9 @@ const EditorToolbar: React.FC = () => {
   };
 
   const handleSave = () => {
-    saveCatalog();
     const toast = document.createElement('div');
     toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
-    toast.innerText = 'Project Saved to "Your Work"';
+    toast.innerText = 'Asset Workspace Synchronized';
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
   };
@@ -146,41 +144,64 @@ const EditorToolbar: React.FC = () => {
     }
   };
 
+  const isDark = uiTheme === 'dark';
+
   return (
-    <header className="h-14 border-b bg-white flex items-center justify-between px-6 shrink-0 z-50 shadow-[0_1px_2px_rgba(0,0,0,0.03)] font-sans">
+    <header className={`h-14 border-b flex items-center justify-between px-6 shrink-0 z-50 font-sans ${isDark
+      ? 'border-slate-700 bg-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.2)]'
+      : 'border-slate-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]'
+      }`}>
       {/* Breadcrumbs */}
       <div className="flex items-center gap-3">
-        <button 
+        <button
           onClick={() => setView('dashboard')}
-          className="flex items-center gap-2 p-2 hover:bg-slate-50 rounded-xl text-slate-400 hover:text-indigo-600 transition-all group"
+          className={`flex items-center gap-2 p-2 rounded-xl transition-all group ${isDark
+            ? 'hover:bg-slate-800 text-slate-400 hover:text-white'
+            : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
+            }`}
         >
           <LayoutDashboard size={18} className="group-hover:scale-110 transition-transform" />
         </button>
-        <ChevronRight size={14} className="text-slate-200" />
+        <ChevronRight size={14} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
         <div className="flex flex-col">
-          <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none mb-1">Active Publication</span>
+          <span className={`text-[9px] font-black uppercase tracking-widest leading-none mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Active Publication</span>
           <div className="flex items-center gap-2">
-            <span className="font-black text-slate-800 text-xs uppercase tracking-tight truncate max-w-[150px]">
+            <span className={`font-black text-xs uppercase tracking-tight truncate max-w-[150px] ${isDark ? 'text-white' : 'text-slate-800'}`}>
               {catalog.name || 'Untitled Project'}
             </span>
-            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest bg-slate-50 px-2 py-0.5 rounded border">Page {currentPageIndex + 1}</span>
+            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${isDark
+              ? 'text-slate-400 bg-slate-800 border-slate-700'
+              : 'text-slate-500 bg-slate-100 border-slate-200'
+              }`}>Page {currentPageIndex + 1}</span>
           </div>
         </div>
       </div>
 
       {/* Center Tools */}
       <div className="flex items-center gap-6">
-        <div className="flex items-center bg-slate-50 p-1 rounded-2xl border border-slate-100 shadow-inner">
-          <div className="flex gap-1 pr-3 border-r border-slate-200">
-            <button onClick={() => handleAddText('heading')} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500 hover:text-indigo-600" title="Add Heading"><Heading1 size={18} /></button>
-            <button onClick={() => handleAddText('body')} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500 hover:text-indigo-600" title="Add Body Text"><TextCursor size={18} /></button>
+        <div className={`flex items-center p-1 rounded-2xl border shadow-inner ${isDark
+          ? 'bg-slate-800 border-slate-700'
+          : 'bg-slate-50 border-slate-200'
+          }`}>
+          <div className={`flex gap-1 pr-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <button onClick={() => handleAddText('heading')} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
+              ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+              : 'hover:bg-white text-slate-500 hover:text-slate-700'
+              }`} title="Add Heading"><Heading1 size={18} /></button>
+            <button onClick={() => handleAddText('body')} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
+              ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+              : 'hover:bg-white text-slate-500 hover:text-slate-700'
+              }`} title="Add Body Text"><TextCursor size={18} /></button>
           </div>
-          
-          <div className="flex gap-1 px-3 border-r border-slate-200">
+
+          <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
             <div className="relative" ref={shapeMenuRef}>
-              <button 
-                onClick={() => setIsShapeMenuOpen(!isShapeMenuOpen)} 
-                className={`p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all flex items-center gap-0.5 ${isShapeMenuOpen ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-indigo-600'}`} 
+              <button
+                onClick={() => setIsShapeMenuOpen(!isShapeMenuOpen)}
+                className={`p-2 hover:shadow-sm rounded-xl transition-all flex items-center gap-0.5 ${isShapeMenuOpen
+                  ? (isDark ? 'bg-slate-700 shadow-sm text-white' : 'bg-white shadow-sm text-slate-700')
+                  : (isDark ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-700')
+                  }`}
                 title="Add Shape"
               >
                 <Square size={18} />
@@ -211,22 +232,31 @@ const EditorToolbar: React.FC = () => {
                 </div>
               )}
             </div>
-            <button onClick={handleAddComment} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-amber-500 hover:text-amber-600" title="Add Annotation"><MessageSquare size={18} /></button>
+            <button onClick={handleAddComment} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
+              ? 'hover:bg-slate-700 text-amber-400 hover:text-amber-300'
+              : 'hover:bg-white text-amber-500 hover:text-amber-600'
+              }`} title="Add Annotation"><MessageSquare size={18} /></button>
           </div>
 
-          <div className="flex gap-1 px-3 border-r border-slate-200">
-            <button 
-              onClick={undo} 
+          <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <button
+              onClick={undo}
               disabled={undoStack.length === 0}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500 hover:text-indigo-600 disabled:opacity-30 disabled:hover:bg-transparent" 
+              className={`p-2 hover:shadow-sm rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent ${isDark
+                ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                : 'hover:bg-white text-slate-500 hover:text-slate-700'
+                }`}
               title="Undo (Ctrl+Z)"
             >
               <Undo2 size={18} />
             </button>
-            <button 
-              onClick={redo} 
+            <button
+              onClick={redo}
               disabled={redoStack.length === 0}
-              className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500 hover:text-indigo-600 disabled:opacity-30 disabled:hover:bg-transparent" 
+              className={`p-2 hover:shadow-sm rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent ${isDark
+                ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
+                : 'hover:bg-white text-slate-500 hover:text-slate-700'
+                }`}
               title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
             >
               <Redo2 size={18} />
@@ -234,18 +264,24 @@ const EditorToolbar: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1 pl-3">
-            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500" title="Zoom Out"><Minus size={18} /></button>
-            <button onClick={() => setZoom(0.8)} className="px-3 py-1.5 hover:bg-white hover:shadow-sm rounded-xl transition-all text-[10px] font-black text-slate-700 font-mono w-16 text-center" title="Reset Zoom (80%)">{Math.round(zoom * 100)}%</button>
-            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-500" title="Zoom In"><Plus size={18} /></button>
-            <button onClick={() => setZoom(1.0)} className="p-2 hover:bg-white hover:shadow-sm rounded-xl transition-all text-slate-300 hover:text-slate-500 ml-1" title="Fit to Width (100%)"><RotateCcw size={16} /></button>
+            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark ? 'text-slate-400' : 'text-slate-500'}`} title="Zoom Out"><Minus size={18} /></button>
+            <button onClick={() => setZoom(0.8)} className={`px-3 py-1.5 hover:shadow-sm rounded-xl transition-all text-[10px] font-black font-mono w-16 text-center ${isDark
+              ? 'hover:bg-slate-700 text-white'
+              : 'hover:bg-white text-slate-700'
+              }`} title="Reset Zoom (80%)">{Math.round(zoom * 100)}%</button>
+            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark ? 'text-slate-400' : 'text-slate-500'}`} title="Zoom In"><Plus size={18} /></button>
+            <button onClick={() => setZoom(1.0)} className={`p-2 hover:shadow-sm rounded-xl transition-all ml-1 ${isDark
+              ? 'text-slate-500 hover:bg-slate-700 hover:text-slate-300'
+              : 'text-slate-400 hover:bg-white hover:text-slate-600'
+              }`} title="Fit to Width (100%)"><RotateCcw size={16} /></button>
           </div>
         </div>
 
-        <div className="w-px h-6 bg-slate-200" />
+        <div className={`w-px h-6 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
 
-        <button 
+        <button
           onClick={() => setIsPropertyPanelOpen(!isPropertyPanelOpen)}
-          className={`p-2.5 rounded-xl transition-all ${isPropertyPanelOpen ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50 hover:text-slate-600'}`}
+          className={`p-2.5 rounded-xl transition-all ${isPropertyPanelOpen ? 'bg-indigo-600 text-white shadow-lg' : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700')}`}
           title="Toggle Properties Panel"
         >
           <Settings2 size={18} />
@@ -259,17 +295,20 @@ const EditorToolbar: React.FC = () => {
           <span className="text-[9px] font-black uppercase tracking-[0.2em]">Live Sync</span>
         </div>
 
-        <button 
+        <button
           onClick={handleSave}
-          className="px-4 py-2 text-slate-500 hover:bg-slate-50 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-transparent hover:border-slate-100 flex items-center gap-2"
+          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-transparent flex items-center gap-2 ${isDark
+            ? 'text-slate-400 hover:bg-slate-800 hover:border-slate-700'
+            : 'text-slate-500 hover:bg-slate-100 hover:border-slate-200'
+            }`}
         >
           <Save size={14} />
-          Save Project
+          Commit
         </button>
-        
-        <div className="w-px h-6 bg-slate-100 mx-1"></div>
 
-        <button 
+        <div className={`w-px h-6 mx-1 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
+
+        <button
           onClick={handleExportPDF}
           disabled={isExporting}
           className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/10 hover:bg-indigo-700 transition-all disabled:opacity-50 active:scale-95"

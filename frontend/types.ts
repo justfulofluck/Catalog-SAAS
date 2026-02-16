@@ -2,7 +2,7 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
 export type PageType = 'cover' | 'interior' | 'index' | 'closing';
 export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star';
-export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay';
+export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
 
@@ -21,23 +21,37 @@ export interface CanvasElement {
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string; // '400', '700', '900'
-  fontStyle?: 'normal' | 'italic'; 
-  textDecoration?: 'none' | 'underline'; 
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: 'none' | 'underline';
   textAlign?: 'left' | 'center' | 'right';
   lineHeight?: number;
   letterSpacing?: number;
   src?: string;
   productId?: string;
   zIndex: number;
-  author?: string; 
-  groupId?: string; 
-  locked?: boolean; 
-  visible?: boolean; 
+  author?: string;
+  groupId?: string;
+  locked?: boolean;
+  visible?: boolean;
   // Product Block specific
   cardTheme?: CardTheme;
   showPrice?: boolean;
   showSku?: boolean;
   showName?: boolean;
+  shadowBlur?: number;
+  shadowColor?: string;
+  shadowOpacity?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  effectStyle?: 'none' | 'shadow' | 'lift' | 'hollow' | 'splice' | 'outline' | 'echo' | 'glitch' | 'neon' | 'background';
+  textStrokeWidth?: number;
+  textStrokeColor?: string;
+  effectIntensity?: number;
+  effectDirection?: number;
+  effectColor?: string;
+  effectColor2?: string;
+  effectSpread?: number;
+  effectRoundness?: number;
   filters?: {
     brightness?: number;
     blur?: number;
@@ -116,7 +130,7 @@ export interface Catalog {
   status: 'draft' | 'published';
   pages: CatalogPage[];
   updatedAt: string;
-  productIds: string[]; 
+  productIds: string[];
   selectedCategoryIds: string[]; // Changed from selectedCategoryId to array
   headerText?: string;
   footerText?: string;

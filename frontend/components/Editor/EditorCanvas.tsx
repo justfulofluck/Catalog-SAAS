@@ -1,4 +1,3 @@
-
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { Stage as KonvaStage, Layer as KonvaLayer, Rect as KonvaRect, Text as KonvaText, Group as KonvaGroup, Line as KonvaLine, Image as KonvaImage } from 'react-konva';
 import useImage from 'use-image';
@@ -7,11 +6,12 @@ import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, HEADER_FOOTER_HEIGHT } from '../../constants';
 import CanvasElementComponent from './CanvasElement';
 import PageNavigator from './PageNavigator';
+import { FloatingTextToolbar } from '../Toolbar/FloatingTextToolbar';
 
 // Internal component for the holographic drop preview
 const SnapPreview: React.FC<{ target: any; imageUrl: string; zoom: number }> = ({ target, imageUrl, zoom }) => {
   const [image] = useImage(imageUrl, 'anonymous');
-  
+
   const crop = useMemo(() => {
     if (!image || !target.width || !target.height) return undefined;
     const containerRatio = target.width / target.height;
@@ -19,7 +19,7 @@ const SnapPreview: React.FC<{ target: any; imageUrl: string; zoom: number }> = (
     let cropWidth = image.width;
     let cropHeight = image.height;
     let cropX = 0, cropY = 0;
-    
+
     if (containerRatio > imageRatio) {
       cropHeight = image.width / containerRatio;
       cropY = (image.height - cropHeight) / 2;
@@ -43,178 +43,27 @@ const SnapPreview: React.FC<{ target: any; imageUrl: string; zoom: number }> = (
         stroke="#4f46e5"
         strokeWidth={4 / zoom}
       />
-      <KonvaRect 
-        width={target.width} 
-        height={target.height} 
-        fill="rgba(79, 70, 229, 0.15)" 
-        stroke="#4f46e5" 
-        strokeWidth={2 / zoom} 
-        dash={[8, 4]} 
+      <KonvaRect
+        width={target.width}
+        height={target.height}
+        fill="rgba(79, 70, 229, 0.15)"
+        stroke="#4f46e5"
+        strokeWidth={2 / zoom}
+        dash={[8, 4]}
       />
     </KonvaGroup>
   );
 };
 
-const CanvasHeader: React.FC<{
-  catalog: any;
-  theme: any;
-  selectedElementIds: string[];
-  hoveredZone: string | null;
-  setHoveredZone: (z: 'header' | 'footer' | null) => void;
-  setSelectedElementIds: (ids: string[]) => void;
-  headerTextOverride?: string;
-}> = ({ catalog, theme, selectedElementIds, hoveredZone, setHoveredZone, setSelectedElementIds, headerTextOverride }) => {
-  const isSelected = selectedElementIds.includes('__HEADER__');
-  const isHovered = hoveredZone === 'header';
-  const [logoImage] = useImage(catalog.headerLogoUrl || '', 'anonymous');
-
-  const handleZoneClick = (e: any) => {
-    e.cancelBubble = true;
-    setSelectedElementIds(['__HEADER__']);
-  };
-
-  const textString = headerTextOverride || catalog.headerText || '';
-
-  // Layout Logic
-  const height = catalog.headerHeight || HEADER_FOOTER_HEIGHT;
-  const padding = catalog.headerSideMargin || 40;
-  const fontFamily = catalog.headerFontFamily || theme.headingFont;
-  const fontSize = catalog.headerFontSize || 11;
-  
-  const logoHeight = Math.min(24, height - 10); // Dynamic scale limit
-  const logoWidth = logoImage ? (logoImage.width / logoImage.height) * logoHeight : 0;
-  
-  const getX = (alignment: 'left' | 'center' | 'right', width: number) => {
-    if (alignment === 'center') return (PAGE_WIDTH / 2) - (width / 2);
-    if (alignment === 'right') return PAGE_WIDTH - padding - width;
-    return padding;
-  };
-
-  // Collision handling for left/left or right/right
-  const logoAlign = catalog.headerLogoAlignment || 'left';
-  const textAlign = catalog.headerTextAlignment || 'left';
-  
-  let logoX = getX(logoAlign, logoWidth);
-  let textX = 0; // Calculated below based on text width approximation, refined in render
-
-  // Determine standard text block width for alignment calculation
-  const textApproxWidth = textString.length * (fontSize * 0.7); // Approximation based on font size
-  
-  textX = getX(textAlign, textApproxWidth);
-
-  // Offset logic if they collide on the same side
-  if (catalog.headerLogoUrl) {
-    if (logoAlign === 'left' && textAlign === 'left') {
-        textX += logoWidth + 15;
-    } else if (logoAlign === 'right' && textAlign === 'right') {
-        textX -= (logoWidth + 15);
-    }
-  }
-
-  const renderText = () => {
-    if (catalog.logoStyle === 'boxed') {
-        return (
-          <KonvaGroup x={textX} y={(height - (fontSize * 2.5)) / 2} listening={false}>
-             <KonvaRect width={Math.min(200, textApproxWidth + 20)} height={fontSize * 2.5} fill={theme.headingColor} cornerRadius={4} />
-             <KonvaText 
-               text={textString} 
-               x={10} 
-               y={fontSize * 0.7} 
-               fontSize={fontSize} 
-               fontFamily={fontFamily} 
-               fontWeight="bold" 
-               fill="#ffffff" 
-             />
-          </KonvaGroup>
-        );
-    }
-    if (catalog.logoStyle === 'modern') {
-        return (
-          <KonvaGroup x={textX} y={height / 2 - (fontSize * 0.5)} listening={false}>
-             <KonvaRect x={-10} y={-fontSize * 0.4} width={4} height={fontSize * 1.8} fill={theme.accentColor} />
-             <KonvaText 
-               text={textString} 
-               x={0} 
-               y={0} 
-               fontSize={fontSize} 
-               fontFamily={fontFamily} 
-               fontWeight="bold" 
-               fill={theme.headingColor} 
-               opacity={0.9} 
-             />
-          </KonvaGroup>
-        );
-    }
-    if (catalog.logoStyle === 'text') {
-        return (
-          <KonvaText 
-            text={textString} 
-            x={textX} 
-            y={height / 2 - (fontSize * 0.5)} 
-            fontSize={fontSize} 
-            fontFamily={fontFamily} 
-            fontWeight="bold" 
-            fill={theme.headingColor} 
-            opacity={0.9} 
-            listening={false}
-          />
-        );
-    }
-    return null;
-  };
-
-  return (
-    <KonvaGroup 
-        y={0} 
-        onClick={handleZoneClick}
-        onTap={handleZoneClick}
-        onMouseEnter={() => { document.body.style.cursor = 'pointer'; setHoveredZone('header'); }}
-        onMouseLeave={() => { document.body.style.cursor = 'default'; setHoveredZone(null); }}
-      >
-        <KonvaRect 
-          width={PAGE_WIDTH} 
-          height={height} 
-          fill={catalog.backgroundColor || theme.backgroundColor} 
-        />
-        
-        {(isSelected || isHovered) && (
-          <KonvaRect 
-            width={PAGE_WIDTH} 
-            height={height} 
-            stroke="#4f46e5" 
-            strokeWidth={isSelected ? 2 : 1}
-            dash={isSelected ? [] : [4, 4]}
-            fill={isHovered ? 'rgba(79, 70, 229, 0.05)' : undefined}
-          />
-        )}
-        
-        <KonvaLine points={[padding, height, PAGE_WIDTH - padding, height]} stroke="#f1f5f9" strokeWidth={1} listening={false} />
-        
-        {catalog.headerLogoUrl && logoImage && (
-            <KonvaImage 
-                image={logoImage}
-                x={logoX}
-                y={(height - logoHeight) / 2}
-                width={logoWidth}
-                height={logoHeight}
-                listening={false}
-            />
-        )}
-
-        {renderText()}
-      </KonvaGroup>
-  );
-};
-
 const EditorCanvas: React.FC = () => {
-  const { 
-    catalog, 
-    activeThemeId, 
-    currentPageIndex, 
-    zoom, 
+  const {
+    catalog,
+    activeThemeId,
+    currentPageIndex,
+    zoom,
     setZoom,
-    selectedElementIds, 
-    setSelectedElementIds, 
+    selectedElementIds,
+    setSelectedElementIds,
     updateElement,
     removeElement,
     duplicateElement,
@@ -229,25 +78,27 @@ const EditorCanvas: React.FC = () => {
     addMedia,
     draggingItem,
     setDraggingItem,
-    categories
+    pushHistory,
+    uiTheme
   } = useStore();
-  
+
   const currentPage = catalog.pages[currentPageIndex];
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const canvasBg = catalog.backgroundColor || theme.backgroundColor;
-
-  const currentCategory = currentPage?.categoryId ? categories.find(c => c.id === currentPage.categoryId) : null;
 
   const [selectionBox, setSelectionBox] = useState<{ x1: number; y1: number; x2: number; y2: number; visible: boolean }>({
     x1: 0, y1: 0, x2: 0, y2: 0, visible: false
   });
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverTargetId, setDragOverTargetId] = useState<string | null>(null);
-  const [hoveredZone, setHoveredZone] = useState<'header' | 'footer' | null>(null);
-  
+
   const isSelecting = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<any>(null);
+
+  // Text editing state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editConfig, setEditConfig] = useState<any | null>(null);
 
   // Global trap for native browser zoom
   useEffect(() => {
@@ -264,44 +115,58 @@ const EditorCanvas: React.FC = () => {
   }, []);
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    const activeEl = document.activeElement;
-    if (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA') return;
+    const activeEl = document.activeElement as HTMLElement;
+    if (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.isContentEditable) {
+      // For backspace/delete, we want to allow the event to proceed for the input but
+      // NOT trigger our global element deletion logic.
+      if (e.key === 'Backspace' || e.key === 'Delete') return;
+      // Also skip nudging and other shortcuts if typing
+      if (e.key.startsWith('Arrow') || (e.ctrlKey || e.metaKey)) {
+        // We might want to allow some shortcuts (like Ctrl+B), but Arrow keys
+        // should definitely move the cursor in the input, not the element on canvas.
+        if (e.key.startsWith('Arrow')) return;
+      }
+    }
 
     const isMod = e.metaKey || e.ctrlKey;
     const nudgeAmount = e.shiftKey ? 10 : 1;
 
     switch (e.key) {
       case 'ArrowUp':
-        if (selectedElementIds.length > 0) { 
-          e.preventDefault(); 
-          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, - nudgeAmount)); 
+        if (selectedElementIds.length > 0) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, - nudgeAmount));
         }
         break;
       case 'ArrowDown':
-        if (selectedElementIds.length > 0) { 
-          e.preventDefault(); 
-          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, nudgeAmount)); 
+        if (selectedElementIds.length > 0) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, nudgeAmount));
         }
         break;
       case 'ArrowLeft':
-        if (selectedElementIds.length > 0) { 
-          e.preventDefault(); 
-          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, -nudgeAmount, 0)); 
+        if (selectedElementIds.length > 0) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, -nudgeAmount, 0));
         }
         break;
       case 'ArrowRight':
-        if (selectedElementIds.length > 0) { 
-          e.preventDefault(); 
-          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, nudgeAmount, 0)); 
+        if (selectedElementIds.length > 0) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, nudgeAmount, 0));
         }
         break;
       case 'Backspace':
       case 'Delete':
-        if (selectedElementIds.length > 0) { 
+        if (selectedElementIds.length > 0) {
           const el = currentPage.elements.find(e => selectedElementIds.includes(e.id));
           if (el && !el.locked) {
-            e.preventDefault(); 
-            selectedElementIds.forEach(id => removeElement(currentPageIndex, id)); 
+            e.preventDefault();
+            selectedElementIds.forEach(id => removeElement(currentPageIndex, id));
             setSelectedElementIds([]);
           }
         }
@@ -314,9 +179,9 @@ const EditorCanvas: React.FC = () => {
         }
         break;
       case 'd':
-        if (isMod) { 
-          e.preventDefault(); 
-          selectedElementIds.forEach(id => duplicateElement(currentPageIndex, id)); 
+        if (isMod) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => duplicateElement(currentPageIndex, id));
         }
         break;
       case 'g':
@@ -332,8 +197,8 @@ const EditorCanvas: React.FC = () => {
         break;
       case 'z':
       case 'Z':
-        if (isMod) { 
-          e.preventDefault(); 
+        if (isMod) {
+          e.preventDefault();
           if (e.shiftKey) {
             redo();
           } else {
@@ -343,9 +208,9 @@ const EditorCanvas: React.FC = () => {
         break;
       case 'y':
       case 'Y':
-        if (isMod) { 
-          e.preventDefault(); 
-          redo(); 
+        if (isMod) {
+          e.preventDefault();
+          redo();
         }
         break;
       case '=':
@@ -355,8 +220,65 @@ const EditorCanvas: React.FC = () => {
       case '-':
         if (isMod) { e.preventDefault(); setZoom(Math.max(0.1, zoom - 0.1)); }
         break;
+      case 'b':
+      case 'B':
+        if (isMod) {
+          e.preventDefault();
+
+          const activeEl = document.activeElement as HTMLElement;
+          if (activeEl && activeEl.isContentEditable) {
+            document.execCommand('bold');
+          } else {
+            selectedElementIds.forEach(id => {
+              const el = currentPage.elements.find(e => e.id === id);
+              if (el && el.type === 'text') {
+                const isBold = el.fontWeight === 'bold' || el.fontWeight === '700' || el.fontWeight === '800';
+                updateElement(currentPageIndex, id, { fontWeight: isBold ? '400' : '700' });
+              }
+            });
+          }
+        }
+        break;
+      case 'i':
+      case 'I':
+        if (isMod) {
+          e.preventDefault();
+
+          const activeEl = document.activeElement as HTMLElement;
+          if (activeEl && activeEl.isContentEditable) {
+            document.execCommand('italic');
+          } else {
+            selectedElementIds.forEach(id => {
+              const el = currentPage.elements.find(e => e.id === id);
+              if (el && el.type === 'text') {
+                updateElement(currentPageIndex, id, { fontStyle: el.fontStyle === 'italic' ? 'normal' : 'italic' });
+              }
+            });
+          }
+        }
+        break;
+      case 'u':
+      case 'U':
+        if (isMod) {
+          e.preventDefault();
+
+          const activeEl = document.activeElement as HTMLElement;
+          if (activeEl && activeEl.isContentEditable) {
+            document.execCommand('underline');
+          } else {
+            selectedElementIds.forEach(id => {
+              const el = currentPage.elements.find(e => e.id === id);
+              if (el && el.type === 'text') {
+                updateElement(currentPageIndex, id, { textDecoration: el.textDecoration === 'underline' ? 'none' : 'underline' });
+              }
+            });
+          }
+        }
+        break;
       case 'Escape':
         setSelectedElementIds([]);
+        setEditingId(null);
+        setEditConfig(null);
         break;
     }
   }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements]);
@@ -371,10 +293,10 @@ const EditorCanvas: React.FC = () => {
       const pos = e.target.getStage().getPointerPosition();
       const x = pos.x / zoom;
       const y = pos.y / zoom;
-      
+
       setSelectionBox({ x1: x, y1: y, x2: x, y2: y, visible: true });
       isSelecting.current = true;
-      
+
       if (!e.evt.shiftKey) {
         setSelectedElementIds([]);
       }
@@ -392,7 +314,7 @@ const EditorCanvas: React.FC = () => {
   const handleStageMouseUp = (e: any) => {
     if (!isSelecting.current) return;
     isSelecting.current = false;
-    
+
     const x = Math.min(selectionBox.x1, selectionBox.x2);
     const y = Math.min(selectionBox.y1, selectionBox.y2);
     const width = Math.abs(selectionBox.x2 - selectionBox.x1);
@@ -437,9 +359,9 @@ const EditorCanvas: React.FC = () => {
     let idsToSelect = [id];
 
     if (clickedElement?.groupId) {
-        idsToSelect = currentPage.elements
-            .filter(el => el.groupId === clickedElement.groupId)
-            .map(el => el.id);
+      idsToSelect = currentPage.elements
+        .filter(el => el.groupId === clickedElement.groupId)
+        .map(el => el.id);
     }
 
     if (isMulti) {
@@ -452,11 +374,6 @@ const EditorCanvas: React.FC = () => {
     } else {
       setSelectedElementIds(idsToSelect);
     }
-  };
-
-  const handleZoneClick = (e: any, zone: 'header' | 'footer') => {
-    e.cancelBubble = true;
-    setSelectedElementIds([zone === 'header' ? '__HEADER__' : '__FOOTER__']);
   };
 
   // --- REFINED DRAG & DROP LOGIC ---
@@ -474,10 +391,10 @@ const EditorCanvas: React.FC = () => {
     const stageContainer = stage.container().getBoundingClientRect();
     const x = e.clientX - stageContainer.left;
     const y = e.clientY - stageContainer.top;
-    
+
     // Konva's intersection logic requires coordinates relative to the Stage
     const intersectedNode = stage.getIntersection({ x, y });
-    
+
     if (intersectedNode) {
       const id = intersectedNode.id();
       // Only snap to images or placeholders
@@ -515,13 +432,15 @@ const EditorCanvas: React.FC = () => {
         const data = JSON.parse(jsonData) as any;
         if (data.type === 'image' || data.type === 'product') {
           if (targetId && currentPage.type === 'interior') {
-             // ATOMIC REPLACEMENT: Conform new data to the target's geometry
-             updateElement(currentPageIndex, targetId, {
-               type: 'image',
-               src: data.url,
-               productId: data.productId,
-               opacity: 1
-             });
+            const targetEl = currentPage.elements.find(el => el.id === targetId);
+            // ATOMIC REPLACEMENT: Conform new data to the target's geometry and theme
+            updateElement(currentPageIndex, targetId, {
+              type: targetEl?.type === 'product-block' ? 'product-block' : 'image',
+              src: data.url,
+              productId: data.productId,
+              cardTheme: targetEl?.cardTheme || undefined,
+              opacity: 1
+            });
           } else {
             // Standard placement for free-form pages (Cover/Index)
             addElement(currentPageIndex, {
@@ -549,13 +468,13 @@ const EditorCanvas: React.FC = () => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const files = Array.from(e.dataTransfer.files) as File[];
       const imageFiles = files.filter(f => f.type.startsWith('image/'));
-      
+
       for (let i = 0; i < imageFiles.length; i++) {
         const file = imageFiles[i];
         const reader = new FileReader();
         reader.onload = (event) => {
           const url = event.target?.result as string;
-          
+
           if (targetId && i === 0 && currentPage.type === 'interior') {
             updateElement(currentPageIndex, targetId, {
               type: 'image',
@@ -592,112 +511,105 @@ const EditorCanvas: React.FC = () => {
     }
   };
 
-  const renderFooter = () => {
-    if (catalog.paginationStyle === 'none') return null;
-    const isSelected = selectedElementIds.includes('__FOOTER__');
-    const isHovered = hoveredZone === 'footer';
-
-    const height = catalog.footerHeight || HEADER_FOOTER_HEIGHT;
-    const padding = catalog.footerSideMargin || 40;
-    const fontFamily = catalog.footerFontFamily || theme.fontFamily;
-    const fontSize = catalog.footerFontSize || 9;
-
-    let pageText = `${currentPageIndex + 1}`;
-    let pageLabelWidth = 20;
-    
-    if (catalog.paginationStyle === 'minimal') {
-      pageText = `|  ${(currentPageIndex + 1).toString().padStart(2, '0')}`;
-      pageLabelWidth = 40;
-    } else if (catalog.paginationStyle === 'pill') {
-      pageText = `${currentPageIndex + 1} / ${catalog.pages.length}`;
-      pageLabelWidth = 50;
-    } else if (catalog.paginationStyle === 'simple') {
-      pageText = `PAGE ${currentPageIndex + 1}`;
-      pageLabelWidth = 60;
-    }
-
-    return (
-      <KonvaGroup 
-        y={PAGE_HEIGHT - height} 
-        onClick={(e) => handleZoneClick(e, 'footer')}
-        onTap={(e) => handleZoneClick(e, 'footer')}
-        onMouseEnter={() => { document.body.style.cursor = 'pointer'; setHoveredZone('footer'); }}
-        onMouseLeave={() => { document.body.style.cursor = 'default'; setHoveredZone(null); }}
-      >
-        <KonvaRect width={PAGE_WIDTH} height={height} fill={canvasBg} />
-        
-        {/* Interaction Highlight */}
-        {(isSelected || isHovered) && (
-          <KonvaRect 
-            width={PAGE_WIDTH} 
-            height={height} 
-            stroke="#4f46e5" 
-            strokeWidth={isSelected ? 2 : 1}
-            dash={isSelected ? [] : [4, 4]}
-            fill={isHovered ? 'rgba(79, 70, 229, 0.05)' : undefined}
-          />
-        )}
-
-        <KonvaLine points={[padding, 0, PAGE_WIDTH - padding, 0]} stroke="#f1f5f9" strokeWidth={1} listening={false} />
-        
-        <KonvaText 
-          text={catalog.footerText || ''} 
-          x={padding} 
-          y={height / 2 - (fontSize * 0.5)} 
-          fontSize={fontSize} 
-          fontFamily={fontFamily} 
-          fill={theme.bodyColor} 
-          opacity={0.6} 
-          listening={false}
-        />
-
-        {catalog.paginationStyle === 'pill' ? (
-           <KonvaGroup x={PAGE_WIDTH - padding - pageLabelWidth} y={height / 2 - 10} listening={false}>
-              <KonvaRect width={pageLabelWidth} height={20} fill={theme.bodyColor} opacity={0.1} cornerRadius={10} />
-              <KonvaText 
-                text={pageText} 
-                width={pageLabelWidth} 
-                height={20}
-                offsetY={-4}
-                align="center"
-                fontSize={fontSize} 
-                fontFamily="Inter" 
-                fontWeight="bold" 
-                fill={theme.headingColor} 
-              />
-           </KonvaGroup>
-        ) : (
-           <KonvaText 
-             text={pageText} 
-             x={PAGE_WIDTH - padding - pageLabelWidth} 
-             y={height / 2 - (fontSize * 0.5)} 
-             width={pageLabelWidth} 
-             align="right"
-             fontSize={fontSize} 
-             fontFamily={theme.fontFamily} 
-             fontWeight="900" 
-             fill={theme.headingColor} 
-             letterSpacing={1} 
-             listening={false}
-           />
-        )}
-      </KonvaGroup>
-    );
-  };
-
   if (!currentPage) return null;
 
   const snapTarget = dragOverTargetId ? currentPage.elements.find(el => el.id === dragOverTargetId) : null;
 
+  // Handle double-click to enter text edit mode
+  const handleStageDblClick = (e: any) => {
+    if (e.target === e.target.getStage()) {
+      setEditingId(null);
+      setEditConfig(null);
+      return;
+    }
+
+    const node = e.target;
+    const element = currentPage.elements.find(el =>
+      el.id === node.id() ||
+      el.id === node.name() ||
+      el.id === node.getParent()?.id() ||
+      el.id === node.getParent()?.name()
+    );
+
+    if (element && element.type === 'text' && !element.locked) {
+      pushHistory();
+      setEditingId(element.id);
+      setEditConfig({
+        id: element.id,
+        text: element.text || '',
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+        rotation: element.rotation || 0,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fontWeight: element.fontWeight,
+        fontStyle: element.fontStyle,
+        align: element.textAlign || 'left',
+        color: element.fill || '#000000'
+      });
+    } else {
+      setEditingId(null);
+      setEditConfig(null);
+    }
+  };
+
+  // Handle text editing complete
+  const handleTextEditComplete = (e: React.FocusEvent<HTMLDivElement>) => {
+    if (!editConfig) return;
+
+    const newText = e.target.innerHTML;
+    updateElement(currentPageIndex, editConfig.id, { text: newText });
+    setEditingId(null);
+    setEditConfig(null);
+  };
+
+  // Sync external updates to active editor
+  useEffect(() => {
+    if (editingId && currentPage) {
+      const element = currentPage.elements.find(el => el.id === editingId);
+      if (element) {
+        setEditConfig(prev => ({
+          ...prev,
+          color: element.fill || '#000000',
+          fontSize: element.fontSize,
+          fontWeight: element.fontWeight || 'normal',
+          fontStyle: element.fontStyle || 'normal',
+          fontFamily: element.fontFamily,
+          align: element.textAlign || 'left',
+          text: element.text || ''
+        }));
+      }
+    }
+  }, [currentPage?.elements, editingId, currentPageIndex]);
+
   return (
-    <div className="flex-1 flex flex-col bg-slate-100 overflow-hidden relative" ref={containerRef}>
-      <div 
-        className={`flex-1 overflow-auto relative flex flex-col items-center custom-scrollbar p-16 transition-colors duration-300 ${isDragOver ? 'bg-indigo-50/50' : 'bg-[#e2e8f0]'}`}
+    <div
+      className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-500 ${uiTheme === 'dark' ? 'bg-slate-950' : 'bg-slate-100'}`}
+      ref={containerRef}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          setSelectedElementIds([]);
+          setEditingId(null);
+          setEditConfig(null);
+        }
+      }}
+    >
+      <div
+        className={`flex-1 overflow-auto relative flex flex-col items-center custom-scrollbar p-16 pb-48 transition-colors duration-500 ${isDragOver ? (uiTheme === 'dark' ? 'bg-indigo-950/20' : 'bg-indigo-50/50') : (uiTheme === 'dark' ? 'bg-slate-900' : 'bg-[#e2e8f0]')}`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        onClick={(e) => {
+          if (e.target === e.currentTarget) {
+            setSelectedElementIds([]);
+            setEditingId(null);
+            setEditConfig(null);
+          }
+        }}
       >
-        <div 
+        <div
           className={`shadow-[0_40px_100px_rgba(0,0,0,0.12)] relative bg-white border shrink-0 transition-all origin-top ${isDragOver ? 'border-indigo-400 scale-[1.002] ring-8 ring-indigo-600/5' : 'border-slate-300'}`}
           style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}
         >
@@ -716,16 +628,16 @@ const EditorCanvas: React.FC = () => {
 
           {/* Quick HUD for Snapping */}
           {snapTarget && (
-             <div 
-               className="absolute z-[110] px-4 py-2 bg-indigo-600 text-white rounded-[10px] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl animate-in slide-in-from-top-2 duration-200"
-               style={{ 
-                 left: snapTarget.x * zoom, 
-                 top: (snapTarget.y * zoom) - 45 
-               }}
-             >
-               <Sparkles size={14} className="animate-pulse" />
-               Auto-Fitting Asset
-             </div>
+            <div
+              className="absolute z-[110] px-4 py-2 bg-indigo-600 text-white rounded-[10px] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl animate-in slide-in-from-top-2 duration-200"
+              style={{
+                left: snapTarget.x * zoom,
+                top: (snapTarget.y * zoom) - 45
+              }}
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              Auto-Fitting Asset
+            </div>
           )}
 
           <KonvaStage
@@ -738,33 +650,31 @@ const EditorCanvas: React.FC = () => {
             onMouseMove={handleStageMouseMove}
             onMouseUp={handleStageMouseUp}
             onWheel={handleWheel}
+            onDblClick={handleStageDblClick}
           >
             <KonvaLayer>
-              <KonvaRect 
+              <KonvaRect
                 name="grid-background"
-                width={PAGE_WIDTH} 
-                height={PAGE_HEIGHT} 
-                fill={canvasBg} 
+                width={PAGE_WIDTH}
+                height={PAGE_HEIGHT}
+                fill={canvasBg}
               />
-              
-              <CanvasHeader 
-                catalog={catalog} 
-                theme={theme} 
-                selectedElementIds={selectedElementIds} 
-                hoveredZone={hoveredZone} 
-                setHoveredZone={setHoveredZone} 
-                setSelectedElementIds={setSelectedElementIds}
-                headerTextOverride={catalog.showCategoryTitleInHeader ? currentCategory?.name : undefined}
-              />
+
+              <KonvaGroup y={0} listening={false}>
+                <KonvaRect width={PAGE_WIDTH} height={HEADER_FOOTER_HEIGHT} fill={canvasBg} />
+                <KonvaLine points={[40, HEADER_FOOTER_HEIGHT, PAGE_WIDTH - 40, HEADER_FOOTER_HEIGHT]} stroke="#f1f5f9" strokeWidth={1} />
+                <KonvaText text={catalog.headerText || ''} x={40} y={HEADER_FOOTER_HEIGHT / 2 - 5} fontSize={11} fontFamily={theme.headingFont} fontWeight="bold" fill={theme.headingColor} opacity={0.9} />
+              </KonvaGroup>
 
               <KonvaGroup>
                 {currentPage.elements.map((el) => (
-                  <CanvasElementComponent 
-                    key={el.id} 
-                    element={el} 
-                    isSelected={selectedElementIds.includes(el.id)} 
-                    onSelect={(multi) => handleSelectElement(el.id, multi)} 
-                    onChange={(updates) => updateElement(currentPageIndex, el.id, updates)} 
+                  <CanvasElementComponent
+                    key={el.id}
+                    element={el}
+                    isSelected={selectedElementIds.includes(el.id)}
+                    onSelect={(multi) => handleSelectElement(el.id, multi)}
+                    onChange={(updates) => updateElement(currentPageIndex, el.id, updates)}
+                    isEditing={editingId === el.id}
                   />
                 ))}
               </KonvaGroup>
@@ -787,11 +697,93 @@ const EditorCanvas: React.FC = () => {
                 />
               )}
 
-              {renderFooter()}
+              <KonvaGroup y={PAGE_HEIGHT - HEADER_FOOTER_HEIGHT} listening={false}>
+                <KonvaRect width={PAGE_WIDTH} height={HEADER_FOOTER_HEIGHT} fill={canvasBg} />
+                <KonvaLine points={[40, 0, PAGE_WIDTH - 40, 0]} stroke="#f1f5f9" strokeWidth={1} />
+                <KonvaText text={catalog.footerText || ''} x={40} y={HEADER_FOOTER_HEIGHT / 2 - 4} fontSize={9} fontFamily={theme.fontFamily} fill={theme.bodyColor} opacity={0.6} />
+                <KonvaText text={`${currentPage.type.toUpperCase()} | PAGE ${currentPageIndex + 1}`} x={PAGE_WIDTH - 150} y={HEADER_FOOTER_HEIGHT / 2 - 4} width={120} textAlign="right" fontSize={9} fontFamily={theme.fontFamily} fontWeight="900" fill={theme.headingColor} letterSpacing={1} />
+              </KonvaGroup>
             </KonvaLayer>
           </KonvaStage>
         </div>
       </div>
+
+      {editConfig && (
+        <div
+          className="absolute z-[1000] bg-white shadow-2xl border-2 border-indigo-500 rounded-lg"
+          style={{
+            left: (() => {
+              if (!stageRef.current || !containerRef.current) return 0;
+              const stageRect = stageRef.current.container().getBoundingClientRect();
+              const containerRect = containerRef.current.getBoundingClientRect();
+              return stageRect.left - containerRect.left + editConfig.x * zoom;
+            })(),
+            top: (() => {
+              if (!stageRef.current || !containerRef.current) return 0;
+              const stageRect = stageRef.current.container().getBoundingClientRect();
+              const containerRect = containerRef.current.getBoundingClientRect();
+              return stageRect.top - containerRect.top + editConfig.y * zoom;
+            })(),
+            width: editConfig.width * zoom,
+            height: editConfig.height * zoom,
+            transform: `rotate(${editConfig.rotation || 0}deg)`,
+            transformOrigin: 'top left',
+          }}
+        >
+          <div
+            contentEditable
+            suppressContentEditableWarning
+            className="w-full h-full p-0 outline-none overflow-hidden [&_span]:bg-transparent [&_span]:text-inherit [&_span]:[-webkit-text-fill-color:inherit]"
+            style={{
+              fontSize: editConfig.fontSize * zoom,
+              fontFamily: editConfig.fontFamily || 'Inter',
+              fontWeight: editConfig.fontWeight,
+              fontStyle: editConfig.fontStyle,
+              textAlign: editConfig.align as any,
+              lineHeight: 1.2,
+              color: editConfig.color?.includes('gradient') ? '#475569' : editConfig.color,
+              caretColor: '#4f46e5',
+              whiteSpace: 'pre-wrap',
+              wordBreak: 'break-word',
+              padding: 5,
+            }}
+            onBlur={(e) => {
+              handleTextEditComplete(e);
+            }}
+            onMouseUp={() => {
+              // This helps ensure selection is active and can be captured 
+              // by the Property Panel logic if focus moves there.
+            }}
+            onInput={(e) => {
+              const newText = (e.currentTarget as HTMLElement).innerHTML;
+              updateElement(currentPageIndex, editConfig.id, { text: newText });
+            }}
+            ref={(el) => {
+              if (el && !el.dataset.initialized) {
+                el.innerHTML = editConfig.text;
+                el.dataset.initialized = 'true';
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.selectNodeContents(el);
+                range.collapse(false);
+                sel?.removeAllRanges();
+                sel?.addRange(range);
+                el.focus();
+              }
+            }}
+          />
+
+
+          {/* Floating Format Toolbar */}
+          <div className="absolute left-0 -top-12">
+            <FloatingTextToolbar
+              onBold={() => document.execCommand('bold')}
+              onItalic={() => document.execCommand('italic')}
+              onUnderline={() => document.execCommand('underline')}
+            />
+          </div>
+        </div>
+      )}
 
       <PageNavigator />
     </div>

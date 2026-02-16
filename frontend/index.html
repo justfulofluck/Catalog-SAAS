@@ -1,91 +1,120 @@
-
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CatalogStudio - Pro Catalog Builder</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-      tailwind.config = {
-        darkMode: 'class',
-        theme: {
-          extend: {
-            borderRadius: {
-              'xl': '10px',
-              '2xl': '10px',
-              '3xl': '10px',
-            }
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CatalogStudio - Pro Catalog Builder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          borderRadius: {
+            'xl': '10px',
+            '2xl': '10px',
+            '3xl': '10px',
           }
         }
       }
-    </script>
-    <style>
-      body {
-        margin: 0;
-        padding: 0;
-        background-color: #f3f4f6;
-        overflow: hidden;
-      }
-      
-      /* Standardizing every button and major container to 10px radius */
-      button, 
-      input, 
-      select, 
-      textarea,
-      .rounded-xl, 
-      .rounded-2xl, 
-      .rounded-3xl,
-      [class*="rounded-["],
-      [class*="rounded-full"] {
-        border-radius: 10px !important;
-      }
+    }
+  </script>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f3f4f6;
+      overflow: hidden;
+    }
 
-      /* Exception for actually round status indicators/dots if needed */
-      .w-1.h-1.rounded-full, 
-      .w-2.h-2.rounded-full, 
-      .w-3.h-3.rounded-full,
-      .w-2\.5.h-2\.5.rounded-full {
-        border-radius: 9999px !important;
-      }
+    /* Standardizing every button and major container to 10px radius */
+    button,
+    input,
+    select,
+    textarea,
+    .rounded-xl,
+    .rounded-2xl,
+    .rounded-3xl,
+    [class*="rounded-["],
+    [class*="rounded-full"] {
+      border-radius: 10px !important;
+    }
 
-      /* Custom scrollbar for a pro look */
-      ::-webkit-scrollbar {
-        width: 8px;
-        height: 8px;
-      }
-      ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #ccc;
-        border-radius: 4px;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #bbb;
-      }
+    /* Exception for actually round status indicators/dots if needed */
+    .w-1.h-1.rounded-full,
+    .w-2.h-2.rounded-full,
+    .w-3.h-3.rounded-full,
+    .w-2\.5.h-2\.5.rounded-full {
+      border-radius: 9999px !important;
+    }
 
-      /* Hide scrollbar utility */
-      .no-scrollbar::-webkit-scrollbar {
-        display: none;
-      }
-      .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-      }
+    /* Custom scrollbar for a pro look */
+    /* Custom scrollbar for a pro look */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+      background-color: transparent;
+    }
 
-      /* SortableJS Ghost Class Styling */
-      .sortable-ghost {
-        opacity: 0.3;
-        background: #e2e8f0 !important;
-        border: 2px dashed #6366f1 !important;
-      }
-      .sortable-drag {
-        opacity: 0.9;
-        transform: rotate(2deg) scale(1.02);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
-      }
-    </style>
+    /* Light Mode Defaults */
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #ccc;
+      border-radius: 4px;
+      border: 2px solid #f1f1f1;
+      /* Creates padding effect */
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #bbb;
+    }
+
+    /* Dark Mode Overrides - High Specificity */
+    html.dark {
+      color-scheme: dark;
+    }
+
+    html.dark ::-webkit-scrollbar-track {
+      background: #0f172a !important;
+    }
+
+    html.dark ::-webkit-scrollbar-thumb {
+      background-color: #334155 !important;
+      border: 2px solid #0f172a !important;
+      /* Matches track for padding effect */
+    }
+
+    html.dark ::-webkit-scrollbar-thumb:hover {
+      background-color: #475569 !important;
+    }
+
+    /* Hide scrollbar utility */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* SortableJS Ghost Class Styling */
+    .sortable-ghost {
+      opacity: 0.3;
+      background: #e2e8f0 !important;
+      border: 2px dashed #6366f1 !important;
+    }
+
+    .sortable-drag {
+      opacity: 0.9;
+      transform: rotate(2deg) scale(1.02);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    }
+  </style>
   <script type="importmap">
 {
   "imports": {
@@ -102,10 +131,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
-  <body>
-    <div id="root"></div>
+
+<body>
+  <div id="root"></div>
   <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

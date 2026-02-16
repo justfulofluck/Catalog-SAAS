@@ -22,9 +22,9 @@ import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
 import PublicViewer from './components/Publish/PublicViewer';
 import { useStore } from './store/useStore';
-import { 
-  LayoutDashboard, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Settings,
   LogOut,
   ChevronDown,
   Menu,
@@ -38,30 +38,34 @@ import {
   Moon,
   Layers,
   Briefcase,
-  Rocket
+  Rocket,
+  Sparkles
 } from 'lucide-react';
+import EffectsPanel from './components/Sidebar/EffectsPanel';
 
 const App: React.FC = () => {
-  const { 
-    isAuthenticated, 
-    logout, 
-    user, 
-    currentView, 
-    setView, 
-    isSidebarExpanded, 
+  const {
+    isAuthenticated,
+    logout,
+    user,
+    currentView,
+    setView,
+    isSidebarExpanded,
     setSidebarExpanded,
     setActiveCategoryId,
     isPropertyPanelOpen,
     uiTheme,
     toggleUiTheme,
-    savedCatalogs
+    savedCatalogs,
+    editorTab,
+    setEditorTab
   } = useStore();
-  
+
   const [loading, setLoading] = useState(true);
   const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
   const [isCatalogMenuOpen, setCatalogMenuOpen] = useState(true);
-  
-  const [editorTab, setEditorTab] = useState<'products' | 'media' | 'templates' | 'layers'>('products');
+
+  // const [editorTab, setEditorTab] = useState<'products' | 'media' | 'templates' | 'layers'>('products');
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 800);
@@ -69,7 +73,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (uiTheme === 'dark' && currentView !== 'editor') {
+    if (uiTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
@@ -98,39 +102,46 @@ const App: React.FC = () => {
 
   if (currentView === 'editor') {
     return (
-      <div className="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-700">
+      <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors ${uiTheme === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-slate-700'}`}>
         <EditorToolbar />
         <div className="flex flex-1 overflow-hidden relative">
-          <div className="flex flex-col border-r bg-slate-900 z-40">
+          <div className="flex flex-col border-r border-slate-800 bg-slate-900 z-40">
             <div className="flex flex-col w-16 items-center py-8 gap-8">
-               <button 
+              <button
                 onClick={() => setEditorTab('products')}
                 className={`p-3 rounded-[10px] transition-all ${editorTab === 'products' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
                 title="Product Assets"
-               >
-                 <Package size={22} />
-               </button>
-               <button 
+              >
+                <Package size={22} />
+              </button>
+              <button
                 onClick={() => setEditorTab('media')}
                 className={`p-3 rounded-[10px] transition-all ${editorTab === 'media' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
                 title="Media Library"
-               >
-                 <Images size={22} />
-               </button>
-               <button 
+              >
+                <Images size={22} />
+              </button>
+              <button
                 onClick={() => setEditorTab('templates')}
                 className={`p-3 rounded-[10px] transition-all ${editorTab === 'templates' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
                 title="Templates"
-               >
-                 <LayoutTemplate size={22} />
-               </button>
-               <button 
+              >
+                <LayoutTemplate size={22} />
+              </button>
+              <button
                 onClick={() => setEditorTab('layers')}
                 className={`p-3 rounded-[10px] transition-all ${editorTab === 'layers' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
                 title="Layers"
-               >
-                 <Layers size={22} />
-               </button>
+              >
+                <Layers size={22} />
+              </button>
+              <button
+                onClick={() => setEditorTab('effects')}
+                className={`p-3 rounded-[10px] transition-all ${editorTab === 'effects' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                title="Effects"
+              >
+                <Sparkles size={22} />
+              </button>
             </div>
           </div>
           <div className="z-30 h-full shrink-0 shadow-2xl">
@@ -138,6 +149,7 @@ const App: React.FC = () => {
             {editorTab === 'media' && <MediaAssetLibrary />}
             {editorTab === 'templates' && <TemplatesPanel />}
             {editorTab === 'layers' && <LayersPanel />}
+            {editorTab === 'effects' && <EffectsPanel />}
           </div>
           <EditorCanvas />
           {isPropertyPanelOpen && <PropertyPanel />}
@@ -174,15 +186,15 @@ const App: React.FC = () => {
             <div className="w-10 h-10 bg-indigo-600 rounded-[10px] flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition-transform text-center shrink-0">C</div>
             {isSidebarExpanded && <span className="text-white font-black text-xl tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">Studio.</span>}
           </div>
-          <button 
-            onClick={() => setSidebarExpanded(!isSidebarExpanded)} 
+          <button
+            onClick={() => setSidebarExpanded(!isSidebarExpanded)}
             className={`text-slate-500 hover:text-white transition-colors p-1 rounded-[10px] hover:bg-slate-800 ${!isSidebarExpanded ? 'w-10 h-10 flex items-center justify-center' : ''}`}
             title={isSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             <Menu size={20} />
           </button>
         </div>
-        
+
         <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
           <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all ${currentView === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}`}>
             <LayoutDashboard size={20} className="shrink-0" />
@@ -231,7 +243,7 @@ const App: React.FC = () => {
         </nav>
 
         <div className="px-4 mt-auto space-y-4">
-          <button 
+          <button
             onClick={toggleUiTheme}
             className="w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all text-slate-400 hover:text-white bg-slate-800/20 hover:bg-slate-800/50"
             title={`Switch to ${uiTheme === 'light' ? 'Dark' : 'Light'} Mode`}
@@ -244,20 +256,20 @@ const App: React.FC = () => {
             <Settings size={20} className="shrink-0" />
             {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Settings</span>}
           </button>
-          
+
           <div className="flex items-center gap-3 p-3 bg-slate-800/40 rounded-[10px] border border-slate-700/50">
-             <div className="w-9 h-9 bg-indigo-500 rounded-[10px] flex items-center justify-center text-white font-bold shrink-0">{user?.avatar || 'JD'}</div>
-             {isSidebarExpanded && (
-               <div className="flex-1 min-w-0">
-                 <p className="text-xs font-bold text-white truncate leading-none mb-1">{user?.name}</p>
-                 <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
-               </div>
-             )}
-             {isSidebarExpanded && (
-               <button onClick={logout} className="text-slate-500 hover:text-red-400 transition-colors">
+            <div className="w-9 h-9 bg-indigo-500 rounded-[10px] flex items-center justify-center text-white font-bold shrink-0">{user?.avatar || 'JD'}</div>
+            {isSidebarExpanded && (
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-white truncate leading-none mb-1">{user?.name}</p>
+                <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
+              </div>
+            )}
+            {isSidebarExpanded && (
+              <button onClick={logout} className="text-slate-500 hover:text-red-400 transition-colors">
                 <LogOut size={16} />
-               </button>
-             )}
+              </button>
+            )}
           </div>
         </div>
       </aside>

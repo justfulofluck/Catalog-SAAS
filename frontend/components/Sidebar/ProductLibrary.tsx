@@ -6,15 +6,15 @@ import { useStore } from '../../store/useStore';
 import { Product, CanvasElement } from '../../types';
 
 const ProductLibrary: React.FC = () => {
-  const { products, categories, addElement, currentPageIndex, catalog, reorderProducts, removeProductFromCanvas, setDraggingItem } = useStore();
+  const { products, categories, addElement, currentPageIndex, catalog, reorderProducts, removeProductFromCanvas, setDraggingItem, uiTheme } = useStore();
   const [search, setSearch] = useState('');
   const sortableRef = useRef<HTMLDivElement>(null);
 
   // Filter to show all products available in the publication's selected categories
   // If catalog.selectedCategoryIds is empty (legacy), fall back to selectedCategoryId if it exists, or show nothing specific.
-  const activeCategoryIds = catalog.selectedCategoryIds || (catalog.selectedCategoryId ? [catalog.selectedCategoryId] : []);
-  
-  const availableCategoryAssets = products.filter(p => 
+  const activeCategoryIds = catalog.selectedCategoryIds || [];
+
+  const availableCategoryAssets = products.filter(p =>
     (activeCategoryIds.length === 0 || (p.categoryId && activeCategoryIds.includes(p.categoryId))) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
   );
@@ -43,7 +43,7 @@ const ProductLibrary: React.FC = () => {
   const handleAddProduct = (product: Product) => {
     const timestamp = Date.now();
     const currentPage = catalog.pages[currentPageIndex];
-    
+
     // Improved slot detection
     const slots = currentPage.elements.filter(el => el.id.includes('slot'));
     const occupiedSlotIdentifiers = new Set(
@@ -80,11 +80,11 @@ const ProductLibrary: React.FC = () => {
       height = targetSlot.height;
       const sParts = targetSlot.id.split('-');
       const sIdx = sParts.findIndex(p => p === 'slot');
-      slotTag = sIdx !== -1 ? `slot-${sParts[sIdx+1]}` : `slot-${timestamp}`;
+      slotTag = sIdx !== -1 ? `slot-${sParts[sIdx + 1]}` : `slot-${timestamp}`;
     } else {
       slotTag = `slot-${timestamp}`;
     }
-    
+
     addElement(currentPageIndex, {
       id: `product-block-${slotTag}-${timestamp}`,
       type: 'product-block',
@@ -117,23 +117,30 @@ const ProductLibrary: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r w-[320px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] animate-in slide-in-from-left-4 duration-500 font-sans">
-      <div className="p-6 border-b bg-white">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
-          <Layers size={14} className="text-indigo-600" />
-          Publication Assets
-        </h3>
+    <div className={`flex flex-col h-full border-r w-[320px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] animate-in slide-in-from-left-4 duration-500 font-sans transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+      <div className={`p-6 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className={`text-xs font-black uppercase tracking-widest ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Products Panel</h2>
+          <Layers size={14} className={uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-300'} />
+        </div>
+        <div>
+          <h3 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2 mb-0.5">
+            <Package size={12} />
+            Publication Assets
+          </h3>
+          <p className="text-[9px] font-semibold text-slate-400 pl-5">ENTERPRISE REPOSITORY V3.1</p>
+        </div>
       </div>
 
-      <div className="p-4 border-b bg-slate-50/50">
+      <div className={`p-4 border-b transition-colors ${uiTheme === 'dark' ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'}`}>
         <div className="relative group">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-          <input 
-            type="text" 
+          <Search size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${uiTheme === 'dark' ? 'text-slate-500 group-focus-within:text-indigo-400' : 'text-slate-300 group-focus-within:text-indigo-600'}`} />
+          <input
+            type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search Assets..."
-            className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-slate-800 focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 outline-none transition-all placeholder:text-slate-300"
+            className={`w-full border rounded-2xl pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all focus:ring-4 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-indigo-500/20 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:ring-indigo-600/5 focus:border-indigo-600'}`}
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
@@ -143,16 +150,16 @@ const ProductLibrary: React.FC = () => {
         </div>
       </div>
 
-      <div 
+      <div
         ref={sortableRef}
         className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar"
       >
         {availableCategoryAssets.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-[24px] flex items-center justify-center text-slate-200 mb-6 border border-slate-100 shadow-inner">
+            <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center mb-6 border shadow-inner transition-colors ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700 text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-200'}`}>
               <Package size={32} />
             </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
+            <p className={`text-[10px] font-black uppercase tracking-widest leading-relaxed ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
               No matching assets <br /> found in selected categories
             </p>
           </div>
@@ -160,40 +167,40 @@ const ProductLibrary: React.FC = () => {
           availableCategoryAssets.map((product, idx) => {
             const category = categories.find(c => c.id === product.categoryId);
             return (
-              <div 
+              <div
                 key={product.id}
                 data-id={product.id}
                 draggable="true"
                 onDragStart={(e) => handleDragStart(e, product)}
                 onDragEnd={handleDragEnd}
-                className="group flex items-center gap-3 p-3 rounded-[24px] bg-white hover:bg-slate-50 cursor-pointer transition-all border border-slate-100 hover:border-indigo-100 hover:shadow-xl hover:shadow-slate-200/40 relative"
+                className={`group flex items-center gap-3 p-3 rounded-[24px] cursor-pointer transition-all border relative hover:shadow-xl ${uiTheme === 'dark' ? 'bg-slate-800/40 border-slate-800 hover:bg-slate-800 hover:border-indigo-500/30 hover:shadow-black/20' : 'bg-white border-slate-100 hover:bg-slate-50 hover:border-indigo-100 hover:shadow-slate-200/40'}`}
                 onClick={() => handleAddProduct(product)}
               >
-                <div className="drag-handle p-1 -ml-1 text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing shrink-0 transition-colors">
+                <div className={`drag-handle p-1 -ml-1 cursor-grab active:cursor-grabbing shrink-0 transition-colors ${uiTheme === 'dark' ? 'text-slate-600 hover:text-slate-400' : 'text-slate-200 hover:text-slate-400'}`}>
                   <GripVertical size={16} />
                 </div>
 
-                <div className="w-14 h-14 rounded-2xl bg-white overflow-hidden shrink-0 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform duration-500">
+                <div className={`w-14 h-14 rounded-2xl overflow-hidden shrink-0 border shadow-sm group-hover:scale-105 transition-transform duration-500 ${uiTheme === 'dark' ? 'bg-slate-700 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
                 </div>
-                
+
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-black text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">
+                  <div className={`text-[11px] font-black truncate mb-1 transition-colors ${uiTheme === 'dark' ? 'text-slate-200 group-hover:text-indigo-400' : 'text-slate-800 group-hover:text-indigo-600'}`}>
                     {product.name}
                   </div>
                   <div className="flex items-center justify-between mb-1">
-                     <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-slate-50 rounded-md border border-slate-100">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: category?.color || '#cbd5e1' }} />
-                        <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter max-w-[80px] truncate">
-                           {category?.name || 'General'}
-                        </span>
-                     </div>
+                    <div className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md border ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: category?.color || '#cbd5e1' }} />
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter max-w-[80px] truncate">
+                        {category?.name || 'General'}
+                      </span>
+                    </div>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-indigo-600">{product.currency}{product.price}</span>
-                    <button 
+                    <span className={`text-[10px] font-black ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{product.currency}{product.price}</span>
+                    <button
                       onClick={(e) => handleClearFromCanvas(product.id, e)}
-                      className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                      className={`w-6 h-6 flex items-center justify-center rounded-lg transition-all opacity-0 group-hover:opacity-100 ${uiTheme === 'dark' ? 'hover:bg-red-500/20 text-slate-600 hover:text-red-400' : 'hover:bg-red-50 text-slate-200 hover:text-red-500'}`}
                       title="Clear from All Pages"
                     >
                       <Trash2 size={12} />
