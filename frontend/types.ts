@@ -2,9 +2,28 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
 export type PageType = 'cover' | 'interior' | 'index' | 'closing';
 export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star';
-export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
+export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
+
+export type FieldType = 'text' | 'number' | 'select' | 'boolean' | 'image' | 'textarea';
+
+export interface FormField {
+  id: string;
+  label: string;
+  type: FieldType;
+  options?: string[]; // For select inputs
+  required?: boolean;
+  section: 'basic' | 'technical' | 'commercial';
+  placeholder?: string;
+}
+
+export interface BusinessTemplate {
+  id: string;
+  name: string;
+  description: string;
+  schema: FormField[];
+}
 
 export interface CanvasElement {
   id: string;
@@ -38,20 +57,6 @@ export interface CanvasElement {
   showPrice?: boolean;
   showSku?: boolean;
   showName?: boolean;
-  shadowBlur?: number;
-  shadowColor?: string;
-  shadowOpacity?: number;
-  shadowOffsetX?: number;
-  shadowOffsetY?: number;
-  effectStyle?: 'none' | 'shadow' | 'lift' | 'hollow' | 'splice' | 'outline' | 'echo' | 'glitch' | 'neon' | 'background';
-  textStrokeWidth?: number;
-  textStrokeColor?: string;
-  effectIntensity?: number;
-  effectDirection?: number;
-  effectColor?: string;
-  effectColor2?: string;
-  effectSpread?: number;
-  effectRoundness?: number;
   filters?: {
     brightness?: number;
     blur?: number;
@@ -109,6 +114,8 @@ export interface Product {
   description: string;
   image: string;
   categoryId?: string;
+  // Dynamic fields storage
+  customFields?: Record<string, any>;
 }
 
 export type MediaType = 'image';

@@ -1,6 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import Login from './components/Auth/Login';
+import AdminLogin from './components/Admin/AdminLogin';
+import AdminDashboard from './components/Admin/AdminDashboard';
+import BusinessSelection from './components/Onboarding/BusinessSelection';
+import OnboardingForm from './components/Onboarding/BusinessOnboardingForm';
 import Dashboard from './components/Dashboard/Dashboard';
 import SettingsView from './components/Settings/Settings';
 import ProductsListView from './components/Products/ProductsListView';
@@ -38,14 +41,13 @@ import {
   Moon,
   Layers,
   Briefcase,
-  Rocket,
-  Sparkles
+  Rocket
 } from 'lucide-react';
-import EffectsPanel from './components/Sidebar/EffectsPanel';
 
 const App: React.FC = () => {
   const {
     isAuthenticated,
+    isAdminAuthenticated,
     logout,
     user,
     currentView,
@@ -56,16 +58,14 @@ const App: React.FC = () => {
     isPropertyPanelOpen,
     uiTheme,
     toggleUiTheme,
-    savedCatalogs,
-    editorTab,
-    setEditorTab
+    savedCatalogs
   } = useStore();
 
   const [loading, setLoading] = useState(true);
   const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
   const [isCatalogMenuOpen, setCatalogMenuOpen] = useState(true);
 
-  // const [editorTab, setEditorTab] = useState<'products' | 'media' | 'templates' | 'layers'>('products');
+  const [editorTab, setEditorTab] = useState<'products' | 'media' | 'templates' | 'layers'>('products');
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 800);
@@ -73,7 +73,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (uiTheme === 'dark') {
+    if (uiTheme === 'dark' && currentView !== 'editor' && currentView !== 'admin-dashboard') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
@@ -92,20 +92,41 @@ const App: React.FC = () => {
     );
   }
 
-  if (!isAuthenticated) {
-    return <Login />;
+  // Admin Routes
+  if (currentView === 'admin-login') {
+    return <AdminLogin />;
   }
 
+  if (isAdminAuthenticated && currentView === 'admin-dashboard') {
+    return <AdminDashboard />;
+  }
+
+  // Public Viewers
   if (currentView === 'public-viewer') {
     return <PublicViewer />;
   }
 
+  // Standard Authentication Check
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Business Onboarding Flow
+  if (isAuthenticated && !user?.businessId) {
+    if (currentView === 'business-onboarding') {
+      return <OnboardingForm />;
+    }
+    // Default to selection if no business and not already on form
+    return <BusinessSelection />;
+  }
+
+  // Editor View (Fullscreen)
   if (currentView === 'editor') {
     return (
-      <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors ${uiTheme === 'dark' ? 'bg-slate-950 text-slate-200' : 'bg-slate-100 text-slate-700'}`}>
+      <div className="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-700">
         <EditorToolbar />
         <div className="flex flex-1 overflow-hidden relative">
-          <div className="flex flex-col border-r border-slate-800 bg-slate-900 z-40">
+          <div className="flex flex-col border-r bg-slate-900 z-40">
             <div className="flex flex-col w-16 items-center py-8 gap-8">
               <button
                 onClick={() => setEditorTab('products')}
@@ -135,13 +156,6 @@ const App: React.FC = () => {
               >
                 <Layers size={22} />
               </button>
-              <button
-                onClick={() => setEditorTab('effects')}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'effects' ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Effects"
-              >
-                <Sparkles size={22} />
-              </button>
             </div>
           </div>
           <div className="z-30 h-full shrink-0 shadow-2xl">
@@ -149,7 +163,6 @@ const App: React.FC = () => {
             {editorTab === 'media' && <MediaAssetLibrary />}
             {editorTab === 'templates' && <TemplatesPanel />}
             {editorTab === 'layers' && <LayersPanel />}
-            {editorTab === 'effects' && <EffectsPanel />}
           </div>
           <EditorCanvas />
           {isPropertyPanelOpen && <PropertyPanel />}
@@ -243,6 +256,13 @@ const App: React.FC = () => {
         </nav>
 
         <div className="px-4 mt-auto space-y-4">
+          {user?.businessName && isSidebarExpanded && (
+            <div className="px-4 py-3 bg-slate-800 rounded-xl border border-slate-700/50">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Organization</p>
+              <p className="text-xs font-bold text-white truncate">{user.businessName}</p>
+            </div>
+          )}
+
           <button
             onClick={toggleUiTheme}
             className="w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all text-slate-400 hover:text-white bg-slate-800/20 hover:bg-slate-800/50"

@@ -1,19 +1,26 @@
 
 import { create } from 'zustand';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle } from '../types';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, BusinessTemplate, FormField } from '../types';
 import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES } from '../constants';
 
 interface User {
+  id: string;
   name: string;
   email: string;
   avatar?: string;
+  role: 'user' | 'admin';
+  status: 'active' | 'suspended';
+  joinedAt: string;
+  businessId?: string; // Links user to a specific business template/instance
+  businessName?: string;
 }
 
-type View = 'dashboard' | 'products-list' | 'create-product' | 'edit-product' | 'settings' | 'category-list' | 'create-category' | 'edit-category' | 'media-library' | 'editor' | 'catalog-setup' | 'catalog-products' | 'your-work' | 'publish' | 'public-viewer';
+type View = 'dashboard' | 'products-list' | 'create-product' | 'edit-product' | 'settings' | 'category-list' | 'create-category' | 'edit-category' | 'media-library' | 'editor' | 'catalog-setup' | 'catalog-products' | 'your-work' | 'publish' | 'public-viewer' | 'admin-login' | 'admin-dashboard' | 'business-selection' | 'business-onboarding';
 
 interface State {
   user: User | null;
   isAuthenticated: boolean;
+  isAdminAuthenticated: boolean;
   currentView: View;
   isSidebarExpanded: boolean;
   uiTheme: 'light' | 'dark';
@@ -26,6 +33,12 @@ interface State {
   editingProductId: string | null;
   editingCategoryId: string | null;
 
+  registeredUsers: User[];
+
+  // Business / Admin State
+  businessTemplates: BusinessTemplate[];
+  selectedBusinessTemplateId: string | null;
+
   catalog: Catalog;
   savedCatalogs: Catalog[];
   activeThemeId: string;
@@ -36,7 +49,6 @@ interface State {
   isPropertyPanelOpen: boolean;
   catalogSetupName: string;
 
-  // New state for public viewer
   viewingCatalogId: string | null;
 
   draggingItem: { url: string; productId?: string; name: string } | null;
@@ -45,6 +57,7 @@ interface State {
   redoStack: Catalog[];
 
   login: (email: string) => void;
+  adminLogin: (email: string) => void;
   logout: () => void;
   setView: (view: View) => void;
   setSidebarExpanded: (expanded: boolean) => void;
@@ -52,6 +65,12 @@ interface State {
   setDefaultCurrency: (currency: string) => void;
 
   updateUser: (updates: Partial<User>) => void;
+
+  // Business Actions
+  addBusinessTemplate: (template: BusinessTemplate) => void;
+  updateBusinessTemplate: (id: string, updates: Partial<BusinessTemplate>) => void;
+  selectBusinessTemplate: (id: string | null) => void;
+  completeOnboarding: (businessId: string, businessName: string) => void;
 
   addProduct: (product: Product) => void;
   updateProduct: (id: string, updates: Partial<Product>) => void;
@@ -132,17 +151,7 @@ interface State {
 
   undo: () => void;
   redo: () => void;
-  copyToClipboard: () => void;
-  pasteFromClipboard: () => void;
   pushHistory: () => void;
-  savedColors: string[];
-  editorTab: 'products' | 'media' | 'templates' | 'layers' | 'effects';
-
-  // Actions
-  setEditorTab: (tab: 'products' | 'media' | 'templates' | 'layers' | 'effects') => void;
-  setUser: (user: User | null) => void;
-  addSavedColor: (color: string) => void;
-  removeSavedColor: (color: string) => void;
 }
 
 const INITIAL_MEDIA: MediaItem[] = [
@@ -158,9 +167,38 @@ const INITIAL_MEDIA: MediaItem[] = [
   }
 ];
 
+const INITIAL_USERS: User[] = [
+  { id: 'u1', name: 'John Doe', email: 'john@example.com', avatar: 'JD', role: 'user', status: 'active', joinedAt: '2023-10-15T10:00:00Z', businessId: 'tech-nova', businessName: 'TechNova Store 1' },
+  { id: 'u2', name: 'Alice Smith', email: 'alice@design.co', avatar: 'AS', role: 'user', status: 'active', joinedAt: '2023-11-02T14:30:00Z', businessId: 'tech-nova', businessName: 'TechNova North' },
+  { id: 'u5', name: 'Admin User', email: 'admin@catalog.team', avatar: 'AD', role: 'admin', status: 'active', joinedAt: '2023-01-01T00:00:00Z' }
+];
+
+const TECHNOVA_SCHEMA: FormField[] = [
+  // Basic Fields
+  { id: 'prod_name', label: 'Product Name', type: 'text', section: 'basic', required: true },
+  { id: 'description', label: 'Description', type: 'textarea', section: 'basic' },
+  { id: 'price', label: 'Price', type: 'number', section: 'basic', required: true },
+  { id: 'mrp', label: 'MRP', type: 'number', section: 'basic' },
+  { id: 'main_image', label: 'Main Image', type: 'image', section: 'basic', required: true },
+
+  // Technical Specs
+  { id: 'model_num', label: 'Model Number', type: 'text', section: 'technical' },
+  { id: 'power', label: 'Power Consumption (Watts)', type: 'number', section: 'technical' },
+  { id: 'warranty', label: 'Warranty', type: 'select', options: ['1 Year', '2 Year', '3 Year'], section: 'technical' },
+  { id: 'voltage', label: 'Voltage', type: 'text', section: 'technical' },
+  { id: 'connectivity', label: 'Connectivity (WiFi/BT/HDMI)', type: 'text', section: 'technical' },
+  { id: 'dims', label: 'Dimensions (L x W x H)', type: 'text', section: 'technical' },
+  { id: 'weight', label: 'Weight (kg)', type: 'number', section: 'technical' },
+
+  // Commercial Fields
+  { id: 'in_stock', label: 'In Stock', type: 'boolean', section: 'commercial' },
+  { id: 'emi', label: 'EMI Available', type: 'boolean', section: 'commercial' }
+];
+
 export const useStore = create<State>((set, get) => ({
   user: null,
   isAuthenticated: false,
+  isAdminAuthenticated: false,
   currentView: 'dashboard',
   isSidebarExpanded: true,
   uiTheme: 'light',
@@ -176,6 +214,39 @@ export const useStore = create<State>((set, get) => ({
     { id: 'cat3', name: 'Accessories', productCount: 1, color: '#10b981', rank: 3, description: 'Handcrafted home decor and accessories.' }
   ],
   mediaItems: INITIAL_MEDIA,
+  registeredUsers: INITIAL_USERS,
+
+  businessTemplates: [
+    {
+      id: 'tech-nova',
+      name: 'TechNova Electronics',
+      description: 'Specialized template for consumer electronics retail with technical specification support.',
+      schema: TECHNOVA_SCHEMA
+    },
+    {
+      id: 'fashion-boutique',
+      name: 'Luxe Fashion',
+      description: 'Standard apparel template with size, color, and fabric attributes.',
+      schema: [
+        { id: 'prod_name', label: 'Item Name', type: 'text', section: 'basic', required: true },
+        { id: 'price', label: 'Retail Price', type: 'number', section: 'basic', required: true },
+        { id: 'size', label: 'Size', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL'], section: 'technical' },
+        { id: 'fabric', label: 'Material', type: 'text', section: 'technical' }
+      ]
+    },
+    {
+      id: 'general-retail',
+      name: 'General Retail',
+      description: 'Flexible template suitable for general merchandise and home goods.',
+      schema: [
+        { id: 'prod_name', label: 'Product Name', type: 'text', section: 'basic', required: true },
+        { id: 'sku', label: 'SKU', type: 'text', section: 'basic' },
+        { id: 'price', label: 'Price', type: 'number', section: 'basic', required: true }
+      ]
+    }
+  ],
+  selectedBusinessTemplateId: null,
+
   activeCategoryId: null,
   editingProductId: null,
   editingCategoryId: null,
@@ -220,9 +291,6 @@ export const useStore = create<State>((set, get) => ({
 
   undoStack: [],
   redoStack: [],
-  clipboard: [],
-  savedColors: ['#4f46e5', '#0f172a', '#ffffff', '#f1f5f9'], // Default colors
-  editorTab: 'products',
 
   pushHistory: () => {
     const { catalog, undoStack } = get();
@@ -259,21 +327,44 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  login: (email) => set({
-    isAuthenticated: true,
-    user: { name: 'John Doe', email, avatar: 'JD' },
-    currentView: 'dashboard'
+  login: (email) => {
+    const existingUser = INITIAL_USERS.find(u => u.email === email && u.role !== 'admin');
+
+    // Simulate new user if not found in mock list (John/Alice are existing)
+    const isNewUser = !existingUser;
+
+    const userObj: User = existingUser || {
+      id: `u-${Date.now()}`,
+      name: 'New User',
+      email,
+      avatar: undefined,
+      role: 'user',
+      status: 'active',
+      joinedAt: new Date().toISOString(),
+      businessId: undefined // New users have no business initially
+    };
+
+    set({
+      isAuthenticated: true,
+      user: userObj,
+      currentView: userObj.businessId ? 'dashboard' : 'business-selection'
+    });
+  },
+
+  adminLogin: (email) => set({
+    isAdminAuthenticated: true,
+    user: { id: 'admin-1', name: 'Catalog Admin', email, avatar: 'AD', role: 'admin', status: 'active', joinedAt: new Date().toISOString() },
+    currentView: 'admin-dashboard'
   }),
 
   logout: () => set({
     isAuthenticated: false,
+    isAdminAuthenticated: false,
     user: null,
     currentView: 'dashboard'
   }),
 
   setView: (view) => set({ currentView: view }),
-  setEditorTab: (tab) => set({ editorTab: tab }),
-  setUser: (user) => set({ user, isAuthenticated: !!user }),
   setSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
   toggleUiTheme: () => set((state) => ({ uiTheme: state.uiTheme === 'light' ? 'dark' : 'light' })),
   setDefaultCurrency: (currency) => set({ defaultCurrency: currency }),
@@ -281,6 +372,27 @@ export const useStore = create<State>((set, get) => ({
   updateUser: (updates) => set((state) => ({
     user: state.user ? { ...state.user, ...updates } : null
   })),
+
+  // Business Logic
+  addBusinessTemplate: (template) => set(state => ({
+    businessTemplates: [...state.businessTemplates, template]
+  })),
+
+  updateBusinessTemplate: (id, updates) => set(state => ({
+    businessTemplates: state.businessTemplates.map(b => b.id === id ? { ...b, ...updates } : b)
+  })),
+
+  selectBusinessTemplate: (id) => set({
+    selectedBusinessTemplateId: id,
+    currentView: id ? 'business-onboarding' : 'business-selection'
+  }),
+
+  completeOnboarding: (businessId, businessName) => set(state => {
+    return {
+      user: state.user ? { ...state.user, businessId, businessName } : null,
+      currentView: 'dashboard'
+    };
+  }),
 
   addProduct: (product) => set((state) => ({
     products: [product, ...state.products]
@@ -1364,38 +1476,5 @@ export const useStore = create<State>((set, get) => ({
     if (groupsToDissolve.size === 0) return state;
     page.elements = page.elements.map(el => (el.groupId && groupsToDissolve.has(el.groupId)) ? { ...el, groupId: undefined } : el);
     return { catalog: { ...catalog, pages: newPages, updatedAt: new Date().toISOString() } };
-  }),
-
-  copyToClipboard: () => set((state) => {
-    const selectedElements = state.catalog.pages[state.currentPageIndex].elements.filter(el => state.selectedElementIds.includes(el.id));
-    return { clipboard: selectedElements };
-  }),
-
-  pasteFromClipboard: () => set((state) => {
-    if (state.clipboard.length === 0) return state;
-    get().pushHistory();
-    const newElements = state.clipboard.map(el => ({
-      ...JSON.parse(JSON.stringify(el)),
-      id: `el-paste-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      x: el.x + 20,
-      y: el.y + 20,
-      zIndex: state.catalog.pages[state.currentPageIndex].elements.length + 1
-    }));
-
-    const newPages = [...state.catalog.pages];
-    newPages[state.currentPageIndex].elements = [...newPages[state.currentPageIndex].elements, ...newElements];
-
-    return {
-      catalog: { ...state.catalog, pages: newPages },
-      selectedElementIds: newElements.map(el => el.id)
-    };
-  }),
-
-  addSavedColor: (color) => set((state) => ({
-    savedColors: state.savedColors.includes(color) ? state.savedColors : [...state.savedColors, color]
-  })),
-
-  removeSavedColor: (color) => set((state) => ({
-    savedColors: state.savedColors.filter(c => c !== color)
-  })),
+  })
 }));

@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield } from 'lucide-react';
 
 const Login: React.FC = () => {
-  const login = useStore((state) => state.login);
+  const { login, setView } = useStore();
   const [isLoginMode, setIsLoginMode] = useState(true);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -25,42 +25,42 @@ const Login: React.FC = () => {
   return (
     <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 font-sans">
       <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 bg-white rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden min-h-[640px]">
-        
+
         {/* Visual Brand Side */}
         <div className="hidden md:flex flex-col bg-slate-900 p-16 text-white relative overflow-hidden">
-           <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-transparent"></div>
-           <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px]"></div>
-           
-           <div className="relative z-10 flex flex-col h-full">
-              <div className="flex items-center gap-4 mb-auto">
-                 <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl shadow-indigo-600/30">C</div>
-                 <span className="font-black text-2xl tracking-tighter">Studio.</span>
-              </div>
-              
-              <div className="space-y-6">
-                 <span className="px-4 py-1.5 bg-indigo-600/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-indigo-600/30 inline-block">Enterprise v3.1</span>
-                 <h2 className="text-5xl font-black leading-[1.1] tracking-tight">Design At Scale. <br /><span className="text-indigo-500">Effortlessly.</span></h2>
-                 <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm">
-                   Accelerate your go-to-market strategy with automated high-fidelity catalog generation and cloud asset management.
-                 </p>
-              </div>
+          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-transparent"></div>
+          <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px]"></div>
 
-              <div className="mt-20 flex items-center gap-8 text-slate-500">
-                 <div className="flex flex-col">
-                    <span className="text-2xl font-black text-white leading-none mb-1">2k+</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest">Global Brands</span>
-                 </div>
-                 <div className="w-px h-8 bg-slate-800"></div>
-                 <div className="flex flex-col">
-                    <span className="text-2xl font-black text-white leading-none mb-1">99.9%</span>
-                    <span className="text-[10px] font-black uppercase tracking-widest">Uptime SLA</span>
-                 </div>
+          <div className="relative z-10 flex flex-col h-full">
+            <div className="flex items-center gap-4 mb-auto">
+              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl shadow-indigo-600/30">C</div>
+              <span className="font-black text-2xl tracking-tighter">Studio.</span>
+            </div>
+
+            <div className="space-y-6">
+              <span className="px-4 py-1.5 bg-indigo-600/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-indigo-600/30 inline-block">Enterprise v3.1</span>
+              <h2 className="text-5xl font-black leading-[1.1] tracking-tight">Design At Scale. <br /><span className="text-indigo-500">Effortlessly.</span></h2>
+              <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm">
+                Accelerate your go-to-market strategy with automated high-fidelity catalog generation and cloud asset management.
+              </p>
+            </div>
+
+            <div className="mt-20 flex items-center gap-8 text-slate-500">
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white leading-none mb-1">2k+</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Global Brands</span>
               </div>
-           </div>
+              <div className="w-px h-8 bg-slate-800"></div>
+              <div className="flex flex-col">
+                <span className="text-2xl font-black text-white leading-none mb-1">99.9%</span>
+                <span className="text-[10px] font-black uppercase tracking-widest">Uptime SLA</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Auth Interaction Side */}
-        <div className="flex flex-col p-12 md:p-20 justify-center">
+        <div className="flex flex-col p-12 md:p-20 justify-center relative">
           <div className="mb-12">
             <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
               {isLoginMode ? 'Welcome Back' : 'Get Started'}
@@ -74,8 +74,8 @@ const Login: React.FC = () => {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Legal Name</label>
                 <div className="relative group">
                   <UserIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                  <input 
-                    type="text" 
+                  <input
+                    type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -90,8 +90,8 @@ const Login: React.FC = () => {
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Corporate Email</label>
               <div className="relative group">
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -107,15 +107,15 @@ const Login: React.FC = () => {
               </div>
               <div className="relative group">
                 <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-                <input 
-                  type={showPassword ? "text" : "password"} 
+                <input
+                  type={showPassword ? "text" : "password"}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Your secure password"
                   className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-12 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors"
@@ -125,7 +125,7 @@ const Login: React.FC = () => {
               </div>
             </div>
 
-            <button 
+            <button
               type="submit"
               disabled={isSubmitting}
               className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 disabled:opacity-70 mt-4"
@@ -141,13 +141,22 @@ const Login: React.FC = () => {
             </button>
           </form>
 
-          <div className="mt-12 text-center">
+          <div className="mt-10 text-center space-y-4">
             <p className="text-xs font-bold text-slate-400">
               {isLoginMode ? "New here?" : "Already a user?"}
               <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-indigo-600 font-black ml-2 hover:underline">
                 {isLoginMode ? "Establish Account" : "Sign In"}
               </button>
             </p>
+
+            <div className="w-full h-px bg-slate-100 my-4" />
+
+            <button
+              onClick={() => setView('admin-login')}
+              className="flex items-center justify-center gap-2 mx-auto text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-indigo-600 transition-colors"
+            >
+              <Shield size={12} /> Catalog Team Login
+            </button>
           </div>
         </div>
       </div>
