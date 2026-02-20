@@ -19,6 +19,7 @@ import EditorCanvas from './components/Editor/EditorCanvas';
 import ProductLibrary from './components/Sidebar/ProductLibrary';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
 import TemplatesPanel from './components/Sidebar/TemplatesPanel';
+import StockImagesPanel from './components/Sidebar/StockImagesPanel';
 
 import EffectsPanel from './components/Sidebar/EffectsPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
@@ -49,7 +50,8 @@ import {
   Rocket,
   Sparkles,
   FileText,
-  MousePointer2
+  MousePointer2,
+  Image as ImageIcon
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -80,7 +82,7 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => setLoading(false), 800);
-    
+
     // Wait for Font Awesome fonts to load before enabling editor
     if (document.fonts) {
       document.fonts.ready.then(() => {
@@ -89,7 +91,7 @@ const App: React.FC = () => {
     } else {
       setFontsLoaded(true);
     }
-    
+
     return () => clearTimeout(timer);
   }, []);
 
@@ -188,9 +190,23 @@ const App: React.FC = () => {
                   }
                 }}
                 className={`p-3 rounded-[10px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Media Library"
+                title="My Images"
               >
                 <Images size={22} />
+              </button>
+              <button
+                onClick={() => {
+                  if (editorTab === 'stock' && isSidebarExpanded) {
+                    setSidebarExpanded(false);
+                  } else {
+                    setEditorTab('stock');
+                    setSidebarExpanded(true);
+                  }
+                }}
+                className={`p-3 rounded-[10px] transition-all ${editorTab === 'stock' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                title="Stock Images"
+              >
+                <ImageIcon size={22} />
               </button>
               <button
                 onClick={() => {
@@ -258,6 +274,7 @@ const App: React.FC = () => {
               {editorTab === 'pages' && <PagesPanel />}
               {editorTab === 'products' && <ProductLibrary />}
               {editorTab === 'media' && <MediaAssetLibrary />}
+              {editorTab === 'stock' && <StockImagesPanel />}
               {editorTab === 'templates' && <TemplatesPanel />}
               {editorTab === 'buttons' && <ButtonsPanel />}
 

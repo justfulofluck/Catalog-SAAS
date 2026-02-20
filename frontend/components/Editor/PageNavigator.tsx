@@ -139,11 +139,15 @@ const PageNavigator: React.FC = () => {
             >
               {/* Thumbnail / Preview */}
               <div
-                className={`page-preview w-[80px] h-[106px] relative bg-white border shadow-sm overflow-hidden rounded-[2px] transition-all
+                className={`page-preview relative bg-white border shadow-sm overflow-hidden rounded-[2px] transition-all
                   ${isActive
                     ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-lg'
                     : (isDark ? 'border-slate-700 hover:border-slate-500' : 'border-slate-200 hover:border-slate-300')}
                 `}
+                style={{
+                  width: page.orientation === 'landscape' ? '106px' : '80px',
+                  height: page.orientation === 'landscape' ? '80px' : '106px'
+                }}
               >
                 {page.elements.length === 0 ? (
                   <div className="w-full h-full flex items-center justify-center opacity-5 bg-slate-50">
@@ -151,19 +155,23 @@ const PageNavigator: React.FC = () => {
                   </div>
                 ) : (
                   <div className="w-full h-full relative" style={{ backgroundColor: page.backgroundColor || '#ffffff' }}>
-                    {page.elements.slice(0, 15).map((el) => (
-                      <div
-                        key={el.id}
-                        className="absolute opacity-30"
-                        style={{
-                          top: `${(el.y / 1123) * 100}%`,
-                          left: `${(el.x / 794) * 100}%`,
-                          width: `${(el.width / 794) * 100}%`,
-                          height: `${(el.height / 1123) * 100}%`,
-                          backgroundColor: el.fill || (el.type === 'image' ? '#4f46e5' : '#94a3b8'),
-                        }}
-                      />
-                    ))}
+                    {page.elements.slice(0, 15).map((el) => {
+                      const curW = page.orientation === 'landscape' ? 1123 : 794;
+                      const curH = page.orientation === 'landscape' ? 794 : 1123;
+                      return (
+                        <div
+                          key={el.id}
+                          className="absolute opacity-30"
+                          style={{
+                            top: `${(el.y / curH) * 100}%`,
+                            left: `${(el.x / curW) * 100}%`,
+                            width: `${(el.width / curW) * 100}%`,
+                            height: `${(el.height / curH) * 100}%`,
+                            backgroundColor: el.fill || (el.type === 'image' ? '#4f46e5' : '#94a3b8'),
+                          }}
+                        />
+                      );
+                    })}
                   </div>
                 )}
 
@@ -173,23 +181,39 @@ const PageNavigator: React.FC = () => {
                 </div>
 
                 {/* Hover Overlay Actions */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-wrap items-center justify-center gap-1.5 p-2">
                   <button
-                    onClick={(e) => { e.stopPropagation(); duplicatePage(index); }}
-                    className="p-1.5 bg-white text-slate-700 rounded-full hover:bg-indigo-50 hover:text-indigo-600 shadow-lg"
-                    title="Duplicate"
+                    onClick={(e) => { e.stopPropagation(); useStore.getState().setPageOrientation(index, 'portrait'); }}
+                    className={`p-1.5 rounded-md transition-colors ${page.orientation !== 'landscape' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                    title="Portrait"
                   >
-                    <Copy size={10} />
+                    <div className="w-2 h-3 border-2 border-current rounded-[1px]" />
                   </button>
-                  {catalog.pages.length > 1 && (
+                  <button
+                    onClick={(e) => { e.stopPropagation(); useStore.getState().setPageOrientation(index, 'landscape'); }}
+                    className={`p-1.5 rounded-md transition-colors ${page.orientation === 'landscape' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
+                    title="Landscape"
+                  >
+                    <div className="w-3 h-2 border-2 border-current rounded-[1px]" />
+                  </button>
+                  <div className="w-full flex justify-center gap-1.5 mt-1">
                     <button
-                      onClick={(e) => { e.stopPropagation(); removePage(index); }}
-                      className="p-1.5 bg-white text-red-500 rounded-full hover:bg-red-50 shadow-lg"
-                      title="Delete"
+                      onClick={(e) => { e.stopPropagation(); duplicatePage(index); }}
+                      className="p-1.5 bg-white text-slate-700 rounded-full hover:bg-indigo-50 hover:text-indigo-600 shadow-lg"
+                      title="Duplicate"
                     >
-                      <Trash2 size={10} />
+                      <Copy size={10} />
                     </button>
-                  )}
+                    {catalog.pages.length > 1 && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); removePage(index); }}
+                        className="p-1.5 bg-white text-red-500 rounded-full hover:bg-red-50 shadow-lg"
+                        title="Delete"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
