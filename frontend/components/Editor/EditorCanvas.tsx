@@ -74,18 +74,18 @@ const PageStage: React.FC<{
 
     const marginColor = catalog.marginColor || '#6366f1';
 
-    // Hierarchy: Page Edge -> Margins -> Header/Footer segments -> Content Area
-    // The "dashed box" is the actual Margin boundary.
-    // The Header and Footer live INSIDE this box.
+    const isLandscape = page.orientation === 'landscape';
+    const currentWidth = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+    const currentHeight = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
 
     const effContentTop = marginTop + (hasHeader ? headerHeight : 0);
-    const effContentBottom = PAGE_HEIGHT - marginBottom - (hasFooter ? footerHeight : 0);
+    const effContentBottom = currentHeight - marginBottom - (hasFooter ? footerHeight : 0);
 
     return (
       <KonvaStage
         ref={isActive ? stageRef : undefined}
-        width={PAGE_WIDTH * zoom}
-        height={PAGE_HEIGHT * zoom}
+        width={currentWidth * zoom}
+        height={currentHeight * zoom}
         scaleX={zoom}
         scaleY={zoom}
         onMouseDown={isActive ? onMouseDown : undefined}
@@ -97,7 +97,7 @@ const PageStage: React.FC<{
       >
         <KonvaLayer>
           {/* Page background */}
-          <KonvaRect name="grid-background" width={PAGE_WIDTH} height={PAGE_HEIGHT} fill={canvasBg} />
+          <KonvaRect name="grid-background" width={currentWidth} height={currentHeight} fill={canvasBg} />
 
 
           {/* Margins & Areas Visualization (Rendered ON TOP for visibility) */}
@@ -108,8 +108,8 @@ const PageStage: React.FC<{
               listening={false}
               x={marginLeft}
               y={marginTop}
-              width={PAGE_WIDTH - marginLeft - marginRight}
-              height={PAGE_HEIGHT - marginTop - marginBottom}
+              width={currentWidth - marginLeft - marginRight}
+              height={currentHeight - marginTop - marginBottom}
               stroke={marginColor}
               strokeWidth={Math.max(1, 2 / zoom)}
               dash={[6, 3]}
@@ -123,14 +123,14 @@ const PageStage: React.FC<{
                   name="header-bg"
                   x={marginLeft}
                   y={marginTop}
-                  width={PAGE_WIDTH - marginLeft - marginRight}
+                  width={currentWidth - marginLeft - marginRight}
                   height={headerHeight}
                   fill={`${marginColor}22`}
                 />
                 <KonvaRect
                   x={marginLeft}
                   y={marginTop + headerHeight}
-                  width={PAGE_WIDTH - marginLeft - marginRight}
+                  width={currentWidth - marginLeft - marginRight}
                   height={Math.max(1, 2 / zoom)}
                   fill={marginColor}
                   opacity={0.6}
@@ -142,7 +142,7 @@ const PageStage: React.FC<{
                   name="header-text"
                   x={marginLeft + 10}
                   y={marginTop + (headerHeight / 4)}
-                  width={PAGE_WIDTH - marginLeft - marginRight - 20}
+                  width={currentWidth - marginLeft - marginRight - 20}
                   height={headerHeight / 2}
                   text={catalog.headerText || ""}
                   fontSize={catalog.headerFontSize || Math.min(12, headerHeight / 2)}
@@ -167,8 +167,8 @@ const PageStage: React.FC<{
               <KonvaText
                 key={`page-num-no-footer-${catalog.pageNumberAlignment}`}
                 name="page-number-no-footer"
-                x={catalog.pageNumberAlignment === 'right' ? PAGE_WIDTH - marginRight - 30 : marginLeft + 10}
-                y={PAGE_HEIGHT - marginBottom - 25}
+                x={catalog.pageNumberAlignment === 'right' ? currentWidth - marginRight - 30 : marginLeft + 10}
+                y={currentHeight - marginBottom - 25}
                 width={40}
                 height={20}
                 text={String(pageIdx + 1)}
@@ -186,15 +186,15 @@ const PageStage: React.FC<{
                 <KonvaRect
                   name="footer-bg"
                   x={marginLeft}
-                  y={PAGE_HEIGHT - marginBottom - footerHeight}
-                  width={PAGE_WIDTH - marginLeft - marginRight}
+                  y={currentHeight - marginBottom - footerHeight}
+                  width={currentWidth - marginLeft - marginRight}
                   height={footerHeight}
                   fill={`${marginColor}22`}
                 />
                 <KonvaRect
                   x={marginLeft}
-                  y={PAGE_HEIGHT - marginBottom - footerHeight}
-                  width={PAGE_WIDTH - marginLeft - marginRight}
+                  y={currentHeight - marginBottom - footerHeight}
+                  width={currentWidth - marginLeft - marginRight}
                   height={Math.max(1, 2 / zoom)}
                   fill={marginColor}
                   opacity={0.6}
@@ -205,8 +205,8 @@ const PageStage: React.FC<{
                   key={`footer-${catalog.footerFontFamily}-${catalog.footerFontSize}`}
                   name="footer-text"
                   x={marginLeft + 10}
-                  y={PAGE_HEIGHT - marginBottom - footerHeight + (footerHeight / 4)}
-                  width={PAGE_WIDTH - marginLeft - marginRight - 20}
+                  y={currentHeight - marginBottom - footerHeight + (footerHeight / 4)}
+                  width={currentWidth - marginLeft - marginRight - 20}
                   height={footerHeight / 2}
                   text={catalog.footerText ? catalog.footerText.replace(/\{\{page\}\}/gi, '') : ""}
                   fontSize={catalog.footerFontSize || Math.min(10, footerHeight / 2)}
@@ -222,8 +222,8 @@ const PageStage: React.FC<{
                   <KonvaText
                     key={`page-num-footer-${catalog.pageNumberAlignment}`}
                     name="page-number"
-                    x={catalog.pageNumberAlignment === 'right' ? PAGE_WIDTH - marginRight - 50 : marginLeft + 10}
-                    y={PAGE_HEIGHT - marginBottom - footerHeight}
+                    x={catalog.pageNumberAlignment === 'right' ? currentWidth - marginRight - 50 : marginLeft + 10}
+                    y={currentHeight - marginBottom - footerHeight}
                     width={40}
                     height={footerHeight}
                     text={String(pageIdx + 1)}
@@ -237,7 +237,7 @@ const PageStage: React.FC<{
                 )}
 
                 {/* Footer Label Pill */}
-                <KonvaGroup x={marginLeft - 50} y={PAGE_HEIGHT - marginBottom - (footerHeight / 2) - 12}>
+                <KonvaGroup x={marginLeft - 50} y={currentHeight - marginBottom - (footerHeight / 2) - 12}>
                   <KonvaRect width={45} height={24} fill="#475569" cornerRadius={6} />
                   <KonvaText text="Footer" fill="#ffffff" fontSize={9} fontStyle="bold" width={45} height={24} align="center" verticalAlign="middle" />
                 </KonvaGroup>
@@ -253,7 +253,7 @@ const PageStage: React.FC<{
             <KonvaGroup
               clipX={marginLeft}
               clipY={effContentTop}
-              clipWidth={Math.max(0, PAGE_WIDTH - marginLeft - marginRight)}
+              clipWidth={Math.max(0, currentWidth - marginLeft - marginRight)}
               clipHeight={Math.max(0, effContentBottom - effContentTop)}
             >
               {page.elements.map((el) => (
@@ -313,9 +313,11 @@ const PageStage: React.FC<{
 
           {/* Master Footer Elements - Rendered LAST to be on top */}
           {hasFooter && catalog.footerElements.map((el: any) => {
-            const elementWithPage = el.type === 'text' && el.text?.toLowerCase().includes('{{page}}')
-              ? { ...el, text: el.text.replace(/\{\{page\}\}/gi, String(pageIdx + 1)) }
-              : el;
+            const footerShift = currentHeight - PAGE_HEIGHT;
+            const shiftedEl = { ...el, y: el.y + footerShift };
+            const elementWithPage = shiftedEl.type === 'text' && shiftedEl.text?.toLowerCase().includes('{{page}}')
+              ? { ...shiftedEl, text: shiftedEl.text.replace(/\{\{page\}\}/gi, String(pageIdx + 1)) }
+              : shiftedEl;
 
             return (
               <CanvasElementComponent
@@ -323,7 +325,15 @@ const PageStage: React.FC<{
                 element={elementWithPage}
                 isSelected={isActive && selectedElementIds.includes(el.id)}
                 onSelect={(multi) => isActive && onSelect(el.id, multi)}
-                onChange={(updates) => isActive && useStore.getState().updateFooterElement(el.id, updates)}
+                onChange={(updates: any) => {
+                  if (!isActive) return;
+                  // If Y is updated, we must un-shift it before saving back to master
+                  const savedUpdates = { ...updates };
+                  if (updates.y !== undefined) {
+                    savedUpdates.y = updates.y - footerShift;
+                  }
+                  useStore.getState().updateFooterElement(el.id, savedUpdates);
+                }}
                 isEditing={isActive && editingId === el.id}
               />
             );
@@ -353,6 +363,10 @@ const EditorCanvas: React.FC = () => {
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
+  const isLandscape = currentPage?.orientation === 'landscape';
+  const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+  const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const canvasBg = catalog.backgroundColor || theme.backgroundColor;
 
@@ -645,7 +659,7 @@ const EditorCanvas: React.FC = () => {
         const data = JSON.parse(json);
         if (data.type === 'image' || data.type === 'product') {
           const isHeaderDrop = dropY < (marginTop + headerHeight);
-          const isFooterDrop = dropY > (PAGE_HEIGHT - marginBottom - footerHeight);
+          const isFooterDrop = dropY > (curH - marginBottom - footerHeight);
 
           if (targetId && currentPage.type === 'interior') {
             const tEl = currentPage.elements.find(el => el.id === targetId);
@@ -654,7 +668,7 @@ const EditorCanvas: React.FC = () => {
             const headerY = marginTop + 10;
             useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: headerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
           } else if (isFooterDrop) {
-            const footerY = PAGE_HEIGHT - marginBottom - footerHeight + 10;
+            const footerY = curH - marginBottom - footerHeight + 10;
             useStore.getState().addFooterElement({ id: `footer-el-${Date.now()}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: footerY, width: 200, height: footerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
           } else {
             addElement(currentPageIndex, { id: `drop-${Date.now()}`, type: 'image', x: dropX - 150, y: dropY - 150, width: 300, height: 300, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
@@ -709,7 +723,7 @@ const EditorCanvas: React.FC = () => {
           text: catalog.headerText || 'Header Text',
           x: (catalog.marginLeft || 0) + 10,
           y: (catalog.marginTop || 0) + ((catalog.headerHeight || 0) / 4),
-          width: PAGE_WIDTH - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
+          width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
           height: (catalog.headerHeight || 0) / 2,
           fontSize: catalog.headerFontSize || 12,
           fontFamily: catalog.headerFontFamily || 'Inter',
@@ -726,7 +740,7 @@ const EditorCanvas: React.FC = () => {
 
     // 2. Footer Area Check
     const isFooterArea = targetName === 'footer-bg' || targetName === 'footer-text' || parentName === 'footer-group';
-    const footerTopY = PAGE_HEIGHT - (catalog.marginBottom || 0) - (catalog.footerHeight || 0);
+    const footerTopY = curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 0);
     const inFooterZone = catalog.hasFooter && y >= footerTopY && y <= footerTopY + (catalog.footerHeight || 0);
 
     if (isFooterArea || inFooterZone) {
@@ -743,7 +757,7 @@ const EditorCanvas: React.FC = () => {
           text: catalog.footerText || 'Footer Text',
           x: (catalog.marginLeft || 0) + 10,
           y: footerTopY + ((catalog.footerHeight || 0) / 4),
-          width: PAGE_WIDTH - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
+          width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
           height: (catalog.footerHeight || 0) / 2,
           fontSize: catalog.footerFontSize || 10,
           fontFamily: catalog.footerFontFamily || 'Inter',
@@ -846,6 +860,10 @@ const EditorCanvas: React.FC = () => {
         >
           {catalog.pages.map((page, pageIdx) => {
             const isActive = pageIdx === currentPageIndex;
+            const isLandscape = page.orientation === 'landscape';
+            const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+            const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+
             return (
               <div
                 key={page.id}
@@ -867,7 +885,7 @@ const EditorCanvas: React.FC = () => {
                     ? (isDragOver ? 'border-indigo-400 ring-8 ring-indigo-600/5' : 'border-slate-300')
                     : (uiTheme === 'dark' ? 'border-slate-700 opacity-80 hover:opacity-100 cursor-pointer' : 'border-slate-200 opacity-80 hover:opacity-100 cursor-pointer')
                     }`}
-                  style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}
+                  style={{ width: curW * zoom, height: curH * zoom }}
                 >
                   {/* Drop indicator (active page only) */}
                   {isActive && isDragOver && (
@@ -995,7 +1013,7 @@ const EditorCanvas: React.FC = () => {
 
           {/* Add New Page */}
           <div className="shrink-0 flex flex-col items-center mb-10" ref={addPageMenuRef}>
-            <div className="relative" style={{ width: PAGE_WIDTH * zoom }}>
+            <div className="relative" style={{ width: (catalog.pages[catalog.pages.length - 1]?.orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH) * zoom }}>
               <button
                 onClick={() => setShowAddPageMenu(prev => !prev)}
                 className={`w-full border-2 border-dashed rounded-lg flex items-center justify-center gap-3 py-4 transition-all ${uiTheme === 'dark'

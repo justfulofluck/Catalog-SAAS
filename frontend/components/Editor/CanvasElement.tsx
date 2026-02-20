@@ -38,6 +38,9 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
+  const isLandscape = currentPage?.orientation === 'landscape';
+  const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+  const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
 
   const linkedProduct = useMemo(() => {
     if (element.productId) {
@@ -377,7 +380,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     const centerY = e.target.y() + e.target.height() / 2;
 
     // Vertical guides (Left, CenterX, Right)
-    const vSnaps = [0, PAGE_WIDTH / 2, PAGE_WIDTH];
+    const vSnaps = [0, curW / 2, curW];
     currentPage.elements.forEach(el => {
       if (el.id === element.id || selectedElementIds.includes(el.id)) return;
       vSnaps.push(el.x, el.x + el.width / 2, el.x + el.width);
@@ -393,7 +396,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     if (snappedH) e.target.x(snappedX);
 
     // Horizontal guides (Top, CenterY, Bottom)
-    const hSnaps = [0, PAGE_HEIGHT / 2, PAGE_HEIGHT];
+    const hSnaps = [0, curH / 2, curH];
     currentPage.elements.forEach(el => {
       if (el.id === element.id || selectedElementIds.includes(el.id)) return;
       hSnaps.push(el.y, el.y + el.height / 2, el.y + el.height);

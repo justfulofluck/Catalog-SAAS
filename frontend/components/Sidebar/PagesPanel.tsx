@@ -6,9 +6,9 @@ import { useStore } from '../../store/useStore';
 import { PageType, CatalogPage, CanvasElement, Product } from '../../types';
 import { THEMES, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 
-const THUMB_W = 140;
-const THUMB_H = Math.round(THUMB_W * (PAGE_HEIGHT / PAGE_WIDTH));
-const THUMB_SCALE = THUMB_W / PAGE_WIDTH;
+const THUMB_BASE = 140;
+const THUMB_SCALE_PORTRAIT = THUMB_BASE / PAGE_WIDTH;
+const THUMB_SCALE_LANDSCAPE = THUMB_BASE / PAGE_HEIGHT;
 
 // Renders a single canvas element inside the thumbnail
 const ThumbElement: React.FC<{ el: CanvasElement; products: Product[] }> = ({ el, products }) => {
@@ -92,14 +92,23 @@ const ThumbElement: React.FC<{ el: CanvasElement; products: Product[] }> = ({ el
 };
 
 const PageThumbnail: React.FC<{ page: CatalogPage; index: number; isActive: boolean; canvasBg: string; products: Product[]; catalog: any }> = ({ page, index, isActive, canvasBg, products, catalog }) => {
+    const isLandscape = page.orientation === 'landscape';
+    const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+    const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+
+    // Scale so it fits in our 140px wide sidebar container
+    const thumbW = THUMB_BASE;
+    const thumbH = Math.round(thumbW * (curH / curW));
+    const thumbScale = thumbW / curW;
+
     return (
         <div
-            className={`w-full overflow-hidden rounded-sm border transition-all ${isActive ? 'border-indigo-500 ring-2 ring-indigo-400/30' : 'border-slate-200 hover:border-slate-300'}`}
-            style={{ width: THUMB_W, height: THUMB_H }}
+            className={`overflow-hidden rounded-sm border transition-all ${isActive ? 'border-indigo-500 ring-2 ring-indigo-400/30' : 'border-slate-200 hover:border-slate-300'}`}
+            style={{ width: thumbW, height: thumbH, margin: '0 auto' }}
         >
-            <KonvaStage width={THUMB_W} height={THUMB_H} scaleX={THUMB_SCALE} scaleY={THUMB_SCALE} listening={false}>
+            <KonvaStage width={thumbW} height={thumbH} scaleX={thumbScale} scaleY={thumbScale} listening={false}>
                 <KonvaLayer>
-                    <KonvaRect width={PAGE_WIDTH} height={PAGE_HEIGHT} fill={canvasBg} />
+                    <KonvaRect width={curW} height={curH} fill={canvasBg} />
 
                     {/* Master Header */}
                     {catalog.hasHeader && catalog.headerElements.map((el: any) => (
@@ -108,9 +117,10 @@ const PageThumbnail: React.FC<{ page: CatalogPage; index: number; isActive: bool
 
                     {/* Master Footer */}
                     {catalog.hasFooter && catalog.footerElements.map((el: any) => {
+                        const footerShift = curH - PAGE_HEIGHT;
                         const elWithPage = el.type === 'text' && el.text?.includes('{{page}}')
-                            ? { ...el, text: el.text.replace('{{page}}', String(index + 1)) }
-                            : el;
+                            ? { ...el, y: el.y + footerShift, text: el.text.replace('{{page}}', String(index + 1)) }
+                            : { ...el, y: el.y + footerShift };
                         return <ThumbElement key={`footer-${el.id}`} el={elWithPage} products={products} />;
                     })}
 
@@ -228,19 +238,29 @@ const PagesPanel: React.FC = () => {
                             {hoveredIndex === index && (
                                 <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
                                     <button
+                                        onClick={(e) => { e.stopPropagation(); useStore.getState().setPageOrientation(index, page.orientation === 'landscape' ? 'portrait' : 'landscape'); }}
+                                        className="p-1.5 bg-white text-indigo-600 rounded-lg shadow-lg hover:bg-indigo-50 border border-indigo-100 transition-all active:scale-95"
+                                        title={`Switch to ${page.orientation === 'landscape' ? 'Portrait' : 'Landscape'}`}
+                                    >
+                                        <div className={`transition-transform duration-300 ${page.orientation === 'landscape' ? 'rotate-90' : ''}`}>
+                                            <div className="w-2.5 h-3.5 border-2 border-current rounded-[2px]" />
+                                        </div>
+                                    </button>
+                                    <div className="h-px bg-slate-100 my-0.5" />
+                                    <button
                                         onClick={(e) => { e.stopPropagation(); duplicatePage(index); }}
-                                        className="p-1 bg-white text-slate-600 rounded shadow-md hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200"
+                                        className="p-1.5 bg-white text-slate-600 rounded-lg shadow-md hover:bg-slate-50 border border-slate-200"
                                         title="Duplicate page"
                                     >
-                                        <Copy size={10} />
+                                        <Copy size={12} />
                                     </button>
                                     {catalog.pages.length > 1 && (
                                         <button
                                             onClick={(e) => { e.stopPropagation(); removePage(index); }}
-                                            className="p-1 bg-white text-red-500 rounded shadow-md hover:bg-red-50 border border-slate-200"
+                                            className="p-1.5 bg-white text-red-500 rounded-lg shadow-md hover:bg-red-50 border border-slate-200"
                                             title="Delete page"
                                         >
-                                            <Trash2 size={10} />
+                                            <Trash2 size={12} />
                                         </button>
                                     )}
                                 </div>

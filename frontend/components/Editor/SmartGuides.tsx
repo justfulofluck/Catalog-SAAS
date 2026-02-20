@@ -29,7 +29,7 @@ const SmartGuides: React.FC<Props> = ({ guides, dragPosition }) => {
                 guide.orientation === 'V' ? (
                     <KonvaLine
                         key={`v-${i}`}
-                        points={[guide.position, 0, guide.position, PAGE_HEIGHT]}
+                        points={[guide.position, 0, guide.position, PAGE_HEIGHT * 2]} // Use large values or props?
                         stroke={GUIDE_COLOR}
                         strokeWidth={1}
                         dash={[4, 3]}
@@ -38,7 +38,7 @@ const SmartGuides: React.FC<Props> = ({ guides, dragPosition }) => {
                 ) : (
                     <KonvaLine
                         key={`h-${i}`}
-                        points={[0, guide.position, PAGE_WIDTH, guide.position]}
+                        points={[0, guide.position, PAGE_WIDTH * 2, guide.position]}
                         stroke={GUIDE_COLOR}
                         strokeWidth={1}
                         dash={[4, 3]}

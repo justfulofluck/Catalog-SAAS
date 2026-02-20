@@ -107,6 +107,8 @@ export interface CatalogPage {
   elements: CanvasElement[];
   type: PageType;
   categoryId?: string;
+  orientation?: 'portrait' | 'landscape';
+  backgroundColor?: string;
 }
 
 // Added PageTemplate interface for predefined layouts used in constants.ts

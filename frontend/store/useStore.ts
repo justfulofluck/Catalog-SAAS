@@ -121,8 +121,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'effects' | 'components' | 'buttons' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'effects' | 'components' | 'buttons' | null) => void;
+  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'effects' | 'components' | 'buttons' | 'stock' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'effects' | 'components' | 'buttons' | 'stock' | null) => void;
 
   renameCatalog: (newName: string) => void;
   updateCatalogCategories: (categoryIds: string[]) => void;
@@ -158,6 +158,7 @@ interface State {
   removePage: (index: number) => void;
   duplicatePage: (index: number) => void;
   reorderPages: (newPageIds: string[]) => void;
+  setPageOrientation: (pageIndex: number, orientation: 'portrait' | 'landscape') => void;
 
   toggleCatalogProduct: (productId: string) => void;
   removeProductFromCanvas: (productId: string) => void;
@@ -1053,16 +1054,22 @@ export const useStore = create<State>((set, get) => ({
     if (ids.length < 1) return;
     get().pushHistory();
     const { catalog } = get();
-    const elements = catalog.pages[pageIndex].elements.filter(el => ids.includes(el.id));
+    const page = catalog.pages[pageIndex];
+    if (!page) return;
+
+    const elements = page.elements.filter(el => ids.includes(el.id));
+    const isLandscape = page.orientation === 'landscape';
+    const currentWidth = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+    const currentHeight = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
 
     let target = 0;
     if (type === 'left') target = ids.length === 1 ? 0 : Math.min(...elements.map(e => e.x));
-    if (type === 'right') target = ids.length === 1 ? PAGE_WIDTH : Math.max(...elements.map(e => e.x + e.width));
+    if (type === 'right') target = ids.length === 1 ? currentWidth : Math.max(...elements.map(e => e.x + e.width));
     if (type === 'top') target = ids.length === 1 ? 0 : Math.min(...elements.map(e => e.y));
-    if (type === 'bottom') target = ids.length === 1 ? PAGE_HEIGHT : Math.max(...elements.map(e => e.y + e.height));
+    if (type === 'bottom') target = ids.length === 1 ? currentHeight : Math.max(...elements.map(e => e.y + e.height));
     if (type === 'center') {
       if (ids.length === 1) {
-        target = PAGE_WIDTH / 2;
+        target = currentWidth / 2;
       } else {
         const minX = Math.min(...elements.map(e => e.x));
         const maxX = Math.max(...elements.map(e => e.x + e.width));
@@ -1071,7 +1078,7 @@ export const useStore = create<State>((set, get) => ({
     }
     if (type === 'middle') {
       if (ids.length === 1) {
-        target = PAGE_HEIGHT / 2;
+        target = currentHeight / 2;
       } else {
         const minY = Math.min(...elements.map(e => e.y));
         const maxY = Math.max(...elements.map(e => e.y + e.height));
@@ -1150,6 +1157,53 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
+  setPageOrientation: (pageIndex, orientation) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (!newPages[pageIndex]) return state;
+
+      const oldOrientation = newPages[pageIndex].orientation || 'portrait';
+      if (oldOrientation === orientation) return state;
+
+      // Swap dimensions for shift logic
+      const oldW = oldOrientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH;
+      const oldH = oldOrientation === 'landscape' ? PAGE_WIDTH : PAGE_HEIGHT;
+      const newW = orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH;
+      const newH = orientation === 'landscape' ? PAGE_WIDTH : PAGE_HEIGHT;
+
+      newPages[pageIndex] = {
+        ...newPages[pageIndex],
+        orientation,
+        elements: newPages[pageIndex].elements.map(el => {
+          // Scale positions proportionally
+          const scaleX = newW / oldW;
+          const scaleY = newH / oldH;
+
+          let newX = el.x * scaleX;
+          let newY = el.y * scaleY;
+          let newWidth = el.width * scaleX;
+          let newHeight = el.height * scaleY;
+
+          // For certain elements like product blocks, we might want to preserve aspect ratio
+          // but for now, simple scaling is a good start as per "shifted and positioned accordingly"
+
+          return {
+            ...el,
+            x: newX,
+            y: newY,
+            width: newWidth,
+            height: newHeight
+          };
+        })
+      };
+
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
+      };
+    });
+  },
+
   addPage: (type: PageType = 'interior') => set((state) => {
     const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
     const elements: CanvasElement[] = [];
@@ -1177,7 +1231,8 @@ export const useStore = create<State>((set, get) => ({
       id: `page-${Date.now()}`,
       pageNumber: state.catalog.pages.length + 1,
       elements,
-      type
+      type,
+      orientation: 'portrait'
     };
     return {
       catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
@@ -1206,7 +1261,8 @@ export const useStore = create<State>((set, get) => ({
       pageNumber: state.catalog.pages.length + 1,
       elements: inheritedElements,
       type: 'interior',
-      categoryId: lastInteriorPage?.categoryId
+      categoryId: lastInteriorPage?.categoryId,
+      orientation: lastInteriorPage?.orientation || 'portrait'
     };
     return {
       catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
