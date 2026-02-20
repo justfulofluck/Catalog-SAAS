@@ -11,14 +11,20 @@ import {
     XCircle,
     LogOut,
     Store,
-    Layout
+    Layout,
+    CreditCard
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import BusinessManager from './BusinessManager';
+import SubscriptionManagement from './SubscriptionManagement';
 
 const AdminDashboard: React.FC = () => {
-    const { registeredUsers, logout, user } = useStore();
-    const [activeTab, setActiveTab] = useState<'users' | 'businesses'>('users');
+    const { registeredUsers, logout, user, fetchUsers, error } = useStore();
+    const [activeTab, setActiveTab] = useState<'users' | 'businesses' | 'subscriptions'>('users');
+
+    React.useEffect(() => {
+        fetchUsers();
+    }, []);
 
     const totalUsers = registeredUsers.length;
     const activeUsers = registeredUsers.filter(u => u.status === 'active').length;
@@ -51,6 +57,13 @@ const AdminDashboard: React.FC = () => {
                 </div>
             </div>
 
+            {error && (
+                <div className="bg-red-50 text-red-600 px-8 py-4 text-sm font-bold border-b border-red-100 flex items-center justify-between">
+                    <span>{error}</span>
+                    <button onClick={() => useStore.setState({ error: null })}><XCircle size={16} /></button>
+                </div>
+            )}
+
             {/* Tabs */}
             <div className="bg-white border-b border-slate-200 px-8 pt-6">
                 <div className="flex gap-8">
@@ -65,6 +78,12 @@ const AdminDashboard: React.FC = () => {
                         className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'businesses' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
                     >
                         <Store size={16} /> Business Templates
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('subscriptions')}
+                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'subscriptions' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        <CreditCard size={16} /> Subscription Factory
                     </button>
                 </div>
             </div>
@@ -155,40 +174,40 @@ const AdminDashboard: React.FC = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {registeredUsers.map(user => (
-                                                <tr key={user.id} className="hover:bg-slate-50/80 transition-colors">
+                                            {registeredUsers.map(u => (
+                                                <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
                                                     <td className="px-8 py-4">
                                                         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500">
-                                                            {user.avatar || user.name.substring(0, 2).toUpperCase()}
+                                                            {u.avatar || u.name.substring(0, 2).toUpperCase()}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-4">
                                                         <div>
-                                                            <p className="text-sm font-bold text-slate-900">{user.name}</p>
-                                                            <p className="text-xs text-slate-500">{user.email}</p>
-                                                            {user.businessName && <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-bold uppercase">{user.businessName}</span>}
+                                                            <p className="text-sm font-bold text-slate-900">{u.name}</p>
+                                                            <p className="text-xs text-slate-500">{u.email}</p>
+                                                            {u.businessName && <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-bold uppercase">{u.businessName}</span>}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-4">
-                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${user.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                                            {user.role}
+                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${u.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                            {u.role}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-4">
                                                         <div className="flex items-center gap-2">
-                                                            {user.status === 'active' ? (
+                                                            {u.status === 'active' ? (
                                                                 <CheckCircle2 size={14} className="text-emerald-500" />
                                                             ) : (
                                                                 <XCircle size={14} className="text-red-500" />
                                                             )}
-                                                            <span className={`text-xs font-bold ${user.status === 'active' ? 'text-slate-700' : 'text-red-600'}`}>
-                                                                {user.status === 'active' ? 'Active' : 'Suspended'}
+                                                            <span className={`text-xs font-bold ${u.status === 'active' ? 'text-slate-700' : 'text-red-600'}`}>
+                                                                {u.status === 'active' ? 'Active' : 'Suspended'}
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-4">
                                                         <span className="text-xs font-mono text-slate-500">
-                                                            {new Date(user.joinedAt).toLocaleDateString()}
+                                                            {new Date(u.joinedAt).toLocaleDateString()}
                                                         </span>
                                                     </td>
                                                     <td className="px-8 py-4 text-right">
@@ -203,8 +222,10 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    ) : activeTab === 'businesses' ? (
                         <BusinessManager />
+                    ) : (
+                        <SubscriptionManagement />
                     )}
                 </div>
             </div>

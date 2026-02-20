@@ -30,6 +30,7 @@ import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
 import PublicViewer from './components/Publish/PublicViewer';
+import PricingView from './components/Pricing/PricingView';
 import { useStore } from './store/useStore';
 import {
   LayoutDashboard,
@@ -65,14 +66,11 @@ const App: React.FC = () => {
     isSidebarExpanded,
     setSidebarExpanded,
     setActiveCategoryId,
-    isPropertyPanelOpen,
-    uiTheme,
-    toggleUiTheme,
-
     savedCatalogs,
     editorTab,
     setEditorTab,
-    isProjectSettingsOpen
+    isProjectSettingsOpen,
+    checkAuth
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -81,7 +79,11 @@ const App: React.FC = () => {
   const [isCatalogMenuOpen, setCatalogMenuOpen] = useState(true);
 
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 800);
+    const init = async () => {
+      await checkAuth();
+      setLoading(false);
+    };
+    init();
 
     // Wait for Font Awesome fonts to load before enabling editor
     if (document.fonts) {
@@ -92,8 +94,8 @@ const App: React.FC = () => {
       setFontsLoaded(true);
     }
 
-    return () => clearTimeout(timer);
-  }, []);
+    return () => {};
+  }, [checkAuth]);
 
   useEffect(() => {
     if (uiTheme === 'dark' && currentView !== 'editor' && currentView !== 'admin-dashboard') {
@@ -127,6 +129,11 @@ const App: React.FC = () => {
   // Public Viewers
   if (currentView === 'public-viewer') {
     return <PublicViewer />;
+  }
+
+  // Pricing View (Fullscreen)
+  if (currentView === 'pricing') {
+    return <PricingView />;
   }
 
   // Standard Authentication Check
@@ -302,6 +309,7 @@ const App: React.FC = () => {
       case 'settings': return <SettingsView />;
       case 'your-work': return <YourWork />;
       case 'publish': return <PublishView />;
+      case 'pricing': return <PricingView />;
       default: return <Dashboard />;
     }
   };
@@ -368,6 +376,16 @@ const App: React.FC = () => {
               </div>
             )}
           </div>
+
+          <div className="h-px bg-slate-800/50 mx-4 my-2"></div>
+
+          <button onClick={() => setView('pricing')} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] transition-all group ${currentView === 'pricing' ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>
+            <div className="flex items-center gap-4">
+              <Rocket size={20} className={`shrink-0 ${currentView === 'pricing' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-indigo-400 transition-colors'}`} />
+              {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Upgrade Plan</span>}
+            </div>
+            {isSidebarExpanded && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>}
+          </button>
         </nav>
 
         <div className="px-4 mt-auto space-y-4">

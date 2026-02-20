@@ -29,7 +29,7 @@ const BusinessManager: React.FC = () => {
         setIsEditing(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!templateName) return;
 
         const newTemplate: BusinessTemplate = {
@@ -40,9 +40,9 @@ const BusinessManager: React.FC = () => {
         };
 
         if (activeTemplateId) {
-            updateBusinessTemplate(activeTemplateId, newTemplate);
+            await updateBusinessTemplate(activeTemplateId, newTemplate);
         } else {
-            addBusinessTemplate(newTemplate);
+            await addBusinessTemplate(newTemplate);
         }
         setIsEditing(false);
     };
