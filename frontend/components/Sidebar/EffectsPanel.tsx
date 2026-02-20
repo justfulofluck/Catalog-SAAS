@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { Sparkles, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Sparkles, Check, X } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { applyStyleToSelection } from '../../utils/textStyleSelection';
+import { applyEffectToSelection, saveSelection, restoreSelection, SelectionState } from '../../utils/textStyleSelection';
 
 type EffectStyle = 'none' | 'shadow' | 'lift' | 'hollow' | 'splice' | 'outline' | 'echo' | 'glitch' | 'neon' | 'background';
 
 const EffectsPanel: React.FC = () => {
     const {
-        catalog, currentPageIndex, selectedElementIds, updateElement, uiTheme
+        catalog, currentPageIndex, selectedElementIds, updateElement, uiTheme, setEditorTab
     } = useStore();
 
     const currentPage = catalog.pages[currentPageIndex];
@@ -25,70 +25,54 @@ const EffectsPanel: React.FC = () => {
     const [tempEffectSpread, setTempEffectSpread] = useState(0);
     const [tempEffectRoundness, setTempEffectRoundness] = useState(4);
 
+    const partialID = 'temp-effect-target';
+    const lastSelectionOffsets = useRef<SelectionState | null>(null);
+
     // Sync with selected element
     useEffect(() => {
         if (selectedElement) {
-            setTempShadowBlur(selectedElement.shadowBlur || 0);
-            setTempShadowOpacity(selectedElement.shadowOpacity || 0);
-            setTempShadowOffset(Math.sqrt((selectedElement.shadowOffsetX || 0) ** 2 + (selectedElement.shadowOffsetY || 0) ** 2) * 10);
-            setTempShadowDirection(Math.atan2(selectedElement.shadowOffsetY || 0, selectedElement.shadowOffsetX || 0) * (180 / Math.PI));
-            setTempShadowColor(selectedElement.shadowColor || '#000000');
-            setTempEffectColor2(selectedElement.effectColor2 || '#00fff9');
-            setTempEffectSpread(selectedElement.effectSpread || 0);
-            setTempEffectRoundness(selectedElement.effectRoundness || 4);
+            setTempShadowBlur(0);
+            setTempShadowOpacity(0);
+            setTempShadowOffset(0);
+            setTempShadowDirection(-45);
+            setTempShadowColor('#000000');
+            setTempEffectColor2('#00fff9');
+            setTempEffectSpread(0);
+            setTempEffectRoundness(0);
+            setTempTextStrokeWidth(1);
             setActiveEffectStyle(selectedElement.effectStyle || 'none');
-            setTempTextStrokeWidth(selectedElement.textStrokeWidth || 1);
         }
-    }, [selectedElement?.id, selectedElement?.effectStyle]);
+    }, [selectedElement?.id]);
+
+    // Track selection offsets for persistence
+    useEffect(() => {
+        const handleSelectionChange = () => {
+            const sel = window.getSelection();
+            if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+                const container = sel.anchorNode?.parentElement?.closest('[contenteditable="true"]') as HTMLElement;
+                if (container) {
+                    lastSelectionOffsets.current = saveSelection(container);
+                }
+            }
+        };
+        document.addEventListener('selectionchange', handleSelectionChange);
+        return () => document.removeEventListener('selectionchange', handleSelectionChange);
+    }, []);
 
     const handleBatchUpdate = (updates: any) => {
         selectedElementIds.forEach(id => updateElement(currentPageIndex, id, updates));
     };
 
-    // Helper to apply configuration to either selected text span (if active) or global element
-    const partialID = 'temp-effect-target';
-
-    const applyToSelection = (css: string) => {
-        // 1. Check for Cross-Tab Selection Marker
-        if (selectedElement?.text && selectedElement.text.includes(`id="${partialID}"`)) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = selectedElement.text;
-            const targetSpan = tempDiv.querySelector(`#${partialID}`) as HTMLElement;
-            if (targetSpan) {
-                // Overwrite cssText for the temporary span
-                targetSpan.style.cssText = css;
-                // IMPORTANT: Do NOT remove ID here.
-                handleBatchUpdate({ text: tempDiv.innerHTML });
-                return true;
-            }
-        }
-
-        // 2. Check for Active ContentEditable Selection (first time apply)
-        // If we apply here, we MUST inject the ID so subsequent edits find it.
-        if (applyStyleToSelection(css, `id="${partialID}"`)) {
-            // We successfully wrapped it.
-            // We need to trigger an update to ensure the Store has the new text with ID.
-            const activeEl = document.activeElement as HTMLElement;
-            if (activeEl) {
-                activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            return true;
-        }
-
-        return false;
-    };
-
-    const generateCSS = (styleId: string, overrides: any = {}) => {
-        // Use overrides or current state
-        const sBlur = overrides.shadowBlur !== undefined ? overrides.shadowBlur : tempShadowBlur;
-        const sOpacity = overrides.shadowOpacity !== undefined ? overrides.shadowOpacity : tempShadowOpacity;
-        const sDir = overrides.shadowDirection !== undefined ? overrides.shadowDirection : tempShadowDirection;
-        const sOffset = overrides.shadowOffset !== undefined ? overrides.shadowOffset : tempShadowOffset;
-        const sColor = overrides.shadowColor !== undefined ? overrides.shadowColor : tempShadowColor;
-        const sColor2 = overrides.effectColor2 !== undefined ? overrides.effectColor2 : tempEffectColor2;
-        const sSpread = overrides.effectSpread !== undefined ? overrides.effectSpread : tempEffectSpread;
-        const sRound = overrides.effectRoundness !== undefined ? overrides.effectRoundness : tempEffectRoundness;
-        const sStroke = overrides.textStrokeWidth !== undefined ? overrides.textStrokeWidth : tempTextStrokeWidth;
+    const generateCSS = (styleId: string) => {
+        const sBlur = tempShadowBlur;
+        const sOpacity = tempShadowOpacity;
+        const sDir = tempShadowDirection;
+        const sOffset = tempShadowOffset;
+        const sColor = tempShadowColor;
+        const sColor2 = tempEffectColor2;
+        const sSpread = tempEffectSpread;
+        const sRound = tempEffectRoundness;
+        const sStroke = tempTextStrokeWidth;
 
         const rad = (sDir * Math.PI) / 180;
         const offX = Math.round(sOffset * Math.cos(rad) * 0.1);
@@ -109,60 +93,59 @@ const EffectsPanel: React.FC = () => {
         return css;
     };
 
-    const updateEffect = (styleId: EffectStyle, overrides: any = {}, commitGlobal: boolean = true) => {
-        const css = generateCSS(styleId, overrides);
+    const handleApply = () => {
+        const css = generateCSS(activeEffectStyle);
+        const styleId = activeEffectStyle;
 
-        // Try applied to selection first
-        if (applyToSelection(css)) {
-            // If applied to selection, we mostly done.
-            setActiveEffectStyle(styleId);
+        const sel = window.getSelection();
+        const editable = sel?.anchorNode?.parentElement?.closest('[contenteditable="true"]') as HTMLElement;
+
+        if (editable && sel && !sel.isCollapsed) {
+            // Apply to partial selection
+            applyEffectToSelection(css, `id="${partialID}"`);
+            editable.dispatchEvent(new Event('input', { bubbles: true }));
             return;
         }
 
-        // Fallback to global
-        if (commitGlobal) {
-            const rad = ((overrides.shadowDirection ?? tempShadowDirection) * Math.PI) / 180;
-            const off = (overrides.shadowOffset ?? tempShadowOffset);
-            const offX = Math.round(off * Math.cos(rad) * 0.1);
-            const offY = Math.round(off * Math.sin(rad) * 0.1);
+        // Apply globally if no selection
+        const rad = (tempShadowDirection * Math.PI) / 180;
+        const offX = Math.round(tempShadowOffset * Math.cos(rad) * 0.1);
+        const offY = Math.round(tempShadowOffset * Math.sin(rad) * 0.1);
 
-            handleBatchUpdate({
-                effectStyle: styleId,
-                shadowBlur: overrides.shadowBlur ?? (styleId === 'shadow' || styleId === 'lift' ? tempShadowBlur : 0),
-                shadowOpacity: overrides.shadowOpacity ?? (styleId === 'background' ? 1 : tempShadowOpacity),
-                shadowColor: overrides.shadowColor ?? tempShadowColor,
-                effectColor: overrides.shadowColor ?? tempShadowColor,
-                effectColor2: overrides.effectColor2 ?? tempEffectColor2,
-                shadowOffsetX: offX,
-                shadowOffsetY: offY,
-                textStrokeWidth: overrides.textStrokeWidth ?? tempTextStrokeWidth,
-                effectSpread: overrides.effectSpread ?? tempEffectSpread,
-                effectRoundness: overrides.effectRoundness ?? tempEffectRoundness,
-            });
-            setActiveEffectStyle(styleId);
-        }
-    };
-
-    const handleApplySelection = () => {
-        if (selectedElement?.text && selectedElement.text.includes(`id="${partialID}"`)) {
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = selectedElement.text;
-            const targetSpan = tempDiv.querySelector(`#${partialID}`) as HTMLElement;
-            if (targetSpan) {
-                targetSpan.removeAttribute('id');
-                handleBatchUpdate({ text: tempDiv.innerHTML });
-            }
-        }
+        handleBatchUpdate({
+            effectStyle: styleId,
+            shadowBlur: styleId === 'shadow' || styleId === 'lift' ? tempShadowBlur : 0,
+            shadowOpacity: styleId === 'background' ? 1 : tempShadowOpacity,
+            shadowColor: tempShadowColor,
+            effectColor: tempShadowColor,
+            effectColor2: tempEffectColor2,
+            shadowOffsetX: offX,
+            shadowOffsetY: offY,
+            textStrokeWidth: tempTextStrokeWidth,
+            effectSpread: tempEffectSpread,
+            effectRoundness: tempEffectRoundness,
+        });
     };
 
     if (selectedElementIds.length === 0) {
         return (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center">
-                <div className={`p-4 rounded-full mb-4 ${uiTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-50'}`}>
-                    <Sparkles className="text-indigo-500" size={32} />
+            <div className={`h-full flex flex-col w-[320px] border-r shrink-0 transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+                <div className={`p-6 border-b flex items-center justify-between transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+                    <h3 className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-400'}`}>
+                        <Sparkles size={14} className={uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />
+                        Effects Studio
+                    </h3>
+                    <button onClick={() => setEditorTab(null)} className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}>
+                        <X size={14} />
+                    </button>
                 </div>
-                <p className={`text-sm font-bold ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>No element selected</p>
-                <p className="text-xs text-slate-500 mt-2">Select a text or shape element to apply advanced effects and filters.</p>
+                <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-slate-50/50">
+                    <div className={`p-4 rounded-full mb-4 ${uiTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-50'}`}>
+                        <Sparkles className="text-indigo-500" size={32} />
+                    </div>
+                    <p className={`text-sm font-bold ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>No element selected</p>
+                    <p className="text-xs text-slate-500 mt-2">Select a text or shape element to apply advanced effects and filters.</p>
+                </div>
             </div>
         );
     }
@@ -182,7 +165,43 @@ const EffectsPanel: React.FC = () => {
 
     return (
         <div className={`h-full flex flex-col w-[320px] border-r shrink-0 transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className={`p-6 border-b flex items-center justify-between transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+                <h3 className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-400'}`}>
+                    <Sparkles size={14} className={uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />
+                    Effects Studio
+                </h3>
+                <button onClick={() => setEditorTab(null)} className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}>
+                    <X size={14} />
+                </button>
+            </div>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-8">
+                {/* Live Preview */}
+                <div className="space-y-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Live Preview</span>
+                    <div className={`h-24 rounded-2xl border-2 flex items-center justify-center overflow-hidden relative ${uiTheme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
+                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `radial-gradient(${uiTheme === 'dark' ? '#334155' : '#cbd5e1'} 1px, transparent 1px)`, backgroundSize: '8px 8px' }} />
+                        <span
+                            className={`text-4xl font-bold transition-all duration-200 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}
+                            style={{
+                                ...((() => {
+                                    const cssString = generateCSS(activeEffectStyle);
+                                    const styleObj: any = {};
+                                    cssString.split(';').forEach(rule => {
+                                        const [key, value] = rule.split(':');
+                                        if (key && value) {
+                                            const camelKey = key.trim().replace(/-([a-z])/g, g => g[1].toUpperCase());
+                                            styleObj[camelKey] = value.trim();
+                                        }
+                                    });
+                                    return styleObj;
+                                })())
+                            }}
+                        >
+                            Ag
+                        </span>
+                    </div>
+                </div>
+
                 {/* Style Selection */}
                 <div className="space-y-4">
                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Style Presets</span>
@@ -191,22 +210,12 @@ const EffectsPanel: React.FC = () => {
                             <button
                                 key={style.id}
                                 onMouseDown={(e) => e.preventDefault()}
-                                onClick={() => {
-                                    updateEffect(style.id);
-                                }}
+                                onClick={() => setActiveEffectStyle(style.id)}
                                 className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-3 group relative ${activeEffectStyle === style.id ? (uiTheme === 'dark' ? 'border-indigo-500 bg-indigo-500/10' : 'border-indigo-600 bg-indigo-50/10') : (uiTheme === 'dark' ? 'border-slate-800 bg-slate-800/30 hover:border-slate-700' : 'border-slate-50 bg-slate-50/50 hover:border-slate-200')}`}
                             >
-                                <div className="w-12 h-12 flex items-center justify-center transition-transform group-hover:scale-110">
-                                    {style.preview}
-                                </div>
-                                <span className={`text-[10px] font-bold uppercase tracking-tighter ${activeEffectStyle === style.id ? (uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500') : (uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500')}`}>
-                                    {style.label}
-                                </span>
-                                {activeEffectStyle === style.id && (
-                                    <div className="absolute top-2 right-2 w-4 h-4 bg-indigo-600 rounded-full flex items-center justify-center">
-                                        <Check size={10} className="text-white" strokeWidth={4} />
-                                    </div>
-                                )}
+                                <div className="w-12 h-12 flex items-center justify-center transition-transform group-hover:scale-110">{style.preview}</div>
+                                <span className={`text-[10px] font-bold uppercase tracking-tighter ${activeEffectStyle === style.id ? (uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500') : (uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500')}`}>{style.label}</span>
+                                {activeEffectStyle === style.id && <div className="absolute top-2 right-2 w-4 h-4 bg-indigo-600 rounded-full flex items-center justify-center"><Check size={10} className="text-white" strokeWidth={4} /></div>}
                             </button>
                         ))}
                     </div>
@@ -214,169 +223,86 @@ const EffectsPanel: React.FC = () => {
 
                 {/* Dynamic Controls */}
                 {activeEffectStyle !== 'none' && (
-                    <div className={`space-y-6 pt-6 border-t ${uiTheme === 'dark' ? 'border-slate-800' : 'border-slate-800/50'}`}>
-
+                    <div className={`space-y-6 pt-6 border-t ${uiTheme === 'dark' ? 'border-slate-800' : 'border-slate-800/5'}`}>
                         {(activeEffectStyle === 'hollow' || activeEffectStyle === 'splice' || activeEffectStyle === 'outline') && (
                             <div className="space-y-2.5">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Stroke Thickness</span>
                                 <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                    <input
-                                        type="range" min="1" max="10" value={tempTextStrokeWidth}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            setTempTextStrokeWidth(val);
-                                            updateEffect(activeEffectStyle, { textStrokeWidth: val });
-                                        }}
-                                        className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                    />
-                                    <span className={`text-[11px] font-black w-8 text-right shrink-0 ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`}>{tempTextStrokeWidth}px</span>
+                                    <input type="range" min="1" max="10" value={tempTextStrokeWidth} onChange={(e) => setTempTextStrokeWidth(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                    <span className="text-[11px] font-black w-8 text-right shrink-0 text-indigo-500">{tempTextStrokeWidth}px</span>
                                 </div>
                             </div>
                         )}
-
                         {(activeEffectStyle === 'neon' || activeEffectStyle === 'lift' || activeEffectStyle === 'shadow' || activeEffectStyle === 'background') && (
                             <div className="space-y-2.5">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                                    {activeEffectStyle === 'neon' ? 'Neon Intensity' : (activeEffectStyle === 'background' ? 'Block Opacity' : 'Effect Opacity')}
-                                </span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">{activeEffectStyle === 'neon' ? 'Neon Intensity' : (activeEffectStyle === 'background' ? 'Block Opacity' : 'Effect Opacity')}</span>
                                 <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                    <input
-                                        type="range" min="0" max="100" value={tempShadowOpacity * 100}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value) / 100;
-                                            setTempShadowOpacity(val);
-                                            updateEffect(activeEffectStyle, { shadowOpacity: val });
-                                        }}
-                                        className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                    />
-                                    <span className={`text-[11px] font-black w-8 text-right shrink-0 ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`}>{Math.round(tempShadowOpacity * 100)}%</span>
+                                    <input type="range" min="0" max="100" value={tempShadowOpacity * 100} onChange={(e) => setTempShadowOpacity(parseInt(e.target.value) / 100)} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                    <span className="text-[11px] font-black w-8 text-right shrink-0 text-indigo-500">{Math.round(tempShadowOpacity * 100)}%</span>
                                 </div>
                             </div>
                         )}
-
                         {(activeEffectStyle === 'shadow' || activeEffectStyle === 'splice' || activeEffectStyle === 'echo' || activeEffectStyle === 'glitch') && (
                             <>
                                 <div className="space-y-2.5">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Offset Distance</span>
                                     <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                        <input
-                                            type="range" min="0" max="100" value={tempShadowOffset}
-                                            onChange={(e) => {
-                                                const val = parseInt(e.target.value);
-                                                setTempShadowOffset(val);
-                                                updateEffect(activeEffectStyle, { shadowOffset: val });
-                                            }}
-                                            className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                        />
-                                        <span className={`text-[11px] font-black w-8 text-right shrink-0 ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{tempShadowOffset}</span>
+                                        <input type="range" min="0" max="100" value={tempShadowOffset} onChange={(e) => setTempShadowOffset(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                        <span className="text-[11px] font-black w-8 text-right shrink-0 text-slate-700">{tempShadowOffset}</span>
                                     </div>
                                 </div>
                                 <div className="space-y-2.5">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Shadow Angle</span>
                                     <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                        <input
-                                            type="range" min="-180" max="180" value={tempShadowDirection}
-                                            onChange={(e) => {
-                                                const val = parseInt(e.target.value);
-                                                setTempShadowDirection(val);
-                                                updateEffect(activeEffectStyle, { shadowDirection: val });
-                                            }}
-                                            className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                        />
-                                        <span className={`text-[11px] font-black w-10 text-right shrink-0 ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{tempShadowDirection}°</span>
+                                        <input type="range" min="-180" max="180" value={tempShadowDirection} onChange={(e) => setTempShadowDirection(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                        <span className="text-[11px] font-black w-10 text-right shrink-0 text-slate-700">{tempShadowDirection}°</span>
                                     </div>
                                 </div>
                             </>
                         )}
-
                         {(activeEffectStyle === 'shadow' || activeEffectStyle === 'lift') && (
                             <div className="space-y-2.5">
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Blur Amount</span>
                                 <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                    <input
-                                        type="range" min="0" max="100" value={tempShadowBlur}
-                                        onChange={(e) => {
-                                            const val = parseInt(e.target.value);
-                                            setTempShadowBlur(val);
-                                            updateEffect(activeEffectStyle, { shadowBlur: val });
-                                        }}
-                                        className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                    />
-                                    <span className={`text-[11px] font-black w-8 text-right shrink-0 ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`}>{tempShadowBlur}px</span>
+                                    <input type="range" min="0" max="100" value={tempShadowBlur} onChange={(e) => setTempShadowBlur(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                    <span className="text-[11px] font-black w-8 text-right shrink-0 text-indigo-500">{tempShadowBlur}px</span>
                                 </div>
                             </div>
                         )}
-
                         {activeEffectStyle === 'background' && (
                             <>
                                 <div className="space-y-2.5">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Padding</span>
                                     <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                        <input
-                                            type="range" min="0" max="50" value={tempEffectSpread}
-                                            onChange={(e) => {
-                                                const val = parseInt(e.target.value);
-                                                setTempEffectSpread(val);
-                                                updateEffect(activeEffectStyle, { effectSpread: val });
-                                            }}
-                                            className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                        />
-                                        <span className={`text-[11px] font-black w-8 text-right shrink-0 ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`}>{tempEffectSpread}px</span>
+                                        <input type="range" min="0" max="50" value={tempEffectSpread} onChange={(e) => setTempEffectSpread(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                        <span className="text-[11px] font-black w-8 text-right shrink-0 text-indigo-500">{tempEffectSpread}px</span>
                                     </div>
                                 </div>
                                 <div className="space-y-2.5">
                                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Radius</span>
                                     <div className={`flex items-center gap-3 p-3 rounded-xl border ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                                        <input
-                                            type="range" min="0" max="50" value={tempEffectRoundness}
-                                            onChange={(e) => {
-                                                const val = parseInt(e.target.value);
-                                                setTempEffectRoundness(val);
-                                                updateEffect(activeEffectStyle, { effectRoundness: val });
-                                            }}
-                                            className={`flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}
-                                        />
-                                        <span className={`text-[11px] font-black w-8 text-right shrink-0 ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-500'}`}>{tempEffectRoundness}px</span>
+                                        <input type="range" min="0" max="50" value={tempEffectRoundness} onChange={(e) => setTempEffectRoundness(parseInt(e.target.value))} className="flex-1 accent-indigo-600 h-1.5 rounded-lg appearance-none cursor-pointer bg-slate-200" />
+                                        <span className="text-[11px] font-black w-8 text-right shrink-0 text-indigo-500">{tempEffectRoundness}px</span>
                                     </div>
                                 </div>
                             </>
                         )}
-
                         {activeEffectStyle !== 'lift' && (
                             <div className="space-y-4 pt-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">
-                                    {activeEffectStyle === 'glitch' ? 'Dual Color Palette' : 'Effect Color'}
-                                </span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">{activeEffectStyle === 'glitch' ? 'Dual Color Palette' : 'Effect Color'}</span>
                                 <div className="flex items-center gap-3">
-                                    <div className={`flex flex-1 items-center gap-3 p-2 rounded-xl border transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                                        <div className={`w-8 h-8 rounded-lg border relative overflow-hidden shrink-0 ${uiTheme === 'dark' ? 'border-slate-600' : 'border-slate-200'}`} style={{ background: tempShadowColor }}>
-                                            <input
-                                                type="color" value={tempShadowColor}
-                                                onChange={(e) => {
-                                                    const val = e.target.value;
-                                                    setTempShadowColor(val);
-                                                    updateEffect(activeEffectStyle, { shadowColor: val });
-                                                }}
-                                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                                            />
+                                    <div className="flex flex-1 items-center gap-3 p-2 rounded-xl border bg-white border-slate-100">
+                                        <div className="w-8 h-8 rounded-lg border border-slate-200 relative overflow-hidden shrink-0" style={{ background: tempShadowColor }}>
+                                            <input type="color" value={tempShadowColor} onChange={(e) => setTempShadowColor(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                                         </div>
-                                        <span className={`text-[10px] font-bold uppercase ${uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{tempShadowColor}</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-500">{tempShadowColor}</span>
                                     </div>
-
                                     {activeEffectStyle === 'glitch' && (
-                                        <div className={`flex flex-1 items-center gap-3 p-2 rounded-xl border transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                                            <div className={`w-8 h-8 rounded-lg border relative overflow-hidden shrink-0 ${uiTheme === 'dark' ? 'border-slate-600' : 'border-slate-200'}`} style={{ background: tempEffectColor2 }}>
-                                                <input
-                                                    type="color" value={tempEffectColor2}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setTempEffectColor2(val);
-                                                        updateEffect(activeEffectStyle, { effectColor2: val });
-                                                    }}
-                                                    className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                                                />
+                                        <div className="flex flex-1 items-center gap-3 p-2 rounded-xl border bg-white border-slate-100">
+                                            <div className="w-8 h-8 rounded-lg border border-slate-200 relative overflow-hidden shrink-0" style={{ background: tempEffectColor2 }}>
+                                                <input type="color" value={tempEffectColor2} onChange={(e) => setTempEffectColor2(e.target.value)} className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
                                             </div>
-                                            <span className={`text-[10px] font-bold uppercase ${uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'}`}>{tempEffectColor2}</span>
+                                            <span className="text-[10px] font-bold uppercase text-slate-500">{tempEffectColor2}</span>
                                         </div>
                                     )}
                                 </div>
@@ -389,7 +315,8 @@ const EffectsPanel: React.FC = () => {
             {/* Footer Action */}
             <div className={`p-4 border-t ${uiTheme === 'dark' ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
                 <button
-                    onClick={handleApplySelection}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleApply}
                     className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-600/20 active:scale-95 transition-all"
                 >
                     Apply Changes

@@ -5,7 +5,7 @@ import { useStore } from '../../store/useStore';
 import { MediaItem } from '../../types';
 
 const MediaAssetLibrary: React.FC = () => {
-  const { mediaItems, addElement, currentPageIndex, addMedia, setDraggingItem, uiTheme } = useStore();
+  const { mediaItems, addElement, currentPageIndex, addMedia, setDraggingItem, uiTheme, setEditorTab } = useStore();
   const [search, setSearch] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,13 +85,21 @@ const MediaAssetLibrary: React.FC = () => {
           </h3>
         </div>
 
-        <button
-          onClick={() => fileInputRef.current?.click()}
-          className="w-10 h-10 flex items-center justify-center bg-indigo-600 text-white rounded-2xl hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 group"
-          title="Upload Local Asset"
-        >
-          <Upload size={18} className="group-hover:-translate-y-0.5 transition-transform" />
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-8 h-8 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 group"
+            title="Upload Local Asset"
+          >
+            <Upload size={14} className="group-hover:-translate-y-0.5 transition-transform" />
+          </button>
+          <button
+            onClick={() => setEditorTab(null)}
+            className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+          >
+            <X size={14} />
+          </button>
+        </div>
         <input
           type="file"
           ref={fileInputRef}

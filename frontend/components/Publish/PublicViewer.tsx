@@ -11,37 +11,51 @@ import { jsPDF } from 'jspdf';
 // Reusing CanvasHeader for consistent rendering
 const CanvasHeader: React.FC<{ catalog: any; theme: any }> = ({ catalog, theme }) => {
   const [logoImage] = useImage(catalog.headerLogoUrl || '', 'anonymous');
-  const height = catalog.headerHeight || HEADER_FOOTER_HEIGHT;
-  const padding = catalog.headerSideMargin || 40;
+  const height = catalog.headerHeight ?? HEADER_FOOTER_HEIGHT;
+  const padding = catalog.headerSideMargin ?? 40;
   const fontFamily = catalog.headerFontFamily || theme.headingFont;
   const fontSize = catalog.headerFontSize || 11;
   const textString = catalog.headerText || '';
-  
+
   const logoHeight = catalog.headerLogoHeight || 24;
-  const logoWidth = logoImage ? (logoImage.width / logoImage.height) * logoHeight : 0;
-  
-  const getX = (alignment: 'left' | 'center' | 'right', width: number) => {
-    if (alignment === 'center') return (PAGE_WIDTH / 2) - (width / 2);
-    if (alignment === 'right') return PAGE_WIDTH - padding - width;
-    return padding;
-  };
+  const logoWidth = logoImage ? (logoImage.width / logoImage.height) * logoHeight : 0; // Aspect ratio
 
   const logoAlign = catalog.headerLogoAlignment || 'left';
-  const textAlign = catalog.headerTextAlignment || 'left';
-  let logoX = getX(logoAlign, logoWidth);
-  let textX = getX(textAlign, textString.length * (fontSize * 0.7));
 
-  if (catalog.headerLogoUrl) {
-    if (logoAlign === 'left' && textAlign === 'left') textX += logoWidth + 15;
-    else if (logoAlign === 'right' && textAlign === 'right') textX -= (logoWidth + 15);
-  }
+  // Logo X Position
+  let logoX = padding;
+  if (logoAlign === 'center') logoX = (PAGE_WIDTH - logoWidth) / 2;
+  if (logoAlign === 'right') logoX = PAGE_WIDTH - padding - logoWidth;
 
   return (
     <Group>
       <Rect width={PAGE_WIDTH} height={height} fill={catalog.backgroundColor || theme.backgroundColor} />
-      <Line points={[padding, height, PAGE_WIDTH - padding, height]} stroke="#f1f5f9" strokeWidth={1} />
-      {catalog.headerLogoUrl && logoImage && <KonvaImage image={logoImage} x={logoX} y={(height - logoHeight) / 2} width={logoWidth} height={logoHeight} />}
-      {textString && <Text text={textString} x={textX} y={height / 2 - (fontSize * 0.5)} fontSize={fontSize} fontFamily={fontFamily} fontWeight="bold" fill={theme.headingColor} opacity={0.9} />}
+      <Line points={[40, height, PAGE_WIDTH - 40, height]} stroke="#f1f5f9" strokeWidth={1} />
+
+      {catalog.headerLogoUrl && logoImage && (
+        <KonvaImage
+          image={logoImage}
+          x={logoX}
+          y={(height - logoHeight) / 2}
+          width={logoWidth}
+          height={logoHeight}
+        />
+      )}
+
+      {textString && (
+        <Text
+          text={textString}
+          x={padding}
+          y={height / 2 - 5}
+          width={PAGE_WIDTH - (padding * 2)}
+          align={catalog.headerTextAlignment || 'left'}
+          fontSize={fontSize}
+          fontFamily={fontFamily}
+          fontWeight="bold"
+          fill={theme.headingColor}
+          opacity={0.9}
+        />
+      )}
     </Group>
   );
 };
@@ -49,7 +63,7 @@ const CanvasHeader: React.FC<{ catalog: any; theme: any }> = ({ catalog, theme }
 const PublicViewer: React.FC = () => {
   const { savedCatalogs, viewingCatalogId, setView, activeThemeId } = useStore();
   const catalog = savedCatalogs.find(c => c.id === viewingCatalogId);
-  
+
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [zoom, setZoom] = useState(0.8);
   const [isDownloading, setIsDownloading] = useState(false);
@@ -63,7 +77,7 @@ const PublicViewer: React.FC = () => {
   const handleDownload = async (format: 'pdf' | 'png' | 'jpeg') => {
     setIsDownloading(true);
     const stage = stageRef.current;
-    
+
     if (stage) {
       if (format === 'pdf') {
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [PAGE_WIDTH, PAGE_HEIGHT] });
@@ -72,7 +86,7 @@ const PublicViewer: React.FC = () => {
         // For a full multi-page export in a viewer, we'd need to programmatically render each page to a hidden canvas.
         // For this demo, we'll export the *current view* or simulate multi-page if possible. 
         // Given constraints, let's just export current page for visual proof or simulate full download.
-        
+
         const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/jpeg' });
         pdf.addImage(dataUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
         pdf.save(`${catalog.name}_Page_${currentPageIndex + 1}.pdf`);
@@ -114,15 +128,15 @@ const PublicViewer: React.FC = () => {
               {isDownloading ? 'Saving...' : 'Download'} <ChevronLeft size={12} className="-rotate-90" />
             </button>
             <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl overflow-hidden hidden group-hover:block animate-in fade-in zoom-in-95 duration-200 min-w-[160px]">
-               <button onClick={() => handleDownload('pdf')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
-                  <FileDown size={16} /> <span className="text-xs font-bold">Export as PDF</span>
-               </button>
-               <button onClick={() => handleDownload('png')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
-                  <ImageIcon size={16} /> <span className="text-xs font-bold">Export as PNG</span>
-               </button>
-               <button onClick={() => handleDownload('jpeg')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
-                  <ImageIcon size={16} /> <span className="text-xs font-bold">Export as JPEG</span>
-               </button>
+              <button onClick={() => handleDownload('pdf')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+                <FileDown size={16} /> <span className="text-xs font-bold">Export as PDF</span>
+              </button>
+              <button onClick={() => handleDownload('png')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+                <ImageIcon size={16} /> <span className="text-xs font-bold">Export as PNG</span>
+              </button>
+              <button onClick={() => handleDownload('jpeg')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+                <ImageIcon size={16} /> <span className="text-xs font-bold">Export as JPEG</span>
+              </button>
             </div>
           </div>
         </div>
@@ -131,77 +145,78 @@ const PublicViewer: React.FC = () => {
       {/* Main Canvas Area */}
       <div className="flex-1 overflow-auto flex justify-center p-8 relative bg-slate-900/50">
         <div className="relative shadow-2xl shadow-black/50 transition-transform duration-200 ease-out origin-top" style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}>
-           <Stage
-             ref={stageRef}
-             width={PAGE_WIDTH * zoom}
-             height={PAGE_HEIGHT * zoom}
-             scaleX={zoom}
-             scaleY={zoom}
-           >
-             <Layer>
-               <Rect width={PAGE_WIDTH} height={PAGE_HEIGHT} fill={catalog.backgroundColor || '#ffffff'} />
-               <CanvasHeader catalog={catalog} theme={theme} />
-               <Group>
-                 {currentPage.elements.map((el) => (
-                   <CanvasElementComponent 
-                     key={el.id} 
-                     element={el} 
-                     isSelected={false} 
-                     onSelect={() => {}} 
-                     onChange={() => {}} 
-                   />
-                 ))}
-               </Group>
-               
-               {/* Footer Render */}
-               <Group y={PAGE_HEIGHT - (catalog.footerHeight || 38)}>
-                  <Rect width={PAGE_WIDTH} height={catalog.footerHeight || 38} fill={catalog.backgroundColor || '#ffffff'} />
-                  <Line points={[40, 0, PAGE_WIDTH - 40, 0]} stroke="#f1f5f9" strokeWidth={1} />
-                  <Text 
-                    text={catalog.footerText || ''} 
-                    x={40} 
-                    y={(catalog.footerHeight || 38) / 2 - 4} 
-                    fontSize={9} 
-                    fontFamily="Inter" 
-                    fill={theme.bodyColor} 
-                    opacity={0.6} 
+          <Stage
+            ref={stageRef}
+            width={PAGE_WIDTH * zoom}
+            height={PAGE_HEIGHT * zoom}
+            scaleX={zoom}
+            scaleY={zoom}
+          >
+            <Layer>
+              <Rect width={PAGE_WIDTH} height={PAGE_HEIGHT} fill={catalog.backgroundColor || '#ffffff'} />
+              <CanvasHeader catalog={catalog} theme={theme} />
+              <Group>
+                {currentPage.elements.map((el) => (
+                  <CanvasElementComponent
+                    key={el.id}
+                    element={el}
+                    isSelected={false}
+                    onSelect={() => { }}
+                    onChange={() => { }}
                   />
-                  <Text 
-                    text={`PAGE ${currentPageIndex + 1}`} 
-                    x={PAGE_WIDTH - 100} 
-                    y={(catalog.footerHeight || 38) / 2 - 4} 
-                    width={60} 
-                    align="right" 
-                    fontSize={9} 
-                    fontFamily="Inter" 
-                    fontWeight="900" 
-                    fill={theme.headingColor} 
-                  />
-               </Group>
-             </Layer>
-           </Stage>
+                ))}
+              </Group>
+
+              {/* Footer Render */}
+              <Group y={PAGE_HEIGHT - (catalog.footerHeight ?? 38)}>
+                <Rect width={PAGE_WIDTH} height={catalog.footerHeight ?? 38} fill={catalog.backgroundColor || '#ffffff'} />
+                <Line points={[40, 0, PAGE_WIDTH - 40, 0]} stroke="#f1f5f9" strokeWidth={1} />
+                <Text
+                  text={catalog.footerText || ''}
+                  x={catalog.footerSideMargin ?? 40}
+                  y={(catalog.footerHeight ?? 38) / 2 - 4}
+                  width={PAGE_WIDTH - ((catalog.footerSideMargin ?? 40) * 2)}
+                  fontSize={catalog.footerFontSize ?? 9}
+                  fontFamily={catalog.footerFontFamily || "Inter"}
+                  fill={theme.bodyColor}
+                  opacity={0.6}
+                />
+                <Text
+                  text={`PAGE ${currentPageIndex + 1}`}
+                  x={PAGE_WIDTH - 150}
+                  y={(catalog.footerHeight ?? 38) / 2 - 4}
+                  width={120}
+                  align="right"
+                  fontSize={9}
+                  fontFamily="Inter"
+                  fontWeight="900"
+                  fill={theme.headingColor}
+                />
+              </Group>
+            </Layer>
+          </Stage>
         </div>
       </div>
 
       {/* Footer Navigation */}
       <div className="h-16 bg-slate-900 border-t border-white/10 flex items-center justify-center gap-8 shrink-0 relative z-50">
-         <button 
-           onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
-           disabled={currentPageIndex === 0}
-           className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-         >
-           <ChevronLeft size={20} />
-         </button>
-         <span className="text-white/80 font-mono font-bold text-sm">
-           Page {currentPageIndex + 1} <span className="text-white/30 mx-2">/</span> {catalog.pages.length}
-         </span>
-         <button 
-           onClick={() => setCurrentPageIndex(Math.min(catalog.pages.length - 1, currentPageIndex + 1))}
-           disabled={currentPageIndex === catalog.pages.length - 1}
-           className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
-         >
-           <ChevronRight size={20} />
-         </button>
+        <button
+          onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
+          disabled={currentPageIndex === 0}
+          className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <span className="text-white/80 font-mono font-bold text-sm">
+          Page {currentPageIndex + 1} <span className="text-white/30 mx-2">/</span> {catalog.pages.length}
+        </span>
+        <button
+          onClick={() => setCurrentPageIndex(Math.min(catalog.pages.length - 1, currentPageIndex + 1))}
+          disabled={currentPageIndex === catalog.pages.length - 1}
+          className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
     </div>
   );

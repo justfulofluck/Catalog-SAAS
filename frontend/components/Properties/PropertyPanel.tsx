@@ -1,690 +1,369 @@
-
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
-  X, Trash2, Eye, Palette, Layers, Ungroup, ChevronUp, ChevronDown,
-  ChevronsUp, ChevronsDown, EyeOff, Type,
-  Lock, Unlock, Package, Layout, Frame, Check,
-  AlignLeft, AlignCenter, AlignRight,
-  Bold, Italic, Underline, Minus, Plus, Sparkles, Columns, Image
+  X, Type, Palette, AlignLeft, AlignCenter,
+  AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, Minus, Plus, ChevronDown,
+  Layers, Trash2, Copy, Lock, Unlock,
+  Sparkles, Sliders, Bold, Italic, Underline,
+  ChevronUp, ChevronDown as ChevronDownIcon,
+  ChevronsUp, ChevronsDown
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { FONTS } from '../../constants';
-import { CardTheme } from '../../types';
+import { FONTS, CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import AdvancedColorPicker from './AdvancedColorPicker';
-import { applyStyleToSelection } from '../../utils/textStyleSelection';
+import { toggleStyle } from '../../utils/textStyleSelection';
 
 const PropertyPanel: React.FC = () => {
   const {
-    catalog, currentPageIndex, selectedElementIds, updateElement, removeElement,
-    setIsPropertyPanelOpen, isPropertyPanelOpen,
-    groupSelected, ungroupSelected, reorderElement, products,
-    uiTheme, setEditorTab, editorTab
+    selectedElementIds,
+    updateElement,
+    catalog,
+    currentPageIndex,
+    isPropertyPanelOpen,
+    setIsPropertyPanelOpen,
+    removeElement,
+    duplicateElement,
+    toggleLock,
+    reorderElement,
+    uiTheme,
+    setEditorTab,
+    setSidebarExpanded
   } = useStore();
 
-  const [solidColor, setSolidColor] = useState('#000000');
-  const [fontSizeInput, setFontSizeInput] = useState<string>('12');
-
-  // New Popover State
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [workingMode, setWorkingMode] = useState<'solid' | 'gradient'>('solid');
-  const [workingSolid, setWorkingSolid] = useState('#000000');
-  const [workingGrad1, setWorkingGrad1] = useState('#6366f1');
-  const [workingGrad2, setWorkingGrad2] = useState('#ec4899');
-  const [workingGradType, setWorkingGradType] = useState<'horizontal' | 'vertical' | 'diagonal' | 'radial'>('horizontal');
-
-  const typographyRef = useRef<HTMLDivElement>(null);
-
-  // Range and selection persistence refs
-  const lastSelectionRange = useRef<Range | null>(null);
-  const lastActiveElement = useRef<HTMLElement | null>(null);
-
-  const saveSelection = () => {
-    const selection = window.getSelection();
-    if (selection && selection.rangeCount > 0) {
-      const activeEl = document.activeElement as HTMLElement;
-      if (activeEl && activeEl.isContentEditable) {
-        lastSelectionRange.current = selection.getRangeAt(0).cloneRange();
-        lastActiveElement.current = activeEl;
-      }
-    }
-  };
-
-  const restoreSelection = () => {
-    if (lastSelectionRange.current && lastActiveElement.current) {
-      lastActiveElement.current.focus();
-      const selection = window.getSelection();
-      if (selection) {
-        selection.removeAllRanges();
-        selection.addRange(lastSelectionRange.current);
-      }
-      return true;
-    }
-    return false;
-  };
 
   const currentPage = catalog.pages[currentPageIndex];
   const selectedElements = currentPage?.elements.filter(el => selectedElementIds.includes(el.id)) || [];
   const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
-  const isProductBlock = selectedElements.some(el => el.type === 'product-block');
-  const isText = selectedElements.some(el => el.type === 'text');
+  if (!isPropertyPanelOpen || selectedElementIds.length === 0) return null;
 
-  const linkedProduct = selectedElement?.productId ? products.find(p => p.id === selectedElement.productId) : null;
+  const isText = selectedElement?.type === 'text';
 
-  useEffect(() => {
-    if (selectedElement?.fill) {
-      setSolidColor(selectedElement.fill);
-      setWorkingSolid(selectedElement.fill.includes('gradient') ? '#000000' : selectedElement.fill);
-
-      if (selectedElement.fill.includes('gradient')) {
-        setWorkingMode('gradient');
-        const colors = selectedElement.fill.match(/#(?:[0-9a-fA-F]{3}){1,2}/g);
-        if (colors && colors.length >= 2) {
-          setWorkingGrad1(colors[0]);
-          setWorkingGrad2(colors[1]);
-        }
-      } else {
-        setWorkingMode('solid');
-      }
+  const handleAlignment = (align: 'left' | 'center' | 'right') => {
+    if (!selectedElement || selectedElement.type !== 'text') {
+      handleBatchUpdate({ textAlign: align });
+      return;
     }
-  }, [selectedElement?.id, selectedElement?.fill]);
 
-  useEffect(() => {
-    if (selectedElement?.fontSize) {
-      setFontSizeInput(selectedElement.fontSize.toString());
+    const { marginLeft, marginRight } = catalog;
+    let newX = selectedElement.x;
+    const width = selectedElement.width;
+    const mLeft = marginLeft || 40;
+    const mRight = marginRight || 40;
+
+    if (align === 'left') {
+      newX = mLeft;
+    } else if (align === 'center') {
+      newX = (PAGE_WIDTH + mLeft - mRight - width) / 2;
+    } else if (align === 'right') {
+      newX = PAGE_WIDTH - width - mRight;
     }
-  }, [selectedElement?.id, selectedElement?.fontSize]);
+
+    updateElement(currentPageIndex, selectedElement.id, { textAlign: align, x: newX });
+  };
+
+  const handleVerticalAlignment = (align: 'top' | 'middle' | 'bottom') => {
+    if (!selectedElement) return;
+
+    const { marginTop, marginBottom, hasHeader, hasFooter, headerHeight, footerHeight } = catalog;
+    const height = selectedElement.height;
+
+    // Hierarchy: Page -> Margin -> Header/Footer -> Content
+    const safeY1 = (marginTop || 0) + (hasHeader ? (headerHeight || 0) : 0);
+    const safeY2 = PAGE_HEIGHT - (marginBottom || 0) - (hasFooter ? (footerHeight || 0) : 0);
+
+    let newY = selectedElement.y;
+
+    if (align === 'top') {
+      newY = safeY1;
+    } else if (align === 'middle') {
+      newY = safeY1 + (safeY2 - safeY1 - height) / 2;
+    } else if (align === 'bottom') {
+      newY = safeY2 - height;
+    }
+
+    updateElement(currentPageIndex, selectedElement.id, { y: newY });
+  };
 
   const handleBatchUpdate = (updates: any) => {
+    // Check for selective text styling
+    const sel = window.getSelection();
+    if (isText && sel && !sel.isCollapsed && sel.rangeCount > 0) {
+      let appliedLocally = false;
+
+      // Use native toggleStyle for standard formatting
+      // This fix addresses the "overwriting/toggling" issue reported by the user
+      if ('fontWeight' in updates) {
+        toggleStyle('bold');
+        appliedLocally = true;
+      } else if ('fontStyle' in updates) {
+        toggleStyle('italic');
+        appliedLocally = true;
+      } else if ('textDecoration' in updates) {
+        toggleStyle('underline');
+        appliedLocally = true;
+      } else if ('fill' in updates) {
+        toggleStyle('foreColor', updates.fill);
+        appliedLocally = true;
+      }
+
+      if (appliedLocally) return;
+    }
+
     selectedElementIds.forEach(id => updateElement(currentPageIndex, id, updates));
   };
 
-  const stripRichTextColors = (html: string) => {
-    if (!html) return html;
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    const allElements = tempDiv.querySelectorAll('*');
-    allElements.forEach(el => {
-      const style = (el as HTMLElement).style;
-      style.background = '';
-      style.backgroundImage = '';
-      style.backgroundClip = '';
-      style.webkitBackgroundClip = '';
-      style.webkitTextFillColor = '';
-      style.color = '';
-      (el as HTMLElement).removeAttribute('color');
-      if (!style.cssText.trim()) {
-        (el as HTMLElement).removeAttribute('style');
-      }
-    });
-    return tempDiv.innerHTML.trim();
-  };
-
-  const handlePickerApply = () => {
-    if (workingMode === 'solid') {
-      if (selectedElement?.type === 'text') {
-        restoreSelection();
-        const selection = window.getSelection();
-        const activeEl = document.activeElement as HTMLElement;
-        if (selection && selection.rangeCount > 0 && selection.toString().length > 0) {
-          // Robustly apply solid color, explicitly removing any gradient properties
-          const css = `color: ${workingSolid}; -webkit-text-fill-color: initial; background: none; text-shadow: none;`;
-          applyStyleToSelection(css);
-          activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-        } else {
-          const cleanText = stripRichTextColors(selectedElement.text || 'Text');
-          if (typographyRef.current) typographyRef.current.innerHTML = cleanText;
-          handleBatchUpdate({ text: cleanText, fill: workingSolid });
-        }
-      } else {
-        handleBatchUpdate({ fill: workingSolid });
-      }
-    } else {
-      const gradString = workingGradType === 'vertical' ? `linear-gradient(to bottom, ${workingGrad1}, ${workingGrad2})` :
-        workingGradType === 'diagonal' ? `linear-gradient(to bottom right, ${workingGrad1}, ${workingGrad2})` :
-          workingGradType === 'radial' ? `radial-gradient(circle, ${workingGrad1}, ${workingGrad2})` :
-            `linear-gradient(to right, ${workingGrad1}, ${workingGrad2})`;
-
-      if (selectedElement?.type === 'text') {
-        const css = `background: ${gradString}; -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; display: inline;`;
-        if (applyStyleToSelection(css)) {
-          setPickerOpen(false);
-          return;
-        }
-      }
-
-      handleBatchUpdate({ fill: gradString });
-    }
-    setPickerOpen(false);
-  };
-
-  const handlePickerCancel = () => {
-    setPickerOpen(false);
-  };
-
-  const stripUnderlineTags = (html: string) => {
-    if (!html) return html;
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-
-    // Remove <u> tags
-    const uTags = tempDiv.getElementsByTagName('u');
-    while (uTags.length > 0) {
-      const u = uTags[0];
-      const parent = u.parentNode;
-      if (parent) {
-        while (u.firstChild) parent.insertBefore(u.firstChild, u);
-        parent.removeChild(u);
-      } else {
-        break;
-      }
-    }
-
-    // Remove style based underline
-    const allElements = tempDiv.querySelectorAll('*');
-    allElements.forEach((el) => {
-      const style = (el as HTMLElement).style;
-      if (style.textDecoration.includes('underline')) {
-        style.textDecoration = style.textDecoration.replace('underline', '').trim();
-      }
-    });
-    return tempDiv.innerHTML;
-  };
-
-  if (!isPropertyPanelOpen) return null;
-
-  if (selectedElementIds.length === 0) {
-    return (
-      <div className={`w-[320px] shrink-0 border-l shadow-2xl z-40 h-full select-none flex flex-col transition-all duration-300 ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
-        <div className="p-6 h-full flex flex-col">
-          {/* Header with Close Button */}
-          <div className="flex items-center justify-end mb-8">
-            <button
-              onClick={() => setIsPropertyPanelOpen(false)}
-              className={`p-2 rounded-xl transition-all ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-600'}`}
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          <div className="flex-1 flex flex-col items-center justify-center text-center opacity-40">
-            <div className={`w-16 h-16 rounded-3xl mb-4 flex items-center justify-center ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-600' : 'bg-slate-200 text-slate-400'}`}>
-              <Palette size={32} />
-            </div>
-            <h3 className={`text-sm font-bold mb-1 ${uiTheme === 'dark' ? 'text-slate-500' : 'text-slate-400'}`}>No Selection</h3>
-            <p className="text-xs text-slate-500 max-w-[180px]">Select an element on the canvas to edit its properties.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   const renderSectionHeader = (title: string, icon: React.ReactNode) => (
-    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-4">
-      {icon} {title}
-    </h4>
+    <div className="flex items-center gap-2 mb-3">
+      <div className="text-slate-400">{icon}</div>
+      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+        {title}
+      </h4>
+    </div>
   );
 
-  const cardThemes: { id: CardTheme; label: string; icon: any }[] = [
-    { id: 'classic-stack', label: 'Stacked', icon: Layout },
-    { id: 'split-row', label: 'Split', icon: Columns },
-    { id: 'editorial-overlay', label: 'Overlay', icon: Frame },
-    { id: 'minimal-image', label: 'Minimal', icon: Image }
-  ];
+  const handleOpenEffects = () => {
+    setEditorTab('effects');
+    setSidebarExpanded(true);
+  };
 
   return (
-    <div
-      className={`w-[320px] shrink-0 border-l shadow-2xl z-40 h-full select-none flex flex-col transition-all duration-300 ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}
-    >
-      <div className="p-6 flex flex-col gap-6 h-full">
-        {/* Header */}
-        <div className="flex items-center justify-between">
+    <div className={`w-[360px] h-full flex flex-col border-l transition-colors duration-300 ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-[#f8fafc] border-slate-200'}`}>
+      {/* Header */}
+      <div className="p-6 pb-2">
+        <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${uiTheme === 'dark' ? 'bg-indigo-500/10' : 'bg-indigo-50'}`}>
+            <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center shadow-sm ${uiTheme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100/50'}`}>
               <Palette className="text-indigo-600" size={18} />
             </div>
             <div>
-              <h3 className={`text-sm font-black tracking-tight ${uiTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>{selectedElementIds.length > 1 ? 'Batch Edit' : (selectedElement?.type?.toUpperCase() || 'ELEMENT')}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Instance Properties</p>
+              <h3 className={`text-sm font-black tracking-tight ${uiTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
+                {isText ? 'TEXT' : 'ELEMENT'}
+              </h3>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Instance Properties</p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            {selectedElementIds.length > 1 ? (
-              <button onClick={() => groupSelected(currentPageIndex)} className={`p-2 rounded-xl transition-all ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-600'}`} title="Group Selection">
-                <Layers size={16} />
-              </button>
-            ) : selectedElement?.groupId && (
-              <button onClick={() => ungroupSelected(currentPageIndex)} className={`p-2 rounded-xl transition-all ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-600'}`} title="Ungroup">
-                <Ungroup size={16} />
-              </button>
-            )}
-            <button
-              onClick={() => setIsPropertyPanelOpen(false)}
-              className={`p-2 rounded-xl transition-all ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-400 hover:text-white' : 'bg-slate-50 text-slate-400 hover:text-slate-600'}`}
-            >
-              <X size={16} />
-            </button>
-          </div>
+          <button
+            onClick={() => setIsPropertyPanelOpen(false)}
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+          >
+            <X size={18} />
+          </button>
         </div>
+      </div>
 
-        <div className="flex-1 space-y-6 overflow-y-auto pr-2 custom-scrollbar pb-24">
-          {/* Main Controls Selection */}
-          <section className="animate-in slide-in-from-top-2">
-            {renderSectionHeader("VISUAL STYLE", <Palette size={11} />)}
-
-            <div className="flex flex-col gap-3 relative">
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setPickerOpen(!pickerOpen)}
-                  className={`flex-1 flex items-center gap-3 px-4 py-3 rounded-xl border relative group transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 hover:border-indigo-200'} ${pickerOpen ? 'ring-2 ring-inset ring-indigo-500' : ''}`}
-                >
-                  <div
-                    className={`w-7 h-7 rounded-lg border-2 shadow-sm relative overflow-hidden shrink-0 ${uiTheme === 'dark' ? 'border-slate-600' : 'border-white'}`}
-                    style={{ background: selectedElement?.fill || solidColor }}
-                  />
-                  <div className="flex flex-col items-start">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">Color Code</span>
-                    <span className={`text-[11px] font-black uppercase ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-700'}`}>{selectedElement?.fill && selectedElement.fill.includes('gradient') ? 'GRADIENT' : (selectedElement?.fill || solidColor)}</span>
-                  </div>
-                </button>
-
-                <button
-                  onClick={() => {
-                    // Mark the selection so EffectsPanel can find it
-                    if (selectedElement?.type === 'text') {
-                      // We use a specific ID to track the selection across tab switches
-                      applyStyleToSelection('', 'id="temp-effect-target"');
-                      const activeEl = document.activeElement as HTMLElement;
-                      if (activeEl) {
-                        activeEl.dispatchEvent(new Event('input', { bubbles: true }));
-                      }
-                    }
-                    setEditorTab('effects');
-                  }}
-                  className={`flex-1 flex items-center justify-center px-4 py-3 rounded-xl border transition-all ${editorTab === 'effects' ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : (uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300 hover:border-indigo-500/50' : 'bg-slate-50 border-slate-100 text-slate-600 hover:border-indigo-200')}`}
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Sparkles size={14} className={editorTab === 'effects' ? 'text-white' : 'text-indigo-500'} />
-                    <span className="text-[10px] font-black uppercase tracking-wider">Effects</span>
-                  </div>
-                </button>
-              </div>
-
-              {/* Color Picker Popover */}
-              {pickerOpen && (
-                <div className={`absolute top-full left-0 w-full mt-2 z-50 p-5 rounded-[24px] border shadow-2xl animate-in fade-in zoom-in-95 duration-200 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-                  {/* Mode Toggles */}
-                  <div className="flex gap-2 mb-5 p-1 bg-slate-100 dark:bg-slate-900 rounded-xl">
-                    <button
-                      onClick={() => setWorkingMode('solid')}
-                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${workingMode === 'solid' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                    >
-                      Color
-                    </button>
-                    <button
-                      onClick={() => setWorkingMode('gradient')}
-                      className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${workingMode === 'gradient' ? 'bg-white dark:bg-slate-800 text-indigo-600 shadow-sm' : 'text-slate-400'}`}
-                    >
-                      Gradient
-                    </button>
-                  </div>
-
-                  {workingMode === 'solid' ? (
-                    <div className="space-y-4">
-                      <AdvancedColorPicker
-                        color={workingSolid}
-                        onChange={setWorkingSolid}
-                      />
-                      <div className="flex items-center justify-between px-1">
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-mono">{workingSolid}</span>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-5">
-                      <div className="flex gap-4">
-                        <div className="flex-1 space-y-3">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Start Color</label>
-                          <AdvancedColorPicker
-                            color={workingGrad1}
-                            onChange={setWorkingGrad1}
-                          />
-                          <div className="text-[9px] font-black text-slate-500 font-mono text-center">{workingGrad1}</div>
-                        </div>
-                        <div className="flex-1 space-y-3">
-                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">End Color</label>
-                          <AdvancedColorPicker
-                            color={workingGrad2}
-                            onChange={setWorkingGrad2}
-                          />
-                          <div className="text-[9px] font-black text-slate-500 font-mono text-center">{workingGrad2}</div>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-4 gap-2 pt-2">
-                        {['horizontal', 'vertical', 'diagonal', 'radial'].map((t) => (
-                          <button
-                            key={t}
-                            onClick={() => setWorkingGradType(t as any)}
-                            className={`h-10 rounded-xl border-2 transition-all ${workingGradType === t ? 'border-indigo-600 scale-105 z-10 shadow-lg shadow-indigo-500/10' : 'border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-600'}`}
-                            title={t}
-                            style={{
-                              background: t === 'horizontal' ? `linear-gradient(to right, ${workingGrad1}, ${workingGrad2})` :
-                                t === 'vertical' ? `linear-gradient(to bottom, ${workingGrad1}, ${workingGrad2})` :
-                                  t === 'diagonal' ? `linear-gradient(to bottom right, ${workingGrad1}, ${workingGrad2})` :
-                                    `radial-gradient(circle, ${workingGrad1}, ${workingGrad2})`
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Footer Buttons */}
-                  <div className="flex gap-3 mt-8">
-                    <button
-                      onClick={handlePickerCancel}
-                      className="flex-1 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-[11px] font-black uppercase tracking-[0.2em] hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all text-slate-500"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      onClick={handlePickerApply}
-                      className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 hover:translate-y-[-1px] active:translate-y-[0px] transition-all"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Independent Opacity Control */}
-              <div className={`p-5 rounded-[24px] border transition-all ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700' : 'bg-white border-slate-100 shadow-sm'}`}>
-                <div className="flex items-center justify-between mb-4">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Transparency</span>
-                  <span className="text-[11px] font-black text-indigo-500">{Math.round((selectedElement?.opacity || 1) * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0"
-                  max="1"
-                  step="0.01"
-                  value={selectedElement?.opacity ?? 1}
-                  onChange={(e) => handleBatchUpdate({ opacity: parseFloat(e.target.value) })}
-                  className="w-full h-1.5 bg-slate-100 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-0 space-y-8">
+        {/* Visual Style Section */}
+        <section>
+          {renderSectionHeader("VISUAL STYLE", <Palette size={11} />)}
+          <div className="space-y-3">
+            <div className="flex gap-3">
+              {/* Color Code Card */}
+              <div
+                onClick={() => setPickerOpen(!pickerOpen)}
+                className="flex-1 p-3 rounded-[18px] border bg-white border-slate-100 shadow-sm flex items-center gap-3 cursor-pointer hover:border-indigo-200 transition-all"
+              >
+                <div
+                  className="w-10 h-10 rounded-xl shadow-sm border-2 border-slate-50"
+                  style={{ background: selectedElement?.fill || '#000000' }}
                 />
+                <div className="flex flex-col">
+                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Color Code</span>
+                  <span className="text-[11px] font-black text-slate-900 uppercase">
+                    {(selectedElement?.fill && !selectedElement.fill.includes('gradient')) ? selectedElement.fill : '#000000'}
+                  </span>
+                </div>
               </div>
+
+              {/* Effects Button Card - Now triggers left sidebar */}
+              <button
+                onClick={handleOpenEffects}
+                className="w-[100px] p-3 rounded-[18px] border bg-white border-slate-100 shadow-sm flex flex-col items-center justify-center gap-1 hover:bg-slate-50 hover:border-indigo-100 transition-all group"
+              >
+                <Sparkles size={16} className="text-indigo-600 group-hover:scale-110 transition-transform" />
+                <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Effects</span>
+              </button>
             </div>
-          </section>
 
-          {/* TEXT SPECIFIC CONTROLS */}
-          {isText && (
-            <section className="animate-in slide-in-from-top-2">
-              {renderSectionHeader("TEXT FORMATTING", <Type size={11} />)}
+            {/* Picker Overlay */}
+            {pickerOpen && (
+              <div className="p-3 border rounded-2xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                <AdvancedColorPicker color={selectedElement?.fill || '#000000'} onChange={(c) => handleBatchUpdate({ fill: c })} />
+              </div>
+            )}
 
-              <div className="flex gap-2 mb-3">
+            {/* Transparency Card */}
+            <div className="p-4 rounded-[18px] border bg-white border-slate-100 shadow-sm space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Transparency</span>
+                <span className="text-[11px] font-black text-indigo-600">{Math.round((selectedElement?.opacity || 1) * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={selectedElement?.opacity ?? 1}
+                onChange={(e) => handleBatchUpdate({ opacity: parseFloat(e.target.value) })}
+                className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* Text Formatting Section */}
+        {isText && (
+          <section>
+            {renderSectionHeader("TEXT FORMATTING", <Type size={11} />)}
+            <div className="space-y-4">
+              <div className="flex items-center gap-3">
+                {/* Font Dropdown */}
                 <div className="flex-1 relative">
                   <select
                     value={selectedElement?.fontFamily || 'Inter'}
                     onChange={(e) => handleBatchUpdate({ fontFamily: e.target.value })}
-                    className={`w-full appearance-none border rounded-xl px-4 py-2.5 text-xs font-bold outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-100 text-slate-700'}`}
+                    className="w-full appearance-none bg-white border border-slate-100 rounded-[14px] px-4 py-3 text-xs font-bold text-slate-700 shadow-sm outline-none hover:border-indigo-100 transition-all"
                   >
-                    {FONTS.map(f => <option key={f} value={f}>{f}</option>)}
+                    {CATEGORIZED_FONTS.map(group => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.fonts.map(f => (
+                          <option key={f} value={f}>{f}</option>
+                        ))}
+                      </optgroup>
+                    ))}
                   </select>
                   <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                 </div>
 
-                <div className={`flex items-center border rounded-xl overflow-hidden shrink-0 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
+                {/* Size Controls */}
+                <div className="flex items-center bg-transparent border border-slate-100 rounded-[14px] overflow-hidden w-[100px]">
                   <button
-                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleBatchUpdate({ fontSize: Math.max(1, (selectedElement?.fontSize || 12) - 1) })}
-                    className={`w-9 h-full flex items-center justify-center transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-500 hover:text-white' : 'hover:bg-slate-100 text-slate-400'}`}
+                    className="w-8 py-3 flex items-center justify-center hover:bg-slate-50 text-slate-400"
                   >
                     <Minus size={12} />
                   </button>
-                  <input
-                    type="text"
-                    value={fontSizeInput}
-                    onChange={(e) => {
-                      const val = e.target.value.replace(/[^0-9]/g, '');
-                      setFontSizeInput(val);
-                      if (val && parseInt(val) > 0) {
-                        handleBatchUpdate({ fontSize: parseInt(val) });
-                      }
-                    }}
-                    onBlur={() => {
-                      if (!fontSizeInput || parseInt(fontSizeInput) <= 0) {
-                        setFontSizeInput(selectedElement?.fontSize?.toString() || '12');
-                      }
-                    }}
-                    className={`w-8 bg-transparent text-center text-xs font-black outline-none transition-colors ${uiTheme === 'dark' ? 'text-slate-200 focus:text-indigo-400' : 'text-slate-800 focus:text-indigo-600 focus:bg-indigo-50/50'}`}
-                  />
+                  <span className="flex-1 text-center text-xs font-black text-slate-900">{Math.round(selectedElement?.fontSize || 12)}</span>
                   <button
-                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => handleBatchUpdate({ fontSize: (selectedElement?.fontSize || 12) + 1 })}
-                    className={`w-9 h-full flex items-center justify-center transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-500 hover:text-white' : 'hover:bg-slate-100 text-slate-400'}`}
+                    className="w-8 py-3 flex items-center justify-center hover:bg-slate-50 text-slate-400"
                   >
                     <Plus size={12} />
                   </button>
                 </div>
               </div>
 
-              <div className="flex gap-2 mb-4">
-                <div className={`flex p-1 rounded-xl gap-1 ${uiTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-900'} text-slate-400`}>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleBatchUpdate({ textAlign: 'left' })}
-                    className={`p-2 rounded-lg transition-all ${selectedElement?.textAlign === 'left' || !selectedElement?.textAlign ? 'bg-indigo-600 text-white shadow-lg' : 'hover:text-white'}`}
-                  >
-                    <AlignLeft size={16} />
-                  </button>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleBatchUpdate({ textAlign: 'center' })}
-                    className={`p-2 rounded-lg transition-all ${selectedElement?.textAlign === 'center' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:text-white'}`}
-                  >
-                    <AlignCenter size={16} />
-                  </button>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => handleBatchUpdate({ textAlign: 'right' })}
-                    className={`p-2 rounded-lg transition-all ${selectedElement?.textAlign === 'right' ? 'bg-indigo-600 text-white shadow-lg' : 'hover:text-white'}`}
-                  >
-                    <AlignRight size={16} />
-                  </button>
+              <div className="flex items-center justify-between">
+                <div className="flex bg-[#1e293b] rounded-xl p-1 shadow-inner">
+                  {(['left', 'center', 'right'] as const).map(align => (
+                    <button
+                      key={align}
+                      onClick={() => handleAlignment(align)}
+                      className={`p-2 rounded-lg transition-all ${selectedElement?.textAlign === align ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                    >
+                      {align === 'left' && <AlignLeft size={16} />}
+                      {align === 'center' && <AlignCenter size={16} />}
+                      {align === 'right' && <AlignRight size={16} />}
+                    </button>
+                  ))}
                 </div>
 
-                <div className={`flex-1 flex border rounded-xl p-1 gap-1 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      const activeEl = document.activeElement as HTMLElement;
-                      if (activeEl && activeEl.isContentEditable) {
-                        document.execCommand('bold');
-                      } else {
-                        handleBatchUpdate({ fontWeight: (selectedElement?.fontWeight === 'bold' || selectedElement?.fontWeight === '700') ? '400' : '700' });
-                      }
-                    }}
-                    className={`flex-1 rounded-lg transition-all flex items-center justify-center ${selectedElement?.fontWeight === 'bold' || selectedElement?.fontWeight === '700' ? (uiTheme === 'dark' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm border border-slate-100') : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-                  >
-                    <Bold size={16} />
-                  </button>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      const activeEl = document.activeElement as HTMLElement;
-                      if (activeEl && activeEl.isContentEditable) {
-                        document.execCommand('italic');
-                      } else {
-                        handleBatchUpdate({ fontStyle: selectedElement?.fontStyle === 'italic' ? 'normal' : 'italic' });
-                      }
-                    }}
-                    className={`flex-1 rounded-lg transition-all flex items-center justify-center ${selectedElement?.fontStyle === 'italic' ? (uiTheme === 'dark' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm border border-slate-100') : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
-                  >
-                    <Italic size={16} />
-                  </button>
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => {
-                      const activeEl = document.activeElement as HTMLElement;
-                      if (activeEl && activeEl.isContentEditable) {
-                        document.execCommand('underline');
-                      } else {
-                        const isUnderlined = selectedElement?.textDecoration === 'underline';
-                        const updates: any = { textDecoration: isUnderlined ? 'none' : 'underline' };
+                <div className="flex bg-[#1e293b] rounded-xl p-1 shadow-inner gap-1">
+                  {(['top', 'middle', 'bottom'] as const).map(align => (
+                    <button
+                      key={align}
+                      onClick={() => handleVerticalAlignment(align)}
+                      className="p-2 rounded-lg transition-all text-slate-500 hover:text-slate-300"
+                    >
+                      {align === 'top' && <AlignVerticalJustifyStart size={16} />}
+                      {align === 'middle' && <AlignVerticalJustifyCenter size={16} />}
+                      {align === 'bottom' && <AlignVerticalJustifyEnd size={16} />}
+                    </button>
+                  ))}
+                </div>
 
-                        if (isUnderlined && selectedElement?.text) {
-                          updates.text = stripUnderlineTags(selectedElement.text);
-                        }
-                        handleBatchUpdate(updates);
-                      }
-                    }}
-                    className={`flex-1 rounded-lg transition-all flex items-center justify-center ${selectedElement?.textDecoration === 'underline' ? (uiTheme === 'dark' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-white text-indigo-600 shadow-sm border border-slate-100') : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                <div className="flex gap-4 px-2">
+                  <button
+                    onClick={() => handleBatchUpdate({ fontWeight: selectedElement?.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                    className={`transition-colors ${selectedElement?.fontWeight === 'bold' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-400'}`}
                   >
-                    <Underline size={16} />
+                    <Bold size={18} strokeWidth={selectedElement?.fontWeight === 'bold' ? 3 : 2} />
+                  </button>
+                  <button
+                    onClick={() => handleBatchUpdate({ fontStyle: selectedElement?.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                    className={`transition-colors ${selectedElement?.fontStyle === 'italic' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-400'}`}
+                  >
+                    <Italic size={18} strokeWidth={selectedElement?.fontStyle === 'italic' ? 3 : 2} />
+                  </button>
+                  <button
+                    onClick={() => handleBatchUpdate({ textDecoration: selectedElement?.textDecoration === 'underline' ? 'none' : 'underline' })}
+                    className={`transition-colors ${selectedElement?.textDecoration === 'underline' ? 'text-indigo-600' : 'text-slate-300 hover:text-slate-400'}`}
+                  >
+                    <Underline size={18} strokeWidth={selectedElement?.textDecoration === 'underline' ? 3 : 2} />
                   </button>
                 </div>
               </div>
-
-              <div className="mb-4">
-                <div
-                  contentEditable
-                  suppressContentEditableWarning
-                  className={`w-full border rounded-xl p-4 text-sm font-medium outline-none resize-none transition-all min-h-[100px] overflow-auto shadow-inner ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-white border-slate-200 text-slate-700'}`}
-                  style={{
-                    fontFamily: selectedElement?.fontFamily || 'Inter',
-                    fontSize: '14px',
-                    fontWeight: selectedElement?.fontWeight || 'normal',
-                    fontStyle: selectedElement?.fontStyle || 'normal',
-                    textAlign: selectedElement?.textAlign || 'left',
-                    color: uiTheme === 'dark' ? '#cbd5e1' : '#475569',
-                    caretColor: '#4f46e5',
-                    lineHeight: 1.5,
-                    whiteSpace: 'pre-wrap',
-                    wordBreak: 'break-word',
-                  }}
-                  onKeyDown={(e) => {
-                    e.stopPropagation();
-                  }}
-                  onBlur={saveSelection}
-                  onMouseUp={saveSelection}
-                  onInput={(e) => {
-                    const newText = (e.currentTarget as HTMLElement).innerHTML;
-                    handleBatchUpdate({ text: newText });
-                  }}
-                  ref={(el) => {
-                    if (el && selectedElement?.text !== undefined) {
-                      const cleanText = selectedElement.text || '';
-                      if (el.innerHTML !== cleanText && document.activeElement !== el) {
-                        el.innerHTML = cleanText;
-                      }
-                    }
-                  }}
-                />
-              </div>
-            </section>
-          )}
-
-          {/* Card Specific Architecture */}
-          {isProductBlock && (
-            <section className="p-4 border-b border-slate-100">
-              {renderSectionHeader("PRODUCT COLLECTION", <Layout size={14} className="text-purple-500" />)}
-              <div className="grid grid-cols-2 gap-2 mt-3">
-                {cardThemes.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => handleBatchUpdate({ cardTheme: t.id })}
-                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border transition-all ${selectedElement?.cardTheme === t.id || (!selectedElement?.cardTheme && t.id === 'classic-stack') ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : (uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-400 hover:bg-slate-700' : 'bg-slate-50 border-slate-100 text-slate-400 hover:bg-slate-100')}`}
-                  >
-                    <t.icon size={18} />
-                    <span className="text-[8px] font-black uppercase tracking-tighter">{t.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-6 space-y-2">
-                <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-3">CONTENT VISIBILITY</p>
-                {[
-                  { key: 'showName', label: 'Product Name' },
-                  { key: 'showPrice', label: 'Retail Price' },
-                  { key: 'showSku', label: 'SKU / ID' }
-                ].map(opt => (
-                  <button
-                    key={opt.key}
-                    onClick={() => handleBatchUpdate({ [opt.key]: (selectedElement as any)[opt.key] === false })}
-                    className={`w-full flex items-center justify-between p-2.5 rounded-xl border group hover:border-indigo-200 transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-100'}`}
-                  >
-                    <span className={`text-[10px] font-bold ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-600'}`}>{opt.label}</span>
-                    <div className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${(selectedElement as any)[opt.key] !== false ? 'bg-indigo-600 text-white' : (uiTheme === 'dark' ? 'bg-slate-700 text-transparent' : 'bg-slate-200 text-transparent')}`}>
-                      <Check size={12} strokeWidth={4} />
-                    </div>
-                  </button>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Linked Asset Info */}
-          {isProductBlock && linkedProduct && (
-            <section>
-              {renderSectionHeader("SOURCE DATA", <Package size={11} />)}
-              <div className="p-4 bg-indigo-600 rounded-2xl text-white space-y-2 shadow-lg shadow-indigo-600/20">
-                <p className="text-[10px] font-mono font-bold opacity-60 uppercase">{linkedProduct.sku}</p>
-                <p className="text-xs font-black truncate">{linkedProduct.name}</p>
-                <div className="flex items-center gap-2 pt-1">
-                  <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-                  <span className="text-[9px] font-black uppercase tracking-widest opacity-80">Synced with Catalog</span>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* Layer Management */}
-          <section>
-            {renderSectionHeader("LAYER STACKING", <Layers size={11} />)}
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { id: 'front', icon: <ChevronsUp size={16} />, title: 'Bring to Front' },
-                { id: 'forward', icon: <ChevronUp size={16} />, title: 'Bring Forward' },
-                { id: 'backward', icon: <ChevronDown size={16} />, title: 'Send Backward' },
-                { id: 'back', icon: <ChevronsDown size={16} />, title: 'Send to Back' },
-              ].map((btn) => (
-                <button
-                  key={btn.id}
-                  onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], btn.id as any)}
-                  className={`p-3 rounded-xl transition-all flex items-center justify-center shadow-sm border ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-white border-slate-700' : 'bg-slate-50 text-slate-500 hover:bg-indigo-50 hover:text-indigo-600 border-slate-100/50'}`}
-                  title={btn.title}
-                >
-                  {btn.icon}
-                </button>
-              ))}
             </div>
           </section>
+        )}
 
-          {/* Visibility Controls */}
-          <section>
-            {renderSectionHeader("CONTROL FLAGS", <Eye size={11} />)}
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleBatchUpdate({ visible: selectedElement?.visible === false })}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${uiTheme === 'dark' ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-slate-50 text-slate-500 hover:bg-slate-100 border-slate-100'}`}
-              >
-                {selectedElement?.visible === false ? <EyeOff size={14} /> : <Eye size={14} />} {selectedElement?.visible === false ? 'Hidden' : 'Visible'}
-              </button>
-              <button
-                onClick={() => handleBatchUpdate({ locked: !selectedElement?.locked })}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all border ${selectedElement?.locked ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg' : (uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-slate-300' : 'bg-slate-50 border-slate-100 text-slate-500')}`}
-              >
-                {selectedElement?.locked ? <Lock size={14} /> : <Unlock size={14} />} {selectedElement?.locked ? 'Locked' : 'Unlocked'}
-              </button>
-            </div>
-          </section>
+        {/* Layer Stacking Section */}
+        <section>
+          {renderSectionHeader("LAYER STACKING", <Layers size={11} />)}
+          <div className="flex gap-2">
+            <button
+              onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'front')}
+              className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
+            >
+              <ChevronsUp size={20} />
+            </button>
+            <button
+              onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'forward')}
+              className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
+            >
+              <ChevronUp size={20} />
+            </button>
+            <button
+              onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'backward')}
+              className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
+            >
+              <ChevronDownIcon size={20} />
+            </button>
+            <button
+              onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'back')}
+              className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
+            >
+              <ChevronsDown size={20} />
+            </button>
+          </div>
+        </section>
 
-          <button
-            onClick={() => selectedElementIds.forEach(id => removeElement(currentPageIndex, id))}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all font-black text-[10px] uppercase tracking-widest mt-4"
-          >
-            <Trash2 size={14} /> Delete Selected
-          </button>
-        </div>
+        {/* Control Flags Section */}
+        <section>
+          {renderSectionHeader("CONTROL FLAGS", <Sliders size={11} />)}
+          <div className="flex gap-2">
+            <button
+              onClick={() => toggleLock(currentPageIndex, selectedElementIds[0])}
+              className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 rounded-[18px] border transition-all ${selectedElement?.locked ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:text-slate-600 shadow-sm'}`}
+            >
+              {selectedElement?.locked ? <Lock size={16} /> : <Unlock size={16} />}
+              <span className="text-[10px] font-black uppercase tracking-widest">{selectedElement?.locked ? 'Locked' : 'Lock'}</span>
+            </button>
+            <button
+              onClick={() => duplicateElement(currentPageIndex, selectedElementIds[0])}
+              className="flex-1 py-3 px-4 flex items-center justify-center gap-2 rounded-[18px] border bg-white border-slate-100 text-slate-400 hover:text-indigo-600 shadow-sm transition-all"
+            >
+              <Copy size={16} />
+              <span className="text-[10px] font-black uppercase tracking-widest">Duplicate</span>
+            </button>
+            <button
+              onClick={() => removeElement(currentPageIndex, selectedElementIds[0])}
+              className="p-3 px-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 text-red-400 hover:bg-red-50 hover:border-red-100 shadow-sm transition-all"
+            >
+              <Trash2 size={16} />
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

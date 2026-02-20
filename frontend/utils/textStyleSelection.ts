@@ -1,43 +1,138 @@
 /**
- * Applies CSS styles to the currently active text selection using document.execCommand('insertHTML').
- * This allows for partial text styling (color, gradient, effects) within a contentEditable element.
- * 
- * @param styleString - The CSS style string to apply (e.g., "color: red; font-weight: bold;")
- * @param attributes - Optional HTML attributes to add to the span (e.g., 'id="my-id" class="bold"')
- * @returns boolean - True if the style was applied to a selection, False otherwise.
+ * Applies CSS styles to the currently active text selection.
+ * Handles both native formatting (B/I/U/Color) and advanced span-based effects.
  */
-export const applyStyleToSelection = (styleString: string, attributes: string = ''): boolean => {
-    const selection = window.getSelection();
 
-    // Basic validation: Must have a selection and it must not be collapsed (cursor only)
-    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
-        return false;
+export interface SelectionState {
+    start: number;
+    end: number;
+}
+
+/**
+ * Saves the current selection as character offsets relative to a container.
+ */
+export const saveSelection = (container: HTMLElement): SelectionState | null => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return null;
+
+    try {
+        const range = sel.getRangeAt(0);
+        const preSelectionRange = range.cloneRange();
+        preSelectionRange.selectNodeContents(container);
+        preSelectionRange.setEnd(range.startContainer, range.startOffset);
+        const start = preSelectionRange.toString().length;
+
+        return {
+            start: start,
+            end: start + range.toString().length
+        };
+    } catch (e) {
+        return null;
+    }
+};
+
+/**
+ * Restores the selection based on saved character offsets within a container.
+ */
+export const restoreSelection = (container: HTMLElement, state: SelectionState | null) => {
+    if (!state) return;
+
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    let charIndex = 0;
+    const range = document.createRange();
+    range.setStart(container, 0);
+    range.collapse(true);
+
+    const nodeStack: Node[] = [container];
+    let node: Node | undefined;
+    let foundStart = false;
+    let stop = false;
+
+    while (!stop && (node = nodeStack.pop())) {
+        if (node.nodeType === 3) { // Text node
+            const nextCharIndex = charIndex + (node.textContent?.length || 0);
+            if (!foundStart && state.start >= charIndex && state.start <= nextCharIndex) {
+                range.setStart(node, state.start - charIndex);
+                foundStart = true;
+            }
+            if (foundStart && state.end >= charIndex && state.end <= nextCharIndex) {
+                range.setEnd(node, state.end - charIndex);
+                stop = true;
+            }
+            charIndex = nextCharIndex;
+        } else {
+            let i = node.childNodes.length;
+            while (i--) {
+                nodeStack.push(node.childNodes[i]);
+            }
+        }
     }
 
-    // Ensure the selection is actually within a contentEditable element
-    const anchorNode = selection.anchorNode;
-    const focusNode = selection.focusNode;
+    sel.removeAllRanges();
+    sel.addRange(range);
+};
 
-    if (!anchorNode || !focusNode) return false;
+/**
+ * Uses native document.execCommand for robust toggling and merging of basic styles.
+ */
+export const toggleStyle = (command: 'bold' | 'italic' | 'underline' | 'foreColor', value?: string): boolean => {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return false;
 
-    const parentEditable = (
-        anchorNode.nodeType === Node.ELEMENT_NODE
-            ? (anchorNode as Element).closest('[contenteditable="true"]')
-            : anchorNode.parentElement?.closest('[contenteditable="true"]')
-    );
+    const range = sel.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const parentEditable = container.nodeType === Node.ELEMENT_NODE
+        ? (container as Element).closest('[contenteditable="true"]')
+        : container.parentElement?.closest('[contenteditable="true"]');
 
     if (!parentEditable) return false;
 
-    // Create standard span with styling
-    // We use a span with the style attribute.
+    // Save offsets to restore focus/selection after command
+    const offsets = saveSelection(parentEditable as HTMLElement);
+
+    try {
+        const success = document.execCommand(command, false, value);
+        if (success && offsets) {
+            restoreSelection(parentEditable as HTMLElement, offsets);
+            // Trigger input for store sync
+            parentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        return success;
+    } catch (e) {
+        console.error(`Failed to apply ${command}:`, e);
+        return false;
+    }
+};
+
+/**
+ * For complex effects that aren't supported by execCommand.
+ */
+export const applyEffectToSelection = (styleString: string, attributes: string = ''): boolean => {
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return false;
+
+    const range = selection.getRangeAt(0);
+    const container = range.commonAncestorContainer;
+    const parentEditable = container.nodeType === Node.ELEMENT_NODE
+        ? (container as Element).closest('[contenteditable="true"]')
+        : container.parentElement?.closest('[contenteditable="true"]');
+
+    if (!parentEditable) return false;
+
+    const offsets = saveSelection(parentEditable as HTMLElement);
     const spanHtml = `<span style="${styleString}" ${attributes}>${selection.toString()}</span>`;
 
     try {
-        // execCommand 'insertHTML' is widely supported for contentEditable
-        // and handles splitting existing nodes and maintaining the undo stack better than manual DOM manipulation.
-        return document.execCommand('insertHTML', false, spanHtml);
+        const success = document.execCommand('insertHTML', false, spanHtml);
+        if (success && offsets) {
+            restoreSelection(parentEditable as HTMLElement, offsets);
+            parentEditable.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        return success;
     } catch (e) {
-        console.error('Failed to apply style to selection:', e);
+        console.error('Failed to apply effect to selection:', e);
         return false;
     }
 };

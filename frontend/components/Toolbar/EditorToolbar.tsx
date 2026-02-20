@@ -26,22 +26,40 @@ import {
   Zap,
   Undo2,
   Redo2,
-  ChevronDown
+  ChevronDown,
+  MousePointer2,
+  Hand,
+  Layers,
+  Hexagon,
+  Pentagon,
+  Octagon,
+  Diamond,
+  ArrowRight,
+  MoveHorizontal,
+  RectangleHorizontal,
+  Cloud,
+  Flag,
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { jsPDF } from 'jspdf';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { ShapeType } from '../../types';
+import SceneTreePanel from './SceneTreePanel';
+
 
 const EditorToolbar: React.FC = () => {
   const {
     zoom, setZoom, addElement, currentPageIndex, catalog, setView, user,
     isPropertyPanelOpen, setIsPropertyPanelOpen,
-    undo, redo, undoStack, redoStack, uiTheme, toggleUiTheme
+    undo, redo, undoStack, redoStack, uiTheme, toggleUiTheme,
+    saveCatalog, activeTool, setActiveTool, isSceneTreeOpen, setIsSceneTreeOpen
   } = useStore();
+  const [isCommiting, setIsCommiting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
+  const [isTextMenuOpen, setIsTextMenuOpen] = useState(false);
   const shapeMenuRef = useRef<HTMLDivElement>(null);
+  const textMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -55,25 +73,42 @@ const EditorToolbar: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isShapeMenuOpen]);
 
-  const handleAddText = (type: 'heading' | 'body') => {
-    const isHeading = type === 'heading';
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (textMenuRef.current && !textMenuRef.current.contains(e.target as Node)) {
+        setIsTextMenuOpen(false);
+      }
+    };
+    if (isTextMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isTextMenuOpen]);
+
+  const handleAddText = (type: 'heading' | 'subheading' | 'body') => {
+    const config = {
+      heading: { width: 400, height: 50, text: 'Headings', fontSize: 36, fontWeight: '800' },
+      subheading: { width: 350, height: 40, text: 'Sub-headings', fontSize: 22, fontWeight: '700' },
+      body: { width: 300, height: 100, text: 'Body text', fontSize: 14, fontWeight: '400' },
+    }[type];
     addElement(currentPageIndex, {
       id: `el-${Date.now()}`,
       type: 'text',
       x: 100,
       y: 100,
-      width: isHeading ? 400 : 300,
-      height: isHeading ? 50 : 100,
+      width: config.width,
+      height: config.height,
       rotation: 0,
       opacity: 1,
-      text: isHeading ? 'New Headline' : 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam at varius enim.',
-      fontSize: isHeading ? 32 : 14,
+      text: config.text,
+      fontSize: config.fontSize,
       fontFamily: 'Inter',
-      fontWeight: isHeading ? '800' : '400',
+      fontWeight: config.fontWeight,
       fill: '#1e293b',
       textAlign: 'left',
       zIndex: 10
     });
+    setIsTextMenuOpen(false);
   };
 
   const handleAddShape = (shapeType: ShapeType = 'rect') => {
@@ -110,12 +145,21 @@ const EditorToolbar: React.FC = () => {
     });
   };
 
-  const handleSave = () => {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
-    toast.innerText = 'Asset Workspace Synchronized';
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
+  const handleSave = async () => {
+    setIsCommiting(true);
+    try {
+      await saveCatalog();
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
+      toast.innerText = 'Asset Workspace Synchronized';
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 2500);
+    } catch (error) {
+      console.error('Failed to save catalog', error);
+      // Optionally show an error toast
+    } finally {
+      setIsCommiting(false);
+    }
   };
 
   const handleExportPDF = async () => {
@@ -177,21 +221,86 @@ const EditorToolbar: React.FC = () => {
         </div>
       </div>
 
+      {/* Floating Panels */}
+      <SceneTreePanel />
+
       {/* Center Tools */}
       <div className="flex items-center gap-6">
         <div className={`flex items-center p-1 rounded-2xl border shadow-inner ${isDark
           ? 'bg-slate-800 border-slate-700'
           : 'bg-slate-50 border-slate-200'
           }`}>
+
+          {/* Tool Toggle (Select / Hand) */}
           <div className={`flex gap-1 pr-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
-            <button onClick={() => handleAddText('heading')} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
-              ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-              : 'hover:bg-white text-slate-500 hover:text-slate-700'
-              }`} title="Add Heading"><Heading1 size={18} /></button>
-            <button onClick={() => handleAddText('body')} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
-              ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-              : 'hover:bg-white text-slate-500 hover:text-slate-700'
-              }`} title="Add Body Text"><TextCursor size={18} /></button>
+            <button
+              onClick={() => setActiveTool('select')}
+              className={`p-2 rounded-xl transition-all ${activeTool === 'select'
+                ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm')
+                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-700')}`}
+              title="Select Tool"
+            >
+              <MousePointer2 size={18} />
+            </button>
+            <button
+              onClick={() => setActiveTool('hand')}
+              className={`p-2 rounded-xl transition-all ${activeTool === 'hand'
+                ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm')
+                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-700')}`}
+              title="Hand Tool (Pan)"
+            >
+              <Hand size={18} />
+            </button>
+            <button
+              onClick={() => setIsSceneTreeOpen(!isSceneTreeOpen)}
+              className={`p-2 rounded-xl transition-all group ${isSceneTreeOpen
+                ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm')
+                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-700')}`}
+              title="Toggle Layers"
+            >
+              <Layers size={18} />
+            </button>
+          </div>
+
+          <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <div className="relative" ref={textMenuRef}>
+              <button
+                onClick={() => setIsTextMenuOpen(!isTextMenuOpen)}
+                className={`p-2 hover:shadow-sm rounded-xl transition-all flex items-center gap-0.5 ${isTextMenuOpen
+                  ? (isDark ? 'bg-slate-700 shadow-sm text-white' : 'bg-white shadow-sm text-slate-700')
+                  : (isDark ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-700')
+                  }`}
+                title="Add Text"
+              >
+                <Type size={18} />
+              </button>
+
+              {isTextMenuOpen && (
+                <div className={`absolute top-full left-0 mt-2 w-56 border shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-slate-700' : 'border-slate-50'}`}>
+                    <p className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-300'}`}>Insert Text</p>
+                  </div>
+                  <button onClick={() => handleAddText('heading')} className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 text-slate-400 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
+                      <Heading1 size={16} />
+                    </div>
+                    <span className={`text-sm font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Headings</span>
+                  </button>
+                  <button onClick={() => handleAddText('subheading')} className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 text-slate-400 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
+                      <Heading1 size={14} />
+                    </div>
+                    <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Sub-headings</span>
+                  </button>
+                  <button onClick={() => handleAddText('body')} className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 text-slate-400 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
+                      <TextCursor size={14} />
+                    </div>
+                    <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Body text</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
@@ -209,26 +318,41 @@ const EditorToolbar: React.FC = () => {
               </button>
 
               {isShapeMenuOpen && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                  <div className="px-4 py-2 border-b border-slate-50 mb-1">
-                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Select Primitive</p>
+                <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 border shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] p-3 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`} style={{ width: 220 }}>
+                  <div className="grid grid-cols-5 gap-1.5">
+                    {([
+                      { type: 'line' as ShapeType, icon: <Minus size={18} /> },
+                      { type: 'rect' as ShapeType, icon: <Square size={18} /> },
+                      { type: 'roundedRect' as ShapeType, icon: <RectangleHorizontal size={18} /> },
+                      { type: 'circle' as ShapeType, icon: <Circle size={18} /> },
+                      { type: 'triangle' as ShapeType, icon: <Triangle size={18} /> },
+                      { type: 'rightTriangle' as ShapeType, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="4 20 4 4 20 20" /></svg> },
+                      { type: 'diamond' as ShapeType, icon: <Diamond size={18} /> },
+                      { type: 'pentagon' as ShapeType, icon: <Pentagon size={18} /> },
+                      { type: 'hexagon' as ShapeType, icon: <Hexagon size={18} /> },
+                      { type: 'octagon' as ShapeType, icon: <Octagon size={18} /> },
+                      { type: 'arrow' as ShapeType, icon: <ArrowRight size={18} /> },
+                      { type: 'arrow4' as ShapeType, icon: <MoveHorizontal size={18} /> },
+                      { type: 'star' as ShapeType, icon: <Star size={18} /> },
+                      { type: 'parallelogram' as ShapeType, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 18 2 6 18 6 22 18" /></svg> },
+                      { type: 'cross' as ShapeType, icon: <Plus size={18} /> },
+                      { type: 'cloud' as ShapeType, icon: <Cloud size={18} /> },
+                      { type: 'wave' as ShapeType, icon: <Flag size={18} /> },
+                      { type: 'pill' as ShapeType, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="6" /></svg> },
+                    ]).map(({ type, icon }) => (
+                      <button
+                        key={type}
+                        onClick={() => handleAddShape(type)}
+                        className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${isDark
+                          ? 'text-slate-400 hover:bg-slate-700 hover:text-white'
+                          : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'
+                          }`}
+                        title={type}
+                      >
+                        {icon}
+                      </button>
+                    ))}
                   </div>
-                  <button onClick={() => handleAddShape('rect')} className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left group">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"><Square size={16} /></div>
-                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Rectangle</span>
-                  </button>
-                  <button onClick={() => handleAddShape('circle')} className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left group">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"><Circle size={16} /></div>
-                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Circle</span>
-                  </button>
-                  <button onClick={() => handleAddShape('triangle')} className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left group">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"><Triangle size={16} /></div>
-                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Triangle</span>
-                  </button>
-                  <button onClick={() => handleAddShape('star')} className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left group">
-                    <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors"><Star size={16} /></div>
-                    <span className="text-[11px] font-black text-slate-800 uppercase tracking-widest">Star</span>
-                  </button>
                 </div>
               )}
             </div>
@@ -278,14 +402,6 @@ const EditorToolbar: React.FC = () => {
         </div>
 
         <div className={`w-px h-6 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
-
-        <button
-          onClick={() => setIsPropertyPanelOpen(!isPropertyPanelOpen)}
-          className={`p-2.5 rounded-xl transition-all ${isPropertyPanelOpen ? 'bg-indigo-600 text-white shadow-lg' : (isDark ? 'text-slate-400 hover:bg-slate-800 hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700')}`}
-          title="Toggle Properties Panel"
-        >
-          <Settings2 size={18} />
-        </button>
       </div>
 
       {/* Action Buttons */}
@@ -303,18 +419,7 @@ const EditorToolbar: React.FC = () => {
             }`}
         >
           <Save size={14} />
-          Commit
-        </button>
-
-        <div className={`w-px h-6 mx-1 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`}></div>
-
-        <button
-          onClick={handleExportPDF}
-          disabled={isExporting}
-          className="flex items-center gap-2 px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-indigo-600/10 hover:bg-indigo-700 transition-all disabled:opacity-50 active:scale-95"
-        >
-          {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-          {isExporting ? 'Processing' : 'Export PDF'}
+          {isCommiting ? 'Saving...' : 'Commit'}
         </button>
       </div>
     </header>

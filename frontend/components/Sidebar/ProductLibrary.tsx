@@ -5,29 +5,26 @@ import { useStore } from '../../store/useStore';
 import { Product, CanvasElement } from '../../types';
 
 const ProductLibrary: React.FC = () => {
-  const { products, categories, addElement, currentPageIndex, catalog, reorderProducts, removeProductFromCanvas, setDraggingItem } = useStore();
+  const { products, categories, addElement, currentPageIndex, catalog, reorderProducts, removeProductFromCanvas, setDraggingItem, uiTheme, setEditorTab, selectedCategoryId, setSelectedCategoryId } = useStore();
   const [search, setSearch] = useState('');
   const sortableRef = useRef<HTMLDivElement>(null);
 
-  // Filter to show all products available in the publication's selected categories
-  const activeCategoryIds = catalog.selectedCategoryIds || [];
-
-  const availableCategoryAssets = products.filter(p =>
-    (activeCategoryIds.length === 0 || (p.categoryId && activeCategoryIds.includes(p.categoryId))) &&
+  // Filter products based on selected category (if any) AND search
+  const filteredProducts = products.filter(p =>
+    (selectedCategoryId ? p.categoryId === selectedCategoryId : true) &&
     (p.name.toLowerCase().includes(search.toLowerCase()) || p.sku.toLowerCase().includes(search.toLowerCase()))
   );
 
+  const activeCategory = categories.find(c => c.id === selectedCategoryId);
+
   useEffect(() => {
-    if (sortableRef.current && availableCategoryAssets.length > 0) {
+    if (sortableRef.current && filteredProducts.length > 0) {
       const sortable = Sortable.create(sortableRef.current, {
         animation: 150,
         handle: '.drag-handle',
         ghostClass: 'sortable-ghost',
         dragClass: 'sortable-drag',
         onEnd: (evt) => {
-          // Reordering in this view might be tricky with multiple categories mixed, 
-          // usually reorder applies to the global list or the specific category view.
-          // For now, we update the global order based on the drag result relative to the displayed items.
           const newOrder = Array.from(sortableRef.current!.children).map(
             (el) => (el as HTMLElement).dataset.id!
           );
@@ -36,7 +33,7 @@ const ProductLibrary: React.FC = () => {
       });
       return () => sortable.destroy();
     }
-  }, [availableCategoryAssets.length, activeCategoryIds]);
+  }, [filteredProducts.length, selectedCategoryId]);
 
   const handleAddProduct = (product: Product) => {
     const timestamp = Date.now();
@@ -115,93 +112,152 @@ const ProductLibrary: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white border-r w-[320px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] animate-in slide-in-from-left-4 duration-500 font-sans">
-      <div className="p-6 border-b bg-white">
-        <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-1">
-          <Layers size={14} className="text-indigo-600" />
-          Publication Assets
-        </h3>
-      </div>
+    <div className={`flex h-full border-r w-[380px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] animate-in slide-in-from-left-4 duration-500 font-sans transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
 
-      <div className="p-4 border-b bg-slate-50/50">
-        <div className="relative group">
-          <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search Assets..."
-            className="w-full bg-white border border-slate-200 rounded-2xl pl-10 pr-4 py-3 text-xs font-bold text-slate-800 focus:ring-4 focus:ring-indigo-600/5 focus:border-indigo-600 outline-none transition-all placeholder:text-slate-300"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-              <X size={12} />
+      {/* Left Column: Categories */}
+      <div className={`w-[150px] flex flex-col border-r ${uiTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
+        <div className={`p-3 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+          <h2 className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Categories</h2>
+          <p className="text-[8px] font-semibold text-slate-400">{categories.length} total</p>
+        </div>
+        <div
+          className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar cursor-default"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setSelectedCategoryId(null);
+            }
+          }}
+        >
+          {/* 'All' category removed as per user request */}
+          {categories.map((category, idx) => (
+            <button
+              key={category.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCategoryId(category.id);
+              }}
+              className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all relative group ${selectedCategoryId === category.id ? (uiTheme === 'dark' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white border border-slate-100 shadow-sm text-indigo-600') : (uiTheme === 'dark' ? 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700')}`}
+            >
+              <span className={`absolute left-0.5 top-0.5 text-[7px] font-black ${selectedCategoryId === category.id ? 'text-indigo-500' : 'text-slate-400'}`}>
+                {String(idx + 1).padStart(2, '0')}
+              </span>
+              <div className={`w-6 h-6 rounded-md flex items-center justify-center overflow-hidden ml-1 ${selectedCategoryId === category.id ? 'ring-2 ring-indigo-600 ring-offset-1' : ''}`}>
+                {category.thumbnail ? (
+                  <img src={category.thumbnail} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <div className={`w-full h-full flex items-center justify-center ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                    <Package size={10} />
+                  </div>
+                )}
+              </div>
+              <div className="text-left">
+                <span className="block text-[10px] font-bold truncate max-w-[70px]">{category.name}</span>
+                <span className="block text-[8px] opacity-60 font-medium uppercase tracking-wider">{products.filter(p => p.categoryId === category.id).length}</span>
+              </div>
             </button>
-          )}
+          ))}
         </div>
       </div>
 
-      <div
-        ref={sortableRef}
-        className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar"
-      >
-        {availableCategoryAssets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-24 px-6 text-center">
-            <div className="w-16 h-16 bg-slate-50 rounded-[24px] flex items-center justify-center text-slate-200 mb-6 border border-slate-100 shadow-inner">
-              <Package size={32} />
-            </div>
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-relaxed">
-              No matching assets <br /> found in selected categories
-            </p>
+      {/* Right Column: Products */}
+      <div className="flex-1 flex flex-col w-[230px]">
+        <div className={`p-3 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="flex items-center justify-between mb-1.5">
+            <h2 className={`text-[10px] font-black uppercase tracking-widest ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Products</h2>
+            <button
+              onClick={() => setEditorTab(null)}
+              className={`p-1 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+            >
+              <X size={12} />
+            </button>
           </div>
-        ) : (
-          availableCategoryAssets.map((product, idx) => {
-            const category = categories.find(c => c.id === product.categoryId);
-            return (
-              <div
-                key={product.id}
-                data-id={product.id}
-                draggable="true"
-                onDragStart={(e) => handleDragStart(e, product)}
-                onDragEnd={handleDragEnd}
-                className="group flex items-center gap-3 p-3 rounded-[24px] bg-white hover:bg-slate-50 cursor-pointer transition-all border border-slate-100 hover:border-indigo-100 hover:shadow-xl hover:shadow-slate-200/40 relative"
-                onClick={() => handleAddProduct(product)}
-              >
-                <div className="drag-handle p-1 -ml-1 text-slate-200 hover:text-slate-400 cursor-grab active:cursor-grabbing shrink-0 transition-colors">
-                  <GripVertical size={16} />
-                </div>
+          <h3 className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
+            <Package size={10} />
+            {filteredProducts.length} total
+          </h3>
+        </div>
 
-                <div className="w-14 h-14 rounded-2xl bg-white overflow-hidden shrink-0 border border-slate-100 shadow-sm group-hover:scale-105 transition-transform duration-500">
-                  <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
-                </div>
+        <div className={`p-2.5 border-b transition-colors ${uiTheme === 'dark' ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'}`}>
+          <div className="relative group">
+            <Search size={12} className={`absolute left-2.5 top-1/2 -translate-y-1/2 transition-colors ${uiTheme === 'dark' ? 'text-slate-500 group-focus-within:text-indigo-400' : 'text-slate-300 group-focus-within:text-indigo-600'}`} />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className={`w-full border rounded-lg pl-8 pr-3 py-1.5 text-[11px] font-bold outline-none transition-all focus:ring-2 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-indigo-500/20 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:ring-indigo-600/5 focus:border-indigo-600'}`}
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+                <X size={10} />
+              </button>
+            )}
+          </div>
+        </div>
 
-                <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-black text-slate-800 truncate mb-1 group-hover:text-indigo-600 transition-colors">
-                    {product.name}
+        <div
+          ref={sortableRef}
+          className="flex-1 overflow-y-auto p-2 space-y-1.5 custom-scrollbar"
+        >
+          {filteredProducts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 border shadow-inner transition-colors ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700 text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-200'}`}>
+                <Package size={20} />
+              </div>
+              <p className={`text-[9px] font-black uppercase tracking-widest leading-relaxed ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
+                No assets found
+              </p>
+            </div>
+          ) : (
+            filteredProducts.map((product, idx) => {
+              const category = categories.find(c => c.id === product.categoryId);
+              return (
+                <div
+                  key={product.id}
+                  data-id={product.id}
+                  draggable="true"
+                  onDragStart={(e) => handleDragStart(e, product)}
+                  onDragEnd={handleDragEnd}
+                  className={`group flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all border relative hover:shadow-md ${uiTheme === 'dark' ? 'bg-slate-800/40 border-slate-800 hover:bg-slate-800 hover:border-indigo-500/30 hover:shadow-black/20' : 'bg-white border-slate-100 hover:bg-slate-50 hover:border-indigo-100 hover:shadow-slate-200/40'}`}
+                  onClick={() => handleAddProduct(product)}
+                >
+                  <span className={`absolute left-1.5 top-1.5 text-[8px] font-black ${uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>
+                    {String(idx + 1).padStart(2, '0')}
+                  </span>
+                  <div className={`drag-handle p-0.5 -ml-0.5 cursor-grab active:cursor-grabbing shrink-0 transition-colors ${uiTheme === 'dark' ? 'text-slate-600 hover:text-slate-400' : 'text-slate-200 hover:text-slate-400'}`}>
+                    <GripVertical size={12} />
                   </div>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-1.5 px-1.5 py-0.5 bg-slate-50 rounded-md border border-slate-100">
-                      <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: category?.color || '#cbd5e1' }} />
-                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter max-w-[80px] truncate">
+
+                  <div className={`w-10 h-10 rounded-xl overflow-hidden shrink-0 border shadow-sm group-hover:scale-105 transition-transform duration-500 ${uiTheme === 'dark' ? 'bg-slate-700 border-slate-700' : 'bg-white border-slate-100'}`}>
+                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className={`text-[10px] font-black truncate mb-0.5 transition-colors ${uiTheme === 'dark' ? 'text-slate-200 group-hover:text-indigo-400' : 'text-slate-800 group-hover:text-indigo-600'}`}>
+                      {product.name}
+                    </div>
+                    <div className="flex items-center gap-1 mb-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: category?.color || '#cbd5e1' }} />
+                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate">
                         {category?.name || 'General'}
                       </span>
                     </div>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black text-indigo-600">{product.currency}{product.price}</span>
-                    <button
-                      onClick={(e) => handleClearFromCanvas(product.id, e)}
-                      className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-200 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
-                      title="Clear from All Pages"
-                    >
-                      <Trash2 size={12} />
-                    </button>
+                    <div className="flex items-center justify-between gap-1">
+                      <span className={`text-[9px] font-black ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{product.currency}{product.price}</span>
+                      <button
+                        onClick={(e) => handleClearFromCanvas(product.id, e)}
+                        className={`w-5 h-5 flex items-center justify-center rounded-md transition-all opacity-0 group-hover:opacity-100 ${uiTheme === 'dark' ? 'hover:bg-red-500/20 text-slate-600 hover:text-red-400' : 'hover:bg-red-50 text-slate-200 hover:text-red-500'}`}
+                        title="Clear from All Pages"
+                      >
+                        <Trash2 size={10} />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })
-        )}
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

@@ -1,8 +1,8 @@
 
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
 export type PageType = 'cover' | 'interior' | 'index' | 'closing';
-export type ShapeType = 'rect' | 'circle' | 'triangle' | 'star';
-export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay';
+export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line';
+export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
 
@@ -36,13 +36,15 @@ export interface CanvasElement {
   rotation: number;
   opacity: number;
   fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
   text?: string;
   fontSize?: number;
   fontFamily?: string;
   fontWeight?: string; // '400', '700', '900'
   fontStyle?: 'normal' | 'italic';
-  textDecoration?: 'none' | 'underline';
-  textAlign?: 'left' | 'center' | 'right';
+  textDecoration?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
   lineHeight?: number;
   letterSpacing?: number;
   src?: string;
@@ -52,6 +54,20 @@ export interface CanvasElement {
   groupId?: string;
   locked?: boolean;
   visible?: boolean;
+
+  // Effects
+  effectStyle?: 'none' | 'shadow' | 'lift' | 'hollow' | 'splice' | 'outline' | 'echo' | 'glitch' | 'neon' | 'background';
+  shadowBlur?: number;
+  shadowOpacity?: number;
+  shadowColor?: string;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  textStrokeWidth?: number;
+  effectColor?: string;
+  effectColor2?: string;
+  effectSpread?: number;
+  effectRoundness?: number;
+
   // Product Block specific
   cardTheme?: CardTheme;
   showPrice?: boolean;
@@ -62,6 +78,12 @@ export interface CanvasElement {
     blur?: number;
     contrast?: number;
     saturation?: number;
+  };
+  iconConfig?: {
+    iconName: string;
+    iconLibrary: 'fontawesome';
+    color?: string;
+    size?: number;
   };
 }
 
@@ -139,6 +161,9 @@ export interface Catalog {
   updatedAt: string;
   productIds: string[];
   selectedCategoryIds: string[]; // Changed from selectedCategoryId to array
+  // Headers & Footers
+  hasHeader?: boolean;
+  hasFooter?: boolean;
   headerText?: string;
   footerText?: string;
   backgroundColor?: string;
@@ -153,10 +178,24 @@ export interface Catalog {
   headerSideMargin?: number;
   footerHeight?: number;
   footerSideMargin?: number;
+  footerTextAlignment?: 'left' | 'center' | 'right';
+  pageNumberAlignment?: 'left' | 'right';
   headerFontFamily?: string;
   headerFontSize?: number;
   footerFontFamily?: string;
   footerFontSize?: number;
+  headerColor?: string;
+  footerColor?: string;
+  // Page Layout (Stored in PX, edited in MM)
+  marginTop?: number;
+  marginBottom?: number;
+  marginLeft?: number;
+  marginRight?: number;
+  marginColor?: string;
+
+  // Master Layers (Editable Header/Footer)
+  headerElements: CanvasElement[];
+  footerElements: CanvasElement[];
 }
 
 export interface FullCatalogTemplate {
@@ -187,4 +226,9 @@ export interface EditorState {
   zoom: number;
   history: Catalog[];
   historyIndex: number;
+
+  // UI State
+  isSceneTreeOpen: boolean;
+  activeTool: 'select' | 'hand' | 'text' | 'shape';
+  shouldRenderOutlines: boolean;
 }

@@ -6,6 +6,7 @@ export const PAGE_WIDTH = 794;
 export const PAGE_HEIGHT = 1123;
 
 export const HEADER_FOOTER_HEIGHT = 38;
+export const PX_PER_MM = 3.78; // Standard 96 DPI conversion (25.4 mm = 96 px)
 
 export const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },
@@ -74,13 +75,10 @@ export const INITIAL_PRODUCTS: any[] = [
   }
 ];
 
-export const FONTS = [
-  'Inter',
-  'Roboto',
-  'Playfair Display',
-  'Montserrat',
-  'Open Sans'
-];
+import { ALL_FONTS, CATEGORIZED_FONTS } from './fonts';
+
+export const FONTS = ALL_FONTS;
+export { CATEGORIZED_FONTS };
 
 export const THEMES: Theme[] = [
   {
@@ -165,16 +163,16 @@ export const GRID_TEMPLATES: GridTemplate[] = [
   { id: '2x2-s', name: 'Grid 2x2: Stacked', cols: 2, rows: 2, padding: 50, spacing: 30, arrangement: 'stacked', group: '2x2' },
   { id: '3x3-s', name: 'Grid 3x3: Stacked', cols: 3, rows: 3, padding: 30, spacing: 20, arrangement: 'stacked', group: '3x3' },
   { id: '4x4-s', name: 'Grid 4x4: Stacked', cols: 4, rows: 4, padding: 20, spacing: 15, arrangement: 'stacked', group: '4x4' },
-  
+
   // High-End Themed Layouts (Inspired by Screenshots)
-  { 
-    id: 'vogue-strip', 
-    name: 'Vogue Boutique Strip', 
-    cols: 1, 
-    rows: 3, 
-    padding: 80, 
-    spacing: 50, 
-    arrangement: 'row', 
+  {
+    id: 'vogue-strip',
+    name: 'Vogue Boutique Strip',
+    cols: 1,
+    rows: 3,
+    padding: 80,
+    spacing: 50,
+    arrangement: 'row',
     group: 'Premium',
     cardTheme: 'split-row',
     backgroundColor: '#1e1b4b',
@@ -184,14 +182,14 @@ export const GRID_TEMPLATES: GridTemplate[] = [
       { type: 'shape', shapeType: 'rect', x: 150, y: 0, width: 494, height: 1123, fill: '#fbbf24', zIndex: -2 },
     ]
   },
-  { 
-    id: 'earthbound-sheet', 
-    name: 'Earthbound Line Sheet', 
-    cols: 2, 
-    rows: 4, 
-    padding: 40, 
-    spacing: 20, 
-    arrangement: 'stacked', 
+  {
+    id: 'earthbound-sheet',
+    name: 'Earthbound Line Sheet',
+    cols: 2,
+    rows: 4,
+    padding: 40,
+    spacing: 20,
+    arrangement: 'stacked',
     group: 'Premium',
     cardTheme: 'classic-stack',
     backgroundColor: '#e3d5ca',
@@ -225,10 +223,11 @@ export const INDEX_TEMPLATES: PageTemplate[] = [
     name: 'Standard TOC',
     description: 'Minimalist list layout for catalog navigation.',
     elements: [
-      { type: 'text', x: 80, y: 100, width: 634, height: 60, text: 'CONTENTS', fontSize: 48, fontWeight: '900', zIndex: 1 },
-      { type: 'shape', x: 80, y: 170, width: 634, height: 2, fill: '#0f172a', zIndex: 0 },
-      { type: 'text', x: 80, y: 220, width: 500, height: 30, text: '01. BRAND STORY', fontSize: 14, fontWeight: '700', zIndex: 2 },
-      { type: 'text', x: 650, y: 220, width: 50, height: 30, text: '04', fontSize: 14, fontWeight: '700', textAlign: 'right', zIndex: 3 }
+      { type: 'text', x: 80, y: 160, width: 634, height: 60, text: 'INDEX', fontSize: 52, fontWeight: '900', zIndex: 1 },
+      { type: 'shape', x: 80, y: 235, width: 100, height: 8, fill: '#6366f1', zIndex: 0 },
+      { type: 'text', x: 80, y: 330, width: 500, height: 30, text: '01. BRAND STORY', fontSize: 14, fontWeight: '700', zIndex: 2 },
+      { type: 'text', x: 650, y: 330, width: 50, height: 30, text: '04', fontSize: 14, fontWeight: '700', textAlign: 'right', zIndex: 3 },
+      { id: 'sep-1', type: 'shape', x: 80, y: 370, width: 634, height: 1, fill: '#000000', opacity: 0.1, zIndex: 0 }
     ]
   }
 ];

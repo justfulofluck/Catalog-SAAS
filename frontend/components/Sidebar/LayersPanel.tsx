@@ -1,11 +1,11 @@
 
 import React, { useEffect, useRef } from 'react';
-import { Layers, Eye, EyeOff, Lock, Unlock, MousePointer2, Type, Image as ImageIcon, Square, MessageSquare, GripVertical, Package } from 'lucide-react';
+import { Layers, Eye, EyeOff, Lock, Unlock, MousePointer2, Type, Image as ImageIcon, Square, MessageSquare, GripVertical, Package, X } from 'lucide-react';
 import Sortable from 'sortablejs';
 import { useStore } from '../../store/useStore';
 
 const LayersPanel: React.FC = () => {
-  const { catalog, currentPageIndex, selectedElementIds, setSelectedElementIds, setHoveredElementId, updateElement, setElementOrder, products, uiTheme } = useStore();
+  const { catalog, currentPageIndex, selectedElementIds, setSelectedElementIds, setHoveredElementId, updateElement, setElementOrder, products, uiTheme, setEditorTab } = useStore();
   const listRef = useRef<HTMLDivElement>(null);
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -55,10 +55,18 @@ const LayersPanel: React.FC = () => {
   return (
     <div className={`flex flex-col h-full border-r w-[320px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] animate-in slide-in-from-left-4 duration-500 font-sans transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
       <div className={`p-6 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-        <h3 className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 mb-1 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-400'}`}>
-          <Layers size={14} className="text-indigo-600" />
-          Scene Tree
-        </h3>
+        <div className="flex items-center justify-between mb-1">
+          <h3 className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-400'}`}>
+            <Layers size={14} className="text-indigo-600" />
+            Scene Tree
+          </h3>
+          <button
+            onClick={() => setEditorTab(null)}
+            className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+          >
+            <X size={14} />
+          </button>
+        </div>
       </div>
 
       <div

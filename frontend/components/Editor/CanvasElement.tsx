@@ -1,9 +1,10 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
-import { Text, Image, Rect, Circle, RegularPolygon, Star, Group, Transformer } from 'react-konva';
+import { Text, Image, Rect, Circle, RegularPolygon, Star, Line, Arrow, Group, Transformer } from 'react-konva';
 import useImage from 'use-image';
 import Konva from 'konva';
 import { CanvasElement as ICanvasElement, Product } from '../../types';
 import { useStore } from '../../store/useStore';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 
 interface Props {
   element: ICanvasElement;
@@ -30,7 +31,10 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     draggingItem,
     catalog,
     products,
-    pushHistory
+    pushHistory,
+    activeTool,
+    setGuides,
+    setDragPosition: setActiveDragPosition
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -48,11 +52,70 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   // Check if text contains HTML tags (rich text) or if a global effect is applied
   const isRichText = (element.type === 'text' && element.text && /<[^>]+>/.test(element.text)) ||
     (element.type === 'text' && element.effectStyle && element.effectStyle !== 'none') ||
-    (element.fill?.includes('gradient'));
+    (element.type === 'text' && element.fill?.includes('gradient'));
+
+  const useSvgFallback = isRichText || (element.type === 'shape' && element.fill?.includes('gradient'));
+
+  const parseGradientProps = (str: string, w: number, h: number, shapeType?: string) => {
+    if (!str || !str.includes('linear-gradient')) return { fill: str };
+    const match = str.match(/linear-gradient\s*\(\s*([^,]+)\s*,\s*(#[a-fA-F0-9]+)\s*,\s*(#[a-fA-F0-9]+)\s*\)/i);
+    if (!match) return { fill: str };
+
+    const dir = match[1].trim();
+    const c1 = match[2].trim();
+    const c2 = match[3].trim();
+
+    // Centered shapes use center as 0,0
+    const isCentered = ['circle', 'pentagon', 'hexagon', 'octagon', 'star'].includes(shapeType || '');
+
+    let start = { x: 0, y: 0 };
+    let end = { x: 0, y: 0 };
+
+    if (dir === 'to right') {
+      start = isCentered ? { x: -w / 2, y: 0 } : { x: 0, y: h / 2 };
+      end = isCentered ? { x: w / 2, y: 0 } : { x: w, y: h / 2 };
+    } else if (dir === 'to bottom') {
+      start = isCentered ? { x: 0, y: -h / 2 } : { x: w / 2, y: 0 };
+      end = isCentered ? { x: 0, y: h / 2 } : { x: w / 2, y: h };
+    } else if (dir === 'to bottom right') {
+      start = isCentered ? { x: -w / 2, y: -h / 2 } : { x: 0, y: 0 };
+      end = isCentered ? { x: w / 2, y: h / 2 } : { x: w, y: h };
+    } else if (dir === 'to top right') {
+      start = isCentered ? { x: -w / 2, y: h / 2 } : { x: 0, y: h };
+      end = isCentered ? { x: w / 2, y: -h / 2 } : { x: w, y: 0 };
+    }
+
+    return {
+      fill: c1,
+      fillEnabled: true,
+      fillPriority: 'linear-gradient',
+      fillLinearGradientStartPointX: start.x,
+      fillLinearGradientStartPointY: start.y,
+      fillLinearGradientEndPointX: end.x,
+      fillLinearGradientEndPointY: end.y,
+      fillLinearGradientStartPoint: start,
+      fillLinearGradientEndPoint: end,
+      fillLinearGradientColorStops: [0, c1, 1, c2],
+      stroke: c1,
+      strokeEnabled: true,
+      strokePriority: 'linear-gradient',
+      strokeLinearGradientStartPointX: start.x,
+      strokeLinearGradientStartPointY: start.y,
+      strokeLinearGradientEndPointX: end.x,
+      strokeLinearGradientEndPointY: end.y,
+      strokeLinearGradientStartPoint: start,
+      strokeLinearGradientEndPoint: end,
+      strokeLinearGradientColorStops: [0, c1, 1, c2]
+    };
+  };
+
+  const gradientProps = useMemo(() =>
+    element.type === 'shape' ? parseGradientProps(element.fill || '', element.width, element.height, element.shapeType) : {}
+    , [element.fill, element.width, element.height, element.type, element.shapeType]);
 
   // Render rich text/gradients as SVG for proper display on canvas
   useEffect(() => {
-    if ((element.type === 'text' && isRichText) || (element.type === 'shape' && element.fill?.includes('gradient'))) {
+    if (useSvgFallback) {
       const isGradient = element.fill?.includes('gradient');
       // Escape common HTML entities that break XML/SVG
       const safeText = element.type === 'text' ? (element.text || '')
@@ -97,50 +160,73 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
       };
 
       const borderRadius = element.shapeType === 'circle' ? '50%' : '0';
+      const getShapeClipPath = () => {
+        if (element.type !== 'shape') return 'none';
+        switch (element.shapeType) {
+          case 'circle': return 'circle(50% at 50% 50%)';
+          case 'triangle': return 'polygon(50% 0%, 100% 100%, 0% 100%)';
+          case 'rightTriangle': return 'polygon(0% 100%, 0% 0%, 100% 100%)';
+          case 'diamond': return 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)';
+          case 'pentagon': return 'polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)';
+          case 'hexagon': return 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
+          case 'octagon': return 'polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%)';
+          case 'star': return 'polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%)';
+          case 'parallelogram': return 'polygon(25% 0%, 100% 0%, 75% 100%, 0% 100%)';
+          case 'cross': return 'polygon(30% 0%, 70% 0%, 70% 30%, 100% 30%, 100% 70%, 70% 70%, 70% 100%, 30% 100%, 30% 70%, 0% 70%, 0% 30%, 30% 30%)';
+          case 'pill': return 'inset(0% round 999px)';
+          default: return 'none';
+        }
+      };
+
+      const backgroundStyle = isGradient ? `background: ${element.fill};` : `background: ${element.fill || '#000000'};`;
+      const clipPathStyle = element.type === 'shape' ? `clip-path: ${getShapeClipPath()}; -webkit-clip-path: ${getShapeClipPath()};` : '';
 
       const svgString = `
         <svg xmlns="http://www.w3.org/2000/svg" width="${element.width}" height="${element.height}">
           <foreignObject width="100%" height="100%">
-            <div xmlns="http://www.w3.org/1999/xhtml" class="element-content" style="
+            <div xmlns="http://www.w3.org/1999/xhtml" style="
               width: 100%;
               height: 100%;
               display: flex;
-              align-items: flex-start;
-              justify-content: ${element.textAlign === 'center' ? 'center' : element.textAlign === 'right' ? 'flex-end' : 'flex-start'};
+              align-items: center;
+              justify-content: center;
+              box-sizing: border-box;
+              ${element.type === 'shape' ? `${backgroundStyle} ${clipPathStyle}` : ''}
             ">
-              <div style="
-                font-size: ${element.fontSize || 16}px;
-                font-family: ${element.fontFamily || 'Inter'};
-                font-weight: ${element.fontWeight || 'normal'};
-                font-style: ${element.fontStyle || 'normal'};
-                text-decoration: ${element.textDecoration || 'none'};
-                ${isGradient ? `background: ${element.fill}; -webkit-background-clip: ${element.type === 'text' ? 'text' : 'border-box'}; background-clip: ${element.type === 'text' ? 'text' : 'border-box'}; ${element.type === 'text' ? '-webkit-text-fill-color: transparent; color: transparent;' : ''}` : `color: ${element.fill || '#000000'};`}
-                text-align: ${element.textAlign || 'left'};
-                line-height: 1.2;
-                padding: ${element.type === 'text' ? '5px' : '0'};
-                width: ${element.type === 'text' ? 'auto' : '100%'};
-                height: ${element.type === 'text' ? 'auto' : '100%'};
-                max-width: 100%;
-                overflow: hidden;
-                word-wrap: break-word;
-                border-radius: ${borderRadius};
-                ${getEffectStyles()}
-              ">
-                ${element.type === 'text' ? safeText : ''}
-              </div>
+              ${element.type === 'text' ? `
+                <div style="
+                  font-size: ${element.fontSize || 16}px;
+                  font-family: ${element.fontFamily || 'Inter'};
+                  font-weight: ${element.fontWeight || 'normal'};
+                  font-style: ${element.fontStyle || 'normal'};
+                  text-decoration: ${element.textDecoration || 'none'};
+                  text-align: ${element.textAlign || 'left'};
+                  line-height: 1.2;
+                  ${isGradient ? `${backgroundStyle} -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;` : `color: ${element.fill || '#000000'};`}
+                  width: 100%;
+                  ${getEffectStyles()}
+                ">
+                  ${safeText}
+                </div>
+              ` : '&nbsp;'}
             </div>
           </foreignObject>
         </svg>
       `;
 
-      const img = new window.Image();
-      const encodedSvg = btoa(unescape(encodeURIComponent(svgString)));
-      img.src = `data:image/svg+xml;base64,${encodedSvg}`;
-      img.onload = () => setRichTextImage(img);
-      img.onerror = () => {
-        console.error('Failed to load rich text SVG image');
+      try {
+        const img = new window.Image();
+        const encodedSvg = btoa(unescape(encodeURIComponent(svgString)));
+        img.src = `data:image/svg+xml;base64,${encodedSvg}`;
+        img.onload = () => setRichTextImage(img);
+        img.onerror = () => {
+          console.error('Failed to load rich text SVG image');
+          setRichTextImage(null);
+        };
+      } catch (err) {
+        console.error('Error generating SVG fallback:', err);
         setRichTextImage(null);
-      };
+      }
     } else {
       setRichTextImage(null);
     }
@@ -150,7 +236,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     element.effectStyle, element.effectColor, element.effectColor2, element.textStrokeWidth,
     element.shadowBlur, element.shadowOpacity, element.shadowOffsetX, element.shadowOffsetY,
     element.effectSpread, element.effectRoundness, element.type, element.shapeType,
-    element.textDecoration
+    element.textDecoration, useSvgFallback
   ]);
 
   useEffect(() => {
@@ -205,9 +291,9 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   useEffect(() => {
     if (isSelected && trRef.current && shapeRef.current && !element.locked) {
       trRef.current.nodes([shapeRef.current]);
-      trRef.current.getLayer().batchDraw();
+      trRef.current.getLayer()?.batchDraw();
     }
-  }, [isSelected, element.locked]);
+  }, [isSelected, element.locked, element.fill]);
 
   const handleTransformEnd = () => {
     if (element.locked) return;
@@ -278,6 +364,52 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
 
     const layer = e.target.getLayer();
     if (layer) layer.batchDraw();
+
+    // Snapping Logic
+    const SNAP_THRESHOLD = 5;
+    const guides: { orientation: 'H' | 'V'; position: number }[] = [];
+    const absPos = e.target.getAbsolutePosition();
+    const stage = e.target.getStage();
+    if (!stage) return;
+
+    const box = e.target.getClientRect();
+    const centerX = e.target.x() + e.target.width() / 2;
+    const centerY = e.target.y() + e.target.height() / 2;
+
+    // Vertical guides (Left, CenterX, Right)
+    const vSnaps = [0, PAGE_WIDTH / 2, PAGE_WIDTH];
+    currentPage.elements.forEach(el => {
+      if (el.id === element.id || selectedElementIds.includes(el.id)) return;
+      vSnaps.push(el.x, el.x + el.width / 2, el.x + el.width);
+    });
+
+    let snappedX = e.target.x();
+    let snappedH = false;
+    for (const snapX of vSnaps) {
+      if (Math.abs(e.target.x() - snapX) < SNAP_THRESHOLD) { snappedX = snapX; snappedH = true; guides.push({ orientation: 'V', position: snapX }); }
+      else if (Math.abs(centerX - snapX) < SNAP_THRESHOLD) { snappedX = snapX - e.target.width() / 2; snappedH = true; guides.push({ orientation: 'V', position: snapX }); }
+      else if (Math.abs((e.target.x() + e.target.width()) - snapX) < SNAP_THRESHOLD) { snappedX = snapX - e.target.width(); snappedH = true; guides.push({ orientation: 'V', position: snapX }); }
+    }
+    if (snappedH) e.target.x(snappedX);
+
+    // Horizontal guides (Top, CenterY, Bottom)
+    const hSnaps = [0, PAGE_HEIGHT / 2, PAGE_HEIGHT];
+    currentPage.elements.forEach(el => {
+      if (el.id === element.id || selectedElementIds.includes(el.id)) return;
+      hSnaps.push(el.y, el.y + el.height / 2, el.y + el.height);
+    });
+
+    let snappedY = e.target.y();
+    let snappedV = false;
+    for (const snapY of hSnaps) {
+      if (Math.abs(e.target.y() - snapY) < SNAP_THRESHOLD) { snappedY = snapY; snappedV = true; guides.push({ orientation: 'H', position: snapY }); }
+      else if (Math.abs(centerY - snapY) < SNAP_THRESHOLD) { snappedY = snapY - e.target.height() / 2; snappedV = true; guides.push({ orientation: 'H', position: snapY }); }
+      else if (Math.abs((e.target.y() + e.target.height()) - snapY) < SNAP_THRESHOLD) { snappedY = snapY - e.target.height(); snappedV = true; guides.push({ orientation: 'H', position: snapY }); }
+    }
+    if (snappedV) e.target.y(snappedY);
+
+    setGuides(guides);
+    setActiveDragPosition({ x: Math.round(e.target.x()), y: Math.round(e.target.y()) });
   };
 
   const handleDragEnd = (e: any) => {
@@ -300,6 +432,8 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
       });
     }
     peerNodes.current = [];
+    setGuides([]);
+    setActiveDragPosition(null);
   };
 
   const handleMouseEnter = () => {
@@ -327,7 +461,8 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     height: element.height,
     rotation: element.rotation,
     opacity: element.opacity,
-    draggable: !element.locked,
+    draggable: !element.locked && activeTool !== 'hand',
+    listening: activeTool !== 'hand', // Pass events through to stage when panning
     onClick: handleSelect,
     onTap: handleSelect,
     perfectDrawEnabled: false,
@@ -557,6 +692,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
           />
         ) : (
           <Text
+            key={`text-${element.id}-${element.fontFamily}-${element.fontSize}`}
             {...commonProps}
             text={(element.text || '').replace(/<[^>]*>/g, '')}
             fontSize={element.fontSize}
@@ -580,15 +716,200 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
           crop={crop}
         />
       )}
-      {element.type === 'shape' && (
-        <React.Fragment>
-          {element.shapeType === 'circle' ? (
-            <Circle {...commonProps} x={element.x + element.width / 2} y={element.y + element.height / 2} radius={Math.min(element.width, element.height) / 2} fill={element.fill} />
-          ) : (
-            <Rect {...commonProps} fill={element.fill} />
-          )}
-        </React.Fragment>
-      )}
+      {element.type === 'shape' && (() => {
+        const w = element.width;
+        const h = element.height;
+        const cx = w / 2;
+        const cy = h / 2;
+        const fill = element.fill || '#cbd5e1';
+        const stroke = element.stroke || undefined;
+        const isGradient = fill.includes('linear-gradient');
+        const fillProp = isGradient ? undefined : fill;
+        const strokeProp = isGradient ? undefined : stroke;
+        const fillProps = isGradient ? gradientProps : { fill: fillProp };
+        const strokeWidth = element.strokeWidth || 0;
+
+        // Helper to build a shape rendered as a closed Line (polygon)
+        const poly = (points: number[], props: any = commonProps) => (
+          <Line
+            {...props}
+            points={points}
+            closed
+            {...fillProps}
+            stroke={strokeProp}
+            strokeWidth={strokeWidth}
+          />
+        );
+
+        const renderShape = (visualProps: any) => {
+          // These shapes draw relative to (0,0) of the parent Group
+          switch (element.shapeType) {
+            case 'line':
+              return <Line key={`line`} {...visualProps} points={[0, h / 2, w, h / 2]} />;
+            case 'rect':
+              return <Rect key={`rect`} {...visualProps} x={0} y={0} width={w} height={h} />;
+            case 'roundedRect':
+              return <Rect key={`roundedRect`} {...visualProps} x={0} y={0} width={w} height={h} cornerRadius={Math.min(w, h) * 0.15} />;
+            case 'circle':
+              return <Circle key={`circle`} {...visualProps} x={cx} y={cy} radius={Math.min(w, h) / 2} />;
+            case 'triangle':
+              return <RegularPolygon key={`triangle`} {...visualProps} x={cx} y={cy} sides={3} radius={Math.min(w, h) / 2} />;
+            case 'rightTriangle':
+              return <Line key={`rightTriangle`} {...visualProps} points={[0, h, 0, 0, w, h]} x={0} y={0} closed />;
+            case 'diamond':
+              return <RegularPolygon key={`diamond`} {...visualProps} x={cx} y={cy} sides={4} radius={Math.min(w, h) / 2} rotation={(visualProps.rotation || 0) + 45} />;
+            case 'pentagon':
+              return <RegularPolygon key={`pentagon`} {...visualProps} x={cx} y={cy} sides={5} radius={Math.min(w, h) / 2} />;
+            case 'hexagon':
+              return <RegularPolygon key={`hexagon`} {...visualProps} x={cx} y={cy} sides={6} radius={Math.min(w, h) / 2} />;
+            case 'octagon':
+              return <RegularPolygon key={`octagon`} {...visualProps} x={cx} y={cy} sides={8} radius={Math.min(w, h) / 2} />;
+            case 'star':
+              return <Star key={`star`} {...visualProps} x={cx} y={cy} numPoints={5} innerRadius={Math.min(w, h) * 0.2} outerRadius={Math.min(w, h) * 0.5} />;
+            case 'arrow':
+              return <Arrow key={`arrow`} {...visualProps} points={[0, h / 2, w, h / 2]} strokeWidth={visualProps.strokeWidth || 4} pointerLength={10} pointerWidth={10} />;
+            case 'arrow4': {
+              const a4Stroke = Math.max(visualProps.strokeWidth || 3, 3);
+              return <Arrow key={`arrow4`} {...visualProps} points={[0, h / 2, w, h / 2]} strokeWidth={a4Stroke} pointerLength={a4Stroke * 4} pointerWidth={a4Stroke * 4} pointerAtBeginning={true} lineCap="round" lineJoin="round" />;
+            }
+            case 'parallelogram': {
+              const skew = w * 0.2;
+              return <Line key={`parallelogram`} {...visualProps} points={[skew, 0, w, 0, w - skew, h, 0, h]} x={0} y={0} closed />;
+            }
+            case 'cross': {
+              const t = Math.min(w, h) * 0.3;
+              return <Line key={`cross`} {...visualProps} points={[cx - t, 0, cx + t, 0, cx + t, cy - t, w, cy - t, w, cy + t, cx + t, cy + t, cx + t, h, cx - t, h, cx - t, cy + t, 0, cy + t, 0, cy - t, cx - t, cy - t]} x={0} y={0} closed />;
+            }
+            case 'cloud':
+              return (
+                <Rect
+                  key={`cloud`}
+                  {...visualProps}
+                  fill="transparent"
+                  sceneFunc={(ctx, shape) => {
+                    ctx.beginPath();
+                    ctx.moveTo(w * 0.2, h * 0.75);
+                    ctx.bezierCurveTo(w * -0.05, h * 0.75, w * -0.05, h * 0.35, w * 0.2, h * 0.35);
+                    ctx.bezierCurveTo(w * 0.15, h * 0.05, w * 0.45, h * 0.0, w * 0.5, h * 0.2);
+                    ctx.bezierCurveTo(w * 0.55, h * 0.0, w * 0.85, h * 0.05, w * 0.8, h * 0.35);
+                    ctx.bezierCurveTo(w * 1.05, h * 0.35, w * 1.05, h * 0.75, w * 0.8, h * 0.75);
+                    ctx.closePath();
+                    ctx.fillStyle = isGradient ? ctx.createLinearGradient(
+                      (gradientProps as any).fillLinearGradientStartPoint?.x || 0,
+                      (gradientProps as any).fillLinearGradientStartPoint?.y || 0,
+                      (gradientProps as any).fillLinearGradientEndPoint?.x || 0,
+                      (gradientProps as any).fillLinearGradientEndPoint?.y || 0
+                    ) : fill;
+
+                    if (isGradient && (gradientProps as any).fillLinearGradientColorStops) {
+                      const stops = (gradientProps as any).fillLinearGradientColorStops;
+                      (ctx.fillStyle as CanvasGradient).addColorStop(stops[0], stops[1]);
+                      (ctx.fillStyle as CanvasGradient).addColorStop(stops[2], stops[3]);
+                    }
+
+                    ctx.fill();
+                    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeWidth; ctx.stroke(); }
+                    ctx.fillStrokeShape(shape);
+                  }}
+                />
+              );
+            case 'wave':
+              return (
+                <Rect
+                  key={`wave-${fillKey}`}
+                  {...visualProps}
+                  fill="transparent"
+                  sceneFunc={(ctx, shape) => {
+                    ctx.beginPath();
+                    ctx.moveTo(0, h * 0.2);
+                    ctx.bezierCurveTo(w * 0.25, 0, w * 0.75, h * 0.4, w, h * 0.2);
+                    ctx.lineTo(w, h * 0.8);
+                    ctx.bezierCurveTo(w * 0.75, h, w * 0.25, h * 0.6, 0, h * 0.8);
+                    ctx.closePath();
+                    ctx.fillStyle = isGradient ? ctx.createLinearGradient(
+                      (gradientProps as any).fillLinearGradientStartPoint?.x || 0,
+                      (gradientProps as any).fillLinearGradientStartPoint?.y || 0,
+                      (gradientProps as any).fillLinearGradientEndPoint?.x || 0,
+                      (gradientProps as any).fillLinearGradientEndPoint?.y || 0
+                    ) : fill;
+
+                    if (isGradient && (gradientProps as any).fillLinearGradientColorStops) {
+                      const stops = (gradientProps as any).fillLinearGradientColorStops;
+                      (ctx.fillStyle as CanvasGradient).addColorStop(stops[0], stops[1]);
+                      (ctx.fillStyle as CanvasGradient).addColorStop(stops[2], stops[3]);
+                    }
+
+                    ctx.fill();
+                    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = strokeWidth; ctx.stroke(); }
+                    ctx.fillStrokeShape(shape);
+                  }}
+                />
+              );
+            case 'pill':
+              return <Rect key={`pill`} {...visualProps} x={0} y={0} width={w} height={h} cornerRadius={Math.min(w, h) / 2} />;
+            default:
+              return <Rect key={`default`} {...visualProps} x={0} y={0} width={w} height={h} />;
+          }
+        };
+
+        const visualProps = {
+          ...fillProps,
+          stroke: strokeProp,
+          strokeWidth: strokeWidth,
+          fillEnabled: true,
+          strokeEnabled: true,
+          width: w,
+          height: h
+        };
+
+        if (element.iconConfig) {
+          const ic = element.iconConfig;
+          const { fontWeight = '900', fontFamily = 'Font Awesome 6 Free' } = ic as any;
+          const iconSize = ic.size || (Math.min(w, h) * 0.5);
+
+          return (
+            <Group {...commonProps} key={`shape-${element.id}`}>
+              {renderShape({ ...visualProps, x: 0, y: 0, width: w, height: h, opacity: 1, listening: true })}
+              <Text
+                text={ic.iconName}
+                x={0}
+                y={0}
+                width={w}
+                height={h}
+                fontSize={iconSize}
+                fontFamily={fontFamily}
+                fill={ic.color || '#ffffff'}
+                align="center"
+                verticalAlign="middle"
+                fontStyle={fontWeight} // Konva uses fontStyle for weight if numeric string
+                listening={false}
+                // Force a redraw when color or font changes
+                key={`${ic.iconName}-${ic.color}-${fontFamily}-${fontWeight}`}
+              />
+            </Group>
+          );
+        }
+
+        if (useSvgFallback && richTextImage) {
+          return (
+            <Group {...commonProps} key={`shape-${element.id}`}>
+              <Image
+                image={richTextImage}
+                x={0}
+                y={0}
+                width={w}
+                height={h}
+              />
+            </Group>
+          );
+        }
+
+        return (
+          <Group {...commonProps} key={`shape-${element.id}`}>
+            {renderShape(visualProps)}
+          </Group>
+        );
+      })()}
       {element.type === 'product-block' && renderProductBlock()}
 
       {isSelected && !element.locked && (
