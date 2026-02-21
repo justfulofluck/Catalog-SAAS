@@ -20,6 +20,7 @@ import ProductLibrary from './components/Sidebar/ProductLibrary';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
 import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import StockImagesPanel from './components/Sidebar/StockImagesPanel';
+import LayersPanel from './components/Sidebar/LayersPanel';
 
 import EffectsPanel from './components/Sidebar/EffectsPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
@@ -31,7 +32,7 @@ import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
 import PublicViewer from './components/Publish/PublicViewer';
 import PricingView from './components/Pricing/PricingView';
-import { useStore } from './store/useStore';
+import { useStore, View } from './store/useStore';
 import {
   LayoutDashboard,
   Settings,
@@ -70,6 +71,8 @@ const App: React.FC = () => {
     editorTab,
     setEditorTab,
     isProjectSettingsOpen,
+    uiTheme,
+    toggleUiTheme,
     checkAuth
   } = useStore();
 
@@ -94,7 +97,7 @@ const App: React.FC = () => {
       setFontsLoaded(true);
     }
 
-    return () => {};
+    return () => { };
   }, [checkAuth]);
 
   useEffect(() => {
@@ -259,6 +262,20 @@ const App: React.FC = () => {
               >
                 <MousePointer2 size={22} />
               </button>
+              <button
+                onClick={() => {
+                  if (editorTab === 'layers' && isSidebarExpanded) {
+                    setSidebarExpanded(false);
+                  } else {
+                    setEditorTab('layers');
+                    setSidebarExpanded(true);
+                  }
+                }}
+                className={`p-3 rounded-[10px] transition-all ${editorTab === 'layers' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                title="Layers"
+              >
+                <Layers size={22} />
+              </button>
             </div>
           </div>
 
@@ -286,6 +303,7 @@ const App: React.FC = () => {
               {editorTab === 'buttons' && <ButtonsPanel />}
 
               {editorTab === 'effects' && <EffectsPanel />}
+              {editorTab === 'layers' && <LayersPanel />}
             </div>
           )}
         </div>
@@ -296,7 +314,7 @@ const App: React.FC = () => {
   const sidebarWidth = isSidebarExpanded ? 'w-72' : 'w-20';
 
   const renderContent = () => {
-    switch (currentView) {
+    switch (currentView as string) {
       case 'dashboard': return <Dashboard />;
       case 'products-list': return <ProductsListView />;
       case 'create-product': return <CreateProductForm />;
@@ -379,9 +397,9 @@ const App: React.FC = () => {
 
           <div className="h-px bg-slate-800/50 mx-4 my-2"></div>
 
-          <button onClick={() => setView('pricing')} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] transition-all group ${currentView === 'pricing' ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>
+          <button onClick={() => setView('pricing')} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] transition-all group ${(currentView as string) === 'pricing' ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>
             <div className="flex items-center gap-4">
-              <Rocket size={20} className={`shrink-0 ${currentView === 'pricing' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-indigo-400 transition-colors'}`} />
+              <Rocket size={20} className={`shrink-0 ${(currentView as string) === 'pricing' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-indigo-400 transition-colors'}`} />
               {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Upgrade Plan</span>}
             </div>
             {isSidebarExpanded && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>}

@@ -19,11 +19,12 @@ import BusinessManager from './BusinessManager';
 import SubscriptionManagement from './SubscriptionManagement';
 
 const AdminDashboard: React.FC = () => {
-    const { registeredUsers, logout, user, fetchUsers, error } = useStore();
+    const { registeredUsers, logout, user, fetchUsers, fetchBusinessTemplates, error } = useStore();
     const [activeTab, setActiveTab] = useState<'users' | 'businesses' | 'subscriptions'>('users');
 
     React.useEffect(() => {
         fetchUsers();
+        fetchBusinessTemplates();
     }, []);
 
     const totalUsers = registeredUsers.length;

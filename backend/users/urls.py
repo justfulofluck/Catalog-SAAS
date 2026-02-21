@@ -8,12 +8,15 @@ from .views import (
     ForceLogoutView,
     SubscriptionPlanViewSet,
     DebugJWTSettingsView,
+    UpdateSubscriptionView,
+    AdminSubscriptionViewSet,
 )
 
 router = DefaultRouter()
 router.register(r"users", UserViewSet)
 router.register(r"business-templates", BusinessTemplateViewSet)
 router.register(r"plans", SubscriptionPlanViewSet)
+router.register(r"admin-subscriptions", AdminSubscriptionViewSet, basename="admin-subscriptions")
 
 
 urlpatterns = [
@@ -32,4 +35,5 @@ urlpatterns = [
     path(
         "debug/jwt-settings/", DebugJWTSettingsView.as_view(), name="debug-jwt-settings"
     ),
+    path("subscriptions/update/", UpdateSubscriptionView.as_view(), name="update-subscription"),
 ]

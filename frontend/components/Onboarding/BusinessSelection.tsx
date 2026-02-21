@@ -4,7 +4,11 @@ import { useStore } from '../../store/useStore';
 import { Store, ArrowRight, ShieldCheck } from 'lucide-react';
 
 const BusinessSelection: React.FC = () => {
-    const { businessTemplates, selectBusinessTemplate, logout, setView } = useStore();
+    const { businessTemplates, selectBusinessTemplate, logout, setView, fetchBusinessTemplates } = useStore();
+
+    React.useEffect(() => {
+        fetchBusinessTemplates();
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">

@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { authApi } from '../client';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, BusinessTemplate, FormField } from '../types';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, BusinessTemplate, FormField, SubscriptionPlan, UserSubscription } from '../types';
 import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES } from '../constants';
 
 interface User {
@@ -19,7 +19,7 @@ interface User {
   subscription_features?: any;
 }
 
-type View = 'dashboard' | 'products-list' | 'create-product' | 'edit-product' | 'settings' | 'category-list' | 'create-category' | 'edit-category' | 'media-library' | 'editor' | 'catalog-setup' | 'catalog-products' | 'your-work' | 'publish' | 'public-viewer' | 'admin-login' | 'admin-dashboard' | 'business-selection' | 'business-onboarding' | 'pricing';
+export type View = 'dashboard' | 'products-list' | 'create-product' | 'edit-product' | 'settings' | 'category-list' | 'create-category' | 'edit-category' | 'media-library' | 'editor' | 'catalog-setup' | 'catalog-products' | 'your-work' | 'publish' | 'public-viewer' | 'admin-login' | 'admin-dashboard' | 'business-selection' | 'business-onboarding' | 'pricing';
 
 interface State {
   user: User | null;
@@ -34,8 +34,8 @@ interface State {
 
   products: Product[];
   categories: Category[];
-  plans: any[];
-  allSubscriptions: any[];
+  plans: SubscriptionPlan[];
+  allSubscriptions: UserSubscription[];
   mediaItems: MediaItem[];
   activeCategoryId: string | null;
   editingProductId: string | null;
@@ -101,6 +101,7 @@ interface State {
   fetchBusinessTemplates: () => Promise<void>;
   addBusinessTemplate: (template: BusinessTemplate) => Promise<void>;
   updateBusinessTemplate: (id: string, updates: Partial<BusinessTemplate>) => Promise<void>;
+  deleteBusinessTemplate: (id: string) => Promise<void>;
   selectBusinessTemplate: (id: string | null) => void;
   completeOnboarding: (businessId: string, businessName: string) => void;
 
@@ -312,10 +313,10 @@ export const useStore = create<State>((set, get) => ({
     selectedCategoryIds: [],
     hasHeader: true,
     hasFooter: true,
-    marginTop: 0,
-    marginBottom: 0,
-    marginLeft: 0,
-    marginRight: 0,
+    marginTop: 37.8,
+    marginBottom: 37.8,
+    marginLeft: 37.8,
+    marginRight: 37.8,
     marginColor: '#4f46e5',
     pageNumberAlignment: 'right',
     headerElements: [],
@@ -683,6 +684,7 @@ export const useStore = create<State>((set, get) => ({
       set({ allSubscriptions: Array.isArray(data) ? data : [] });
     } catch (error) {
       console.error("Failed to fetch all subscriptions", error);
+      set({ error: "Failed to fetch subscriptions. Please verify admin permissions." });
     }
   },
 
@@ -690,18 +692,27 @@ export const useStore = create<State>((set, get) => ({
   fetchUsers: async () => {
     try {
       const response = await authApi.getAllUsers();
-      set({ registeredUsers: response.data || [] });
+      const data = (response as any).data || response;
+      const mappedUsers = (Array.isArray(data) ? data : []).map((u: any) => ({
+        ...u,
+        role: u.is_staff ? 'admin' : 'user',
+        status: u.is_active ? 'active' : 'suspended',
+        joinedAt: u.date_joined || new Date().toISOString(),
+        businessName: u.business_name
+      }));
+      set({ registeredUsers: mappedUsers });
     } catch (error) {
       console.error("Failed to fetch users", error);
+      set({ error: "Failed to fetch user accounts. Please check admin permissions." });
     }
   },
 
   fetchBusinessTemplates: async () => {
     try {
       const response = await import('../client').then(m => m.businessTemplatesApi.getAll());
+      const data = (response as any).data || response;
       set(state => ({
-        // Ensure we fallback to empty list if undefined
-        businessTemplates: response.data || []
+        businessTemplates: Array.isArray(data) ? data : []
       }));
     } catch (error) {
       console.error("Failed to fetch business templates", error);
@@ -711,8 +722,9 @@ export const useStore = create<State>((set, get) => ({
   addBusinessTemplate: async (template) => {
     try {
       const response = await import('../client').then(m => m.businessTemplatesApi.create(template));
+      const data = (response as any).data || response;
       set(state => ({
-        businessTemplates: [...state.businessTemplates, response.data]
+        businessTemplates: [...state.businessTemplates, data]
       }));
     } catch (error) {
       console.error("Failed to create business template", error);
@@ -722,11 +734,23 @@ export const useStore = create<State>((set, get) => ({
   updateBusinessTemplate: async (id, updates) => {
     try {
       const response = await import('../client').then(m => m.businessTemplatesApi.update(id, updates));
+      const data = (response as any).data || response;
       set(state => ({
-        businessTemplates: state.businessTemplates.map(b => b.id === id ? response.data : b)
+        businessTemplates: state.businessTemplates.map(b => b.id === id ? data : b)
       }));
     } catch (error) {
       console.error("Failed to update business template", error);
+    }
+  },
+
+  deleteBusinessTemplate: async (id) => {
+    try {
+      await import('../client').then(m => m.businessTemplatesApi.delete(id));
+      set(state => ({
+        businessTemplates: state.businessTemplates.filter(b => b.id !== id)
+      }));
+    } catch (error) {
+      console.error("Failed to delete business template", error);
     }
   },
 

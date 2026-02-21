@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
-import { Plus, ChevronRight, FolderOpen, ArrowLeft, Trash2, Edit2, LayoutList, Package, Search, ExternalLink, Info } from 'lucide-react';
+import { Plus, ChevronRight, FolderOpen, ArrowLeft, Trash2, Edit2, LayoutList, Package, Search, ExternalLink, Info, CornerDownRight } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 
 const CategoryListView: React.FC = () => {
-  const { 
-    categories, products, setView, activeCategoryId, setActiveCategoryId, 
-    setEditingCategoryId, removeCategory, setEditingProductId 
+  const {
+    categories, products, setView, activeCategoryId, setActiveCategoryId,
+    setEditingCategoryId, removeCategory, setEditingProductId
   } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -43,10 +43,95 @@ const CategoryListView: React.FC = () => {
   const activeCategory = categories.find(c => c.id === activeCategoryId);
   const filteredProducts = products.filter(p => {
     const matchesCategory = p.categoryId === activeCategoryId;
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
+
+  // Organizing categories into hierarchy
+  const topLevelCategories = categories.filter(cat => !cat.parent);
+  const getSubcategories = (parentId: string) => categories.filter(cat => cat.parent?.toString() === parentId);
+
+  const renderCategoryItem = (cat: any, depth = 0) => {
+    const isActive = activeCategoryId === cat.id;
+    const isSub = depth > 0;
+    const subcats = getSubcategories(cat.id);
+
+    return (
+      <React.Fragment key={cat.id}>
+        <div
+          onClick={() => handleCategoryClick(cat.id)}
+          className={`group flex items-center gap-6 p-6 transition-all cursor-pointer relative ${isActive ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'}`}
+          style={{ paddingLeft: `${depth * 2 + 1.5}rem` }}
+        >
+          {/* Ranking Color Strip */}
+          <div
+            className={`absolute left-0 top-0 bottom-0 w-1 transition-all ${isActive ? 'opacity-100 scale-y-100' : 'opacity-60 scale-y-75 group-hover:scale-y-100 group-hover:opacity-100'}`}
+            style={{ backgroundColor: cat.color || '#4f46e5' }}
+          />
+
+          {/* Hierarchy Indicator for subcategories */}
+          {isSub && (
+            <div className="absolute left-6 text-slate-300 dark:text-slate-700">
+              <CornerDownRight size={14} />
+            </div>
+          )}
+
+          {/* Thumbnail/Icon */}
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all overflow-hidden border shrink-0 ${isActive ? 'bg-white dark:bg-slate-800 shadow-md border-indigo-100 dark:border-indigo-900/50' : 'bg-slate-100 dark:bg-slate-800 border-slate-100 dark:border-slate-800 group-hover:bg-white dark:group-hover:bg-slate-700 group-hover:shadow-sm'}`}>
+            {cat.thumbnail ? (
+              <img src={cat.thumbnail} alt={cat.name} className="w-full h-full object-cover" />
+            ) : (
+              <FolderOpen size={20} className={isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'} />
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <h3 className={`text-base font-black transition-colors truncate ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`}>
+                {cat.name}
+              </h3>
+              {cat.parent && (
+                <span className="text-[8px] font-black bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 px-1.5 py-0.5 rounded-full uppercase tracking-tighter">Sub</span>
+              )}
+            </div>
+            <p className="text-xs font-medium text-slate-400 dark:text-slate-500 truncate max-w-md">
+              {cat.description || "Classification for company inventory assets."}
+            </p>
+          </div>
+
+          {/* Stats & Navigation */}
+          <div className="flex items-center gap-6 shrink-0">
+            <div className="text-right">
+              <div className="text-base font-black text-slate-800 dark:text-white leading-none">{cat.productCount}</div>
+              <div className="text-[8px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">Assets</div>
+            </div>
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => handleEditCategory(e, cat.id)}
+                className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                title="Edit Category"
+              >
+                <Edit2 size={14} />
+              </button>
+              <button
+                onClick={(e) => handleDeleteCategory(e, cat.id)}
+                className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
+                title="Delete Category"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${isActive ? 'bg-indigo-600 text-white translate-x-1' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500 group-hover:text-white'}`}>
+              <ChevronRight size={16} />
+            </div>
+          </div>
+        </div>
+        {subcats.map(sub => renderCategoryItem(sub, depth + 1))}
+      </React.Fragment>
+    );
+  };
 
   return (
     <div className="flex-1 flex overflow-hidden bg-[#f7f8f9] dark:bg-slate-950 animate-in slide-in-from-bottom-4 duration-500 transition-colors duration-300">
@@ -55,7 +140,7 @@ const CategoryListView: React.FC = () => {
         <div className="max-w-4xl mx-auto">
           <div className="mb-10 flex items-center justify-between">
             <div>
-              <button 
+              <button
                 onClick={() => setView('dashboard')}
                 className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-400 transition-colors mb-4"
               >
@@ -64,7 +149,7 @@ const CategoryListView: React.FC = () => {
               <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Product Categories</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Classify your items to keep your catalogs organized.</p>
             </div>
-            <button 
+            <button
               onClick={() => setView('create-category')}
               className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 flex items-center gap-2 transition-all active:scale-95"
             >
@@ -77,79 +162,18 @@ const CategoryListView: React.FC = () => {
               <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
                 <LayoutList size={14} /> {categories.length} Global Categories
               </div>
-              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500">Sort by: Rank</div>
+              <div className="text-[10px] font-bold text-slate-400 dark:text-slate-500">Hierarchy View</div>
             </div>
-            
+
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {categories.map((cat, idx) => (
-                <div 
-                  key={cat.id} 
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`group flex items-center gap-6 p-6 transition-all cursor-pointer relative ${activeCategoryId === cat.id ? 'bg-indigo-50/30 dark:bg-indigo-900/10' : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'}`}
-                >
-                  {/* Ranking Color Strip */}
-                  <div 
-                    className={`absolute left-0 top-0 bottom-0 w-1 transition-all ${activeCategoryId === cat.id ? 'opacity-100 scale-y-100' : 'opacity-60 scale-y-75 group-hover:scale-y-100 group-hover:opacity-100'}`} 
-                    style={{ backgroundColor: cat.color || '#4f46e5' }}
-                  />
-
-                  {/* Thumbnail/Icon */}
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transition-all overflow-hidden border shrink-0 ${activeCategoryId === cat.id ? 'bg-white dark:bg-slate-800 shadow-md border-indigo-100 dark:border-indigo-900/50' : 'bg-slate-100 dark:bg-slate-800 border-slate-100 dark:border-slate-800 group-hover:bg-white dark:group-hover:bg-slate-700 group-hover:shadow-sm'}`}>
-                    {cat.thumbnail ? (
-                      <img src={cat.thumbnail} alt={cat.name} className="w-full h-full object-cover" />
-                    ) : (
-                      <FolderOpen size={20} className={activeCategoryId === cat.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 dark:text-slate-600 group-hover:text-indigo-600 dark:group-hover:text-indigo-400'} />
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className={`text-base font-black transition-colors truncate ${activeCategoryId === cat.id ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-800 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400'}`}>
-                        {cat.name}
-                      </h3>
-                      <span className="text-[9px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">#{cat.rank || idx + 1}</span>
-                    </div>
-                    <p className="text-xs font-medium text-slate-400 dark:text-slate-500 truncate max-w-md">
-                      {cat.description || "Classification for company inventory assets."}
-                    </p>
-                  </div>
-
-                  {/* Stats & Navigation */}
-                  <div className="flex items-center gap-6 shrink-0">
-                    <div className="text-right">
-                      <div className="text-base font-black text-slate-800 dark:text-white leading-none">{cat.productCount}</div>
-                      <div className="text-[8px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">Assets</div>
-                    </div>
-                    <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button 
-                        onClick={(e) => handleEditCategory(e, cat.id)}
-                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
-                        title="Edit Category"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button 
-                        onClick={(e) => handleDeleteCategory(e, cat.id)}
-                        className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
-                        title="Delete Category"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all ${activeCategoryId === cat.id ? 'bg-indigo-600 text-white translate-x-1' : 'bg-slate-50 dark:bg-slate-800 text-slate-300 dark:text-slate-700 group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500 group-hover:text-white'}`}>
-                      <ChevronRight size={16} />
-                    </div>
-                  </div>
-                </div>
-              ))}
+              {topLevelCategories.map(cat => renderCategoryItem(cat))}
             </div>
 
             {categories.length === 0 && (
               <div className="py-24 text-center">
                 <FolderOpen size={48} className="mx-auto text-slate-200 dark:text-slate-800 mb-4" />
                 <p className="text-lg font-black text-slate-400 dark:text-slate-600">No categories found.</p>
-                <button 
+                <button
                   onClick={() => setView('create-category')}
                   className="mt-4 text-indigo-600 dark:text-indigo-400 font-black hover:underline text-sm uppercase tracking-widest"
                 >
@@ -169,7 +193,7 @@ const CategoryListView: React.FC = () => {
               <Package size={14} className="text-indigo-600 dark:text-indigo-400" />
               Category Assets
             </h3>
-            <button 
+            <button
               onClick={() => setView('products-list')}
               className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 hover:gap-2 transition-all"
             >
@@ -179,15 +203,15 @@ const CategoryListView: React.FC = () => {
 
           {activeCategory ? (
             <div className="mb-6 animate-in slide-in-from-right-4 duration-300">
-               <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xs shadow-lg" style={{ backgroundColor: activeCategory.color }}>
-                    {activeCategory.name.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-black text-slate-800 dark:text-white leading-none">{activeCategory.name}</h4>
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">{activeCategory.productCount} Linked Products</p>
-                  </div>
-               </div>
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-white font-black text-xs shadow-lg" style={{ backgroundColor: activeCategory.color }}>
+                  {activeCategory.name.substring(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <h4 className="text-lg font-black text-slate-800 dark:text-white leading-none">{activeCategory.name}</h4>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">{activeCategory.productCount} Linked Products</p>
+                </div>
+              </div>
             </div>
           ) : (
             <div className="h-10 mb-6 bg-slate-100 dark:bg-slate-800 rounded-2xl animate-pulse" />
@@ -195,9 +219,9 @@ const CategoryListView: React.FC = () => {
 
           <div className="relative">
             <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={16} />
-            <input 
-              type="text" 
-              placeholder="Search category items..." 
+            <input
+              type="text"
+              placeholder="Search category items..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-11 pr-4 py-3 text-xs font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 focus:border-indigo-600 dark:focus:border-indigo-400 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
@@ -211,7 +235,7 @@ const CategoryListView: React.FC = () => {
               <Package size={40} className="text-slate-100 dark:text-slate-800 mb-6" />
               <h5 className="text-sm font-black text-slate-800 dark:text-white">No assets detected</h5>
               <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-2 leading-relaxed">This taxonomy selection has no matching products in the inventory pool.</p>
-              <button 
+              <button
                 onClick={() => setView('create-product')}
                 className="mt-6 px-6 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-indigo-700 transition-all"
               >
@@ -220,7 +244,7 @@ const CategoryListView: React.FC = () => {
             </div>
           ) : (
             filteredProducts.map((product) => (
-              <div 
+              <div
                 key={product.id}
                 onClick={() => handleEditProduct(product.id)}
                 className="group p-4 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500 hover:shadow-xl hover:shadow-indigo-600/5 rounded-2xl transition-all cursor-pointer flex items-center gap-4"
@@ -244,12 +268,12 @@ const CategoryListView: React.FC = () => {
         </div>
 
         <div className="p-6 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/50">
-           <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <Info size={16} className="text-indigo-400 dark:text-indigo-500 shrink-0 mt-0.5" />
-              <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed uppercase tracking-tighter">
-                <b>Taxonomy Sync:</b> Products shown here are filtered by active category assignment. Click to modify individual asset metadata.
-              </p>
-           </div>
+          <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+            <Info size={16} className="text-indigo-400 dark:text-indigo-500 shrink-0 mt-0.5" />
+            <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed uppercase tracking-tighter">
+              <b>Taxonomy Sync:</b> Products shown here are filtered by active category assignment. Click to modify individual asset metadata.
+            </p>
+          </div>
         </div>
       </div>
     </div>

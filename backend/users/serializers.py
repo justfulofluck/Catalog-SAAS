@@ -41,7 +41,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'email', 'name', 'avatar', 'is_verified', 'business_name', 'business_id', 'is_staff', 'is_superuser', 
-                  'subscription_plan', 'subscription_end_date', 'subscription_features')
+                  'date_joined', 'is_active', 'subscription_plan', 'subscription_end_date', 'subscription_features')
         read_only_fields = ('email', 'is_verified', 'is_staff', 'is_superuser')
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):

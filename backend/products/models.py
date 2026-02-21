@@ -22,6 +22,7 @@ class Category(models.Model):
     rank = models.IntegerField(default=0)
     color = models.CharField(max_length=7, default='#000000')
     thumbnail = models.ImageField(upload_to=category_image_path, blank=True, null=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='subcategories')
     created_at = models.DateTimeField(default=timezone.now)
 
     class Meta:

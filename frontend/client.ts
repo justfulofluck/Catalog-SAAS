@@ -38,7 +38,7 @@ export const authApi = {
 export const subscriptionApi = {
     getPlans: () => api.get('/plans/'),
     updatePlan: (data: { plan_slug: string }) => api.post('/subscriptions/update/', data),
-    adminGetAllSubscriptions: () => api.get('/admin/subscriptions/'),
+    adminGetAllSubscriptions: () => api.get('/admin-subscriptions/'),
 };
 
 export const businessTemplatesApi = {

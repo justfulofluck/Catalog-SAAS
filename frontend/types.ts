@@ -1,4 +1,3 @@
-
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
 export type PageType = 'cover' | 'interior' | 'index' | 'closing';
 export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line';
@@ -126,6 +125,8 @@ export interface Category {
   rank?: number;
   color?: string;
   thumbnail?: string;
+  parent?: string | number;
+  parentName?: string;
   productCount: number;
 }
 
@@ -140,6 +141,29 @@ export interface Product {
   categoryId?: string;
   // Dynamic fields storage
   customFields?: Record<string, any>;
+}
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  price: number;
+  features: {
+    max_catalogs: number;
+    max_products: number;
+    max_storage_mb: number;
+    ai_enabled: boolean;
+  };
+}
+
+export interface UserSubscription {
+  id: string;
+  user_name?: string;
+  user_email?: string;
+  plan_name?: string;
+  start_date: string;
+  end_date?: string;
+  is_active: boolean;
 }
 
 export type MediaType = 'image';

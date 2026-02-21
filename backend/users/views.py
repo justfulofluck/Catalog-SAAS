@@ -168,6 +168,10 @@ class AdminSubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = UserSubscriptionSerializer
     permission_classes = [permissions.IsAdminUser]
 
+    def get_queryset(self):
+        print(f"DEBUG: AdminSubscriptionViewSet.get_queryset called by {self.request.user}")
+        return super().get_queryset()
+
 
 class UpdateSubscriptionView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -205,6 +209,29 @@ class UpdateSubscriptionView(APIView):
             else:
                 subscription.end_date = timezone.now() + datetime.timedelta(days=30)
                 subscription.save()
+
+        # Send subscription confirmation email
+        from utils.email_service import send_email
+        from utils.email_templates import get_subscription_purchase_html
+        
+        subject = f"Your {plan.name} Subscription is Active!"
+        html_message = get_subscription_purchase_html(
+            name=request.user.name or "User",
+            plan_name=plan.name,
+            purchase_date=timezone.now(),
+            end_date=subscription.end_date,
+            features=plan.features
+        )
+        
+        try:
+            send_email(
+                to_email=request.user.email,
+                subject=subject,
+                message=f"Thank you for purchasing the {plan.name}.",
+                html_message=html_message
+            )
+        except Exception as e:
+            print(f"Failed to send subscription email: {e}")
 
         return Response({
             "message": f"Successfully upgraded to {plan.name}",
