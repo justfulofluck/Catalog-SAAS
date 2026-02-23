@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 3000,
       host: '0.0.0.0',
+      allowedHosts: ['catalogmakerr.blueglobaltechnology.com'],
       proxy: {
         '/api': {
           target: 'http://192.168.1.177:8003',
