@@ -208,8 +208,14 @@ export interface Catalog {
   pageNumberAlignment?: 'left' | 'right';
   headerFontFamily?: string;
   headerFontSize?: number;
+  headerFontWeight?: string;
+  headerFontStyle?: string;
+  headerTextDecoration?: string;
   footerFontFamily?: string;
   footerFontSize?: number;
+  footerFontWeight?: string;
+  footerFontStyle?: string;
+  footerTextDecoration?: string;
   headerColor?: string;
   footerColor?: string;
   // Page Layout (Stored in PX, edited in MM)

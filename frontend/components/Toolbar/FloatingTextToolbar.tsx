@@ -3,7 +3,6 @@ import {
     Bold, Italic, Underline,
     Minus, Plus,
     AlignLeft, AlignCenter, AlignRight,
-    AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd,
     ChevronDown, MoreHorizontal
 } from 'lucide-react';
 import { CanvasElement } from '../../types';
@@ -79,23 +78,6 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
         }
 
         onUpdate({ textAlign: a, x: newX });
-    };
-
-    const handleVerticalAlignment = (v: 'top' | 'middle' | 'bottom') => {
-        const { marginTop, marginBottom, hasHeader, hasFooter, headerHeight, footerHeight } = catalog;
-        const height = element.height;
-
-        // Hierarchy: Page -> Margin -> Header/Footer -> Content
-        const safeY1 = (marginTop || 0) + (hasHeader ? (headerHeight || 0) : 0);
-        const safeY2 = PAGE_HEIGHT - (marginBottom || 0) - (hasFooter ? (footerHeight || 0) : 0);
-
-        let newY = element.y;
-
-        if (v === 'top') newY = safeY1;
-        else if (v === 'middle') newY = safeY1 + (safeY2 - safeY1 - height) / 2;
-        else if (v === 'bottom') newY = safeY2 - height;
-
-        onUpdate({ y: newY });
     };
 
     return (
@@ -206,23 +188,6 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                         {a === 'left' && <AlignLeft size={14} />}
                         {a === 'center' && <AlignCenter size={14} />}
                         {a === 'right' && <AlignRight size={14} />}
-                    </button>
-                ))}
-            </div>
-
-            <Divider />
-
-            {/* Vertical Alignment */}
-            <div className="flex items-center gap-0.5">
-                {(['top', 'middle', 'bottom'] as const).map(v => (
-                    <button
-                        key={v}
-                        onClick={() => handleVerticalAlignment(v)}
-                        className="p-1.5 rounded-full hover:bg-slate-50 text-slate-400 hover:text-indigo-600 transition-all"
-                    >
-                        {v === 'top' && <AlignVerticalJustifyStart size={14} />}
-                        {v === 'middle' && <AlignVerticalJustifyCenter size={14} />}
-                        {v === 'bottom' && <AlignVerticalJustifyEnd size={14} />}
                     </button>
                 ))}
             </div>
