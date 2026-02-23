@@ -5,8 +5,8 @@ The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/6.0/topics/http/urls/
 Examples:
 Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+    1. Add an import:  from my_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
 Class-based views
     1. Add an import:  from other_app.views import Home
     2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
@@ -21,10 +21,16 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from users.views import PublicRegisterView
+from dj_rest_auth.views import UserDetailsView
+from rest_framework.permissions import AllowAny
+
+class AllowAnyUserDetailsView(UserDetailsView):
+    permission_classes = [AllowAny]
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("dj_rest_auth.urls")),
+    path("api/auth/user/", AllowAnyUserDetailsView.as_view(), name="rest_user_details"),
     path("api/auth/registration/", PublicRegisterView.as_view(), name="rest_register"),
     path("api/", include("users.urls")),
     path("api/", include("products.urls")),

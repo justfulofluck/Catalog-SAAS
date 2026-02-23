@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-65shkrq$m$pr63md-%8yaikcu*yy916=f&(^8ctp8!_u=s51+b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.1.208", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["192.168.1.208", "192.168.1.177", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -183,13 +183,15 @@ CORS_ALLOW_ALL_ORIGINS = False  # Disable wildcard
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://192.168.1.208:3000",  # If testing locally on network
+    "http://192.168.1.208:3000",
+    "http://192.168.1.177:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True  # Required for cookies/session auth with React
 CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://192.168.1.208:3000",
+    "http://192.168.1.177:3000",
 ]
 
 # JWT Settings (dj-rest-auth)

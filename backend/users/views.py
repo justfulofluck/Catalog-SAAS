@@ -41,7 +41,7 @@ class PublicRegisterView(RegisterView):
 
 
 class PublicUserDetailsView(UserDetailsView):
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
@@ -51,13 +51,10 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get_queryset(self):
-        # Users can only see themselves unless they are staff
-        if self.request.user.is_staff:
-            return User.objects.all()
-        return User.objects.filter(id=self.request.user.id)
+        return User.objects.all()
 
 
 class RequestPasswordResetOTP(APIView):

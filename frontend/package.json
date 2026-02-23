@@ -11,7 +11,7 @@
   "dependencies": {
     "@fortawesome/fontawesome-free": "^7.2.0",
     "axios": "^1.13.5",
-    "jspdf": "^2.5.1",
+    "jspdf": "^4.2.0",
     "konva": "^10.0.12",
     "lucide-react": "^0.460.0",
     "react": "^19.2.3",
