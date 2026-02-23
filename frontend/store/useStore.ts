@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, BusinessTemplate, FormField } from '../types';
+import { authApi } from '../client';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, BusinessTemplate, FormField, SubscriptionPlan, UserSubscription } from '../types';
 import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES } from '../constants';
 
 interface User {
@@ -13,9 +14,12 @@ interface User {
   joinedAt: string;
   businessId?: string; // Links user to a specific business template/instance
   businessName?: string;
+  subscription_plan?: string;
+  subscription_end_date?: string;
+  subscription_features?: any;
 }
 
-type View = 'dashboard' | 'products-list' | 'create-product' | 'edit-product' | 'settings' | 'category-list' | 'create-category' | 'edit-category' | 'media-library' | 'editor' | 'catalog-setup' | 'catalog-products' | 'your-work' | 'publish' | 'public-viewer' | 'admin-login' | 'admin-dashboard' | 'business-selection' | 'business-onboarding';
+export type View = 'dashboard' | 'products-list' | 'create-product' | 'edit-product' | 'settings' | 'category-list' | 'create-category' | 'edit-category' | 'media-library' | 'editor' | 'catalog-setup' | 'catalog-products' | 'your-work' | 'publish' | 'public-viewer' | 'admin-login' | 'admin-dashboard' | 'business-selection' | 'business-onboarding' | 'pricing';
 
 interface State {
   user: User | null;
@@ -25,9 +29,13 @@ interface State {
   isSidebarExpanded: boolean;
   uiTheme: 'light' | 'dark';
   defaultCurrency: string;
+  isLoading: boolean;
+  error: string | null;
 
   products: Product[];
   categories: Category[];
+  plans: SubscriptionPlan[];
+  allSubscriptions: UserSubscription[];
   mediaItems: MediaItem[];
   activeCategoryId: string | null;
   editingProductId: string | null;
@@ -63,9 +71,10 @@ interface State {
   guides: { orientation: 'H' | 'V'; position: number }[];
   activeDragPosition: { x: number; y: number } | null;
 
-  login: (email: string) => void;
-  adminLogin: (email: string) => void;
-  logout: () => void;
+  login: (email: string | undefined, username: string | undefined, password: string) => Promise<void>;
+  adminLogin: (email: string | undefined, username: string | undefined, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  checkAuth: () => Promise<void>;
   setView: (view: View) => void;
   setSidebarExpanded: (expanded: boolean) => void;
   setActiveTool: (tool: 'select' | 'hand' | 'text' | 'shape') => void;
@@ -82,9 +91,17 @@ interface State {
 
   updateUser: (updates: Partial<User>) => void;
 
+  // Subscription Actions
+  fetchPlans: () => Promise<void>;
+  updateSubscription: (planSlug: string) => Promise<{ success: boolean; message: string }>;
+  fetchAllSubscriptions: () => Promise<void>;
+
   // Business Actions
-  addBusinessTemplate: (template: BusinessTemplate) => void;
-  updateBusinessTemplate: (id: string, updates: Partial<BusinessTemplate>) => void;
+  fetchUsers: () => Promise<void>;
+  fetchBusinessTemplates: () => Promise<void>;
+  addBusinessTemplate: (template: BusinessTemplate) => Promise<void>;
+  updateBusinessTemplate: (id: string, updates: Partial<BusinessTemplate>) => Promise<void>;
+  deleteBusinessTemplate: (id: string) => Promise<void>;
   selectBusinessTemplate: (id: string | null) => void;
   completeOnboarding: (businessId: string, businessName: string) => void;
 
@@ -207,12 +224,6 @@ const INITIAL_MEDIA: MediaItem[] = [
   }
 ];
 
-const INITIAL_USERS: User[] = [
-  { id: 'u1', name: 'John Doe', email: 'john@example.com', avatar: 'JD', role: 'user', status: 'active', joinedAt: '2023-10-15T10:00:00Z', businessId: 'tech-nova', businessName: 'TechNova Store 1' },
-  { id: 'u2', name: 'Alice Smith', email: 'alice@design.co', avatar: 'AS', role: 'user', status: 'active', joinedAt: '2023-11-02T14:30:00Z', businessId: 'tech-nova', businessName: 'TechNova North' },
-  { id: 'u5', name: 'Admin User', email: 'admin@catalog.team', avatar: 'AD', role: 'admin', status: 'active', joinedAt: '2023-01-01T00:00:00Z' }
-];
-
 const TECHNOVA_SCHEMA: FormField[] = [
   // Basic Fields
   { id: 'prod_name', label: 'Product Name', type: 'text', section: 'basic', required: true },
@@ -244,6 +255,8 @@ export const useStore = create<State>((set, get) => ({
   uiTheme: 'light',
   shouldRenderOutlines: true,
   defaultCurrency: '$',
+  isLoading: false,
+  error: null,
 
   products: INITIAL_PRODUCTS.map((p, idx) => ({
     ...p,
@@ -255,7 +268,9 @@ export const useStore = create<State>((set, get) => ({
     { id: 'cat3', name: 'Accessories', productCount: 1, color: '#10b981', rank: 3, description: 'Handcrafted home decor and accessories.' }
   ],
   mediaItems: INITIAL_MEDIA,
-  registeredUsers: INITIAL_USERS,
+  registeredUsers: [],
+  plans: [],
+  allSubscriptions: [],
 
   businessTemplates: [
     {
@@ -263,27 +278,6 @@ export const useStore = create<State>((set, get) => ({
       name: 'TechNova Electronics',
       description: 'Specialized template for consumer electronics retail with technical specification support.',
       schema: TECHNOVA_SCHEMA
-    },
-    {
-      id: 'fashion-boutique',
-      name: 'Luxe Fashion',
-      description: 'Standard apparel template with size, color, and fabric attributes.',
-      schema: [
-        { id: 'prod_name', label: 'Item Name', type: 'text', section: 'basic', required: true },
-        { id: 'price', label: 'Retail Price', type: 'number', section: 'basic', required: true },
-        { id: 'size', label: 'Size', type: 'select', options: ['XS', 'S', 'M', 'L', 'XL'], section: 'technical' },
-        { id: 'fabric', label: 'Material', type: 'text', section: 'technical' }
-      ]
-    },
-    {
-      id: 'general-retail',
-      name: 'General Retail',
-      description: 'Flexible template suitable for general merchandise and home goods.',
-      schema: [
-        { id: 'prod_name', label: 'Product Name', type: 'text', section: 'basic', required: true },
-        { id: 'sku', label: 'SKU', type: 'text', section: 'basic' },
-        { id: 'price', label: 'Price', type: 'number', section: 'basic', required: true }
-      ]
     }
   ],
   selectedBusinessTemplateId: null,
@@ -319,10 +313,10 @@ export const useStore = create<State>((set, get) => ({
     selectedCategoryIds: [],
     hasHeader: true,
     hasFooter: true,
-    marginTop: 0,
-    marginBottom: 0,
-    marginLeft: 0,
-    marginRight: 0,
+    marginTop: 37.8,
+    marginBottom: 37.8,
+    marginLeft: 37.8,
+    marginRight: 37.8,
     marginColor: '#4f46e5',
     pageNumberAlignment: 'right',
     headerElements: [],
@@ -461,42 +455,112 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  login: (email) => {
-    const existingUser = INITIAL_USERS.find(u => u.email === email && u.role !== 'admin');
+  login: async (email, username, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await authApi.login({ email, username, password });
 
-    // Simulate new user if not found in mock list (John/Alice are existing)
-    const isNewUser = !existingUser;
+      // 2. Fetch User Details
+      const userData: any = await authApi.user();
+      // const userData = userResponse.data; // Removed redundant unwrapping
 
-    const userObj: User = existingUser || {
-      id: `u-${Date.now()}`,
-      name: 'New User',
-      email,
-      avatar: undefined,
-      role: 'user',
-      status: 'active',
-      joinedAt: new Date().toISOString(),
-      businessId: undefined // New users have no business initially
-    };
+      // 3. Enforce Customer Role (Staff cannot log in here)
+      if (userData.is_staff) {
+        await authApi.logout();
+        set({ isLoading: false, error: 'Administrators must use the Admin Login portal.' });
+        return;
+      }
 
-    set({
-      isAuthenticated: true,
-      user: userObj,
-      currentView: userObj.businessId ? 'dashboard' : 'business-selection'
-    });
+      // 4. Set State
+      const userObj: User = {
+        id: userData.id || `u-${Date.now()}`,
+        name: userData.name || 'User',
+        email: userData.email,
+        role: 'user',
+        status: 'active',
+        joinedAt: new Date().toISOString(),
+        businessId: userData.business_id, // synced from serializer
+        businessName: userData.business_name
+      };
+
+      set({
+        isAuthenticated: true,
+        user: userObj,
+        currentView: userObj.businessId ? 'dashboard' : 'business-selection',
+        isLoading: false
+      });
+
+      // Fetch templates on login
+      get().fetchBusinessTemplates();
+      // Fetch users for admin dashboard
+      get().fetchUsers();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.non_field_errors?.[0] || 'Login failed';
+      if (errorMessage.includes('Unable to log in with provided credentials')) {
+        set({ error: 'Invalid email or password. New here? Create an account.', isLoading: false });
+      } else {
+        set({ error: errorMessage, isLoading: false });
+      }
+    }
   },
 
-  adminLogin: (email) => set({
-    isAdminAuthenticated: true,
-    user: { id: 'admin-1', name: 'Catalog Admin', email, avatar: 'AD', role: 'admin', status: 'active', joinedAt: new Date().toISOString() },
-    currentView: 'admin-dashboard'
-  }),
+  adminLogin: async (email, username, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      // 1. Authenticate
+      const payload: any = { password: password || 'admin123' };
+      if (email) payload.email = email;
+      if (username) payload.username = username;
 
-  logout: () => set({
-    isAuthenticated: false,
-    isAdminAuthenticated: false,
-    user: null,
-    currentView: 'dashboard'
-  }),
+      await authApi.login(payload);
+
+      // 2. Fetch User
+      const user = await authApi.user();
+      console.log("Admin Login User Check:", user);
+      console.log("Is Staff:", (user as any).is_staff, "Is Superuser:", (user as any).is_superuser);
+
+      // 3. Enforce Admin Role
+      if (!(user as any).is_staff && !(user as any).is_superuser) {
+        await authApi.logout();
+        set({ isLoading: false, error: 'Access Denied. Authorized personnel only.' });
+        return;
+      }
+
+      set({
+        isAdminAuthenticated: true,
+        user: {
+          id: (user as any).id,
+          name: (user as any).name || 'Admin',
+          email: (user as any).email,
+          role: 'admin',
+          status: 'active',
+          joinedAt: new Date().toISOString()
+        },
+        currentView: 'admin-dashboard',
+        isLoading: false
+      });
+
+      // Fetch data for admin
+      get().fetchBusinessTemplates();
+      get().fetchUsers();
+
+    } catch (error: any) {
+      set({ error: error.response?.data?.non_field_errors?.[0] || 'Admin login failed', isLoading: false });
+    }
+  },
+
+  logout: async () => {
+    try {
+      await authApi.logout();
+    } catch (e) { console.error(e); }
+
+    set({
+      isAuthenticated: false,
+      isAdminAuthenticated: false,
+      user: null,
+      currentView: 'dashboard' // Will trigger Login due to !isAuthenticated check in App
+    });
+  },
 
   setView: (view) => set({ currentView: view }),
   setSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
@@ -579,26 +643,145 @@ export const useStore = create<State>((set, get) => ({
     user: state.user ? { ...state.user, ...updates } : null
   })),
 
-  // Business Logic
-  addBusinessTemplate: (template) => set(state => ({
-    businessTemplates: [...state.businessTemplates, template]
-  })),
+  fetchPlans: async () => {
+    const { subscriptionApi } = await import('../client');
+    try {
+      const response = await subscriptionApi.getPlans();
+      const data = (response as any).data || response;
+      set({ plans: Array.isArray(data) ? data : [] });
+    } catch (error) {
+      console.error("Failed to fetch plans", error);
+    }
+  },
 
-  updateBusinessTemplate: (id, updates) => set(state => ({
-    businessTemplates: state.businessTemplates.map(b => b.id === id ? { ...b, ...updates } : b)
-  })),
+  updateSubscription: async (planSlug: string) => {
+    const { subscriptionApi } = await import('../client');
+    try {
+      const response = await subscriptionApi.updatePlan({ plan_slug: planSlug });
+      const data = (response as any).data || response;
+
+      // Update local user state
+      const { user, checkAuth } = get();
+      if (user) {
+        await checkAuth(); // Refresh user data to get new subscription fields
+      }
+
+      return { success: true, message: data.message };
+    } catch (error: any) {
+      console.error("Failed to update subscription", error);
+      return {
+        success: false,
+        message: error.response?.data?.error || "Failed to process subscription"
+      };
+    }
+  },
+
+  fetchAllSubscriptions: async () => {
+    const { subscriptionApi } = await import('../client');
+    try {
+      const response = await subscriptionApi.adminGetAllSubscriptions();
+      const data = (response as any).data || response;
+      set({ allSubscriptions: Array.isArray(data) ? data : [] });
+    } catch (error) {
+      console.error("Failed to fetch all subscriptions", error);
+      set({ error: "Failed to fetch subscriptions. Please verify admin permissions." });
+    }
+  },
+
+  // Business Logic
+  fetchUsers: async () => {
+    try {
+      const response = await authApi.getAllUsers();
+      const data = (response as any).data || response;
+      const mappedUsers = (Array.isArray(data) ? data : []).map((u: any) => ({
+        ...u,
+        role: u.is_staff ? 'admin' : 'user',
+        status: u.is_active ? 'active' : 'suspended',
+        joinedAt: u.date_joined || new Date().toISOString(),
+        businessName: u.business_name
+      }));
+      set({ registeredUsers: mappedUsers });
+    } catch (error) {
+      console.error("Failed to fetch users", error);
+      set({ error: "Failed to fetch user accounts. Please check admin permissions." });
+    }
+  },
+
+  fetchBusinessTemplates: async () => {
+    try {
+      const response = await import('../client').then(m => m.businessTemplatesApi.getAll());
+      const data = (response as any).data || response;
+      set(state => ({
+        businessTemplates: Array.isArray(data) ? data : []
+      }));
+    } catch (error) {
+      console.error("Failed to fetch business templates", error);
+    }
+  },
+
+  addBusinessTemplate: async (template) => {
+    try {
+      const response = await import('../client').then(m => m.businessTemplatesApi.create(template));
+      const data = (response as any).data || response;
+      set(state => ({
+        businessTemplates: [...state.businessTemplates, data]
+      }));
+    } catch (error) {
+      console.error("Failed to create business template", error);
+    }
+  },
+
+  updateBusinessTemplate: async (id, updates) => {
+    try {
+      const response = await import('../client').then(m => m.businessTemplatesApi.update(id, updates));
+      const data = (response as any).data || response;
+      set(state => ({
+        businessTemplates: state.businessTemplates.map(b => b.id === id ? data : b)
+      }));
+    } catch (error) {
+      console.error("Failed to update business template", error);
+    }
+  },
+
+  deleteBusinessTemplate: async (id) => {
+    try {
+      await import('../client').then(m => m.businessTemplatesApi.delete(id));
+      set(state => ({
+        businessTemplates: state.businessTemplates.filter(b => b.id !== id)
+      }));
+    } catch (error) {
+      console.error("Failed to delete business template", error);
+    }
+  },
 
   selectBusinessTemplate: (id) => set({
     selectedBusinessTemplateId: id,
     currentView: id ? 'business-onboarding' : 'business-selection'
   }),
 
-  completeOnboarding: (businessId, businessName) => set(state => {
-    return {
-      user: state.user ? { ...state.user, businessId, businessName } : null,
-      currentView: 'dashboard'
-    };
-  }),
+  completeOnboarding: async (businessId, businessName) => {
+    set({ isLoading: true });
+    try {
+      // Update User on Backend
+      const updatedUser = await authApi.updateUser({
+        business_id: businessId,
+        business_name: businessName
+      });
+
+      set(state => ({
+        user: {
+          ...state.user!,
+          businessId: (updatedUser as any).business_id,
+          businessName: (updatedUser as any).business_name
+        },
+        currentView: 'dashboard',
+        isLoading: false
+      }));
+    } catch (error) {
+      console.error("Failed to save business details", error);
+      set({ error: "Failed to save business details. Please try again.", isLoading: false });
+    }
+  },
 
   addProduct: (product) => set((state) => ({
     products: [product, ...state.products]
@@ -2010,5 +2193,45 @@ export const useStore = create<State>((set, get) => ({
       footerElements: state.catalog.footerElements.filter(el => el.id !== elementId),
       updatedAt: new Date().toISOString()
     }
-  }))
+  })),
+
+  checkAuth: async () => {
+    try {
+      const user: any = await authApi.user();
+
+      const isStaff = user.is_staff || user.is_superuser;
+
+      const userObj: User = {
+        id: user.id,
+        name: user.name || 'User',
+        email: user.email,
+        role: isStaff ? 'admin' : 'user',
+        status: 'active',
+        joinedAt: new Date().toISOString(),
+        businessId: user.business_id,
+        businessName: user.business_name
+      };
+
+      if (isStaff) {
+        set({
+          isAdminAuthenticated: true,
+          isAuthenticated: false,
+          user: userObj,
+          currentView: 'admin-dashboard'
+        });
+        get().fetchUsers();
+      } else {
+        set({
+          isAuthenticated: true,
+          isAdminAuthenticated: false,
+          user: userObj,
+          currentView: userObj.businessId ? 'dashboard' : 'business-selection'
+        });
+      }
+
+    } catch (error) {
+      console.log("Not authenticated", error);
+      set({ isAuthenticated: false, isAdminAuthenticated: false, user: null });
+    }
+  }
 }));

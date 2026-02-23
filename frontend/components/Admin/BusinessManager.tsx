@@ -4,7 +4,7 @@ import { Plus, Trash2, Edit2, Save, X, GripVertical, ChevronRight, Layers, Credi
 import { BusinessTemplate, FormField, FieldType } from '../../types';
 
 const BusinessManager: React.FC = () => {
-    const { businessTemplates, addBusinessTemplate, updateBusinessTemplate } = useStore();
+    const { businessTemplates, addBusinessTemplate, updateBusinessTemplate, deleteBusinessTemplate } = useStore();
     const [isEditing, setIsEditing] = useState(false);
     const [activeTemplateId, setActiveTemplateId] = useState<string | null>(null);
 
@@ -29,7 +29,7 @@ const BusinessManager: React.FC = () => {
         setIsEditing(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!templateName) return;
 
         const newTemplate: BusinessTemplate = {
@@ -40,11 +40,22 @@ const BusinessManager: React.FC = () => {
         };
 
         if (activeTemplateId) {
-            updateBusinessTemplate(activeTemplateId, newTemplate);
+            await updateBusinessTemplate(activeTemplateId, newTemplate);
         } else {
-            addBusinessTemplate(newTemplate);
+            await addBusinessTemplate(newTemplate);
         }
         setIsEditing(false);
+    };
+
+    const handleDelete = async (e: React.MouseEvent, id: string, name: string) => {
+        e.stopPropagation();
+        if (window.confirm(`Are you sure you want to delete the "${name}" template? This action cannot be undone.`)) {
+            await deleteBusinessTemplate(id);
+            if (activeTemplateId === id) {
+                setIsEditing(false);
+                setActiveTemplateId(null);
+            }
+        }
     };
 
     const addField = (section: 'basic' | 'technical' | 'commercial') => {
@@ -145,7 +156,16 @@ const BusinessManager: React.FC = () => {
                                 <p className="text-xs font-bold text-slate-800">{t.name}</p>
                                 <p className="text-[10px] text-slate-400">{t.schema.length} Fields</p>
                             </div>
-                            <ChevronRight size={14} className="text-slate-300" />
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={(e) => handleDelete(e, t.id, t.name)}
+                                    className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                                    title="Delete Template"
+                                >
+                                    <Trash2 size={14} />
+                                </button>
+                                <ChevronRight size={14} className="text-slate-300" />
+                            </div>
                         </button>
                     ))}
                 </div>

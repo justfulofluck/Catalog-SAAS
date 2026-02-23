@@ -26,8 +26,26 @@ api.interceptors.response.use(
 export const authApi = {
     login: (credentials: any) => api.post('/auth/login/', credentials),
     logout: () => api.post('/auth/logout/'),
+    forceLogout: () => api.post('/users/force-logout/'),
     user: () => api.get('/auth/user/'),
     register: (data: any) => api.post('/auth/registration/', data),
+    requestOtp: (email: string) => api.post('/auth/password-reset/otp/request/', { email }),
+    verifyOtpAndReset: (data: any) => api.post('/auth/password-reset/otp/confirm/', data),
+    updateUser: (data: any) => api.patch('/auth/user/', data),
+    getAllUsers: () => api.get('/users/'),
+};
+
+export const subscriptionApi = {
+    getPlans: () => api.get('/plans/'),
+    updatePlan: (data: { plan_slug: string }) => api.post('/subscriptions/update/', data),
+    adminGetAllSubscriptions: () => api.get('/admin-subscriptions/'),
+};
+
+export const businessTemplatesApi = {
+    getAll: () => api.get('/business-templates/'),
+    create: (data: any) => api.post('/business-templates/', data),
+    update: (id: string, data: any) => api.patch(`/business-templates/${id}/`, data),
+    delete: (id: string) => api.delete(`/business-templates/${id}/`),
 };
 
 // Products API

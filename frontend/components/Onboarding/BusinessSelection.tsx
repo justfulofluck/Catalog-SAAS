@@ -4,7 +4,11 @@ import { useStore } from '../../store/useStore';
 import { Store, ArrowRight, ShieldCheck } from 'lucide-react';
 
 const BusinessSelection: React.FC = () => {
-    const { businessTemplates, selectBusinessTemplate, logout } = useStore();
+    const { businessTemplates, selectBusinessTemplate, logout, setView, fetchBusinessTemplates } = useStore();
+
+    React.useEffect(() => {
+        fetchBusinessTemplates();
+    }, []);
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
@@ -14,7 +18,10 @@ const BusinessSelection: React.FC = () => {
                     <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-600/20">C</div>
                     <span className="font-black text-xl tracking-tight text-slate-900">Studio.</span>
                 </div>
-                <button onClick={logout} className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">Sign Out</button>
+                <div className="flex items-center gap-6">
+                    <button onClick={() => setView('pricing')} className="text-sm font-black text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-widest px-4 py-2 bg-indigo-50 rounded-lg border border-indigo-100 shadow-sm shadow-indigo-600/5 hover:-translate-y-0.5 transform active:scale-95 transition-all">Upgrade Plan</button>
+                    <button onClick={logout} className="text-sm font-bold text-slate-500 hover:text-slate-800 transition-colors">Sign Out</button>
+                </div>
             </div>
 
             <div className="flex-1 flex flex-col items-center justify-center p-8">

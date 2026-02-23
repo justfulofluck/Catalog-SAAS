@@ -45,7 +45,7 @@ const ProjectSettingsPanel: React.FC = () => {
             {/* Header */}
             <div className="p-6 border-b flex items-center justify-between">
                 <h3 className={`text-sm font-black tracking-tight ${uiTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                    Project Settings
+                    Page Settings
                 </h3>
                 <button
                     onClick={() => setIsProjectSettingsOpen(false)}
@@ -83,25 +83,33 @@ const ProjectSettingsPanel: React.FC = () => {
                                             <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 min-w-[70px]">
                                                 <input
                                                     type="number"
-                                                    min="25"
-                                                    max="35"
+                                                    min="3"
+                                                    max="30"
                                                     value={localHeaderMm}
-                                                    onChange={(e) => setLocalHeaderMm(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const rawVal = e.target.value;
+                                                        setLocalHeaderMm(rawVal);
+                                                        const val = parseInt(rawVal);
+                                                        if (!isNaN(val)) {
+                                                            const clamped = Math.max(3, Math.min(30, val));
+                                                            updateProjectSettings({ headerHeight: toPx(clamped) });
+                                                        }
+                                                    }}
                                                     onBlur={(e) => {
                                                         const val = parseInt(e.target.value);
-                                                        const clamped = isNaN(val) ? 30 : Math.max(25, Math.min(35, val));
+                                                        const clamped = isNaN(val) ? 30 : Math.max(3, Math.min(30, val));
                                                         setLocalHeaderMm(clamped.toString());
                                                         updateProjectSettings({ headerHeight: toPx(clamped) });
                                                     }}
-                                                    className="w-full bg-transparent outline-none text-[11px] font-black text-indigo-600 text-right"
+                                                    className="w-full bg-transparent outline-none text-[11px] font-black text-indigo-600 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 />
                                                 <span className="text-[10px] font-bold text-slate-400 shrink-0">mm</span>
                                             </div>
                                         </div>
                                         <input
                                             type="range"
-                                            min="25"
-                                            max="35"
+                                            min="3"
+                                            max="30"
                                             step="1"
                                             value={toMm(catalog.headerHeight || 113.4)}
                                             onChange={(e) => updateProjectSettings({ headerHeight: toPx(parseInt(e.target.value)) })}
@@ -233,14 +241,22 @@ const ProjectSettingsPanel: React.FC = () => {
                                                     min="15"
                                                     max="25"
                                                     value={localFooterMm}
-                                                    onChange={(e) => setLocalFooterMm(e.target.value)}
+                                                    onChange={(e) => {
+                                                        const rawVal = e.target.value;
+                                                        setLocalFooterMm(rawVal);
+                                                        const val = parseInt(rawVal);
+                                                        if (!isNaN(val)) {
+                                                            const clamped = Math.max(15, Math.min(25, val));
+                                                            updateProjectSettings({ footerHeight: toPx(clamped) });
+                                                        }
+                                                    }}
                                                     onBlur={(e) => {
                                                         const val = parseInt(e.target.value);
                                                         const clamped = isNaN(val) ? 20 : Math.max(15, Math.min(25, val));
                                                         setLocalFooterMm(clamped.toString());
                                                         updateProjectSettings({ footerHeight: toPx(clamped) });
                                                     }}
-                                                    className="w-full bg-transparent outline-none text-[11px] font-black text-indigo-600 text-right"
+                                                    className="w-full bg-transparent outline-none text-[11px] font-black text-indigo-600 text-right [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                                 />
                                                 <span className="text-[10px] font-bold text-slate-400 shrink-0">mm</span>
                                             </div>
@@ -400,8 +416,13 @@ const ProjectSettingsPanel: React.FC = () => {
                                 <input
                                     type="number"
                                     value={toMm(catalog.marginTop || 0)}
-                                    onChange={(e) => updateProjectSettings({ marginTop: toPx(parseInt(e.target.value) || 0) })}
-                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700"
+                                    onChange={(e) => {
+                                        const rawVal = e.target.value;
+                                        const val = parseInt(rawVal);
+                                        if (!isNaN(val)) updateProjectSettings({ marginTop: toPx(val) });
+                                        else if (rawVal === '') updateProjectSettings({ marginTop: 0 });
+                                    }}
+                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                                 <span className="text-[10px] font-bold text-slate-400 ml-1">mm</span>
                             </div>
@@ -412,8 +433,13 @@ const ProjectSettingsPanel: React.FC = () => {
                                 <input
                                     type="number"
                                     value={toMm(catalog.marginBottom || 0)}
-                                    onChange={(e) => updateProjectSettings({ marginBottom: toPx(parseInt(e.target.value) || 0) })}
-                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700"
+                                    onChange={(e) => {
+                                        const rawVal = e.target.value;
+                                        const val = parseInt(rawVal);
+                                        if (!isNaN(val)) updateProjectSettings({ marginBottom: toPx(val) });
+                                        else if (rawVal === '') updateProjectSettings({ marginBottom: 0 });
+                                    }}
+                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                                 <span className="text-[10px] font-bold text-slate-400 ml-1">mm</span>
                             </div>
@@ -424,8 +450,13 @@ const ProjectSettingsPanel: React.FC = () => {
                                 <input
                                     type="number"
                                     value={toMm(catalog.marginLeft || 0)}
-                                    onChange={(e) => updateProjectSettings({ marginLeft: toPx(parseInt(e.target.value) || 0) })}
-                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700"
+                                    onChange={(e) => {
+                                        const rawVal = e.target.value;
+                                        const val = parseInt(rawVal);
+                                        if (!isNaN(val)) updateProjectSettings({ marginLeft: toPx(val) });
+                                        else if (rawVal === '') updateProjectSettings({ marginLeft: 0 });
+                                    }}
+                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                                 <span className="text-[10px] font-bold text-slate-400 ml-1">mm</span>
                             </div>
@@ -436,8 +467,13 @@ const ProjectSettingsPanel: React.FC = () => {
                                 <input
                                     type="number"
                                     value={toMm(catalog.marginRight || 0)}
-                                    onChange={(e) => updateProjectSettings({ marginRight: toPx(parseInt(e.target.value) || 0) })}
-                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700"
+                                    onChange={(e) => {
+                                        const rawVal = e.target.value;
+                                        const val = parseInt(rawVal);
+                                        if (!isNaN(val)) updateProjectSettings({ marginRight: toPx(val) });
+                                        else if (rawVal === '') updateProjectSettings({ marginRight: 0 });
+                                    }}
+                                    className="w-full bg-transparent outline-none text-xs font-black text-slate-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                                 />
                                 <span className="text-[10px] font-bold text-slate-400 ml-1">mm</span>
                             </div>

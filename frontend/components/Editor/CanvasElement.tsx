@@ -819,7 +819,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
             case 'wave':
               return (
                 <Rect
-                  key={`wave-${fillKey}`}
+                  key={`wave-${element.fill}`}
                   {...visualProps}
                   fill="transparent"
                   sceneFunc={(ctx, shape) => {

@@ -102,22 +102,24 @@ const PageStage: React.FC<{
 
           {/* Margins & Areas Visualization (Rendered ON TOP for visibility) */}
           <KonvaGroup>
-            {/* Main Margin Box (Outer Boundary) */}
-            <KonvaRect
-              name="margin-bg"
-              listening={false}
-              x={marginLeft}
-              y={marginTop}
-              width={currentWidth - marginLeft - marginRight}
-              height={currentHeight - marginTop - marginBottom}
-              stroke={marginColor}
-              strokeWidth={Math.max(1, 2 / zoom)}
-              dash={[6, 3]}
-              opacity={0.8}
-            />
+            {/* Main Margin Box (Outer Boundary) - Only on interior pages */}
+            {page.type === 'interior' && (
+              <KonvaRect
+                name="margin-bg"
+                listening={false}
+                x={marginLeft}
+                y={marginTop}
+                width={currentWidth - marginLeft - marginRight}
+                height={currentHeight - marginTop - marginBottom}
+                stroke={marginColor}
+                strokeWidth={Math.max(1, 2 / zoom)}
+                dash={[6, 3]}
+                opacity={0.8}
+              />
+            )}
 
             {/* Header Area (Inside Margins) */}
-            {hasHeader && (
+            {hasHeader && page.type === 'interior' && (
               <KonvaGroup name="header-group">
                 <KonvaRect
                   name="header-bg"
@@ -163,7 +165,7 @@ const PageStage: React.FC<{
             )}
 
             {/* Page Number (Only if footer is disabled, otherwise it renders inside footer-group) */}
-            {!hasFooter && catalog.footerText?.includes('{{page}}') && (
+            {!hasFooter && catalog.footerText?.includes('{{page}}') && page.type === 'interior' && (
               <KonvaText
                 key={`page-num-no-footer-${catalog.pageNumberAlignment}`}
                 name="page-number-no-footer"
@@ -181,7 +183,7 @@ const PageStage: React.FC<{
             )}
 
             {/* Footer Area (Inside Margins) */}
-            {hasFooter && (
+            {hasFooter && page.type === 'interior' && (
               <KonvaGroup name="footer-group">
                 <KonvaRect
                   name="footer-bg"
@@ -1090,7 +1092,7 @@ const EditorCanvas: React.FC = () => {
             <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isProjectSettingsOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
               <Settings size={12} />
             </div>
-            Project Settings
+            Page Settings
           </button>
           <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">
             <div className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center">
