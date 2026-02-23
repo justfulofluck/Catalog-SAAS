@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft, Sparkles } from 'lucide-react';
 import { authApi } from '../../client';
 
 const Login: React.FC = () => {
@@ -495,6 +495,16 @@ const Login: React.FC = () => {
               >
                 <Shield size={12} /> Catalog Team Login
               </button>
+
+              {/* <div className="pt-2">
+                <button
+                  onClick={(e) => { e.preventDefault(); (useStore.getState() as any).guestLogin(); }}
+                  className="w-full py-4 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 group"
+                >
+                  <Sparkles size={16} className="text-indigo-400 group-hover:scale-110 transition-transform" />
+                  Try Guest Access (Instant)
+                </button>
+              </div> */}
             </div>
           )}
         </div>

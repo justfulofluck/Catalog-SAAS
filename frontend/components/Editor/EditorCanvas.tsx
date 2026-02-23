@@ -1,7 +1,7 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { Stage as KonvaStage, Layer as KonvaLayer, Rect as KonvaRect, Group as KonvaGroup, Image as KonvaImage, Text as KonvaText } from 'react-konva';
 import useImage from 'use-image';
-import { Plus, Sparkles, BookOpen, List, FileText, Settings } from 'lucide-react';
+import { Plus, Sparkles, BookOpen, List, FileText, Settings, ChevronUp, ChevronDown, Copy, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import CanvasElementComponent from './CanvasElement';
@@ -10,6 +10,8 @@ import FloatingToolbar from '../Toolbar/FloatingToolbar';
 import { saveSelection, restoreSelection } from '../../utils/textStyleSelection';
 import SmartGuides from './SmartGuides';
 import { CatalogPage, PageType } from '../../types';
+
+const Divider = () => <div className="w-[1px] h-4 bg-slate-200 mx-1" />;
 
 // Holographic drop preview
 const SnapPreview: React.FC<{ target: any; imageUrl: string; zoom: number }> = ({ target, imageUrl, zoom }) => {
@@ -81,8 +83,11 @@ const PageStage: React.FC<{
     const shouldShowHeader = hasHeader && (page.type === 'interior');
     const shouldShowFooter = hasFooter && (page.type === 'interior');
 
-    const effContentTop = marginTop + (shouldShowHeader ? headerHeight : 0);
-    const effContentBottom = currentHeight - marginBottom - (shouldShowFooter ? footerHeight : 0);
+    const isInterior = page.type === 'interior';
+    const effContentTop = isInterior ? (marginTop + (shouldShowHeader ? headerHeight : 0)) : 0;
+    const effContentBottom = isInterior ? (currentHeight - marginBottom - (shouldShowFooter ? footerHeight : 0)) : currentHeight;
+    const effMarginLeft = isInterior ? marginLeft : 0;
+    const effMarginRight = isInterior ? marginRight : 0;
 
     return (
       <KonvaStage
@@ -255,12 +260,12 @@ const PageStage: React.FC<{
 
 
 
-          {/* All elements - CLIP to margins for interior, cover, and index pages */}
-          {page.type === 'interior' || page.type === 'cover' || page.type === 'index' ? (
+          {/* All elements - CLIP to margins for interior pages only */}
+          {isInterior ? (
             <KonvaGroup
-              clipX={marginLeft}
+              clipX={effMarginLeft}
               clipY={effContentTop}
-              clipWidth={Math.max(0, currentWidth - marginLeft - marginRight)}
+              clipWidth={Math.max(0, currentWidth - effMarginLeft - effMarginRight)}
               clipHeight={Math.max(0, effContentBottom - effContentTop)}
             >
               {page.elements.map((el) => (
@@ -436,7 +441,7 @@ const EditorCanvas: React.FC = () => {
     }
   };
 
-  const saveContent = useCallback(() => {
+  const saveContent = useCallback((shouldClose = false) => {
     if (editConfig?.id && textInputRef.current) {
       // Use innerText and regex to strip any remaining HTML tags
       let content = textInputRef.current.innerText.replace(/<[^>]*>/g, '');
@@ -447,6 +452,11 @@ const EditorCanvas: React.FC = () => {
         if (editConfig.id === 'header') updateProjectSettings({ headerText: content });
         else if (editConfig.id === 'footer') updateProjectSettings({ footerText: content });
         else updateElement(currentPageIndex, editConfig.id, { text: content });
+      }
+
+      if (shouldClose) {
+        setEditingId(null);
+        setEditConfig(null);
       }
     }
   }, [editConfig, currentPageIndex, updateElement, updateProjectSettings]);
@@ -502,28 +512,83 @@ const EditorCanvas: React.FC = () => {
   }, [setZoom]);
 
   // Keyboard shortcuts
+  // Keyboard shortcuts
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     const activeEl = document.activeElement as HTMLElement;
-    if (activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.isContentEditable) {
-      // Allow Enter key to insert newline without default behavior if necessary,
-      // but let's let default behavior happen and clean it up on save.
-      if (e.key === 'Backspace' || e.key === 'Delete') return;
-      if (e.key.startsWith('Arrow')) return;
-    }
+    const isEditingText = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.isContentEditable;
+
     const isMod = e.metaKey || e.ctrlKey;
+
+    // Undo / Redo - Global
+    if (isMod && (e.key === 'z' || e.key === 'Z')) {
+      e.preventDefault();
+      e.shiftKey ? redo() : undo();
+      return;
+    }
+    if (isMod && (e.key === 'y' || e.key === 'Y')) {
+      e.preventDefault();
+      redo();
+      return;
+    }
+
+    // Numpad Enter to deselect (Global)
+    if (e.code === 'NumpadEnter') {
+      e.preventDefault();
+      setSelectedElementIds([]);
+      setEditingId(null);
+      setEditConfig(null);
+      activeEl?.blur();
+      return;
+    }
+
+    // While editing text, only allow formatting shortcuts
+    if (isEditingText) {
+      if (isMod) {
+        if (['b', 'B'].includes(e.key)) { e.preventDefault(); document.execCommand('bold'); return; }
+        if (['i', 'I'].includes(e.key)) { e.preventDefault(); document.execCommand('italic'); return; }
+        if (['u', 'U'].includes(e.key)) { e.preventDefault(); document.execCommand('underline'); return; }
+      }
+      return;
+    }
+
     const nudge = e.shiftKey ? 10 : 1;
     switch (e.key) {
-      case 'ArrowUp': if (selectedElementIds.length) { e.preventDefault(); if (!e.repeat) pushHistory(); selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, -nudge)); } break;
-      case 'ArrowDown': if (selectedElementIds.length) { e.preventDefault(); if (!e.repeat) pushHistory(); selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, nudge)); } break;
-      case 'ArrowLeft': if (selectedElementIds.length) { e.preventDefault(); if (!e.repeat) pushHistory(); selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, -nudge, 0)); } break;
-      case 'ArrowRight': if (selectedElementIds.length) { e.preventDefault(); if (!e.repeat) pushHistory(); selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, nudge, 0)); } break;
-      case 'Backspace': case 'Delete':
+      case 'ArrowUp':
+        if (selectedElementIds.length) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, -nudge));
+        }
+        break;
+      case 'ArrowDown':
+        if (selectedElementIds.length) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, 0, nudge));
+        }
+        break;
+      case 'ArrowLeft':
+        if (selectedElementIds.length) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, -nudge, 0));
+        }
+        break;
+      case 'ArrowRight':
+        if (selectedElementIds.length) {
+          e.preventDefault();
+          if (!e.repeat) pushHistory();
+          selectedElementIds.forEach(id => nudgeElement(currentPageIndex, id, nudge, 0));
+        }
+        break;
+      case 'Backspace':
+      case 'Delete':
         if (selectedElementIds.length) {
           e.preventDefault();
           selectedElementIds.forEach(id => {
-            if (catalog.headerElements.some(h => h.id === id)) {
+            if (catalog.headerElements?.some(h => h.id === id)) {
               removeHeaderElement(id);
-            } else if (catalog.footerElements.some(f => f.id === id)) {
+            } else if (catalog.footerElements?.some(f => f.id === id)) {
               removeFooterElement(id);
             } else {
               const el = currentPage.elements.find(e => e.id === id);
@@ -531,23 +596,86 @@ const EditorCanvas: React.FC = () => {
             }
           });
           setSelectedElementIds([]);
-        } break;
-      case 'l': case 'L': if (isMod && e.shiftKey) { e.preventDefault(); selectedElementIds.forEach(id => toggleLock(currentPageIndex, id)); } break;
-      case 'd': if (isMod) { e.preventDefault(); selectedElementIds.forEach(id => duplicateElement(currentPageIndex, id)); } break;
-      case 'g': case 'G': if (isMod) { e.preventDefault(); e.shiftKey ? ungroupSelected(currentPageIndex) : groupSelected(currentPageIndex); } break;
-      case 'z': case 'Z': if (isMod) { e.preventDefault(); e.shiftKey ? redo() : undo(); } break;
-      case 'y': case 'Y': if (isMod) { e.preventDefault(); redo(); } break;
-      case '=': case '+': if (isMod) { e.preventDefault(); setZoom(Math.min(3, zoom + 0.1)); } break;
-      case '-': if (isMod) { e.preventDefault(); setZoom(Math.max(0.1, zoom - 0.1)); } break;
-      case 'b': case 'B':
-        if (isMod) { e.preventDefault(); const a = document.activeElement as HTMLElement; if (a?.isContentEditable) { document.execCommand('bold'); } else { selectedElementIds.forEach(id => { const el = currentPage.elements.find(e => e.id === id); if (el?.type === 'text') { const bold = el.fontWeight === 'bold' || el.fontWeight === '700' || el.fontWeight === '800'; updateElement(currentPageIndex, id, { fontWeight: bold ? '400' : '700' }); } }); } } break;
-      case 'i': case 'I':
-        if (isMod) { e.preventDefault(); const a = document.activeElement as HTMLElement; if (a?.isContentEditable) { document.execCommand('italic'); } else { selectedElementIds.forEach(id => { const el = currentPage.elements.find(e => e.id === id); if (el?.type === 'text') updateElement(currentPageIndex, id, { fontStyle: el.fontStyle === 'italic' ? 'normal' : 'italic' }); }); } } break;
-      case 'u': case 'U':
-        if (isMod) { e.preventDefault(); const a = document.activeElement as HTMLElement; if (a?.isContentEditable) { document.execCommand('underline'); } else { selectedElementIds.forEach(id => { const el = currentPage.elements.find(e => e.id === id); if (el?.type === 'text') updateElement(currentPageIndex, id, { textDecoration: el.textDecoration === 'underline' ? 'none' : 'underline' }); }); } } break;
-      case 'Escape': setSelectedElementIds([]); setEditingId(null); setEditConfig(null); break;
+        }
+        break;
+      case 'l':
+      case 'L':
+        if (isMod && e.shiftKey) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => toggleLock(currentPageIndex, id));
+        }
+        break;
+      case 'd':
+      case 'D':
+        if (isMod) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => duplicateElement(currentPageIndex, id));
+        }
+        break;
+      case 'g':
+      case 'G':
+        if (isMod) {
+          e.preventDefault();
+          e.shiftKey ? ungroupSelected(currentPageIndex) : groupSelected(currentPageIndex);
+        }
+        break;
+      case '=':
+      case '+':
+        if (isMod) {
+          e.preventDefault();
+          setZoom(Math.min(3, zoom + 0.1));
+        }
+        break;
+      case '-':
+        if (isMod) {
+          e.preventDefault();
+          setZoom(Math.max(0.1, zoom - 0.1));
+        }
+        break;
+      case 'b':
+      case 'B':
+        if (isMod && selectedElementIds.length) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => {
+            const el = currentPage.elements.find(e => e.id === id);
+            if (el?.type === 'text') {
+              const isBold = el.fontWeight === 'bold' || el.fontWeight === '700' || el.fontWeight === '800';
+              updateElement(currentPageIndex, id, { fontWeight: isBold ? '400' : '700' });
+            }
+          });
+        }
+        break;
+      case 'i':
+      case 'I':
+        if (isMod && selectedElementIds.length) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => {
+            const el = currentPage.elements.find(e => e.id === id);
+            if (el?.type === 'text') {
+              updateElement(currentPageIndex, id, { fontStyle: el.fontStyle === 'italic' ? 'normal' : 'italic' });
+            }
+          });
+        }
+        break;
+      case 'u':
+      case 'U':
+        if (isMod && selectedElementIds.length) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => {
+            const el = currentPage.elements.find(e => e.id === id);
+            if (el?.type === 'text') {
+              updateElement(currentPageIndex, id, { textDecoration: el.textDecoration === 'underline' ? 'none' : 'underline' });
+            }
+          });
+        }
+        break;
+      case 'Escape':
+        setSelectedElementIds([]);
+        setEditingId(null);
+        setEditConfig(null);
+        break;
     }
-  }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements, updateElement, pushHistory]);
+  }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements, updateElement, pushHistory, catalog, removeHeaderElement, removeFooterElement]);
 
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleKeyDown]);
 
@@ -638,7 +766,12 @@ const EditorCanvas: React.FC = () => {
       const y = (pos.y - panRef.current.y) / zoom;
       setSelectionBox({ x1: x, y1: y, x2: x, y2: y, visible: true });
       isSelecting.current = true;
-      if (!e.evt.shiftKey) setSelectedElementIds([]);
+      if (!e.evt.shiftKey) {
+        setSelectedElementIds([]);
+        setIsPropertyPanelOpen(false);
+        setEditingId(null);
+        setEditConfig(null);
+      }
     }
   }, [activeTool, zoom, setSelectedElementIds]);
 
@@ -948,11 +1081,6 @@ const EditorCanvas: React.FC = () => {
                   if (!isActive) { setCurrentPageIndex(pageIdx); setSelectedElementIds([]); setEditingId(null); setEditConfig(null); }
                 }}
               >
-                {/* Page label */}
-                <span className={`text-[11px] font-bold uppercase tracking-widest px-3 py-1 rounded-full ${isActive ? 'bg-indigo-600 text-white' : (uiTheme === 'dark' ? 'text-slate-500' : 'text-slate-400')
-                  }`}>
-                  Page {pageIdx + 1}
-                </span>
 
                 {/* Page wrapper */}
                 <div
@@ -1029,16 +1157,49 @@ const EditorCanvas: React.FC = () => {
                       <div
                         contentEditable suppressContentEditableWarning
                         className={`w-full h-full p-0 outline-none overflow-hidden [&_span]:bg-transparent [&_span]:text-inherit [&_span]:[-webkit-text-fill-color:inherit] ${editConfig.verticalAlign === 'middle' ? 'flex flex-col justify-center' : ''}`}
-                        style={{ fontSize: editConfig.fontSize * zoom, fontFamily: editConfig.fontFamily || 'Inter', fontWeight: editConfig.fontWeight, fontStyle: editConfig.fontStyle, textAlign: editConfig.align, lineHeight: editConfig.lineHeight || 1.2, color: editConfig.color?.includes('gradient') ? '#475569' : editConfig.color, caretColor: '#4f46e5', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
-                        onKeyDown={(e) => e.stopPropagation()}
-                        onBlur={saveContent}
-                        onMouseUp={saveContent}
+                        style={{
+                          fontSize: editConfig.fontSize * zoom,
+                          fontFamily: editConfig.fontFamily || 'Inter',
+                          fontWeight: editConfig.fontWeight,
+                          fontStyle: editConfig.fontStyle,
+                          textAlign: editConfig.align,
+                          lineHeight: 1.15,
+                          color: editConfig.color?.includes('gradient') ? '#475569' : editConfig.color,
+                          caretColor: '#4f46e5',
+                          whiteSpace: 'pre-wrap',
+                          wordBreak: 'break-word',
+                          minHeight: editConfig.height * zoom,
+                          padding: '0 2px'
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && e.shiftKey) {
+                            // Shift+Enter usually adds a newline, which is fine
+                            e.stopPropagation();
+                          } else if (e.key === 'Enter') {
+                            // Regular Enter should also just work in contentEditable, 
+                            // but we want to ensure height updates
+                            e.stopPropagation();
+                          } else {
+                            e.stopPropagation();
+                          }
+                        }}
+                        onBlur={() => saveContent(true)}
+                        onMouseUp={() => saveContent(false)}
                         onInput={(e) => {
-                          const text = (e.currentTarget as HTMLElement).innerText.replace(/<[^>]*>/g, '');
-                          if (editConfig.id && text !== editConfig.text) {
+                          const target = e.currentTarget as HTMLElement;
+                          const text = target.innerText.replace(/<[^>]*>/g, '');
+
+                          // Auto-height calculation with a small buffer for smooth expansion on Enter
+                          const newHeight = Math.max(20, (target.scrollHeight + 2) / zoom);
+
+                          if (editConfig.id && (text !== editConfig.text || Math.abs(newHeight - editConfig.height) > 1)) {
+                            const updates: any = { text: text, height: newHeight };
                             if (editConfig.id === 'header') updateProjectSettings({ headerText: text });
                             else if (editConfig.id === 'footer') updateProjectSettings({ footerText: text });
-                            else updateElement(currentPageIndex, editConfig.id, { text: text });
+                            else {
+                              setEditConfig(prev => prev ? ({ ...prev, ...updates }) : null);
+                              updateElement(currentPageIndex, editConfig.id, updates);
+                            }
                           }
                         }}
                         ref={(el) => {
@@ -1049,9 +1210,18 @@ const EditorCanvas: React.FC = () => {
                             if (!isFocused && el.innerText !== editConfig.text) {
                               el.innerText = editConfig.text;
                             }
-                            // Auto-focus when clicking on text element
+                            // Auto-focus and place cursor at end
                             if (!isFocused && editConfig.id) {
                               el.focus();
+                              // Move cursor to end
+                              const range = document.createRange();
+                              const sel = window.getSelection();
+                              range.selectNodeContents(el);
+                              range.collapse(false);
+                              if (sel) {
+                                sel.removeAllRanges();
+                                sel.addRange(range);
+                              }
                             }
                           }
                         }}

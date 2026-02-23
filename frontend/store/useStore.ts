@@ -73,6 +73,7 @@ interface State {
 
   login: (email: string | undefined, username: string | undefined, password: string) => Promise<void>;
   adminLogin: (email: string | undefined, username: string | undefined, password: string) => Promise<void>;
+  // guestLogin: () => void;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
   setView: (view: View) => void;
@@ -176,6 +177,7 @@ interface State {
   duplicatePage: (index: number) => void;
   reorderPages: (newPageIds: string[]) => void;
   setPageOrientation: (pageIndex: number, orientation: 'portrait' | 'landscape') => void;
+  setPageBackground: (pageIndex: number, color: string) => void;
 
   toggleCatalogProduct: (productId: string) => void;
   removeProductFromCanvas: (productId: string) => void;
@@ -192,6 +194,7 @@ interface State {
   applyInventoryLayout: (pageIndex: number | null, template: GridTemplate) => void;
 
   groupSelected: (pageIndex: number) => void;
+
   ungroupSelected: (pageIndex: number) => void;
 
   undo: () => void;
@@ -548,6 +551,30 @@ export const useStore = create<State>((set, get) => ({
       set({ error: error.response?.data?.non_field_errors?.[0] || 'Admin login failed', isLoading: false });
     }
   },
+
+  // guestLogin: () => {
+  //   const guestUser: User = {
+  //     id: `guest-${Date.now()}`,
+  //     name: 'Guest Designer',
+  //     email: 'guest@example.com',
+  //     role: 'user',
+  //     status: 'active',
+  //     joinedAt: new Date().toISOString(),
+  //     businessId: 'guest-biz',
+  //     businessName: 'Guest Studio'
+  //   };
+
+  //   set({
+  //     isAuthenticated: true,
+  //     user: guestUser,
+  //     currentView: 'dashboard',
+  //     isLoading: false,
+  //     error: null
+  //   });
+
+  //   // Initialize guest data
+  //   get().fetchBusinessTemplates();
+  // },
 
   logout: async () => {
     try {
@@ -1075,7 +1102,23 @@ export const useStore = create<State>((set, get) => ({
     get().pushHistory();
     set((state) => {
       const newPages = [...state.catalog.pages];
-      newPages[pageIndex].elements = [...newPages[pageIndex].elements, element];
+      const page = newPages[pageIndex];
+      const isLandscape = page.orientation === 'landscape';
+      const pageWidth = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+      const pageHeight = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+
+      // Smart positioning: if element is near default (100,100 or 150,150), center it
+      const finalElement = { ...element };
+      const isDefaultPos = (element.x === 100 && element.y === 100) ||
+        (element.x === 150 && element.y === 150) ||
+        (element.x === 200 && element.y === 200);
+
+      if (isDefaultPos) {
+        finalElement.x = (pageWidth - element.width) / 2;
+        finalElement.y = (pageHeight - (element.height || 0)) / 2;
+      }
+
+      newPages[pageIndex].elements = [...newPages[pageIndex].elements, finalElement];
       return {
         catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
         selectedElementIds: [element.id],
@@ -1384,6 +1427,83 @@ export const useStore = create<State>((set, get) => ({
       return {
         catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
       };
+    });
+  },
+
+  setPageBackground: (pageIndex, color) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (newPages[pageIndex]) {
+        newPages[pageIndex].backgroundColor = color;
+      }
+      return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() } };
+    });
+  },
+
+  groupSelected: (pageIndex) => {
+    get().pushHistory();
+    set((state) => {
+      const { selectedElementIds } = state;
+      if (selectedElementIds.length < 2) return state;
+
+      const newPages = [...state.catalog.pages];
+      const page = newPages[pageIndex];
+      const groupId = `group-${Date.now()}`;
+
+      // Calculate representative color (average) for visual grouping in some themes
+      let r = 0, g = 0, b = 0, count = 0;
+      selectedElementIds.forEach(id => {
+        const el = page.elements.find(e => e.id === id);
+        if (el && el.fill && el.fill.startsWith('#')) {
+          const hex = el.fill.replace('#', '');
+          if (hex.length === 6) {
+            r += parseInt(hex.substring(0, 2), 16);
+            g += parseInt(hex.substring(2, 4), 16);
+            b += parseInt(hex.substring(4, 6), 16);
+            count++;
+          }
+        }
+      });
+      const avgColor = count > 0
+        ? `#${Math.round(r / count).toString(16).padStart(2, '0')}${Math.round(g / count).toString(16).padStart(2, '0')}${Math.round(b / count).toString(16).padStart(2, '0')}`
+        : undefined;
+
+      page.elements = page.elements.map(el => {
+        if (selectedElementIds.includes(el.id)) {
+          return { ...el, groupId };
+        }
+        return el;
+      });
+
+      return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() } };
+    });
+  },
+
+  ungroupSelected: (pageIndex) => {
+    get().pushHistory();
+    set((state) => {
+      const { selectedElementIds } = state;
+      if (selectedElementIds.length === 0) return state;
+
+      const newPages = [...state.catalog.pages];
+      const page = newPages[pageIndex];
+
+      const groupsToUngroup = new Set<string>();
+      selectedElementIds.forEach(id => {
+        const el = page.elements.find(e => e.id === id);
+        if (el?.groupId) groupsToUngroup.add(el.groupId);
+      });
+
+      page.elements = page.elements.map(el => {
+        if (el.groupId && groupsToUngroup.has(el.groupId)) {
+          const { groupId, ...rest } = el;
+          return rest as CanvasElement;
+        }
+        return el;
+      });
+
+      return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() } };
     });
   },
 
@@ -2122,29 +2242,6 @@ export const useStore = create<State>((set, get) => ({
       };
     });
   },
-
-  groupSelected: (pageIndex) => set((state) => {
-    const { selectedElementIds, catalog } = state;
-    if (selectedElementIds.length < 2) return state;
-    get().pushHistory();
-    const newPages = [...catalog.pages];
-    const page = newPages[pageIndex];
-    const newGroupId = `group-${Date.now()}`;
-    page.elements = page.elements.map(el => selectedElementIds.includes(el.id) ? { ...el, groupId: newGroupId } : el);
-    return { catalog: { ...catalog, pages: newPages, updatedAt: new Date().toISOString() } };
-  }),
-
-  ungroupSelected: (pageIndex) => set((state) => {
-    const { selectedElementIds, catalog } = state;
-    if (selectedElementIds.length === 0) return state;
-    get().pushHistory();
-    const newPages = [...catalog.pages];
-    const page = newPages[pageIndex];
-    const groupsToDissolve = new Set(page.elements.filter(el => selectedElementIds.includes(el.id) && el.groupId).map(el => el.groupId!));
-    if (groupsToDissolve.size === 0) return state;
-    page.elements = page.elements.map(el => (el.groupId && groupsToDissolve.has(el.groupId)) ? { ...el, groupId: undefined } : el);
-    return { catalog: { ...catalog, pages: newPages, updatedAt: new Date().toISOString() } };
-  }),
 
   // Master Actions Implementation
   addHeaderElement: (element) => set((state) => ({

@@ -204,7 +204,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
                   font-style: ${element.fontStyle || 'normal'};
                   text-decoration: ${element.textDecoration || 'none'};
                   text-align: ${element.textAlign || 'left'};
-                  line-height: 1.2;
+                  line-height: 1.15;
                   ${isGradient ? `${backgroundStyle} -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;` : `color: ${element.fill || '#000000'};`}
                   width: 100%;
                   ${getEffectStyles()}
@@ -298,22 +298,72 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     }
   }, [isSelected, element.locked, element.fill]);
 
-  const handleTransformEnd = () => {
-    if (element.locked) return;
+  const handleTransform = (e: any) => {
     const node = shapeRef.current;
+    if (!node) return;
+    const transformer = trRef.current;
+    if (!transformer) return;
+
+    const anchor = transformer.getActiveAnchor();
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
 
-    node.scaleX(1);
-    node.scaleY(1);
+    if (element.type === 'text') {
+      const isCorner = ['top-left', 'top-right', 'bottom-left', 'bottom-right'].includes(anchor);
+      const isSide = ['middle-left', 'middle-right'].includes(anchor);
+      const isVertical = ['top-center', 'bottom-center'].includes(anchor);
 
-    onChange({
+      if (isSide) {
+        // Change width only (wrapping)
+        node.width(Math.max(20, node.width() * scaleX));
+        node.scaleX(1);
+      } else if (isVertical) {
+        // Change height only (padding/manual control)
+        node.height(Math.max(10, node.height() * scaleY));
+        node.scaleY(1);
+      } else if (isCorner) {
+        // Corner resizing: Scale width, height AND font size proportionally
+        // We use scaleX as the uniform scale factor
+        const currentFontSize = node.fontSize() || element.fontSize || 16;
+        const newFontSize = Math.max(1, currentFontSize * scaleX);
+
+        node.width(node.width() * scaleX);
+        node.height(node.height() * scaleX);
+        node.fontSize(newFontSize);
+        node.scaleX(1);
+        node.scaleY(1);
+      }
+    } else {
+      // General elements: update width/height and reset scales to 1
+      node.width(Math.max(5, node.width() * scaleX));
+      node.height(Math.max(5, node.height() * scaleY));
+      node.scaleX(1);
+      node.scaleY(1);
+    }
+
+    const layer = node.getLayer();
+    if (layer) layer.batchDraw();
+  };
+
+  const handleTransformEnd = () => {
+    if (element.locked) return;
+    const node = shapeRef.current;
+    if (!node) return;
+
+    // By now handleTransform has already reset scaleX/Y to 1
+    const updates: Partial<ICanvasElement> = {
       x: node.x(),
       y: node.y(),
-      width: Math.max(5, node.width() * scaleX),
-      height: Math.max(5, node.height() * scaleY),
+      width: node.width(),
+      height: node.height(),
       rotation: node.rotation(),
-    });
+    };
+
+    if (element.type === 'text') {
+      updates.fontSize = node.fontSize();
+    }
+
+    onChange(updates);
   };
 
   const handleSelect = (e: any) => {
@@ -919,13 +969,52 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
         <Transformer
           ref={trRef}
           rotateEnabled={true}
-          anchorSize={8}
-          anchorCornerRadius={2}
-          anchorStroke="#337ab7"
+          anchorSize={9}
+          anchorCornerRadius={10}
+          anchorStroke="#8b3dff"
           anchorFill="#ffffff"
-          borderStroke="#337ab7"
-          borderStrokeWidth={1}
+          anchorStrokeWidth={1.5}
+          borderStroke="#8b3dff"
+          borderStrokeWidth={1.5}
+          padding={0}
+          enabledAnchors={element.type === 'text'
+            ? ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']
+            : undefined}
+          anchorDrawFunc={(context, shape) => {
+            const name = shape.name();
+            // Naming varies by Konva version, check for core tokens
+            const isSide = name.includes('middle-left') || name.includes('middle-right') || name.includes('middle-left anchor') || name.includes('middle-right anchor');
+            const isVertical = name.includes('top-center') || name.includes('bottom-center') || name.includes('top-center anchor') || name.includes('bottom-center anchor');
+
+            context.beginPath();
+            if (isSide || isVertical) {
+              const w = isSide ? 3.5 : 14;
+              const h = isSide ? 14 : 3.5;
+              context.rect(-w / 2, -h / 2, w, h);
+            } else {
+              context.arc(0, 0, 4.5, 0, Math.PI * 2);
+            }
+            context.fillStrokeShape(shape);
+          }}
+          onTransform={handleTransform}
           onTransformStart={() => pushHistory()}
+          onTransformEnd={handleTransformEnd}
+        />
+      )}
+
+      {/* Hover Highlight (Canva style) */}
+      {!isSelected && hoveredElementId === element.id && !element.locked && (
+        <Rect
+          x={element.x}
+          y={element.y}
+          width={element.width}
+          height={element.height}
+          rotation={element.rotation}
+          stroke="#8b3dff"
+          strokeWidth={1}
+          opacity={0.6}
+          dash={[4, 2]}
+          listening={false}
         />
       )}
     </React.Fragment>

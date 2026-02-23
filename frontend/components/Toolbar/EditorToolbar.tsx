@@ -87,9 +87,9 @@ const EditorToolbar: React.FC = () => {
 
   const handleAddText = (type: 'heading' | 'subheading' | 'body') => {
     const config = {
-      heading: { width: 400, height: 50, text: 'Headings', fontSize: 36, fontWeight: '800' },
-      subheading: { width: 350, height: 40, text: 'Sub-headings', fontSize: 22, fontWeight: '700' },
-      body: { width: 300, height: 100, text: 'Body text', fontSize: 14, fontWeight: '400' },
+      heading: { width: 400, height: 45, text: 'Headings', fontSize: 36, fontWeight: '800' },
+      subheading: { width: 350, height: 30, text: 'Sub-headings', fontSize: 22, fontWeight: '700' },
+      body: { width: 300, height: 60, text: 'Body text', fontSize: 14, fontWeight: '400' },
     }[type];
     addElement(currentPageIndex, {
       id: `el-${Date.now()}`,
