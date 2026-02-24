@@ -122,7 +122,12 @@ export const applyEffectToSelection = (styleString: string, attributes: string =
     if (!parentEditable) return false;
 
     const offsets = saveSelection(parentEditable as HTMLElement);
-    const spanHtml = `<span style="${styleString}" ${attributes}>${selection.toString()}</span>`;
+    const tempDiv = document.createElement('div');
+    tempDiv.appendChild(range.cloneContents());
+    const innerHtml = tempDiv.innerHTML || selection.toString();
+
+    // Use inherit to allow the container's font settings to flow through
+    const spanHtml = `<span style="font-family: inherit; font-size: inherit; ${styleString}" ${attributes}>${innerHtml}</span>`;
 
     try {
         const success = document.execCommand('insertHTML', false, spanHtml);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Auth/Login';
 import AdminLogin from './components/Admin/AdminLogin';
 import AdminDashboard from './components/Admin/AdminDashboard';
@@ -20,11 +20,8 @@ import ProductLibrary from './components/Sidebar/ProductLibrary';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
 import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import StockImagesPanel from './components/Sidebar/StockImagesPanel';
-import LayersPanel from './components/Sidebar/LayersPanel';
-
 import EffectsPanel from './components/Sidebar/EffectsPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
-import PropertyPanel from './components/Properties/PropertyPanel';
 import ProjectSettingsPanel from './components/Sidebar/ProjectSettingsPanel';
 import ButtonsPanel from './components/Sidebar/ButtonsPanel';
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -71,6 +68,7 @@ const App: React.FC = () => {
     editorTab,
     setEditorTab,
     isProjectSettingsOpen,
+    setIsProjectSettingsOpen,
     uiTheme,
     toggleUiTheme,
     checkAuth
@@ -80,6 +78,29 @@ const App: React.FC = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
   const [isCatalogMenuOpen, setCatalogMenuOpen] = useState(true);
+
+  const leftPanelRef = useRef<HTMLDivElement>(null);
+  const rightPanelRef = useRef<HTMLDivElement>(null);
+
+  // Global click listener for "click-outside-to-close" behavior
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      // 1. Sidebar closing (Left)
+      if (isSidebarExpanded && leftPanelRef.current && !leftPanelRef.current.contains(e.target as Node)) {
+        setSidebarExpanded(false);
+      }
+
+      // 2. Project Settings closing (Right)
+      if (isProjectSettingsOpen && rightPanelRef.current && !rightPanelRef.current.contains(e.target as Node)) {
+        setIsProjectSettingsOpen(false);
+      }
+    };
+
+    if (isSidebarExpanded || isProjectSettingsOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [isSidebarExpanded, isProjectSettingsOpen, setSidebarExpanded, setIsProjectSettingsOpen]);
 
   useEffect(() => {
     const init = async () => {
@@ -159,123 +180,125 @@ const App: React.FC = () => {
       <div className="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-700">
         <EditorToolbar />
         <div className="flex flex-1 overflow-hidden relative">
-          {/* Icon rail - always visible, fixed width */}
-          <div className="flex flex-col border-r bg-slate-900 z-40 shrink-0">
-            <div className="flex flex-col w-16 items-center py-8 gap-8">
-              <button
-                onClick={() => {
-                  if (editorTab === 'pages' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('pages');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'pages' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Pages"
-              >
-                <FileText size={22} />
-              </button>
-              <button
-                onClick={() => {
-                  if (editorTab === 'products' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('products');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'products' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Product Assets"
-              >
-                <Package size={22} />
-              </button>
-              <button
-                onClick={() => {
-                  if (editorTab === 'media' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('media');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="My Images"
-              >
-                <Images size={22} />
-              </button>
-              <button
-                onClick={() => {
-                  if (editorTab === 'stock' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('stock');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'stock' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Stock Images"
-              >
-                <ImageIcon size={22} />
-              </button>
-              <button
-                onClick={() => {
-                  if (editorTab === 'templates' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('templates');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'templates' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Templates"
-              >
-                <LayoutTemplate size={22} />
-              </button>
+          {/* Icon rail + Sidebar Content container for click-outside detection */}
+          <div ref={leftPanelRef} className="flex h-full z-40 relative">
+            {/* Icon rail - always visible, fixed width */}
+            <div className="flex flex-col border-r bg-slate-900 shrink-0 h-full">
+              <div className="flex flex-col w-16 items-center py-8 gap-8">
+                <button
+                  onClick={() => {
+                    if (editorTab === 'pages' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('pages');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'pages' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Pages"
+                >
+                  <FileText size={22} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'products' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('products');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'products' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Product Assets"
+                >
+                  <Package size={22} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'media' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('media');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="My Images"
+                >
+                  <Images size={22} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'stock' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('stock');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'stock' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Stock Images"
+                >
+                  <ImageIcon size={22} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'templates' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('templates');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'templates' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Templates"
+                >
+                  <LayoutTemplate size={22} />
+                </button>
 
-              <button
-                onClick={() => {
-                  if (editorTab === 'effects' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('effects');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'effects' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Effects"
-              >
-                <Sparkles size={22} />
-              </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'effects' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('effects');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'effects' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Effects"
+                >
+                  <Sparkles size={22} />
+                </button>
 
-              <button
-                onClick={() => {
-                  if (editorTab === 'buttons' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('buttons');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'buttons' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Buttons"
-              >
-                <MousePointer2 size={22} />
-              </button>
-              <button
-                onClick={() => {
-                  if (editorTab === 'layers' && isSidebarExpanded) {
-                    setSidebarExpanded(false);
-                  } else {
-                    setEditorTab('layers');
-                    setSidebarExpanded(true);
-                  }
-                }}
-                className={`p-3 rounded-[10px] transition-all ${editorTab === 'layers' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                title="Layers"
-              >
-                <Layers size={22} />
-              </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'buttons' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('buttons');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'buttons' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  title="Buttons"
+                >
+                  <MousePointer2 size={22} />
+                </button>
+              </div>
+
+              {/* Floating Sidebar Content (Attached to rail) */}
+              {isSidebarExpanded && (
+                <div className="absolute left-full top-0 h-[calc(100%-48px)] z-30 shadow-2xl bg-white min-w-[300px]">
+                  {editorTab === 'pages' && <PagesPanel />}
+                  {editorTab === 'products' && <ProductLibrary />}
+                  {editorTab === 'media' && <MediaAssetLibrary />}
+                  {editorTab === 'stock' && <StockImagesPanel />}
+                  {editorTab === 'templates' && <TemplatesPanel />}
+                  {editorTab === 'buttons' && <ButtonsPanel />}
+                  {editorTab === 'effects' && <EffectsPanel />}
+                </div>
+              )}
             </div>
           </div>
 
@@ -283,29 +306,12 @@ const App: React.FC = () => {
           <div className="flex-1 flex overflow-hidden relative">
             <EditorCanvas />
 
-            {/* Absolute Sidebars (Right Overlay) */}
-            <div className="absolute top-0 right-0 h-full z-40 flex pointer-events-none">
+            <div ref={rightPanelRef} className="absolute top-0 right-0 h-[calc(100%-48px)] z-40 flex pointer-events-none">
               <div className="flex h-full pointer-events-auto shadow-[-20px_0_50px_rgba(0,0,0,0.02)]">
                 {isProjectSettingsOpen && <ProjectSettingsPanel />}
-                <PropertyPanel />
               </div>
             </div>
           </div>
-
-          {/* Floating Sidebar Content (Left Overlay) */}
-          {isSidebarExpanded && (
-            <div className="absolute left-16 top-0 h-full z-30 shadow-2xl pointer-events-auto">
-              {editorTab === 'pages' && <PagesPanel />}
-              {editorTab === 'products' && <ProductLibrary />}
-              {editorTab === 'media' && <MediaAssetLibrary />}
-              {editorTab === 'stock' && <StockImagesPanel />}
-              {editorTab === 'templates' && <TemplatesPanel />}
-              {editorTab === 'buttons' && <ButtonsPanel />}
-
-              {editorTab === 'effects' && <EffectsPanel />}
-              {editorTab === 'layers' && <LayersPanel />}
-            </div>
-          )}
         </div>
       </div>
     );

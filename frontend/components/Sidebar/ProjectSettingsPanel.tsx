@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     X, Settings, Layout, MousePointer2, ChevronDown, ChevronRight,
     CornerRightDown, CornerRightUp, Palette, Type,
@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PX_PER_MM, FONTS, CATEGORIZED_FONTS, PAGE_HEIGHT } from '../../constants';
+import AdvancedColorPicker from '../Properties/AdvancedColorPicker';
 
 const ProjectSettingsPanel: React.FC = () => {
     const {
@@ -16,11 +17,18 @@ const ProjectSettingsPanel: React.FC = () => {
         uiTheme,
         setEditorTab,
         addHeaderElement,
-        addFooterElement
+        addFooterElement,
+        updateHeaderElement,
+        updateFooterElement,
+        currentPageIndex,
+        setPageBackground,
+        updateAllPageBackgrounds,
+        setSelectedElementIds
     } = useStore();
 
     const [localHeaderMm, setLocalHeaderMm] = React.useState<string>('');
     const [localFooterMm, setLocalFooterMm] = React.useState<string>('');
+    const [pickerOpen, setPickerOpen] = useState(false);
 
     const toMm = (px: number) => Math.round(px / PX_PER_MM);
     const toPx = (mm: number) => Math.round(mm * PX_PER_MM);
@@ -116,104 +124,37 @@ const ProjectSettingsPanel: React.FC = () => {
                                             className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600 mb-2"
                                         />
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Header Text</span>
+                                    <div className="space-y-1.5 pt-2">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Header Content</span>
                                         <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={catalog.headerText || ''}
-                                                onChange={(e) => updateProjectSettings({ headerText: e.target.value })}
-                                                placeholder="Company Name / Catalog Title"
-                                                className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-indigo-100 placeholder:text-slate-300 transition-all"
-                                            />
-                                            <button
-                                                onClick={() => addHeaderElement({ id: `header-text-${Date.now()}`, type: 'text', x: 60, y: 10, width: 200, height: 30, text: 'Header Text', fontSize: 14, fontFamily: 'Inter', fill: '#475569', fontWeight: 'bold', rotation: 0, opacity: 1, zIndex: 10 })}
-                                                title="Add Text Box"
-                                                className="p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all"
-                                            >
-                                                <Type size={14} />
-                                            </button>
+                                            {catalog.headerElements?.some(el => el.type === 'text') ? (
+                                                <button
+                                                    onClick={() => {
+                                                        const textEl = catalog.headerElements.find(el => el.type === 'text');
+                                                        if (textEl) setSelectedElementIds([textEl.id]);
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 hover:border-indigo-200 text-indigo-700 transition-all text-[11px] font-black uppercase tracking-tight"
+                                                >
+                                                    <Type size={14} /> Configure Text
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => addHeaderElement({ id: `header-text-${Date.now()}`, type: 'text', x: (catalog.marginLeft || 0) + 10, y: catalog.marginTop || 0, width: 200, height: 30, text: 'New Text', fontSize: 14, fontFamily: 'Inter', fill: '#475569', fontWeight: 'bold', rotation: 0, opacity: 1, zIndex: 10, verticalAlign: 'middle' })}
+                                                    className="flex-1 flex items-center justify-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-[11px] font-bold text-slate-600"
+                                                >
+                                                    <Type size={14} /> Add Text
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => setEditorTab('media')}
-                                                title="Add Image"
-                                                className="p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all"
+                                                className="flex-1 flex items-center justify-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-[11px] font-bold text-slate-600"
                                             >
-                                                <Image size={14} />
+                                                <Image size={14} /> Add Image
                                             </button>
                                         </div>
-                                    </div>
-
-                                    {/* Granular Header Controls */}
-                                    <div className="pt-2 grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Font Family</span>
-                                            <select
-                                                value={catalog.headerFontFamily || 'Inter'}
-                                                onChange={(e) => updateProjectSettings({ headerFontFamily: e.target.value })}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2.5 text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-100 appearance-none"
-                                            >
-                                                {CATEGORIZED_FONTS.map(group => (
-                                                    <optgroup key={group.label} label={group.label}>
-                                                        {group.fonts.map(f => (
-                                                            <option key={f} value={f}>{f}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Alignment</span>
-                                            <div className="flex bg-slate-50 rounded-xl p-1 border border-slate-100">
-                                                {(['left', 'center', 'right'] as const).map(a => (
-                                                    <button
-                                                        key={a}
-                                                        onClick={() => updateProjectSettings({ headerTextAlignment: a })}
-                                                        className={`flex-1 flex items-center justify-center p-1 rounded-lg transition-all ${catalog.headerTextAlignment === a ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                                                    >
-                                                        {a === 'left' && <AlignLeft size={12} />}
-                                                        {a === 'center' && <AlignCenter size={12} />}
-                                                        {a === 'right' && <AlignRight size={12} />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Font Size</span>
-                                            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 min-w-[70px]">
-                                                <input
-                                                    type="number"
-                                                    min="6"
-                                                    max="72"
-                                                    value={catalog.headerFontSize || 12}
-                                                    onChange={(e) => updateProjectSettings({ headerFontSize: parseInt(e.target.value) || 12 })}
-                                                    className="w-full bg-transparent outline-none text-[11px] font-black text-indigo-600 text-right"
-                                                />
-                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">px</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5 pt-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Color</span>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {['#475569', '#000000', '#ffffff', '#4f46e5', '#ef4444', '#10b981', '#f59e0b'].map(color => (
-                                                <button
-                                                    key={color}
-                                                    onClick={() => updateProjectSettings({ headerColor: color })}
-                                                    className={`w-5 h-5 rounded-full border border-slate-200 transition-all ${catalog.headerColor === color ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110' : 'hover:scale-105'}`}
-                                                    style={{ backgroundColor: color }}
-                                                />
-                                            ))}
-                                            <div className="relative flex-1 min-w-[60px]">
-                                                <input
-                                                    type="text"
-                                                    value={catalog.headerColor || '#475569'}
-                                                    onChange={(e) => updateProjectSettings({ headerColor: e.target.value })}
-                                                    className="w-full h-5 bg-slate-50 border border-slate-200 rounded text-[9px] px-1 font-mono uppercase text-slate-600"
-                                                />
-                                            </div>
-                                        </div>
+                                        <p className="text-[10px] text-slate-400 leading-tight pt-1">
+                                            Use master elements to maintain a consistent style across all your pages.
+                                        </p>
                                     </div>
                                 </div>
                             )}
@@ -271,134 +212,132 @@ const ProjectSettingsPanel: React.FC = () => {
                                             className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600 mb-2"
                                         />
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Footer Text</span>
+                                    <div className="space-y-1.5 pt-2">
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Footer Content</span>
                                         <div className="flex gap-2">
-                                            <input
-                                                type="text"
-                                                value={catalog.footerText || ''}
-                                                onChange={(e) => updateProjectSettings({ footerText: e.target.value })}
-                                                placeholder="Company Address / Legal Text"
-                                                className="flex-1 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 text-xs font-bold text-slate-700 outline-none focus:border-indigo-100 placeholder:text-slate-300 transition-all"
-                                            />
-                                            <button
-                                                onClick={() => addFooterElement({ id: `footer-text-${Date.now()}`, type: 'text', x: 60, y: PAGE_HEIGHT - 60, width: 200, height: 30, text: 'Footer Text', fontSize: 12, fontFamily: 'Inter', fill: '#64748b', rotation: 0, opacity: 1, zIndex: 10 })}
-                                                title="Add Text Box"
-                                                className="p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all"
-                                            >
-                                                <Type size={14} />
-                                            </button>
-                                            <button
-                                                onClick={() => updateProjectSettings({ footerText: (catalog.footerText || '') + ' {{page}}' })}
-                                                title="Add Page Number"
-                                                className="p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all"
-                                            >
-                                                <Hash size={14} />
-                                            </button>
+                                            {catalog.footerElements?.some(el => el.type === 'text') ? (
+                                                <button
+                                                    onClick={() => {
+                                                        const textEl = catalog.footerElements.find(el => el.type === 'text');
+                                                        if (textEl) setSelectedElementIds([textEl.id]);
+                                                    }}
+                                                    className="flex-1 flex items-center justify-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 hover:border-indigo-200 text-indigo-700 transition-all text-[11px] font-black uppercase tracking-tight"
+                                                >
+                                                    <Type size={14} /> Configure Text
+                                                </button>
+                                            ) : (
+                                                <button
+                                                    onClick={() => addFooterElement({ id: `footer-text-${Date.now()}`, type: 'text', x: (catalog.marginLeft || 0) + 10, y: PAGE_HEIGHT - (catalog.marginBottom || 0) - (catalog.footerHeight || 0), width: 200, height: 30, text: 'New Text', fontSize: 12, fontFamily: 'Inter', fill: '#64748b', rotation: 0, opacity: 1, zIndex: 10, verticalAlign: 'middle' })}
+                                                    className="flex-1 flex items-center justify-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-[11px] font-bold text-slate-600"
+                                                >
+                                                    <Type size={14} /> Add Text
+                                                </button>
+                                            )}
                                             <button
                                                 onClick={() => setEditorTab('media')}
-                                                title="Add Image"
-                                                className="p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all"
+                                                className="flex-1 flex items-center justify-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-[11px] font-bold text-slate-600"
                                             >
-                                                <Image size={14} />
+                                                <Image size={14} /> Add Image
                                             </button>
                                         </div>
                                     </div>
 
-                                    {/* Page Number Position */}
-                                    <div className="space-y-1.5 pt-2">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase">Page Number Position</span>
-                                        <div className="flex bg-slate-50 rounded-xl p-1 border border-slate-100">
-                                            <button
-                                                onClick={() => updateProjectSettings({ pageNumberAlignment: 'left' })}
-                                                className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-all text-[10px] font-bold uppercase ${catalog.pageNumberAlignment === 'left' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                Bottom Left
-                                            </button>
-                                            <button
-                                                onClick={() => updateProjectSettings({ pageNumberAlignment: 'right' })}
-                                                className={`flex-1 flex items-center justify-center p-2 rounded-lg transition-all text-[10px] font-bold uppercase ${catalog.pageNumberAlignment === 'right' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                                            >
-                                                Bottom Right
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {/* Granular Footer Controls */}
-                                    <div className="pt-2 grid grid-cols-2 gap-3">
-                                        <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Font Family</span>
-                                            <select
-                                                value={catalog.footerFontFamily || 'Inter'}
-                                                onChange={(e) => updateProjectSettings({ footerFontFamily: e.target.value })}
-                                                className="w-full bg-slate-50 border border-slate-100 rounded-xl px-2 py-2 text-[10px] font-bold text-slate-700 outline-none focus:border-indigo-100"
-                                            >
-                                                {CATEGORIZED_FONTS.map(group => (
-                                                    <optgroup key={group.label} label={group.label}>
-                                                        {group.fonts.map(f => (
-                                                            <option key={f} value={f}>{f}</option>
-                                                        ))}
-                                                    </optgroup>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Alignment</span>
-                                            <div className="flex bg-slate-50 rounded-xl p-1 border border-slate-100">
-                                                {(['left', 'center', 'right'] as const).map(a => (
-                                                    <button
-                                                        key={a}
-                                                        onClick={() => updateProjectSettings({ footerTextAlignment: a })}
-                                                        className={`flex-1 flex items-center justify-center p-1 rounded-lg transition-all ${catalog.footerTextAlignment === a ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
-                                                    >
-                                                        {a === 'left' && <AlignLeft size={12} />}
-                                                        {a === 'center' && <AlignCenter size={12} />}
-                                                        {a === 'right' && <AlignRight size={12} />}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5">
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[10px] font-bold text-slate-400 uppercase">Font Size</span>
-                                            <div className="flex items-center gap-1.5 bg-slate-50 border border-slate-100 rounded-lg px-2.5 py-1 min-w-[70px]">
-                                                <input
-                                                    type="number"
-                                                    min="6"
-                                                    max="72"
-                                                    value={catalog.footerFontSize || 10}
-                                                    onChange={(e) => updateProjectSettings({ footerFontSize: parseInt(e.target.value) || 10 })}
-                                                    className="w-full bg-transparent outline-none text-[11px] font-black text-indigo-600 text-right"
-                                                />
-                                                <span className="text-[10px] font-bold text-slate-400 shrink-0">px</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-1.5 pt-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Color</span>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            {['#64748b', '#000000', '#ffffff', '#4f46e5', '#ef4444', '#10b981', '#f59e0b'].map(color => (
-                                                <button
-                                                    key={color}
-                                                    onClick={() => updateProjectSettings({ footerColor: color })}
-                                                    className={`w-5 h-5 rounded-full border border-slate-200 transition-all ${catalog.footerColor === color ? 'ring-2 ring-indigo-500 ring-offset-1 scale-110' : 'hover:scale-105'}`}
-                                                    style={{ backgroundColor: color }}
-                                                />
-                                            ))}
-                                            <div className="relative flex-1 min-w-[60px]">
-                                                <input
-                                                    type="text"
-                                                    value={catalog.footerColor || '#64748b'}
-                                                    onChange={(e) => updateProjectSettings({ footerColor: e.target.value })}
-                                                    className="w-full h-5 bg-slate-50 border border-slate-200 rounded text-[9px] px-1 font-mono uppercase text-slate-600"
-                                                />
-                                            </div>
-                                        </div>
+                                    {/* Page Number Controls */}
+                                    <div className="space-y-3 pt-4 border-t border-slate-100">
+                                        <label className="flex items-center gap-3 cursor-pointer group">
+                                            <input
+                                                type="checkbox"
+                                                checked={catalog.footerElements?.some(el => el.type === 'text' && el.text?.toLowerCase().includes('{{page}}')) || false}
+                                                onChange={(e) => {
+                                                    const isChecked = e.target.checked;
+                                                    const textEl = catalog.footerElements.find(el => el.type === 'text');
+                                                    if (isChecked) {
+                                                        if (textEl) {
+                                                            const newText = textEl.text?.includes('{{page}}') ? textEl.text : (textEl.text + ' {{page}}');
+                                                            updateFooterElement(textEl.id, { text: newText });
+                                                        } else {
+                                                            addFooterElement({
+                                                                id: `footer-text-${Date.now()}`,
+                                                                type: 'text',
+                                                                x: (catalog.marginLeft || 0) + 10,
+                                                                y: PAGE_HEIGHT - (catalog.marginBottom || 0) - (catalog.footerHeight || 0),
+                                                                width: 200,
+                                                                height: 30,
+                                                                text: 'Page {{page}}',
+                                                                fontSize: 10,
+                                                                fontFamily: 'Inter',
+                                                                fill: '#64748b',
+                                                                rotation: 0,
+                                                                opacity: 1,
+                                                                zIndex: 10,
+                                                                verticalAlign: 'middle'
+                                                            });
+                                                        }
+                                                    } else if (textEl) {
+                                                        const newText = textEl.text.replace(/\{\{page\}\}/gi, '').trim();
+                                                        updateFooterElement(textEl.id, { text: newText || ' ' });
+                                                    }
+                                                    // Still update legacy for backward compatibility/dependencies
+                                                    updateProjectSettings({ footerText: isChecked ? '{{page}}' : '' });
+                                                }}
+                                                className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                            />
+                                            <span className={`text-[11px] font-bold leading-none ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Show Page Numbers</span>
+                                        </label>
                                     </div>
                                 </div>
                             )}
                         </div>
+                    </div>
+                </section>
+
+                {/* Page Background Section */}
+                <section className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${uiTheme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-100/80'}`}>
+                        <Palette size={14} className="text-indigo-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Page Background</span>
+                    </div>
+
+                    <div className="space-y-4 px-1">
+                        {/* Current Page Color */}
+                        <div className="flex gap-3">
+                            <div
+                                onClick={() => setPickerOpen(!pickerOpen)}
+                                className="flex-1 p-3 rounded-[18px] border bg-white border-slate-100 shadow-sm flex items-center gap-3 cursor-pointer hover:border-indigo-200 transition-all"
+                            >
+                                <div
+                                    className="w-10 h-10 rounded-xl shadow-sm border-2 border-slate-50"
+                                    style={{ background: catalog.pages[currentPageIndex]?.backgroundColor || '#ffffff' }}
+                                />
+                                <div className="flex flex-col">
+                                    <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Current Page Background</span>
+                                    <span className="text-[11px] font-black text-slate-900 uppercase">
+                                        {catalog.pages[currentPageIndex]?.backgroundColor || '#FFFFFF'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Picker Overlay */}
+                        {pickerOpen && (
+                            <div className="p-3 border rounded-2xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200 relative z-50">
+                                <AdvancedColorPicker
+                                    color={catalog.pages[currentPageIndex]?.backgroundColor || '#ffffff'}
+                                    onChange={(c) => setPageBackground(currentPageIndex, c)}
+                                />
+                            </div>
+                        )}
+
+                        {/* Apply to All Pages Button */}
+                        <button
+                            onClick={() => updateAllPageBackgrounds(catalog.pages[currentPageIndex]?.backgroundColor || '#ffffff')}
+                            className="w-full py-4 px-6 rounded-[22px] bg-slate-900 text-white font-black text-[11px] uppercase tracking-[0.15em] shadow-xl shadow-slate-200/50 hover:bg-indigo-600 hover:shadow-indigo-200/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-3 group"
+                        >
+                            <div className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/20 transition-colors">
+                                <Sparkles size={14} className="text-white animate-pulse" />
+                            </div>
+                            <span>Apply to All Pages</span>
+                        </button>
                     </div>
                 </section>
 

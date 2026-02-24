@@ -124,20 +124,22 @@ const AdvancedColorPicker: React.FC<AdvancedColorPickerProps> = ({ color, onChan
     };
 
     return (
-        <div className="flex flex-col gap-4 select-none">
+        <div className="flex flex-col gap-3 select-none">
             {/* Mode Toggle */}
             <div className="flex bg-slate-100 p-1 rounded-xl">
                 <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => { setMode('solid'); onChange(gradData.c1); }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'solid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'solid' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                    <Palette size={12} /> Solid
+                    <Palette size={11} /> Solid
                 </button>
                 <button
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => { setMode('gradient'); onChange(`linear-gradient(${gradData.dir}, ${gradData.c1}, ${gradData.c2})`); }}
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${mode === 'gradient' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
+                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all ${mode === 'gradient' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                 >
-                    <GradientIcon size={12} /> Gradient
+                    <GradientIcon size={11} /> Gradient
                 </button>
             </div>
 
@@ -146,14 +148,16 @@ const AdvancedColorPicker: React.FC<AdvancedColorPickerProps> = ({ color, onChan
                     {/* Gradient Preview & Color Selection */}
                     <div className="flex items-center gap-2">
                         <button
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => setActiveColorIdx(1)}
-                            className={`w-10 h-10 rounded-xl border-2 transition-all ${activeColorIdx === 1 ? 'border-indigo-600 scale-110' : 'border-transparent opacity-60'}`}
+                            className={`w-7 h-7 rounded-lg border-2 transition-all ${activeColorIdx === 1 ? 'border-indigo-600 scale-105' : 'border-transparent opacity-60'}`}
                             style={{ backgroundColor: gradData.c1 }}
                         />
-                        <div className="flex-1 h-3 rounded-full border border-slate-100" style={{ background: `linear-gradient(to right, ${gradData.c1}, ${gradData.c2})` }} />
+                        <div className="flex-1 h-2 rounded-full border border-slate-100" style={{ background: `linear-gradient(to right, ${gradData.c1}, ${gradData.c2})` }} />
                         <button
+                            onMouseDown={(e) => e.preventDefault()}
                             onClick={() => setActiveColorIdx(2)}
-                            className={`w-10 h-10 rounded-xl border-2 transition-all ${activeColorIdx === 2 ? 'border-indigo-600 scale-110' : 'border-transparent opacity-60'}`}
+                            className={`w-7 h-7 rounded-lg border-2 transition-all ${activeColorIdx === 2 ? 'border-indigo-600 scale-105' : 'border-transparent opacity-60'}`}
                             style={{ backgroundColor: gradData.c2 }}
                         />
                     </div>
@@ -161,15 +165,16 @@ const AdvancedColorPicker: React.FC<AdvancedColorPickerProps> = ({ color, onChan
                     {/* Direction Selection */}
                     <div className="flex justify-center gap-2">
                         {[
-                            { dir: 'to right', icon: <ArrowRight size={14} /> },
-                            { dir: 'to bottom', icon: <ArrowDown size={14} /> },
-                            { dir: 'to bottom right', icon: <MoveUpRight size={14} className="rotate-90" /> },
-                            { dir: 'to top right', icon: <MoveUpRight size={14} /> },
+                            { dir: 'to right', icon: <ArrowRight size={12} /> },
+                            { dir: 'to bottom', icon: <ArrowDown size={12} /> },
+                            { dir: 'to bottom right', icon: <MoveUpRight size={12} className="rotate-90" /> },
+                            { dir: 'to top right', icon: <MoveUpRight size={12} /> },
                         ].map(d => (
                             <button
                                 key={d.dir}
+                                onMouseDown={(e) => e.preventDefault()}
                                 onClick={() => setDirection(d.dir)}
-                                className={`p-2 rounded-lg border transition-all ${gradData.dir === d.dir ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}
+                                className={`p-1.5 rounded-lg border transition-all ${gradData.dir === d.dir ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:bg-slate-50'}`}
                             >
                                 {d.icon}
                             </button>
@@ -189,20 +194,20 @@ const AdvancedColorPicker: React.FC<AdvancedColorPickerProps> = ({ color, onChan
                 <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black to-transparent" />
                 <div
-                    className="absolute w-4 h-4 border-2 border-white rounded-full shadow-md -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+                    className="absolute w-3 h-3 border-2 border-white rounded-full shadow-md -translate-x-1/2 -translate-y-1/2 pointer-events-none"
                     style={{ left: `${hsv.s}%`, top: `${100 - hsv.v}%` }}
                 />
             </div>
 
             <div
                 ref={hRef}
-                className="w-full h-4 rounded-full relative cursor-pointer shadow-inner"
+                className="w-full h-3 rounded-full relative cursor-pointer shadow-inner"
                 style={{ background: 'linear-gradient(to right, #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%)' }}
                 onMouseDown={handleHueMouseDown}
                 onTouchStart={handleHueMouseDown}
             >
                 <div
-                    className="absolute w-5 h-5 bg-white border-2 border-slate-100 rounded-full shadow-lg -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none"
+                    className="absolute w-4 h-4 bg-white border-2 border-slate-100 rounded-full shadow-lg -translate-x-1/2 top-1/2 -translate-y-1/2 pointer-events-none"
                     style={{ left: `${(hsv.h / 360) * 100}%` }}
                 />
             </div>

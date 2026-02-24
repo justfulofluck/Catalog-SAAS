@@ -52,7 +52,9 @@ const FloatingToolbar: React.FC<Props> = ({
     updateHeaderElement,
     updateFooterElement,
     removeHeaderElement,
-    removeFooterElement
+    removeFooterElement,
+    duplicateHeaderElement,
+    duplicateFooterElement
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -137,7 +139,7 @@ const FloatingToolbar: React.FC<Props> = ({
   const handleDelete = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushHistory();
-    selectedElementIds.forEach(id => removeElement(currentPageIndex, id));
+    selectedElementIds.forEach(id => internalRemove(id));
     setSelectedElementIds([]);
     setShowMoreMenu(false);
   };
@@ -145,7 +147,11 @@ const FloatingToolbar: React.FC<Props> = ({
   const handleDuplicate = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushHistory();
-    selectedElementIds.forEach(id => duplicateElement(currentPageIndex, id));
+    selectedElementIds.forEach(id => {
+      if (catalog.headerElements.some(h => h.id === id)) duplicateHeaderElement(id);
+      else if (catalog.footerElements.some(f => f.id === id)) duplicateFooterElement(id);
+      else duplicateElement(currentPageIndex, id);
+    });
     setShowMoreMenu(false);
   };
 
@@ -175,15 +181,17 @@ const FloatingToolbar: React.FC<Props> = ({
   const handleBringToFront = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushHistory();
-    const maxZ = Math.max(...currentPage.elements.map(el => el.zIndex || 0));
-    selectedElementIds.forEach((id, i) => updateElement(currentPageIndex, id, { zIndex: maxZ + 1 + i }));
+    const allElements = [...currentPage.elements, ...catalog.headerElements, ...catalog.footerElements];
+    const maxZ = Math.max(...allElements.map(el => el.zIndex || 0));
+    selectedElementIds.forEach((id, i) => internalUpdate(id, { zIndex: maxZ + 1 + i }));
   };
 
   const handleSendToBack = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushHistory();
-    const minZ = Math.min(...currentPage.elements.map(el => el.zIndex || 0));
-    selectedElementIds.forEach((id, i) => updateElement(currentPageIndex, id, { zIndex: minZ - 1 - i }));
+    const allElements = [...currentPage.elements, ...catalog.headerElements, ...catalog.footerElements];
+    const minZ = Math.min(...allElements.map(el => el.zIndex || 0));
+    selectedElementIds.forEach((id, i) => internalUpdate(id, { zIndex: minZ - 1 - i }));
   };
 
   const handleClearProduct = (e: React.MouseEvent) => {

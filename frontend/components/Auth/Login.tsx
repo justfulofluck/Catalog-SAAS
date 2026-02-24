@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft, Sparkles } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft} from 'lucide-react';
 import { authApi } from '../../client';
 
 const Login: React.FC = () => {

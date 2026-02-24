@@ -44,6 +44,7 @@ export interface CanvasElement {
   fontStyle?: 'normal' | 'italic';
   textDecoration?: string;
   textAlign?: 'left' | 'center' | 'right' | 'justify';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
   lineHeight?: number;
   letterSpacing?: number;
   src?: string;
@@ -116,6 +117,7 @@ export interface PageTemplate {
   name: string;
   description: string;
   elements: Partial<CanvasElement>[];
+  backgroundColor?: string;
 }
 
 export interface Category {
@@ -190,6 +192,9 @@ export interface Catalog {
   // Headers & Footers
   hasHeader?: boolean;
   hasFooter?: boolean;
+  headerMigrated?: boolean;
+  footerMigrated?: boolean;
+  legacyCleanedUp?: boolean;
   headerText?: string;
   footerText?: string;
   backgroundColor?: string;
@@ -211,11 +216,17 @@ export interface Catalog {
   headerFontWeight?: string;
   headerFontStyle?: string;
   headerTextDecoration?: string;
+  headerLineHeight?: number;
+  headerLetterSpacing?: number;
+  headerOpacity?: number;
   footerFontFamily?: string;
   footerFontSize?: number;
   footerFontWeight?: string;
   footerFontStyle?: string;
   footerTextDecoration?: string;
+  footerLineHeight?: number;
+  footerLetterSpacing?: number;
+  footerOpacity?: number;
   headerColor?: string;
   footerColor?: string;
   // Page Layout (Stored in PX, edited in MM)

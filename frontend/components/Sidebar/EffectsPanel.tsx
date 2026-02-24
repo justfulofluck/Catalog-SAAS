@@ -7,11 +7,15 @@ type EffectStyle = 'none' | 'shadow' | 'lift' | 'hollow' | 'splice' | 'outline' 
 
 const EffectsPanel: React.FC = () => {
     const {
-        catalog, currentPageIndex, selectedElementIds, updateElement, uiTheme, setEditorTab
+        catalog, currentPageIndex, selectedElementIds, updateElement, uiTheme, setEditorTab,
+        updateHeaderElement, updateFooterElement
     } = useStore();
 
     const currentPage = catalog.pages[currentPageIndex];
-    const selectedElements = currentPage?.elements.filter(el => selectedElementIds.includes(el.id)) || [];
+    const pageElements = currentPage?.elements.filter(el => selectedElementIds.includes(el.id)) || [];
+    const headerElements = catalog.headerElements.filter(el => selectedElementIds.includes(el.id)) || [];
+    const footerElements = catalog.footerElements.filter(el => selectedElementIds.includes(el.id)) || [];
+    const selectedElements = [...pageElements, ...headerElements, ...footerElements];
     const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
     const [activeEffectStyle, setActiveEffectStyle] = useState<EffectStyle>('none');
@@ -31,18 +35,72 @@ const EffectsPanel: React.FC = () => {
     // Sync with selected element
     useEffect(() => {
         if (selectedElement) {
-            setTempShadowBlur(0);
-            setTempShadowOpacity(0);
-            setTempShadowOffset(0);
-            setTempShadowDirection(-45);
-            setTempShadowColor('#000000');
-            setTempEffectColor2('#00fff9');
-            setTempEffectSpread(0);
-            setTempEffectRoundness(0);
-            setTempTextStrokeWidth(1);
             setActiveEffectStyle(selectedElement.effectStyle || 'none');
+            setTempShadowBlur(selectedElement.shadowBlur || 0);
+            setTempShadowOpacity(selectedElement.shadowOpacity ?? 0.5);
+            setTempShadowColor(selectedElement.effectColor || selectedElement.shadowColor || '#000000');
+            setTempEffectColor2(selectedElement.effectColor2 || '#00fff9');
+            setTempEffectSpread(selectedElement.effectSpread || 0);
+            setTempEffectRoundness(selectedElement.effectRoundness || 4);
+            setTempTextStrokeWidth(selectedElement.textStrokeWidth || 1);
+
+            // Reverse engineer angle and distance from offsetX/Y
+            const ox = selectedElement.shadowOffsetX || 0;
+            const oy = selectedElement.shadowOffsetY || 0;
+            const dist = Math.sqrt(ox * ox + oy * oy) * 10;
+            const angle = Math.atan2(oy, ox) * (180 / Math.PI);
+
+            setTempShadowOffset(dist || 0);
+            setTempShadowDirection(angle || -45);
         }
     }, [selectedElement?.id]);
+
+    // Live update effect
+    useEffect(() => {
+        if (!selectedElement) return;
+
+        // Don't live update if we have a partial text selection (let them use Apply button)
+        const sel = window.getSelection();
+        if (sel && !sel.isCollapsed && sel.anchorNode?.parentElement?.closest('[contenteditable="true"]')) {
+            return;
+        }
+
+        const rad = (tempShadowDirection * Math.PI) / 180;
+        const offX = Math.round(tempShadowOffset * Math.cos(rad) * 0.1);
+        const offY = Math.round(tempShadowOffset * Math.sin(rad) * 0.1);
+
+        const updates: any = {
+            effectStyle: activeEffectStyle,
+            shadowBlur: (activeEffectStyle === 'shadow' || activeEffectStyle === 'lift') ? tempShadowBlur : 0,
+            shadowOpacity: activeEffectStyle === 'background' ? 1 : tempShadowOpacity,
+            shadowColor: tempShadowColor,
+            effectColor: tempShadowColor,
+            effectColor2: tempEffectColor2,
+            shadowOffsetX: activeEffectStyle === 'none' ? 0 : offX,
+            shadowOffsetY: activeEffectStyle === 'none' ? 0 : offY,
+            textStrokeWidth: tempTextStrokeWidth,
+            effectSpread: tempEffectSpread,
+            effectRoundness: tempEffectRoundness,
+        };
+
+        // Only update if something actually changed to avoid loops
+        const hasChanged =
+            selectedElement.effectStyle !== updates.effectStyle ||
+            selectedElement.shadowBlur !== updates.shadowBlur ||
+            selectedElement.shadowOpacity !== updates.shadowOpacity ||
+            selectedElement.effectColor !== updates.effectColor ||
+            selectedElement.shadowOffsetX !== updates.shadowOffsetX ||
+            selectedElement.shadowOffsetY !== updates.shadowOffsetY ||
+            selectedElement.textStrokeWidth !== updates.textStrokeWidth;
+
+        if (hasChanged) {
+            handleBatchUpdate(updates);
+        }
+    }, [
+        activeEffectStyle, tempShadowBlur, tempShadowOpacity, tempShadowColor,
+        tempEffectColor2, tempShadowOffset, tempShadowDirection, tempTextStrokeWidth,
+        tempEffectSpread, tempEffectRoundness
+    ]);
 
     // Track selection offsets for persistence
     useEffect(() => {
@@ -60,7 +118,15 @@ const EffectsPanel: React.FC = () => {
     }, []);
 
     const handleBatchUpdate = (updates: any) => {
-        selectedElementIds.forEach(id => updateElement(currentPageIndex, id, updates));
+        selectedElementIds.forEach(id => {
+            if (catalog.headerElements.some(el => el.id === id)) {
+                updateHeaderElement(id, updates);
+            } else if (catalog.footerElements.some(el => el.id === id)) {
+                updateFooterElement(id, updates);
+            } else {
+                updateElement(currentPageIndex, id, updates);
+            }
+        });
     };
 
     const generateCSS = (styleId: string) => {
@@ -119,8 +185,8 @@ const EffectsPanel: React.FC = () => {
             shadowColor: tempShadowColor,
             effectColor: tempShadowColor,
             effectColor2: tempEffectColor2,
-            shadowOffsetX: offX,
-            shadowOffsetY: offY,
+            shadowOffsetX: styleId === 'none' ? 0 : offX,
+            shadowOffsetY: styleId === 'none' ? 0 : offY,
             textStrokeWidth: tempTextStrokeWidth,
             effectSpread: tempEffectSpread,
             effectRoundness: tempEffectRoundness,
@@ -181,7 +247,7 @@ const EffectsPanel: React.FC = () => {
                     <div className={`h-24 rounded-2xl border-2 flex items-center justify-center overflow-hidden relative ${uiTheme === 'dark' ? 'border-slate-800 bg-slate-900' : 'border-slate-100 bg-slate-50'}`}>
                         <div className="absolute inset-0 opacity-20" style={{ backgroundImage: `radial-gradient(${uiTheme === 'dark' ? '#334155' : '#cbd5e1'} 1px, transparent 1px)`, backgroundSize: '8px 8px' }} />
                         <span
-                            className={`text-4xl font-bold transition-all duration-200 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}
+                            className={`text-4xl transition-all duration-200 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}
                             style={{
                                 ...((() => {
                                     const cssString = generateCSS(activeEffectStyle);
@@ -194,7 +260,10 @@ const EffectsPanel: React.FC = () => {
                                         }
                                     });
                                     return styleObj;
-                                })())
+                                })()),
+                                fontFamily: selectedElement?.fontFamily || 'Inter',
+                                fontWeight: selectedElement?.fontWeight || 'normal',
+                                fontStyle: selectedElement?.fontStyle || 'normal'
                             }}
                         >
                             Ag

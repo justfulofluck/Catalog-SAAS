@@ -9,53 +9,25 @@ import CanvasElementComponent from '../Editor/CanvasElement';
 import { jsPDF } from 'jspdf';
 
 // Reusing CanvasHeader for consistent rendering
-const CanvasHeader: React.FC<{ catalog: any; theme: any }> = ({ catalog, theme }) => {
-  const [logoImage] = useImage(catalog.headerLogoUrl || '', 'anonymous');
+const CanvasHeader: React.FC<{ catalog: any; theme: any; pageIdx: number }> = ({ catalog, theme, pageIdx }) => {
   const height = catalog.headerHeight ?? HEADER_FOOTER_HEIGHT;
-  const padding = catalog.headerSideMargin ?? 40;
-  const fontFamily = catalog.headerFontFamily || theme.headingFont;
-  const fontSize = catalog.headerFontSize || 11;
-  const textString = catalog.headerText || '';
-
-  const logoHeight = catalog.headerLogoHeight || 24;
-  const logoWidth = logoImage ? (logoImage.width / logoImage.height) * logoHeight : 0; // Aspect ratio
-
-  const logoAlign = catalog.headerLogoAlignment || 'left';
-
-  // Logo X Position
-  let logoX = padding;
-  if (logoAlign === 'center') logoX = (PAGE_WIDTH - logoWidth) / 2;
-  if (logoAlign === 'right') logoX = PAGE_WIDTH - padding - logoWidth;
 
   return (
     <Group>
+      {/* Background for Header Area */}
       <Rect width={PAGE_WIDTH} height={height} fill={catalog.backgroundColor || theme.backgroundColor} />
       <Line points={[40, height, PAGE_WIDTH - 40, height]} stroke="#f1f5f9" strokeWidth={1} />
 
-      {catalog.headerLogoUrl && logoImage && (
-        <KonvaImage
-          image={logoImage}
-          x={logoX}
-          y={(height - logoHeight) / 2}
-          width={logoWidth}
-          height={logoHeight}
+      {/* Render Master Header Elements */}
+      {catalog.headerElements?.map((el: any) => (
+        <CanvasElementComponent
+          key={`header-master-${el.id}`}
+          element={el}
+          isSelected={false}
+          onSelect={() => { }}
+          onChange={() => { }}
         />
-      )}
-
-      {textString && (
-        <Text
-          text={textString}
-          x={padding}
-          y={height / 2 - 5}
-          width={PAGE_WIDTH - (padding * 2)}
-          align={catalog.headerTextAlignment || 'left'}
-          fontSize={fontSize}
-          fontFamily={fontFamily}
-          fontWeight="bold"
-          fill={theme.headingColor}
-          opacity={0.9}
-        />
-      )}
+      ))}
     </Group>
   );
 };
@@ -154,7 +126,8 @@ const PublicViewer: React.FC = () => {
           >
             <Layer>
               <Rect width={PAGE_WIDTH} height={PAGE_HEIGHT} fill={catalog.backgroundColor || '#ffffff'} />
-              <CanvasHeader catalog={catalog} theme={theme} />
+              {/* Header Render */}
+              <CanvasHeader catalog={catalog} theme={theme} pageIdx={currentPageIndex} />
               <Group>
                 {currentPage.elements.map((el) => (
                   <CanvasElementComponent
@@ -171,27 +144,22 @@ const PublicViewer: React.FC = () => {
               <Group y={PAGE_HEIGHT - (catalog.footerHeight ?? 38)}>
                 <Rect width={PAGE_WIDTH} height={catalog.footerHeight ?? 38} fill={catalog.backgroundColor || '#ffffff'} />
                 <Line points={[40, 0, PAGE_WIDTH - 40, 0]} stroke="#f1f5f9" strokeWidth={1} />
-                <Text
-                  text={catalog.footerText || ''}
-                  x={catalog.footerSideMargin ?? 40}
-                  y={(catalog.footerHeight ?? 38) / 2 - 4}
-                  width={PAGE_WIDTH - ((catalog.footerSideMargin ?? 40) * 2)}
-                  fontSize={catalog.footerFontSize ?? 9}
-                  fontFamily={catalog.footerFontFamily || "Inter"}
-                  fill={theme.bodyColor}
-                  opacity={0.6}
-                />
-                <Text
-                  text={`PAGE ${currentPageIndex + 1}`}
-                  x={PAGE_WIDTH - 150}
-                  y={(catalog.footerHeight ?? 38) / 2 - 4}
-                  width={120}
-                  align="right"
-                  fontSize={9}
-                  fontFamily="Inter"
-                  fontWeight="900"
-                  fill={theme.headingColor}
-                />
+
+                {catalog.footerElements?.map((el: any) => {
+                  const elementWithPage = el.type === 'text' && el.text?.toLowerCase().includes('{{page}}')
+                    ? { ...el, text: el.text.replace(/\{\{page\}\}/gi, String(currentPageIndex + 1)) }
+                    : el;
+
+                  return (
+                    <CanvasElementComponent
+                      key={`footer-master-${el.id}`}
+                      element={elementWithPage}
+                      isSelected={false}
+                      onSelect={() => { }}
+                      onChange={() => { }}
+                    />
+                  );
+                })}
               </Group>
             </Layer>
           </Stage>

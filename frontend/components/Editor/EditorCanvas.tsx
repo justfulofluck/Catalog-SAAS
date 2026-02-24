@@ -89,6 +89,27 @@ const PageStage: React.FC<{
     const effMarginLeft = isInterior ? marginLeft : 0;
     const effMarginRight = isInterior ? marginRight : 0;
 
+    const isPageNumEnabled = catalog.footerText?.toLowerCase().includes('{{page}}');
+    let derivedPageNumAlign = catalog.pageNumberAlignment || 'right';
+
+    if (isPageNumEnabled && catalog.footerElements && catalog.footerElements.length > 0) {
+      const leftThreshold = marginLeft + 60;
+      const rightThreshold = currentWidth - marginRight - 60;
+      let hasLeftOverlap = false;
+      let hasRightOverlap = false;
+
+      catalog.footerElements.forEach(el => {
+        if (el.x < leftThreshold) hasLeftOverlap = true;
+        if (el.x + el.width > rightThreshold) hasRightOverlap = true;
+      });
+
+      if (derivedPageNumAlign === 'right' && hasRightOverlap && !hasLeftOverlap) {
+        derivedPageNumAlign = 'left';
+      } else if (derivedPageNumAlign === 'left' && hasLeftOverlap && !hasRightOverlap) {
+        derivedPageNumAlign = 'right';
+      }
+    }
+
     return (
       <KonvaStage
         ref={isActive ? stageRef : undefined}
@@ -105,13 +126,13 @@ const PageStage: React.FC<{
       >
         <KonvaLayer>
           {/* Page background */}
-          <KonvaRect name="grid-background" width={currentWidth} height={currentHeight} fill={canvasBg} />
+          <KonvaRect name="grid-background" width={currentWidth} height={currentHeight} fill={page.backgroundColor || canvasBg} />
 
 
           {/* Margins & Areas Visualization (Rendered ON TOP for visibility) */}
           <KonvaGroup>
             {/* Main Margin Box (Outer Boundary) - Only on interior pages */}
-            {page.type === 'interior' && (
+            {isInterior && (
               <KonvaRect
                 name="margin-bg"
                 listening={false}
@@ -145,40 +166,15 @@ const PageStage: React.FC<{
                   fill={marginColor}
                   opacity={0.6}
                 />
-
-                {/* Header Text (Editable Reference) */}
-                <KonvaText
-                  key={`header-${catalog.headerFontFamily}-${catalog.headerFontSize}-${catalog.headerFontWeight}-${catalog.headerFontStyle}`}
-                  name="header-text"
-                  x={marginLeft + 10}
-                  y={marginTop}
-                  width={currentWidth - marginLeft - marginRight - 20}
-                  height={headerHeight}
-                  text={catalog.headerText || ""}
-                  fontSize={catalog.headerFontSize || Math.min(12, headerHeight / 2)}
-                  fontFamily={catalog.headerFontFamily || 'Inter'}
-                  fill={catalog.headerColor || '#475569'}
-                  fontStyle={`${catalog.headerFontStyle || ''} ${catalog.headerFontWeight || 'bold'}`.trim()}
-                  textDecoration={catalog.headerTextDecoration || 'none'}
-                  verticalAlign="middle"
-                  align={catalog.headerTextAlignment || 'left'}
-                  visible={editingId !== 'header'}
-                />
-
-                {/* Header Label Pill - Adjusted x to avoid overlap and clipping */}
-                <KonvaGroup x={Math.max(marginLeft - 80, 5)} y={marginTop + (headerHeight / 2) - 12}>
-                  <KonvaRect width={45} height={24} fill="#475569" cornerRadius={6} opacity={0.9} />
-                  <KonvaText text="Header" fill="#ffffff" fontSize={9} fontStyle="bold" width={45} height={24} align="center" verticalAlign="middle" />
-                </KonvaGroup>
               </KonvaGroup>
             )}
 
             {/* Page Number (Only if footer is disabled, otherwise it renders inside footer-group) */}
-            {!shouldShowFooter && catalog.footerText?.includes('{{page}}') && (
+            {!shouldShowFooter && isPageNumEnabled && (
               <KonvaText
-                key={`page-num-no-footer-${catalog.pageNumberAlignment}`}
+                key={`page-num-no-footer-${derivedPageNumAlign}`}
                 name="page-number-no-footer"
-                x={catalog.pageNumberAlignment === 'right' ? currentWidth - marginRight - 30 : marginLeft + 10}
+                x={derivedPageNumAlign === 'right' ? currentWidth - marginRight - 30 : marginLeft + 10}
                 y={currentHeight - marginBottom - 25}
                 width={40}
                 height={20}
@@ -187,7 +183,7 @@ const PageStage: React.FC<{
                 fontFamily={catalog.footerFontFamily || 'Inter'}
                 fill={catalog.footerColor || '#64748b'}
                 verticalAlign="middle"
-                align={catalog.pageNumberAlignment || 'right'}
+                align={derivedPageNumAlign}
               />
             )}
 
@@ -210,50 +206,6 @@ const PageStage: React.FC<{
                   fill={marginColor}
                   opacity={0.6}
                 />
-
-                {/* Footer Text (Editable Reference) */}
-                <KonvaText
-                  key={`footer-${catalog.footerFontFamily}-${catalog.footerFontSize}-${catalog.footerFontWeight}-${catalog.footerFontStyle}`}
-                  name="footer-text"
-                  x={marginLeft + 10}
-                  y={currentHeight - marginBottom - footerHeight}
-                  width={currentWidth - marginLeft - marginRight - 20}
-                  height={footerHeight}
-                  text={catalog.footerText ? catalog.footerText.replace(/\{\{page\}\}/gi, '') : ""}
-                  fontSize={catalog.footerFontSize || Math.min(10, footerHeight / 2)}
-                  fontFamily={catalog.footerFontFamily || 'Inter'}
-                  fill={catalog.footerColor || '#64748b'}
-                  fontStyle={`${catalog.footerFontStyle || ''} ${catalog.footerFontWeight || 'normal'}`.trim()}
-                  textDecoration={catalog.footerTextDecoration || 'none'}
-                  verticalAlign="middle"
-                  align={catalog.footerTextAlignment || 'left'}
-                  visible={editingId !== 'footer'}
-                />
-
-                {/* Page Number (Separate from Footer Text) */}
-                {catalog.footerText?.toLowerCase().includes('{{page}}') && (
-                  <KonvaText
-                    key={`page-num-footer-${catalog.pageNumberAlignment}`}
-                    name="page-number"
-                    x={catalog.pageNumberAlignment === 'right' ? currentWidth - marginRight - 50 : marginLeft + 10}
-                    y={currentHeight - marginBottom - footerHeight}
-                    width={40}
-                    height={footerHeight}
-                    text={String(pageIdx + 1)}
-                    fontSize={catalog.footerFontSize || Math.min(10, footerHeight / 2)}
-                    fontFamily={catalog.footerFontFamily || 'Inter'}
-                    fill={catalog.footerColor || '#64748b'}
-                    verticalAlign="middle"
-                    align={catalog.pageNumberAlignment || 'right'}
-                    visible={editingId !== 'footer'}
-                  />
-                )}
-
-                {/* Footer Label Pill - Adjusted x to avoid overlap and clipping */}
-                <KonvaGroup x={Math.max(marginLeft - 80, 5)} y={currentHeight - marginBottom - (footerHeight / 2) - 12}>
-                  <KonvaRect width={45} height={24} fill="#475569" cornerRadius={6} opacity={0.9} />
-                  <KonvaText text="Footer" fill="#ffffff" fontSize={9} fontStyle="bold" width={45} height={24} align="center" verticalAlign="middle" />
-                </KonvaGroup>
               </KonvaGroup>
             )}
           </KonvaGroup>
@@ -363,7 +315,7 @@ const PageStage: React.FC<{
 const EditorCanvas: React.FC = () => {
   const {
     catalog, activeThemeId, currentPageIndex, zoom, setZoom,
-    selectedElementIds, setSelectedElementIds,
+    selectedElementIds, setSelectedElementIds, setSelectedElements,
     updateElement, removeElement, duplicateElement, nudgeElement,
     undo, redo, groupSelected, ungroupSelected, toggleLock,
     addElement, addMedia, draggingItem, setDraggingItem,
@@ -371,7 +323,10 @@ const EditorCanvas: React.FC = () => {
     addPage, setCurrentPageIndex, guides, activeDragPosition,
     isProjectSettingsOpen, setIsProjectSettingsOpen, updateProjectSettings,
     setSelectedPageIndex, setSelectedCategoryId,
-    removeHeaderElement, removeFooterElement
+    addHeaderElement, addFooterElement,
+    updateHeaderElement, updateFooterElement,
+    removeHeaderElement, removeFooterElement,
+    copySelectedElements, pasteElements
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -449,9 +404,10 @@ const EditorCanvas: React.FC = () => {
       if (!content.trim()) content = "";
 
       if (content !== editConfig.text) {
-        if (editConfig.id === 'header') updateProjectSettings({ headerText: content });
-        else if (editConfig.id === 'footer') updateProjectSettings({ footerText: content });
-        else updateElement(currentPageIndex, editConfig.id, { text: content });
+        const html = textInputRef.current?.innerHTML || '';
+        if (editConfig.id === 'header') updateProjectSettings({ headerText: html });
+        else if (editConfig.id === 'footer') updateProjectSettings({ footerText: html });
+        else updateElement(currentPageIndex, editConfig.id, { text: html });
       }
 
       if (shouldClose) {
@@ -477,6 +433,86 @@ const EditorCanvas: React.FC = () => {
     };
     const t = setTimeout(fit, 50);
     return () => clearTimeout(t);
+  }, []);
+
+  // Auto-migrate legacy header/footer text to elements once and cleanup pages
+  useEffect(() => {
+    const headerNeeded = catalog.hasHeader && catalog.headerText && catalog.headerElements.length === 0 && !catalog.headerMigrated;
+    const footerNeeded = catalog.hasFooter && catalog.footerText && catalog.footerElements.length === 0 && !catalog.footerMigrated;
+
+    if (headerNeeded || footerNeeded) {
+      if (headerNeeded) {
+        addHeaderElement({
+          id: `header-txt-migrated-${Date.now()}`,
+          type: 'text',
+          text: '',
+          x: (catalog.marginLeft || 0) + 10,
+          y: (catalog.marginTop || 0),
+          width: PAGE_WIDTH - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
+          height: (catalog.headerHeight || 0),
+          fontSize: catalog.headerFontSize || 12,
+          fontFamily: catalog.headerFontFamily || 'Inter',
+          fontWeight: catalog.headerFontWeight || 'bold',
+          fontStyle: 'normal' as any,
+          textAlign: 'center',
+          fill: catalog.headerColor || '#475569',
+          zIndex: 10,
+          rotation: 0,
+          opacity: 1,
+          verticalAlign: 'middle',
+          locked: false // Allow header to be edited
+        });
+        updateProjectSettings({ headerMigrated: true });
+      }
+      if (footerNeeded) {
+        addFooterElement({
+          id: `footer-txt-migrated-${Date.now()}`,
+          type: 'text',
+          text: '',
+          x: (catalog.marginLeft || 0) + 10,
+          y: PAGE_HEIGHT - (catalog.marginBottom || 0) - (catalog.footerHeight || 0),
+          width: PAGE_WIDTH - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
+          height: (catalog.footerHeight || 0),
+          fontSize: catalog.footerFontSize || 10,
+          fontFamily: catalog.footerFontFamily || 'Inter',
+          fontWeight: catalog.footerFontWeight || 'normal',
+          fontStyle: 'normal' as any,
+          textAlign: 'center',
+          fill: catalog.footerColor || '#64748b',
+          zIndex: 10,
+          rotation: 0,
+          opacity: 1,
+          verticalAlign: 'middle',
+          locked: false // Allow footer to be edited
+        });
+        updateProjectSettings({ footerMigrated: true });
+      }
+    }
+
+    // Trigger cleanup of redundant elements on all pages (run even if already migrated, to fix previous missed cleanups)
+    if (!catalog.legacyCleanedUp) {
+      const stripHtml = (html: string) => html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
+      const hText = stripHtml(catalog.headerText || '');
+      const fText = stripHtml((catalog.footerText || '').replace(/\{\{page\}\}/gi, ''));
+
+      if (hText || fText) {
+        catalog.pages.forEach((page, pageIdx) => {
+          const redundantIds = page.elements
+            .filter(el => el.type === 'text')
+            .filter(el => {
+              const elTextStripped = stripHtml(el.text || '').replace(/\{\{page\}\}/gi, '');
+              const matchesHeader = hText && elTextStripped === hText;
+              const matchesFooter = fText && elTextStripped === fText;
+              return matchesHeader || matchesFooter;
+            })
+            .map(el => el.id);
+
+          redundantIds.forEach(id => removeElement(pageIdx, id));
+        });
+      }
+
+      updateProjectSettings({ legacyCleanedUp: true });
+    }
   }, []);
 
   // Block native zoom
@@ -528,6 +564,17 @@ const EditorCanvas: React.FC = () => {
     if (isMod && (e.key === 'y' || e.key === 'Y')) {
       e.preventDefault();
       redo();
+      return;
+    }
+
+    // Grouping / Ungrouping
+    if (isMod && (e.key === 'g' || e.key === 'G')) {
+      e.preventDefault();
+      if (e.shiftKey) {
+        ungroupSelected(currentPageIndex);
+      } else {
+        groupSelected(currentPageIndex);
+      }
       return;
     }
 
@@ -674,8 +721,22 @@ const EditorCanvas: React.FC = () => {
         setEditingId(null);
         setEditConfig(null);
         break;
+      case 'c':
+      case 'C':
+        if (isMod) {
+          e.preventDefault();
+          copySelectedElements();
+        }
+        break;
+      case 'v':
+      case 'V':
+        if (isMod) {
+          e.preventDefault();
+          pasteElements();
+        }
+        break;
     }
-  }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements, updateElement, pushHistory, catalog, removeHeaderElement, removeFooterElement]);
+  }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements, updateElement, pushHistory, catalog, removeHeaderElement, removeFooterElement, copySelectedElements, pasteElements]);
 
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleKeyDown]);
 
@@ -759,27 +820,36 @@ const EditorCanvas: React.FC = () => {
       lastPointerPosition.current = { x: e.evt.clientX, y: e.evt.clientY };
       return;
     }
-    if (e.target === e.target.getStage() || e.target.name() === 'grid-background' || e.target.name() === 'margin-bg' || e.target.name() === 'header-bg' || e.target.name() === 'footer-bg') {
-      const pos = e.target.getStage()?.getPointerPosition();
+    if (e.target === e.target.getStage() || e.target.name() === 'grid-background' || e.target.name() === 'margin-bg' || e.target.name() === 'header-bg' || e.target.name() === 'footer-bg' || e.target.name() === 'margin-rect') {
+      const stage = e.target.getStage();
+      if (!stage) return;
+      const pos = stage.getPointerPosition();
       if (!pos) return;
-      const x = (pos.x - panRef.current.x) / zoom;
-      const y = (pos.y - panRef.current.y) / zoom;
+
+      // Coordinates within the stage are already relative to its top-left.
+      // We only need to account for zoom.
+      const x = pos.x / zoom;
+      const y = pos.y / zoom;
+
       setSelectionBox({ x1: x, y1: y, x2: x, y2: y, visible: true });
       isSelecting.current = true;
       if (!e.evt.shiftKey) {
-        setSelectedElementIds([]);
+        setSelectedElements([]);
         setIsPropertyPanelOpen(false);
         setEditingId(null);
         setEditConfig(null);
       }
     }
-  }, [activeTool, zoom, setSelectedElementIds]);
+  }, [activeTool, zoom, setSelectedElements, setIsPropertyPanelOpen]);
 
   const handleStageMouseMove = useCallback((e: any) => {
     if (!isSelecting.current) return;
-    const pos = e.target.getStage().getPointerPosition();
-    const x = (pos.x - panRef.current.x) / zoom;
-    const y = (pos.y - panRef.current.y) / zoom;
+    const stage = e.target.getStage();
+    if (!stage) return;
+    const pos = stage.getPointerPosition();
+    if (!pos) return;
+    const x = pos.x / zoom;
+    const y = pos.y / zoom;
     setSelectionBox(prev => ({ ...prev, x2: x, y2: y }));
   }, [zoom]);
 
@@ -790,12 +860,37 @@ const EditorCanvas: React.FC = () => {
     const y = Math.min(selectionBox.y1, selectionBox.y2);
     const w = Math.abs(selectionBox.x2 - selectionBox.x1);
     const h = Math.abs(selectionBox.y2 - selectionBox.y1);
-    if (w < 2 && h < 2) { setSelectionBox(prev => ({ ...prev, visible: false })); return; }
-    const ids = currentPage.elements.filter(el => el.x < x + w && el.x + el.width > x && el.y < y + h && el.y + el.height > y).map(el => el.id);
-    if (e.evt.shiftKey) setSelectedElementIds([...new Set([...selectedElementIds, ...ids])]);
-    else setSelectedElementIds(ids);
+
+    if (w < 2 && h < 2) {
+      setSelectionBox(prev => ({ ...prev, visible: false }));
+      return;
+    }
+
+    // AABB intersection check across all layers
+    const allEls = [
+      ...(currentPage?.elements || []),
+      ...(catalog.headerElements || []),
+      ...(catalog.footerElements || [])
+    ];
+
+    const newlySelectedIds = allEls
+      .filter(el => {
+        const elX = el.x;
+        const elY = el.y;
+        const elW = el.width;
+        const elH = el.height;
+        return elX < x + w && elX + elW > x && elY < y + h && elY + elH > y;
+      })
+      .map(el => el.id);
+
+    if (e.evt.shiftKey) {
+      setSelectedElements([...new Set([...selectedElementIds, ...newlySelectedIds])]);
+    } else {
+      setSelectedElements(newlySelectedIds);
+    }
+
     setSelectionBox(prev => ({ ...prev, visible: false }));
-  }, [currentPage?.elements, selectionBox, setSelectedElementIds, selectedElementIds]);
+  }, [currentPage?.elements, selectionBox, setSelectedElements, selectedElementIds]);
 
   const handleWheel = useCallback((e: any) => {
     if (e.evt.ctrlKey || e.evt.metaKey) {
@@ -809,13 +904,40 @@ const EditorCanvas: React.FC = () => {
   }, [zoom, setZoom]);
 
   const handleSelectElement = useCallback((id: string, isMulti: boolean) => {
-    const el = currentPage.elements.find(e => e.id === id);
-    let ids = el?.groupId ? currentPage.elements.filter(e => e.groupId === el.groupId).map(e => e.id) : [id];
+    // Find where this element belongs
+    const page = catalog.pages[currentPageIndex];
+    const headerEls = catalog.headerElements || [];
+    const footerEls = catalog.footerElements || [];
+
+    let el = page?.elements.find(e => e.id === id);
+    let container = page?.elements;
+
+    if (!el) {
+      el = headerEls.find(e => e.id === id);
+      container = headerEls;
+    }
+    if (!el) {
+      el = footerEls.find(e => e.id === id);
+      container = footerEls;
+    }
+
+    if (!el) return;
+
+    // Use setSelectedElements (group-aware version from store)
     if (isMulti) {
-      const allSel = ids.every(i => selectedElementIds.includes(i));
-      setSelectedElementIds(allSel ? selectedElementIds.filter(s => !ids.includes(s)) : [...new Set([...selectedElementIds, ...ids])]);
-    } else { setSelectedElementIds(ids); }
-  }, [currentPage?.elements, setSelectedElementIds, selectedElementIds]);
+      const isAltSel = selectedElementIds.includes(id);
+      if (isAltSel) {
+        setSelectedElements(selectedElementIds.filter(sid => sid !== id));
+      } else {
+        setSelectedElements([...selectedElementIds, id]);
+      }
+    } else {
+      setSelectedElements([id]);
+      setIsPropertyPanelOpen(true);
+    }
+    setEditingId(null);
+    setEditConfig(null);
+  }, [catalog.pages, currentPageIndex, catalog.headerElements, catalog.footerElements, setSelectedElements, selectedElementIds, setIsPropertyPanelOpen]);
 
   // Drag & drop
   const handleDragOver = (e: React.DragEvent) => {
@@ -889,33 +1011,57 @@ const EditorCanvas: React.FC = () => {
 
     // 1. Header Area Check
     const isHeaderArea = targetName === 'header-bg' || targetName === 'header-text' || parentName === 'header-group';
-    // Fallback: Check coordinates if target name isn't caught
     const inHeaderZone = catalog.hasHeader && y >= (catalog.marginTop || 0) && y <= (catalog.marginTop || 0) + (catalog.headerHeight || 0);
 
     if (isHeaderArea || inHeaderZone) {
       if (catalog.hasHeader) {
-        // Double-click on header background -> Open Media Library
-        if (targetName === 'header-bg' || targetName === 'header-group' || targetName === 'margin-bg') {
-          useStore.getState().setEditorTab('media');
-          return;
+        // Double-click on header background with NO text node -> Create one or Open Media Library
+        if (targetName === 'header-bg' || targetName === 'header-group' || targetName === 'margin-bg' || targetName === 'margin-rect') {
+          // If already has elements, maybe just ignore or open media
+          if (catalog.headerElements.length > 0) {
+            useStore.getState().setEditorTab('media');
+            return;
+          }
         }
 
-        setEditingId('header');
+        // Try to find an existing text element in the header
+        let textEl = catalog.headerElements.find(el => el.type === 'text');
+
+        if (!textEl) {
+          // Migration: Create first text element from legacy headerText
+          const newId = `header-txt-${Date.now()}`;
+          const newEl: any = {
+            id: newId,
+            type: 'text',
+            text: catalog.headerText || 'Header Text',
+            x: (catalog.marginLeft || 0) + 10,
+            y: (catalog.marginTop || 0),
+            width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
+            height: (catalog.headerHeight || 0),
+            fontSize: catalog.headerFontSize || 12,
+            fontFamily: catalog.headerFontFamily || 'Inter',
+            fontWeight: catalog.headerFontWeight || 'bold',
+            fontStyle: catalog.headerFontStyle || 'normal',
+            textAlign: catalog.headerTextAlignment || 'left',
+            fill: catalog.headerColor || '#475569',
+            lineHeight: catalog.headerLineHeight || 1.2,
+            letterSpacing: catalog.headerLetterSpacing || 0,
+            opacity: catalog.headerOpacity ?? 1,
+            zIndex: 10,
+            rotation: 0,
+            verticalAlign: 'middle'
+          };
+          addHeaderElement(newEl);
+          updateProjectSettings({ headerMigrated: true });
+          textEl = newEl;
+        }
+
+        setEditingId(textEl.id);
         setEditConfig({
-          id: 'header',
-          text: catalog.headerText || 'Header Text',
-          x: (catalog.marginLeft || 0) + 10,
-          y: (catalog.marginTop || 0),
-          width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
-          height: (catalog.headerHeight || 0),
-          fontSize: catalog.headerFontSize || 12,
-          fontFamily: catalog.headerFontFamily || 'Inter',
-          fontWeight: 'normal',
-          fontStyle: 'normal',
-          align: catalog.headerTextAlignment || 'left',
-          color: catalog.headerColor || '#475569',
-          lineHeight: 1.2,
-          verticalAlign: 'middle'
+          ...textEl,
+          color: textEl.fill || '#000000',
+          align: textEl.textAlign || 'left',
+          verticalAlign: textEl.verticalAlign || 'middle'
         });
         return;
       }
@@ -930,26 +1076,50 @@ const EditorCanvas: React.FC = () => {
       if (catalog.hasFooter) {
         // Double-click on footer background -> Open Media Library
         if (targetName === 'footer-bg' || targetName === 'footer-group') {
-          useStore.getState().setEditorTab('media');
-          return;
+          if (catalog.footerElements.length > 0) {
+            useStore.getState().setEditorTab('media');
+            return;
+          }
         }
 
-        setEditingId('footer');
+        // Try to find an existing text element in the footer
+        let textEl = catalog.footerElements.find(el => el.type === 'text');
+
+        if (!textEl) {
+          // Migration: Create first text element from legacy footerText
+          const newId = `footer-txt-${Date.now()}`;
+          const newEl: any = {
+            id: newId,
+            type: 'text',
+            text: catalog.footerText || 'Footer Text',
+            x: (catalog.marginLeft || 0) + 10,
+            y: footerTopY,
+            width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
+            height: (catalog.footerHeight || 0),
+            fontSize: catalog.footerFontSize || 10,
+            fontFamily: catalog.footerFontFamily || 'Inter',
+            fontWeight: catalog.footerFontWeight || 'normal',
+            fontStyle: catalog.footerFontStyle || 'normal',
+            textAlign: catalog.footerTextAlignment || 'left',
+            fill: catalog.footerColor || '#64748b',
+            lineHeight: catalog.footerLineHeight || 1.2,
+            letterSpacing: catalog.footerLetterSpacing || 0,
+            opacity: catalog.footerOpacity ?? 1,
+            zIndex: 10,
+            rotation: 0,
+            verticalAlign: 'middle'
+          };
+          addFooterElement(newEl);
+          updateProjectSettings({ footerMigrated: true });
+          textEl = newEl;
+        }
+
+        setEditingId(textEl.id);
         setEditConfig({
-          id: 'footer',
-          text: catalog.footerText || 'Footer Text',
-          x: (catalog.marginLeft || 0) + 10,
-          y: footerTopY,
-          width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
-          height: (catalog.footerHeight || 0),
-          fontSize: catalog.footerFontSize || 10,
-          fontFamily: catalog.footerFontFamily || 'Inter',
-          fontWeight: 'normal',
-          fontStyle: 'normal',
-          align: catalog.footerTextAlignment || 'left',
-          color: catalog.footerColor || '#64748b',
-          lineHeight: 1.2,
-          verticalAlign: 'middle'
+          ...textEl,
+          color: textEl.fill || '#000000',
+          align: textEl.textAlign || 'left',
+          verticalAlign: textEl.verticalAlign || 'middle'
         });
         return;
       }
@@ -958,60 +1128,90 @@ const EditorCanvas: React.FC = () => {
     if (e.target === e.target.getStage()) { setEditingId(null); setEditConfig(null); return; }
     const node = e.target;
     // Standard elements
-    const element = currentPage.elements.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name());
+    const element = currentPage.elements.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name()) ||
+      catalog.headerElements?.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name()) ||
+      catalog.footerElements?.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name());
     if (element && element.type === 'text' && !element.locked) {
       pushHistory();
       setEditingId(element.id);
-      setEditConfig({ id: element.id, text: element.text || '', x: element.x, y: element.y, width: element.width, height: element.height, rotation: element.rotation || 0, fontSize: element.fontSize, fontFamily: element.fontFamily, fontWeight: element.fontWeight, fontStyle: element.fontStyle, align: element.textAlign || 'left', color: element.fill || '#000000' });
+      setEditConfig({
+        id: element.id,
+        text: element.text || '',
+        x: element.x,
+        y: element.y,
+        width: element.width,
+        height: element.height,
+        rotation: element.rotation || 0,
+        fontSize: element.fontSize,
+        fontFamily: element.fontFamily,
+        fontWeight: element.fontWeight,
+        fontStyle: element.fontStyle,
+        align: element.textAlign || 'left',
+        color: element.fill || '#000000',
+        lineHeight: element.lineHeight || 1.2,
+        letterSpacing: element.letterSpacing || 0,
+        opacity: element.opacity ?? 1,
+        effectStyle: element.effectStyle,
+        effectColor: element.effectColor,
+        effectColor2: element.effectColor2,
+        shadowBlur: element.shadowBlur,
+        shadowOpacity: element.shadowOpacity,
+        shadowOffsetX: element.shadowOffsetX,
+        shadowOffsetY: element.shadowOffsetY,
+        textStrokeWidth: element.textStrokeWidth,
+        effectSpread: element.effectSpread,
+        effectRoundness: element.effectRoundness,
+        verticalAlign: element.verticalAlign || 'top'
+      });
     } else { setEditingId(null); setEditConfig(null); }
   }, [activeTool, currentPage?.elements, pushHistory, catalog, zoom]);
 
   useEffect(() => {
     if (editingId && currentPage) {
-      // Handle special IDs first
-      if (editingId === 'header') {
-        setEditConfig((prev: any) => prev ? ({
-          ...prev,
-          text: catalog.headerText || '',
-          fontSize: catalog.headerFontSize || 12,
-          fontFamily: catalog.headerFontFamily || 'Inter',
-          fontWeight: catalog.headerFontWeight || 'bold',
-          fontStyle: catalog.headerFontStyle || 'normal',
-          textDecoration: catalog.headerTextDecoration || 'none',
-          align: catalog.headerTextAlignment || 'left',
-          color: catalog.headerColor || '#475569'
-        }) : null);
-        return;
-      }
-      if (editingId === 'footer') {
-        setEditConfig((prev: any) => prev ? ({
-          ...prev,
-          text: catalog.footerText || '',
-          fontSize: catalog.footerFontSize || 10,
-          fontFamily: catalog.footerFontFamily || 'Inter',
-          fontWeight: catalog.footerFontWeight || 'normal',
-          fontStyle: catalog.footerFontStyle || 'normal',
-          textDecoration: catalog.footerTextDecoration || 'none',
-          align: catalog.footerTextAlignment || 'left',
-          color: catalog.footerColor || '#64748b'
-        }) : null);
-        return;
-      }
-
-      const el = currentPage.elements.find(e => e.id === editingId);
-      if (el) setEditConfig((prev: any) => prev ? { ...prev, color: el.fill || '#000000', fontSize: el.fontSize, fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal', fontFamily: el.fontFamily, align: el.textAlign || 'left', text: el.text || '', textDecoration: el.textDecoration || 'none' } : null);
+      const el = currentPage.elements.find(e => e.id === editingId) ||
+        catalog.headerElements?.find(e => e.id === editingId) ||
+        catalog.footerElements?.find(e => e.id === editingId);
+      if (el) setEditConfig((prev: any) => prev ? {
+        ...prev,
+        color: el.fill || '#000000',
+        fontSize: el.fontSize,
+        fontWeight: el.fontWeight || 'normal',
+        fontStyle: el.fontStyle || 'normal',
+        fontFamily: el.fontFamily,
+        align: el.textAlign || 'left',
+        text: el.text || '',
+        textDecoration: el.textDecoration || 'none',
+        lineHeight: el.lineHeight || 1.2,
+        letterSpacing: el.letterSpacing || 0,
+        opacity: el.opacity ?? 1,
+        effectStyle: el.effectStyle,
+        effectColor: el.effectColor,
+        effectColor2: el.effectColor2,
+        shadowBlur: el.shadowBlur,
+        shadowOpacity: el.shadowOpacity,
+        shadowOffsetX: el.shadowOffsetX,
+        shadowOffsetY: el.shadowOffsetY,
+        textStrokeWidth: el.textStrokeWidth,
+        effectSpread: el.effectSpread,
+        effectRoundness: el.effectRoundness
+      } : null);
     }
   }, [
     currentPageIndex, editingId, currentPage?.elements,
-    catalog.headerText, catalog.headerFontSize, catalog.headerFontFamily, catalog.headerFontWeight, catalog.headerFontStyle, catalog.headerTextDecoration, catalog.headerTextAlignment, catalog.headerColor,
-    catalog.footerText, catalog.footerFontSize, catalog.footerFontFamily, catalog.footerFontWeight, catalog.footerFontStyle, catalog.footerTextDecoration, catalog.footerTextAlignment, catalog.footerColor
+    catalog.headerElements, catalog.footerElements
   ]);
 
-  const selectedTextElement = useMemo(() => {
+  const selectedElement = useMemo(() => {
     if (selectedElementIds.length !== 1) return null;
-    const el = currentPage?.elements.find(e => e.id === selectedElementIds[0]);
-    return el?.type === 'text' ? el : null;
-  }, [selectedElementIds, currentPage?.elements]);
+    const id = selectedElementIds[0];
+    return currentPage?.elements.find(e => e.id === id) ||
+      catalog.headerElements?.find(e => e.id === id) ||
+      catalog.footerElements?.find(e => e.id === id);
+  }, [selectedElementIds, currentPage?.elements, catalog.headerElements, catalog.footerElements]);
+
+  const selectedTextElement = useMemo(() => {
+    return selectedElement?.type === 'text' ? selectedElement : null;
+  }, [selectedElement]);
 
   if (!currentPage) return null;
   const snapTarget = dragOverTargetId ? currentPage.elements.find(el => el.id === dragOverTargetId) : null;
@@ -1090,6 +1290,37 @@ const EditorCanvas: React.FC = () => {
                     }`}
                   style={{ width: curW * zoom, height: curH * zoom }}
                 >
+                  {/* Floating Labels (Outside Stage) */}
+                  {page.type === 'interior' && (
+                    <div className="absolute inset-0 pointer-events-none z-[50]">
+                      {catalog.hasHeader && (
+                        <div
+                          className="absolute bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-lg transition-all"
+                          style={{
+                            left: -5 * zoom,
+                            top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
+                            transform: 'translate(-100%, -50%)',
+                            opacity: isActive ? 1 : 0.4
+                          }}
+                        >
+                          Header
+                        </div>
+                      )}
+                      {catalog.hasFooter && (
+                        <div
+                          className="absolute bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-lg transition-all"
+                          style={{
+                            left: -5 * zoom,
+                            top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
+                            transform: 'translate(-100%, -50%)',
+                            opacity: isActive ? 1 : 0.4
+                          }}
+                        >
+                          Footer
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Drop indicator (active page only) */}
                   {isActive && isDragOver && (
                     <div className="absolute inset-0 z-[100] border-4 border-dashed border-indigo-500/30 pointer-events-none flex items-center justify-center bg-indigo-600/5 backdrop-blur-[1px]">
@@ -1138,66 +1369,108 @@ const EditorCanvas: React.FC = () => {
                   {/* Text editing overlay (active page only) */}
                   {isActive && editConfig && (
                     <div
-                      className="absolute z-[1000] bg-transparent outline-none"
+                      className="absolute z-[3000]"
                       style={{
                         left: editConfig.x * zoom,
                         top: editConfig.y * zoom,
                         width: editConfig.width * zoom,
                         height: editConfig.height * zoom,
                         transform: `rotate(${editConfig.rotation || 0}deg)`,
+                        transformOrigin: 'top left',
+                        pointerEvents: 'auto',
                       }}
                     >
-                      {/* Header/Footer Label Badge */}
-                      {(editConfig.id === 'header' || editConfig.id === 'footer') && (
-                        <div className="absolute -top-6 left-0 bg-indigo-600 text-white text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-t-md shadow-sm pointer-events-none select-none">
-                          {editConfig.id === 'header' ? 'Header' : 'Footer'}
-                        </div>
-                      )}
-
                       <div
                         contentEditable suppressContentEditableWarning
-                        className={`w-full h-full p-0 outline-none overflow-hidden [&_span]:bg-transparent [&_span]:text-inherit [&_span]:[-webkit-text-fill-color:inherit] ${editConfig.verticalAlign === 'middle' ? 'flex flex-col justify-center' : ''}`}
+                        className="w-full h-full p-0 outline-none overflow-visible selection:bg-indigo-200/50"
                         style={{
                           fontSize: editConfig.fontSize * zoom,
                           fontFamily: editConfig.fontFamily || 'Inter',
                           fontWeight: editConfig.fontWeight,
                           fontStyle: editConfig.fontStyle,
                           textAlign: editConfig.align,
-                          lineHeight: 1.15,
-                          color: editConfig.color?.includes('gradient') ? '#475569' : editConfig.color,
-                          caretColor: '#4f46e5',
+                          lineHeight: editConfig.lineHeight || 1.2,
+                          letterSpacing: (editConfig.letterSpacing || 0) * zoom,
+                          opacity: editConfig.opacity ?? 1,
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: editConfig.verticalAlign === 'middle' ? 'center' : (editConfig.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start'),
+                          ...(editConfig.color?.includes('gradient') ? {
+                            background: editConfig.color,
+                            WebkitBackgroundClip: 'text',
+                            backgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            color: 'transparent',
+                          } : {
+                            color: editConfig.color
+                          }),
+                          ...(() => {
+                            if (!editConfig.effectStyle || editConfig.effectStyle === 'none') return {};
+                            const color = editConfig.effectColor || '#000000';
+                            const color2 = editConfig.effectColor2 || '#00fff9';
+                            const offX = (editConfig.shadowOffsetX || 0) * zoom;
+                            const offY = (editConfig.shadowOffsetY || 0) * zoom;
+                            const blur = (editConfig.shadowBlur || 0) * zoom;
+                            const opacity = (editConfig.shadowOpacity !== undefined && editConfig.shadowOpacity !== null) ? editConfig.shadowOpacity : 0.5;
+                            const thickness = (editConfig.textStrokeWidth || 1) * zoom;
+
+                            switch (editConfig.effectStyle) {
+                              case 'hollow': return { WebkitTextStroke: `${thickness}px ${color}`, color: 'transparent', WebkitTextFillColor: 'transparent' };
+                              case 'outline': return { WebkitTextStroke: `${thickness}px ${color}` };
+                              case 'shadow': return { textShadow: `${offX}px ${offY}px ${blur}px ${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}` };
+                              case 'lift': return { textShadow: `0px ${4 * zoom}px ${blur}px rgba(0,0,0,${opacity})` };
+                              case 'neon': return { color: color, textShadow: opacity > 0 ? `0 0 ${5 * zoom * opacity}px ${color}, 0 0 ${10 * zoom * opacity}px ${color}, 0 0 ${20 * zoom * opacity}px ${color}` : 'none' };
+                              case 'glitch': return { textShadow: `${offX}px ${offY}px 0 ${color}, ${-offX}px ${-offY}px 0 ${color2}` };
+                              case 'echo': return { textShadow: `${offX}px ${offY}px 0px ${color}aa, ${offX * 2}px ${offY * 2}px 0px ${color}66, ${offX * 3}px ${offY * 3}px 0px ${color}33` };
+                              case 'splice': return { WebkitTextStroke: `${thickness}px ${color}`, textShadow: `${offX}px ${offY}px 0px ${color}88` };
+                              case 'background': return { backgroundColor: `${color}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`, display: 'inline-block' };
+                              default: return {};
+                            }
+                          })(),
+                          caretColor: '#8b3dff',
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
-                          minHeight: editConfig.height * zoom,
-                          padding: '0 2px'
+                          padding: `${5 * zoom}px`, // Match Konva Text padding
+                          minWidth: 20 * zoom,
+                          minHeight: 20 * zoom,
+                          boxSizing: 'border-box',
                         }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && e.shiftKey) {
-                            // Shift+Enter usually adds a newline, which is fine
-                            e.stopPropagation();
-                          } else if (e.key === 'Enter') {
-                            // Regular Enter should also just work in contentEditable, 
-                            // but we want to ensure height updates
-                            e.stopPropagation();
+                        onBlur={() => {
+                          const html = textInputRef.current?.innerHTML || '';
+                          if (catalog.headerElements.some(el => el.id === editConfig.id)) {
+                            updateHeaderElement(editConfig.id, { text: html });
+                          } else if (catalog.footerElements.some(el => el.id === editConfig.id)) {
+                            updateFooterElement(editConfig.id, { text: html });
                           } else {
-                            e.stopPropagation();
+                            updateElement(currentPageIndex, editConfig.id, { text: html });
                           }
+                          saveContent(true);
                         }}
-                        onBlur={() => saveContent(true)}
-                        onMouseUp={() => saveContent(false)}
                         onInput={(e) => {
                           const target = e.currentTarget as HTMLElement;
-                          const text = target.innerText.replace(/<[^>]*>/g, '');
+                          const html = target.innerHTML;
 
-                          // Auto-height calculation with a small buffer for smooth expansion on Enter
-                          const newHeight = Math.max(20, (target.scrollHeight + 2) / zoom);
+                          const isHeader = catalog.headerElements.some(el => el.id === editConfig.id);
+                          const isFooter = catalog.footerElements.some(el => el.id === editConfig.id);
 
-                          if (editConfig.id && (text !== editConfig.text || Math.abs(newHeight - editConfig.height) > 1)) {
-                            const updates: any = { text: text, height: newHeight };
-                            if (editConfig.id === 'header') updateProjectSettings({ headerText: text });
-                            else if (editConfig.id === 'footer') updateProjectSettings({ footerText: text });
-                            else {
-                              setEditConfig(prev => prev ? ({ ...prev, ...updates }) : null);
+                          if (editConfig.id) {
+                            const updates: any = { text: html };
+
+                            // Only auto-resize height for standard page elements
+                            if (!isHeader && !isFooter) {
+                              const newHeight = Math.max(20, target.scrollHeight / zoom);
+                              if (Math.abs(newHeight - editConfig.height) > 1) {
+                                updates.height = newHeight;
+                              }
+                            }
+
+                            setEditConfig(prev => prev ? ({ ...prev, ...updates }) : null);
+
+                            if (isHeader) {
+                              updateHeaderElement(editConfig.id, updates);
+                            } else if (isFooter) {
+                              updateFooterElement(editConfig.id, updates);
+                            } else {
                               updateElement(currentPageIndex, editConfig.id, updates);
                             }
                           }
@@ -1205,13 +1478,8 @@ const EditorCanvas: React.FC = () => {
                         ref={(el) => {
                           textInputRef.current = el;
                           if (el && editConfig) {
-                            const isFocused = document.activeElement === el;
-                            // Only sync text when NOT focused (prevents cursor jumping while typing)
-                            if (!isFocused && el.innerText !== editConfig.text) {
-                              el.innerText = editConfig.text;
-                            }
-                            // Auto-focus and place cursor at end
-                            if (!isFocused && editConfig.id) {
+                            if (document.activeElement !== el) {
+                              el.innerHTML = editConfig.text;
                               el.focus();
                               // Move cursor to end
                               const range = document.createRange();
@@ -1230,64 +1498,42 @@ const EditorCanvas: React.FC = () => {
                   )}
 
                   {/* Floating text toolbar */}
-                  {isActive && (editingId === 'header' || editingId === 'footer' || selectedTextElement) && (
+                  {isActive && (editingId || selectedTextElement) && (
                     <FloatingTextToolbar
-                      element={selectedTextElement || (editingId === 'header' ? {
-                        id: 'header',
+                      element={(editingId && editConfig ? {
+                        ...editConfig,
                         type: 'text',
-                        text: catalog.headerText || '',
-                        x: editConfig?.x || 0,
-                        y: editConfig?.y || 0,
-                        width: editConfig?.width || 100,
-                        height: editConfig?.height || 20,
-                        fontSize: catalog.headerFontSize,
-                        fontFamily: catalog.headerFontFamily,
-                        fontWeight: catalog.headerFontWeight,
-                        fontStyle: catalog.headerFontStyle,
-                        textDecoration: catalog.headerTextDecoration,
-                        textAlign: catalog.headerTextAlignment,
-                        fill: catalog.headerColor
-                      } : {
-                        id: 'footer',
-                        type: 'text',
-                        text: catalog.footerText || '',
-                        x: editConfig?.x || 0,
-                        y: editConfig?.y || 0,
-                        width: editConfig?.width || 100,
-                        height: editConfig?.height || 20,
-                        fontSize: catalog.footerFontSize,
-                        fontFamily: catalog.footerFontFamily,
-                        fontWeight: catalog.footerFontWeight,
-                        fontStyle: catalog.footerFontStyle,
-                        textDecoration: catalog.footerTextDecoration,
-                        textAlign: catalog.footerTextAlignment,
-                        fill: catalog.footerColor
-                      }) as any}
+                        fill: editConfig.color,
+                        textAlign: editConfig.align,
+                      } : selectedTextElement) as any}
                       onUpdate={(updates) => {
-                        if (editingId === 'header') {
-                          const mappedUpdates: any = {};
-                          if (updates.text !== undefined) mappedUpdates.headerText = updates.text;
-                          if (updates.fontSize !== undefined) mappedUpdates.headerFontSize = updates.fontSize;
-                          if (updates.fontFamily !== undefined) mappedUpdates.headerFontFamily = updates.fontFamily;
-                          if (updates.fontWeight !== undefined) mappedUpdates.headerFontWeight = updates.fontWeight;
-                          if (updates.fontStyle !== undefined) mappedUpdates.headerFontStyle = updates.fontStyle;
-                          if (updates.textDecoration !== undefined) mappedUpdates.headerTextDecoration = updates.textDecoration;
-                          if (updates.textAlign !== undefined) mappedUpdates.headerTextAlignment = updates.textAlign;
-                          if (updates.fill !== undefined) mappedUpdates.headerColor = updates.fill;
-                          updateProjectSettings(mappedUpdates);
-                        } else if (editingId === 'footer') {
-                          const mappedUpdates: any = {};
-                          if (updates.text !== undefined) mappedUpdates.footerText = updates.text;
-                          if (updates.fontSize !== undefined) mappedUpdates.footerFontSize = updates.fontSize;
-                          if (updates.fontFamily !== undefined) mappedUpdates.footerFontFamily = updates.fontFamily;
-                          if (updates.fontWeight !== undefined) mappedUpdates.footerFontWeight = updates.fontWeight;
-                          if (updates.fontStyle !== undefined) mappedUpdates.footerFontStyle = updates.fontStyle;
-                          if (updates.textDecoration !== undefined) mappedUpdates.footerTextDecoration = updates.textDecoration;
-                          if (updates.textAlign !== undefined) mappedUpdates.footerTextAlignment = updates.textAlign;
-                          if (updates.fill !== undefined) mappedUpdates.footerColor = updates.fill;
-                          updateProjectSettings(mappedUpdates);
+                        if (editingId) {
+                          // 1. Update local editing state immediately for instant feedback
+                          const mappedForEdit: any = { ...updates };
+                          if (updates.fill !== undefined) mappedForEdit.color = updates.fill;
+                          if (updates.textAlign !== undefined) mappedForEdit.align = updates.textAlign;
+                          setEditConfig(prev => prev ? { ...prev, ...mappedForEdit } : null);
+
+                          if (updates.text !== undefined && textInputRef.current) {
+                            textInputRef.current.innerHTML = updates.text;
+                          }
+
+                          // 2. Update store
+                          if (catalog.headerElements.some(el => el.id === editingId)) {
+                            updateHeaderElement(editingId, updates);
+                          } else if (catalog.footerElements.some(el => el.id === editingId)) {
+                            updateFooterElement(editingId, updates);
+                          } else {
+                            updateElement(currentPageIndex, editingId, updates);
+                          }
                         } else if (selectedTextElement) {
-                          updateElement(currentPageIndex, selectedTextElement.id, updates);
+                          if (catalog.headerElements.some(el => el.id === selectedTextElement.id)) {
+                            updateHeaderElement(selectedTextElement.id, updates);
+                          } else if (catalog.footerElements.some(el => el.id === selectedTextElement.id)) {
+                            updateFooterElement(selectedTextElement.id, updates);
+                          } else {
+                            updateElement(currentPageIndex, selectedTextElement.id, updates);
+                          }
                         }
                       }}
                       zoom={zoom}
@@ -1295,17 +1541,25 @@ const EditorCanvas: React.FC = () => {
                   )}
 
                   {/* Floating element toolbar */}
-                  {isActive && !editConfig && selectedElementIds.length > 0 &&
-                    currentPage.elements.find(el => el.id === selectedElementIds[0])?.type !== 'text' && (
-                      <FloatingToolbar
-                        onOpenMenu={() => { }}
-                        currentFill={currentPage.elements.find(el => el.id === selectedElementIds[0])?.fill || '#cbd5e1'}
-                        currentStroke={currentPage.elements.find(el => el.id === selectedElementIds[0])?.stroke || 'transparent'}
-                        currentOpacity={currentPage.elements.find(el => el.id === selectedElementIds[0])?.opacity}
-                        onFillChange={(color) => selectedElementIds.forEach(id => updateElement(currentPageIndex, id, { fill: color }))}
-                        onStrokeChange={(color) => selectedElementIds.forEach(id => updateElement(currentPageIndex, id, { stroke: color, strokeWidth: Math.max(currentPage.elements.find(el => el.id === selectedElementIds[0])?.strokeWidth || 0, 2) }))}
-                      />
-                    )
+                  {isActive && !editConfig && selectedElement && selectedElement.type !== 'text' && (
+                    <FloatingToolbar
+                      onOpenMenu={() => { }}
+                      currentFill={selectedElement.fill || '#cbd5e1'}
+                      currentStroke={selectedElement.stroke || 'transparent'}
+                      currentOpacity={selectedElement.opacity}
+                      onFillChange={(color) => {
+                        if (catalog.headerElements.some(el => el.id === selectedElement.id)) updateHeaderElement(selectedElement.id, { fill: color });
+                        else if (catalog.footerElements.some(el => el.id === selectedElement.id)) updateFooterElement(selectedElement.id, { fill: color });
+                        else updateElement(currentPageIndex, selectedElement.id, { fill: color });
+                      }}
+                      onStrokeChange={(color) => {
+                        const updates = { stroke: color, strokeWidth: Math.max(selectedElement.strokeWidth || 0, 2) };
+                        if (catalog.headerElements.some(el => el.id === selectedElement.id)) updateHeaderElement(selectedElement.id, updates);
+                        else if (catalog.footerElements.some(el => el.id === selectedElement.id)) updateFooterElement(selectedElement.id, updates);
+                        else updateElement(currentPageIndex, selectedElement.id, updates);
+                      }}
+                    />
+                  )
                   }
                 </div>
               </div>
@@ -1392,12 +1646,6 @@ const EditorCanvas: React.FC = () => {
               <Settings size={12} />
             </div>
             Page Settings
-          </button>
-          <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">
-            <div className="w-6 h-6 rounded-md bg-slate-100 flex items-center justify-center">
-              <Plus size={12} />
-            </div>
-            Comments
           </button>
         </div>
 
