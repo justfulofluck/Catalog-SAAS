@@ -18,62 +18,7 @@ export const CURRENCIES = [
   { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
 ];
 
-export const INITIAL_PRODUCTS: any[] = [
-  {
-    id: 'p1',
-    name: 'Modern Nordic Chair',
-    sku: 'CHR-001',
-    price: 129.0,
-    currency: '$',
-    description: 'Minimalist wooden chair with ergonomic design.',
-    image: 'https://images.unsplash.com/photo-1592078615290-033ee584e267?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'p2',
-    name: 'Minimalist Desk Lamp',
-    sku: 'LMP-202',
-    price: 45.5,
-    currency: '$',
-    description: 'Adjustable LED lamp with warm light settings.',
-    image: 'https://images.unsplash.com/photo-1534073828943-f801091bb18c?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'p3',
-    name: 'Ceramic Vase Set',
-    sku: 'VSE-99',
-    price: 89.0,
-    currency: '$',
-    description: 'Handcrafted matte finish ceramic vases.',
-    image: 'https://images.unsplash.com/photo-1581783898377-1c85bf937427?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'p4',
-    name: 'Velvet Sofa Green',
-    sku: 'SOF-404',
-    price: 899.0,
-    currency: '$',
-    description: 'Luxurious green velvet sofa with gold legs.',
-    image: 'https://images.unsplash.com/photo-1555041469-a586c61ea9bc?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'p5',
-    name: 'Oak Dining Table',
-    sku: 'TBL-505',
-    price: 550.0,
-    currency: '$',
-    description: 'Solid oak dining table for 6 people.',
-    image: 'https://images.unsplash.com/photo-1577146333195-6604ac3585e7?auto=format&fit=crop&q=80&w=400'
-  },
-  {
-    id: 'p6',
-    name: 'Industrial Bookshelf',
-    sku: 'BSH-606',
-    price: 210.0,
-    currency: '$',
-    description: 'Steel and wood industrial style bookshelf.',
-    image: 'https://images.unsplash.com/photo-1594620302200-9a762244a156?auto=format&fit=crop&q=80&w=400'
-  }
-];
+export const INITIAL_PRODUCTS: any[] = [];
 
 import { ALL_FONTS, CATEGORIZED_FONTS } from './fonts';
 

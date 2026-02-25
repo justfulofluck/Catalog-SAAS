@@ -10,11 +10,12 @@ class ThemeViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 class CatalogViewSet(viewsets.ModelViewSet):
+    queryset = Catalog.objects.none()
     serializer_class = CatalogSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Catalog.objects.all()
+        return Catalog.objects.filter(owner=self.request.user)
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -22,8 +23,7 @@ class CatalogViewSet(viewsets.ModelViewSet):
         return CatalogSerializer
 
     def perform_create(self, serializer):
-        user = self.request.user if self.request.user.is_authenticated else None
-        serializer.save(owner=user)
+        serializer.save(owner=self.request.user)
 
     @action(detail=True, methods=['post'])
     def save_page(self, request, pk=None):

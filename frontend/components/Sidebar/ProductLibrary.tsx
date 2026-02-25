@@ -91,9 +91,20 @@ const ProductLibrary: React.FC = () => {
   };
 
   const handleDragStart = (e: React.DragEvent, product: Product) => {
+    const getProductImage = (p: Product) => {
+      if (p.image) return p.image;
+      if (p.customFields) {
+        const firstImg = Object.values(p.customFields).find(
+          val => typeof val === 'string' && (val.startsWith('/media') || val.startsWith('http'))
+        );
+        if (firstImg) return firstImg as string;
+      }
+      return '';
+    };
+
     const dragData = {
       type: 'product',
-      url: product.image,
+      url: getProductImage(product),
       name: product.name,
       productId: product.id
     };
@@ -205,7 +216,7 @@ const ProductLibrary: React.FC = () => {
                 <Package size={20} />
               </div>
               <p className={`text-[9px] font-black uppercase tracking-widest leading-relaxed ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
-                No assets found
+                No products found
               </p>
             </div>
           ) : (
@@ -229,7 +240,12 @@ const ProductLibrary: React.FC = () => {
                   </div>
 
                   <div className={`w-10 h-10 rounded-xl overflow-hidden shrink-0 border shadow-sm group-hover:scale-105 transition-transform duration-500 ${uiTheme === 'dark' ? 'bg-slate-700 border-slate-700' : 'bg-white border-slate-100'}`}>
-                    <img src={product.image} alt={product.name} className="w-full h-full object-cover" />
+                    {(() => {
+                      const imgSrc = product.image || (product.customFields && Object.values(product.customFields).find(
+                        val => typeof val === 'string' && (val.startsWith('/media') || val.startsWith('http'))
+                      )) || '';
+                      return <img src={imgSrc as string} alt={product.name} className="w-full h-full object-cover" />;
+                    })()}
                   </div>
 
                   <div className="flex-1 min-w-0">

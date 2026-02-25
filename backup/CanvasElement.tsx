@@ -66,84 +66,12 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   }, [element.type, element.src, linkedProduct]);
   const [image] = useImage(imgSrc || '', 'anonymous');
 
-  // Check if text contains HTML tags that Konva can't handle natively
-  // We allow simple non-styled tags to be handled natively (stripped)
-  const hasMixedStyles = element.type === 'text' && element.text && (
-    /<span\s+style=|<b\s+style=|<i\s+style=|<u\s+style=|style="/.test(element.text) ||
-    /color:|font-size:|font-family:/.test(element.text)
-  );
-  const hasEffects = element.type === 'text' && element.effectStyle && element.effectStyle !== 'none';
+  // Check if text contains HTML tags (rich text) or if a global effect is applied
+  const isRichText = (element.type === 'text' && element.text && /<[^>]+>/.test(element.text)) ||
+    (element.type === 'text' && element.effectStyle && element.effectStyle !== 'none') ||
+    (element.type === 'text' && element.fill?.includes('gradient'));
 
-  // Gradients on text are handled natively by Konva now
-  // Global effects should NOT trigger SVG fallback to preserve custom fonts.
-  // SVG fallback is now ONLY for mixed HTML styles (Rich Text).
-  const isRichText = hasMixedStyles || (element.type === 'shape' && element.fill?.includes('gradient'));
-  const useSvgFallback = isRichText && element.type === 'text' && (!element.effectStyle || element.effectStyle === 'none');
-
-  const getNativeEffectProps = () => {
-    if (!hasEffects) {
-      return {
-        shadowEnabled: false,
-        shadowBlur: 0,
-        shadowOffsetX: 0,
-        shadowOffsetY: 0,
-        shadowOpacity: 0,
-        strokeEnabled: false,
-        strokeWidth: 0,
-        fill: element.fill || '#000000'
-      };
-    }
-    const color = element.effectColor || '#000000';
-    const color2 = element.effectColor2 || '#00fff9';
-    const opacity = (element.shadowOpacity !== undefined && element.shadowOpacity !== null) ? element.shadowOpacity : 0.5;
-    const blur = element.shadowBlur || 0;
-    const offX = element.shadowOffsetX || 0;
-    const offY = element.shadowOffsetY || 0;
-    const thickness = element.textStrokeWidth || 1;
-
-    switch (element.effectStyle) {
-      case 'shadow':
-        return {
-          shadowEnabled: true,
-          shadowColor: color,
-          shadowBlur: blur,
-          shadowOffsetX: offX,
-          shadowOffsetY: offY,
-          shadowOpacity: opacity
-        };
-      case 'lift':
-        return {
-          shadowEnabled: true,
-          shadowColor: 'rgba(0,0,0,0.5)',
-          shadowBlur: blur,
-          shadowOffsetX: 0,
-          shadowOffsetY: 4,
-          shadowOpacity: opacity
-        };
-      case 'hollow':
-        return {
-          strokeEnabled: true,
-          stroke: color,
-          strokeWidth: thickness,
-          fill: 'transparent'
-        };
-      case 'outline':
-        return {
-          strokeEnabled: true,
-          stroke: color,
-          strokeWidth: thickness,
-          fill: element.fill
-        };
-      default:
-        return {};
-    }
-  };
-
-  const nativeEffectProps = useMemo(getNativeEffectProps, [
-    element.effectStyle, element.effectColor, element.shadowBlur,
-    element.shadowOffsetX, element.shadowOffsetY, element.shadowOpacity,
-    element.textStrokeWidth, element.fill
-  ]);
+  const useSvgFallback = isRichText || (element.type === 'shape' && element.fill?.includes('gradient'));
 
   const parseGradientProps = (str: string, w: number, h: number, shapeType?: string) => {
     if (!str || !str.includes('linear-gradient')) return { fill: str };
@@ -199,7 +127,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   };
 
   const gradientProps = useMemo(() =>
-    (element.type === 'shape' || element.type === 'text') ? parseGradientProps(element.fill || '', element.width, element.height, element.type === 'shape' ? element.shapeType : undefined) : {}
+    element.type === 'shape' ? parseGradientProps(element.fill || '', element.width, element.height, element.shapeType) : {}
     , [element.fill, element.width, element.height, element.type, element.shapeType]);
 
   // Render rich text/gradients as SVG for proper display on canvas
@@ -211,9 +139,6 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
         .replace(/&nbsp;/g, '&#160;')
         .replace(/<br>/g, '<br/>')
         .replace(/&(?!(amp|lt|gt|quot|apos|#[0-9]+);)/g, '&amp;') : '';
-
-      const fontName = (element.fontFamily || 'Inter').replace(/\s+/g, '+');
-      const fontImport = `@import url('https://fonts.googleapis.com/css2?family=${fontName}&display=swap');`;
 
       const getEffectStyles = () => {
         if (!element.effectStyle || element.effectStyle === 'none') return '';
@@ -279,13 +204,12 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
             <div xmlns="http://www.w3.org/1999/xhtml" style="
               width: 100%;
               height: 100%;
-               display: flex;
-               align-items: ${element.verticalAlign === 'middle' ? 'center' : (element.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start')};
-               justify-content: center;
-               box-sizing: border-box;
-               ${element.type === 'shape' ? `${backgroundStyle} ${clipPathStyle}` : ''}
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              box-sizing: border-box;
+              ${element.type === 'shape' ? `${backgroundStyle} ${clipPathStyle}` : ''}
             ">
-              <style>${fontImport}</style>
               ${element.type === 'text' ? `
                 <div style="
                   font-size: ${element.fontSize || 16}px;
@@ -294,13 +218,9 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
                   font-style: ${element.fontStyle || 'normal'};
                   text-decoration: ${element.textDecoration || 'none'};
                   text-align: ${element.textAlign || 'left'};
-                  line-height: ${element.lineHeight || 1.2};
-                  letter-spacing: ${element.letterSpacing || 0}px;
-                  perspective: 1000px;
+                  line-height: 1.15;
                   ${isGradient ? `${backgroundStyle} -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; color: transparent;` : `color: ${element.fill || '#000000'};`}
                   width: 100%;
-                  padding: 5px;
-                  box-sizing: border-box;
                   ${getEffectStyles()}
                 ">
                   ${safeText}
@@ -333,8 +253,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     element.effectStyle, element.effectColor, element.effectColor2, element.textStrokeWidth,
     element.shadowBlur, element.shadowOpacity, element.shadowOffsetX, element.shadowOffsetY,
     element.effectSpread, element.effectRoundness, element.type, element.shapeType,
-    element.textDecoration, useSvgFallback,
-    element.lineHeight, element.letterSpacing, element.opacity, element.verticalAlign
+    element.textDecoration, useSvgFallback
   ]);
 
   useEffect(() => {
@@ -393,28 +312,6 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     }
   }, [isSelected, element.locked, element.fill]);
 
-  // Auto-resize text box height based on actual rendered text content
-  useEffect(() => {
-    if (element.type === 'text' && shapeRef.current) {
-      // Small timeout to allow Konva to render and calculate bounds
-      const timer = setTimeout(() => {
-        const node = shapeRef.current;
-        if (node) {
-          // getClientRect returns the accurate bounding box including all effects and actual text wrap
-          const rect = node.getClientRect({ skipTransform: true });
-          if (rect.height && Math.abs(rect.height - (element.height || 0)) > 2) {
-            onChange({ height: rect.height });
-          }
-        }
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [
-    element.text, element.fontSize, element.fontFamily, element.fontWeight,
-    element.fontStyle, element.lineHeight, element.letterSpacing,
-    element.width, element.effectStyle
-  ]);
-
   const handleTransform = (e: any) => {
     const node = shapeRef.current;
     if (!node) return;
@@ -425,32 +322,37 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     const scaleX = node.scaleX();
     const scaleY = node.scaleY();
 
-    if (element.type === 'text' && !useSvgFallback) {
+    if (element.type === 'text') {
       const isCorner = ['top-left', 'top-right', 'bottom-left', 'bottom-right'].includes(anchor);
       const isSide = ['middle-left', 'middle-right'].includes(anchor);
       const isVertical = ['top-center', 'bottom-center'].includes(anchor);
 
       if (isSide) {
+        // Change width only (wrapping)
         node.width(Math.max(20, node.width() * scaleX));
         node.scaleX(1);
       } else if (isVertical) {
-        // Vertical scaling for text is disabled in enabledAnchors, but just in case:
+        // Change height only (padding/manual control)
+        node.height(Math.max(10, node.height() * scaleY));
         node.scaleY(1);
       } else if (isCorner) {
-        // Visual text scaling while dragging corners
-        const ratio = Math.max(Math.abs(scaleX), Math.abs(scaleY));
-        const currentFontSize = node.fontSize ? node.fontSize() : element.fontSize || 16;
-        const newFontSize = Math.max(1, currentFontSize * ratio);
+        // Corner resizing: Scale width, height AND font size proportionally
+        // We use scaleX as the uniform scale factor
+        const currentFontSize = node.fontSize() || element.fontSize || 16;
+        const newFontSize = Math.max(1, currentFontSize * scaleX);
 
         node.width(node.width() * scaleX);
+        node.height(node.height() * scaleX);
+        node.fontSize(newFontSize);
         node.scaleX(1);
         node.scaleY(1);
-
-        // Temporarily apply to node if it's a native Text node (not Group)
-        if (typeof node.fontSize === 'function') {
-          node.fontSize(newFontSize);
-        }
       }
+    } else {
+      // General elements: update width/height and reset scales to 1
+      node.width(Math.max(5, node.width() * scaleX));
+      node.height(Math.max(5, node.height() * scaleY));
+      node.scaleX(1);
+      node.scaleY(1);
     }
 
     const layer = node.getLayer();
@@ -462,41 +364,17 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     const node = shapeRef.current;
     if (!node) return;
 
-    // Bake scales into width/height and reset to 1
-    const finalWidth = node.width() * node.scaleX();
-    const finalHeight = node.height() * node.scaleY();
-
+    // By now handleTransform has already reset scaleX/Y to 1
     const updates: Partial<ICanvasElement> = {
       x: node.x(),
       y: node.y(),
-      width: Math.max(1, finalWidth),
+      width: node.width(),
+      height: node.height(),
       rotation: node.rotation(),
     };
 
-    node.width(finalWidth);
-
-    if (element.type !== 'text') {
-      updates.height = Math.max(1, finalHeight);
-      node.height(finalHeight);
-    }
-
-    node.scaleX(1);
-    node.scaleY(1);
-
     if (element.type === 'text') {
-      const transformer = trRef.current;
-      const anchor = transformer?.getActiveAnchor();
-      const isCorner = ['top-left', 'top-right', 'bottom-left', 'bottom-right'].includes(anchor || '');
-
-      if (isCorner) {
-        // Only update font size if a corner was actually dragged
-        const ratio = Math.max(
-          Math.abs(node.scaleX() === 1 && anchor ? (finalWidth / element.width) : node.scaleX()),
-          Math.abs(node.scaleY() === 1 && anchor ? (finalHeight / (element.height || 10)) : node.scaleY())
-        );
-        const currentFontSize = element.fontSize || 16;
-        updates.fontSize = Math.max(1, currentFontSize * ratio);
-      }
+      updates.fontSize = node.fontSize();
     }
 
     onChange(updates);
@@ -518,7 +396,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     if (isSelected && selectedElementIds.length > 1) {
       selectedElementIds.forEach(id => {
         if (id !== element.id) {
-          const peerNode = stage.findOne(`#${id} `);
+          const peerNode = stage.findOne(`#${id}`);
           if (peerNode) {
             peerNode.setAttr('initialDragPos', { x: peerNode.x(), y: peerNode.y() });
             peerNodes.current.push(peerNode);
@@ -526,7 +404,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
         }
       });
     } else if (element.groupId) {
-      const groupNodes = stage.find(`.${element.groupId} `);
+      const groupNodes = stage.find(`.${element.groupId}`);
       groupNodes.forEach((node: any) => {
         if (node !== e.target) {
           node.setAttr('initialDragPos', { x: node.x(), y: node.y() });
@@ -643,11 +521,11 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   const commonProps = {
     ref: shapeRef,
     id: element.id,
-    name: `${element.id} ${element.groupId || ''}`.trim(),
+    name: element.id,
     x: element.x,
     y: element.y,
     width: element.width,
-    height: element.type === 'text' ? undefined : element.height,
+    height: element.height,
     rotation: element.rotation,
     opacity: element.opacity,
     draggable: !element.locked && activeTool !== 'hand',
@@ -753,7 +631,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
 
     // 2. Calculate Content Height for Dynamic Resizing
     let calcY = textPadding;
-    const lineSpacing = 4;
+    const lineSpacing = 4; // Define lineSpacing here as it's used in calculation
     if (showName) calcY += titleFontSize + lineSpacing;
     if (showSku) calcY += (metaFontSize * 0.8) + lineSpacing;
     if (showPrice) calcY += metaFontSize + lineSpacing + 4;
@@ -768,6 +646,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
 
     // Dynamic Vertical Flow Positioning
     let currentY = textPadding;
+
 
     return (
       <Group {...commonProps}>
@@ -899,103 +778,6 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     );
   };
 
-  const renderTextContent = () => {
-    const baseTextProps = {
-      text: (element.text || '').replace(/<[^>]*>/g, ''),
-      fontSize: element.fontSize,
-      fontFamily: element.fontFamily || 'Inter',
-      fontStyle: `${element.fontWeight || 'normal'} ${element.fontStyle || ''}`.trim(),
-      textDecoration: element.textDecoration || 'none',
-      align: element.textAlign || 'left',
-      verticalAlign: element.verticalAlign || 'top',
-      lineHeight: element.lineHeight !== undefined ? element.lineHeight : 1.2,
-      letterSpacing: element.letterSpacing || 0,
-      padding: 5,
-      width: element.width,
-      height: undefined as unknown as number,
-      wrap: "word" as const,
-      opacity: isEditing ? 0 : (element.opacity ?? 1),
-    };
-
-    const offX = element.shadowOffsetX || 2;
-    const offY = element.shadowOffsetY || 2;
-    const effectColor = element.effectColor || '#000000';
-    const effectColor2 = element.effectColor2 || '#00fff9';
-    const effectOpacity = (element.shadowOpacity !== undefined && element.shadowOpacity !== null) ? element.shadowOpacity : 0.5;
-    const blur = element.shadowBlur || 0;
-    const thickness = element.textStrokeWidth || 1;
-
-    const stylisticKey = `${element.id}-${element.fontFamily}-${element.fontSize}-${element.fontWeight}-${element.fontStyle}`;
-
-    if (element.effectStyle === 'neon') {
-      return (
-        <Group {...commonProps} key={`neon-${stylisticKey}`}>
-          <Text {...baseTextProps} fill={effectColor} shadowColor={effectColor} shadowBlur={blur * 3} shadowOpacity={effectOpacity} listening={false} shadowEnabled={true} />
-          <Text {...baseTextProps} fill={effectColor} shadowColor={effectColor} shadowBlur={blur * 1.5} shadowOpacity={effectOpacity} listening={false} shadowEnabled={true} />
-          <Text {...baseTextProps} fill={effectColor} shadowColor={effectColor} shadowBlur={blur * 0.5} shadowOpacity={effectOpacity} shadowEnabled={true} />
-        </Group>
-      );
-    }
-
-    if (element.effectStyle === 'glitch') {
-      return (
-        <Group {...commonProps} key={`glitch-${stylisticKey}`}>
-          <Text {...baseTextProps} x={-offX} fill={effectColor} listening={false} shadowEnabled={false} strokeEnabled={false} />
-          <Text {...baseTextProps} x={offX} fill={effectColor2} listening={false} shadowEnabled={false} strokeEnabled={false} />
-          <Text {...baseTextProps} x={0} fill={element.fill} strokeEnabled={false} shadowEnabled={false} />
-        </Group>
-      );
-    }
-
-    if (element.effectStyle === 'echo') {
-      return (
-        <Group {...commonProps} key={`echo-${stylisticKey}`}>
-          <Text {...baseTextProps} x={offX * 3} y={offY * 3} fill={effectColor} opacity={0.2} listening={false} shadowEnabled={false} strokeEnabled={false} />
-          <Text {...baseTextProps} x={offX * 2} y={offY * 2} fill={effectColor} opacity={0.4} listening={false} shadowEnabled={false} strokeEnabled={false} />
-          <Text {...baseTextProps} x={offX} y={offY} fill={effectColor} opacity={0.6} listening={false} shadowEnabled={false} strokeEnabled={false} />
-          <Text {...baseTextProps} x={0} fill={element.fill} strokeEnabled={false} shadowEnabled={false} />
-        </Group>
-      );
-    }
-
-    if (element.effectStyle === 'splice') {
-      return (
-        <Group {...commonProps} key={`splice-${stylisticKey}`}>
-          <Text {...baseTextProps} x={offX} y={offY} fill={effectColor} opacity={0.8} listening={false} shadowEnabled={false} strokeEnabled={false} />
-          <Text {...baseTextProps} stroke={effectColor} strokeWidth={thickness} fill={element.fill} strokeEnabled={true} shadowEnabled={false} />
-        </Group>
-      );
-    }
-
-    if (element.effectStyle === 'background') {
-      const spread = element.effectSpread || 0;
-      const roundness = element.effectRoundness || 4;
-      return (
-        <Group {...commonProps} key={`bg-${stylisticKey}`}>
-          <Rect
-            x={0}
-            y={0}
-            width={element.width}
-            height={element.height}
-            fill={`${effectColor}${Math.round(effectOpacity * 255).toString(16).padStart(2, '0')}`}
-            cornerRadius={roundness}
-          />
-          <Text {...baseTextProps} fill={element.fill} shadowEnabled={false} strokeEnabled={false} />
-        </Group>
-      );
-    }
-
-    return (
-      <Text
-        key={`text - ${element.id} - ${element.fontFamily} - ${element.fontSize} - ${element.effectStyle || 'none'} `}
-        {...commonProps}
-        {...baseTextProps}
-        {...nativeEffectProps}
-        {...(element.fill?.includes('linear-gradient') ? gradientProps : { fill: element.fill })}
-      />
-    );
-  };
-
   return (
     <React.Fragment>
       {isDroppableTarget && (
@@ -1027,15 +809,30 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
         />
       )}
 
-      {element.type === 'text' && (
+      {element.type === 'text' && !isEditing && (
         isRichText && richTextImage ? (
           <Image
             {...commonProps}
             image={richTextImage}
-            visible={true}
-            opacity={isEditing ? 0 : (element.opacity ?? 1)}
           />
-        ) : renderTextContent()
+        ) : (
+          <Text
+            key={`text-${element.id}-${element.fontFamily}-${element.fontSize}`}
+            {...commonProps}
+            text={(element.text || '').replace(/<[^>]*>/g, '')}
+            fontSize={element.fontSize}
+            fontFamily={element.fontFamily}
+            fontStyle={`${element.fontWeight || 'normal'} ${element.fontStyle || ''}`.trim()}
+            textDecoration={element.textDecoration || 'none'}
+            fill={element.fill}
+            align={element.textAlign || 'left'}
+            verticalAlign="top"
+            lineHeight={element.lineHeight || 1.2}
+            letterSpacing={element.letterSpacing || 0}
+            padding={5}
+            wrap="word"
+          />
+        )
       )}
       {element.type === 'image' && (
         <Image
@@ -1144,7 +941,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
             case 'wave':
               return (
                 <Rect
-                  key={`wave - ${element.fill} `}
+                  key={`wave-${element.fill}`}
                   {...visualProps}
                   fill="transparent"
                   sceneFunc={(ctx, shape) => {
@@ -1176,7 +973,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
             case 'pill':
               return <Rect key={`pill`} {...visualProps} x={0} y={0} width={w} height={h} cornerRadius={Math.min(w, h) / 2} />;
             default:
-              return <Rect key={`default `} {...visualProps} x={0} y={0} width={w} height={h} />;
+              return <Rect key={`default`} {...visualProps} x={0} y={0} width={w} height={h} />;
           }
         };
 
@@ -1196,7 +993,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
           const iconSize = ic.size || (Math.min(w, h) * 0.5);
 
           return (
-            <Group {...commonProps} key={`shape - ${element.id} `}>
+            <Group {...commonProps} key={`shape-${element.id}`}>
               {renderShape({ ...visualProps, x: 0, y: 0, width: w, height: h, opacity: 1, listening: true })}
               <Text
                 text={ic.iconName}
@@ -1212,7 +1009,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
                 fontStyle={fontWeight} // Konva uses fontStyle for weight if numeric string
                 listening={false}
                 // Force a redraw when color or font changes
-                key={`${ic.iconName} -${ic.color} -${fontFamily} -${fontWeight} `}
+                key={`${ic.iconName}-${ic.color}-${fontFamily}-${fontWeight}`}
               />
             </Group>
           );
@@ -1220,7 +1017,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
 
         if (useSvgFallback && richTextImage) {
           return (
-            <Group {...commonProps} key={`shape - ${element.id} `}>
+            <Group {...commonProps} key={`shape-${element.id}`}>
               <Image
                 image={richTextImage}
                 x={0}
@@ -1233,7 +1030,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
         }
 
         return (
-          <Group {...commonProps} key={`shape - ${element.id} `}>
+          <Group {...commonProps} key={`shape-${element.id}`}>
             {renderShape(visualProps)}
           </Group>
         );
@@ -1252,54 +1049,24 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
           borderStroke="#8b3dff"
           borderStrokeWidth={1.5}
           padding={0}
-          enabledAnchors={
-            element.type === 'text'
-              ? ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right']
-              : ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']
-          }
-          rotateAnchorOffset={30}
+          enabledAnchors={element.type === 'text'
+            ? ['top-left', 'top-right', 'bottom-left', 'bottom-right', 'middle-left', 'middle-right', 'top-center', 'bottom-center']
+            : undefined}
           anchorDrawFunc={(context, shape) => {
             const name = shape.name();
-            const isSide = name.includes('middle-left') || name.includes('middle-right');
-            const isVertical = name.includes('top-center') || name.includes('bottom-center');
-            const isRotate = name.includes('rotater');
+            // Naming varies by Konva version, check for core tokens
+            const isSide = name.includes('middle-left') || name.includes('middle-right') || name.includes('middle-left anchor') || name.includes('middle-right anchor');
+            const isVertical = name.includes('top-center') || name.includes('bottom-center') || name.includes('top-center anchor') || name.includes('bottom-center anchor');
 
             context.beginPath();
-            if (isRotate) {
-              // Rotation handle: circle with rotate icon style? 
-              // For now, a clean circle centered 30px below/above
-              context.arc(0, 0, 10, 0, Math.PI * 2);
-              context.fillStyle = '#ffffff';
-              context.fill();
-              context.strokeStyle = '#8b3dff';
-              context.strokeWidth = 1.5;
-              context.stroke();
-
-              // Draw small rotate arrows inside
-              context.beginPath();
-              context.strokeStyle = '#8b3dff';
-              context.arc(0, 0, 5, 0, Math.PI * 1.5);
-              context.stroke();
-              return;
-            }
-
             if (isSide || isVertical) {
-              // Pill shape for side/vertical anchors
-              const w = isSide ? 4 : 16;
-              const h = isSide ? 16 : 4;
-              const r = 2;
-              context.roundRect(-w / 2, -h / 2, w, h, r);
+              const w = isSide ? 3.5 : 14;
+              const h = isSide ? 14 : 3.5;
+              context.rect(-w / 2, -h / 2, w, h);
             } else {
-              // Perfect circle for corner anchors
-              context.arc(0, 0, 5, 0, Math.PI * 2);
+              context.arc(0, 0, 4.5, 0, Math.PI * 2);
             }
             context.fillStrokeShape(shape);
-          }}
-          // Move rotation anchor to bottom
-          boundBoxFunc={(oldBox, newBox) => {
-            // Ensure minimum size
-            if (newBox.width < 5 || newBox.height < 5) return oldBox;
-            return newBox;
           }}
           onTransform={handleTransform}
           onTransformStart={() => pushHistory()}
@@ -1313,7 +1080,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
           x={element.x}
           y={element.y}
           width={element.width}
-          height={element.type === 'text' && shapeRef.current ? shapeRef.current.getClientRect({ skipTransform: true }).height : element.height}
+          height={element.height}
           rotation={element.rotation}
           stroke="#8b3dff"
           strokeWidth={1}

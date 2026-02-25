@@ -41,6 +41,7 @@ class Product(models.Model):
     description = models.TextField(blank=True, null=True)
     image = models.ImageField(upload_to=product_image_path, blank=True, null=True)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, related_name='products')
+    custom_fields = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     updated_at = models.DateTimeField(auto_now=True)
 

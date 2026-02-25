@@ -6,7 +6,7 @@ import { useStore } from '../../store/useStore';
 const CategoryListView: React.FC = () => {
   const {
     categories, products, setView, activeCategoryId, setActiveCategoryId,
-    setEditingCategoryId, removeCategory, setEditingProductId
+    setEditingCategoryId, removeCategory, setEditingProductId, setCreatingSubcategoryParentId
   } = useStore();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -104,8 +104,10 @@ const CategoryListView: React.FC = () => {
           {/* Stats & Navigation */}
           <div className="flex items-center gap-6 shrink-0">
             <div className="text-right">
-              <div className="text-base font-black text-slate-800 dark:text-white leading-none">{cat.productCount}</div>
-              <div className="text-[8px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">Assets</div>
+              <div className="text-base font-black text-slate-800 dark:text-white leading-none">
+                {products.filter(p => String(p.categoryId) === String(cat.id)).length}
+              </div>
+              <div className="text-[8px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mt-1">Product</div>
             </div>
             <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <button
@@ -149,12 +151,22 @@ const CategoryListView: React.FC = () => {
               <h1 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Product Categories</h1>
               <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Classify your items to keep your catalogs organized.</p>
             </div>
-            <button
-              onClick={() => setView('create-category')}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 flex items-center gap-2 transition-all active:scale-95"
-            >
-              <Plus size={16} /> Create Category
-            </button>
+            <div className="flex items-center gap-3">
+              {activeCategory && !activeCategory.parent && (
+                <button
+                  onClick={() => { setCreatingSubcategoryParentId(activeCategoryId); setView('create-category'); }}
+                  className="px-6 py-3 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center gap-2 transition-all active:scale-95"
+                >
+                  <CornerDownRight size={16} /> Create Subcategory
+                </button>
+              )}
+              <button
+                onClick={() => { setCreatingSubcategoryParentId(null); setView('create-category'); }}
+                className="px-6 py-3 bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 flex items-center gap-2 transition-all active:scale-95"
+              >
+                <Plus size={16} /> Create Category
+              </button>
+            </div>
           </div>
 
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
@@ -177,7 +189,7 @@ const CategoryListView: React.FC = () => {
                   onClick={() => setView('create-category')}
                   className="mt-4 text-indigo-600 dark:text-indigo-400 font-black hover:underline text-sm uppercase tracking-widest"
                 >
-                  Initialize first taxonomy
+                  Initialize first category
                 </button>
               </div>
             )}
@@ -191,7 +203,7 @@ const CategoryListView: React.FC = () => {
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
               <Package size={14} className="text-indigo-600 dark:text-indigo-400" />
-              Category Assets
+              Category Product
             </h3>
             <button
               onClick={() => setView('products-list')}
@@ -209,7 +221,9 @@ const CategoryListView: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-lg font-black text-slate-800 dark:text-white leading-none">{activeCategory.name}</h4>
-                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">{activeCategory.productCount} Linked Products</p>
+                  <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1.5">
+                    {products.filter(p => String(p.categoryId) === String(activeCategory.id)).length} Linked Products
+                  </p>
                 </div>
               </div>
             </div>
@@ -233,8 +247,8 @@ const CategoryListView: React.FC = () => {
           {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-24 text-center px-8">
               <Package size={40} className="text-slate-100 dark:text-slate-800 mb-6" />
-              <h5 className="text-sm font-black text-slate-800 dark:text-white">No assets detected</h5>
-              <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-2 leading-relaxed">This taxonomy selection has no matching products in the inventory pool.</p>
+              <h5 className="text-sm font-black text-slate-800 dark:text-white">No products detected</h5>
+              <p className="text-xs text-slate-400 dark:text-slate-500 font-medium mt-2 leading-relaxed">This category selection has no matching products in the inventory pool.</p>
               <button
                 onClick={() => setView('create-product')}
                 className="mt-6 px-6 py-2.5 bg-slate-900 dark:bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-black dark:hover:bg-indigo-700 transition-all"
@@ -271,7 +285,7 @@ const CategoryListView: React.FC = () => {
           <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <Info size={16} className="text-indigo-400 dark:text-indigo-500 shrink-0 mt-0.5" />
             <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed uppercase tracking-tighter">
-              <b>Taxonomy Sync:</b> Products shown here are filtered by active category assignment. Click to modify individual asset metadata.
+              <b>Category Sync:</b> Products shown here are filtered by active category assignment. Click to modify individual asset metadata.
             </p>
           </div>
         </div>

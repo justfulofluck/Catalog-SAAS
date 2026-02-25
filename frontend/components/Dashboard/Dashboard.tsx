@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { 
-  Package, 
+import {
+  Package,
   Box,
   Layout,
   BookOpen,
@@ -91,22 +91,22 @@ const Dashboard: React.FC = () => {
 
           <div className="space-y-10">
             <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-xl dark:shadow-none p-4 space-y-2">
-               <button onClick={() => setView('create-category')} className="w-full flex items-center gap-5 p-5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all group text-left">
-                  <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><FolderPlus size={22} /></div>
-                  <div><p className="text-sm font-black text-slate-900 dark:text-white">Add Taxonomy</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Classification</p></div>
-                </button>
-                <button 
-                  onClick={() => setView('your-work')} 
-                  disabled={savedCatalogs.length === 0}
-                  className={`w-full flex items-center gap-5 p-5 rounded-2xl transition-all group text-left ${savedCatalogs.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                >
-                  <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Briefcase size={22} /></div>
-                  <div><p className="text-sm font-black text-slate-900 dark:text-white">Your Work</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Project History</p></div>
-                </button>
-                <button onClick={() => setView('settings')} className="w-full flex items-center gap-5 p-5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all group text-left">
-                  <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Settings size={22} /></div>
-                  <div><p className="text-sm font-black text-slate-900 dark:text-white">Global Settings</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Workspace Config</p></div>
-                </button>
+              <button onClick={() => setView('create-category')} className="w-full flex items-center gap-5 p-5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all group text-left">
+                <div className="w-12 h-12 bg-indigo-50 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><FolderPlus size={22} /></div>
+                <div><p className="text-sm font-black text-slate-900 dark:text-white">Add Category</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Classification</p></div>
+              </button>
+              <button
+                onClick={() => setView('your-work')}
+                disabled={savedCatalogs.length === 0}
+                className={`w-full flex items-center gap-5 p-5 rounded-2xl transition-all group text-left ${savedCatalogs.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+              >
+                <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Briefcase size={22} /></div>
+                <div><p className="text-sm font-black text-slate-900 dark:text-white">Your Work</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Project History</p></div>
+              </button>
+              <button onClick={() => setView('settings')} className="w-full flex items-center gap-5 p-5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all group text-left">
+                <div className="w-12 h-12 bg-slate-50 dark:bg-slate-800 text-slate-400 dark:text-slate-500 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Settings size={22} /></div>
+                <div><p className="text-sm font-black text-slate-900 dark:text-white">Global Settings</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Workspace Config</p></div>
+              </button>
             </div>
           </div>
         </div>

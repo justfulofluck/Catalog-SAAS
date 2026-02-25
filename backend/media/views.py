@@ -3,14 +3,13 @@ from .models import MediaItem
 from .serializers import MediaItemSerializer
 
 class MediaViewSet(viewsets.ModelViewSet):
-    queryset = MediaItem.objects.all()
+    queryset = MediaItem.objects.none()
     serializer_class = MediaItemSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def get_queryset(self):
-        return MediaItem.objects.all()
+        return MediaItem.objects.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        user = self.request.user if self.request.user.is_authenticated else None
-        serializer.save(user=user)
+        serializer.save(user=self.request.user)

@@ -1,12 +1,12 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Package, 
-  Plus, 
-  Search, 
-  ChevronRight, 
-  Trash2, 
-  Filter, 
+import {
+  Package,
+  Plus,
+  Search,
+  ChevronRight,
+  Trash2,
+  Filter,
   Download,
   MoreVertical,
   ArrowUpRight,
@@ -26,8 +26,8 @@ const ProductsListView: React.FC = () => {
   // Filter by category if one is selected, then by search term
   const filteredProducts = products.filter(p => {
     const matchesCategory = activeCategoryId ? p.categoryId === activeCategoryId : true;
-    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -59,7 +59,7 @@ const ProductsListView: React.FC = () => {
               <div className="flex items-center gap-2 px-3 py-1 bg-[#337ab7]/10 dark:bg-indigo-400/10 text-[#337ab7] dark:text-indigo-400 rounded-full border border-[#337ab7]/20 dark:border-indigo-400/20 animate-in zoom-in duration-200">
                 <FolderOpen size={14} />
                 <span className="text-[10px] font-black uppercase tracking-widest">{activeCategory?.name}</span>
-                <button 
+                <button
                   onClick={() => setActiveCategoryId(null)}
                   className="hover:text-red-500 transition-colors"
                   title="Clear category filter"
@@ -70,8 +70,8 @@ const ProductsListView: React.FC = () => {
             )}
           </div>
           <p className="text-sm text-slate-400 dark:text-slate-500 font-medium mt-1">
-            {activeCategoryId 
-              ? `Showing products in ${activeCategory?.name}` 
+            {activeCategoryId
+              ? `Showing products in ${activeCategory?.name}`
               : `Manage your complete catalog of ${products.length} items`}
           </p>
         </div>
@@ -79,7 +79,7 @@ const ProductsListView: React.FC = () => {
           <button className="flex items-center gap-2 px-4 py-2.5 text-slate-600 dark:text-slate-400 font-black text-xs uppercase tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all">
             <Download size={16} /> Export
           </button>
-          <button 
+          <button
             onClick={() => setView('create-product')}
             className="px-6 py-2.5 bg-[#337ab7] dark:bg-indigo-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-[#337ab7]/20 dark:shadow-indigo-600/20 hover:bg-[#286090] dark:hover:bg-indigo-700 flex items-center gap-2 transition-all active:scale-95"
           >
@@ -92,15 +92,15 @@ const ProductsListView: React.FC = () => {
       <div className="px-8 py-4 bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-slate-100 dark:border-slate-800 flex items-center gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search products by name or SKU..." 
+          <input
+            type="text"
+            placeholder="Search products by name or SKU..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-10 py-2 text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-[#337ab7]/10 dark:focus:ring-indigo-600/10 focus:border-[#337ab7] dark:focus:border-indigo-600 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
           />
           {searchTerm && (
-            <button 
+            <button
               onClick={() => setSearchTerm('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
             >
@@ -111,7 +111,7 @@ const ProductsListView: React.FC = () => {
 
         {/* Workable Category Filter Dropdown */}
         <div className="relative" ref={filterRef}>
-          <button 
+          <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`p-2.5 rounded-2xl transition-all border flex items-center gap-2 ${isFilterOpen || activeCategoryId ? 'bg-[#337ab7] text-white border-[#337ab7] shadow-lg' : 'text-slate-400 dark:text-slate-600 hover:text-slate-600 dark:hover:text-slate-400 bg-white dark:bg-slate-800 border-transparent hover:border-slate-200 dark:hover:border-slate-700'}`}
           >
@@ -121,29 +121,29 @@ const ProductsListView: React.FC = () => {
 
           {isFilterOpen && (
             <div className="absolute right-0 mt-3 w-64 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-50 py-3 overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-               <div className="px-4 pb-2 border-b border-slate-50 dark:border-slate-800 mb-2">
-                  <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Filter by Taxonomy</p>
-               </div>
-               <button 
-                 onClick={() => { setActiveCategoryId(null); setIsFilterOpen(false); }}
-                 className={`w-full px-4 py-2 text-left text-xs font-bold transition-colors flex items-center justify-between ${!activeCategoryId ? 'text-[#337ab7] bg-blue-50 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-               >
-                 All Categories
-                 {!activeCategoryId && <CheckCircle2 size={14} />}
-               </button>
-               {categories.map(cat => (
-                 <button 
-                   key={cat.id}
-                   onClick={() => { setActiveCategoryId(cat.id); setIsFilterOpen(false); }}
-                   className={`w-full px-4 py-2 text-left text-xs font-bold transition-colors flex items-center justify-between ${activeCategoryId === cat.id ? 'text-[#337ab7] bg-blue-50 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
-                 >
-                   <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
-                      {cat.name}
-                   </div>
-                   {activeCategoryId === cat.id && <CheckCircle2 size={14} />}
-                 </button>
-               ))}
+              <div className="px-4 pb-2 border-b border-slate-50 dark:border-slate-800 mb-2">
+                <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Filter by Category</p>
+              </div>
+              <button
+                onClick={() => { setActiveCategoryId(null); setIsFilterOpen(false); }}
+                className={`w-full px-4 py-2 text-left text-xs font-bold transition-colors flex items-center justify-between ${!activeCategoryId ? 'text-[#337ab7] bg-blue-50 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+              >
+                All Categories
+                {!activeCategoryId && <CheckCircle2 size={14} />}
+              </button>
+              {categories.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => { setActiveCategoryId(cat.id); setIsFilterOpen(false); }}
+                  className={`w-full px-4 py-2 text-left text-xs font-bold transition-colors flex items-center justify-between ${activeCategoryId === cat.id ? 'text-[#337ab7] bg-blue-50 dark:bg-blue-900/20' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: cat.color }} />
+                    {cat.name}
+                  </div>
+                  {activeCategoryId === cat.id && <CheckCircle2 size={14} />}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -192,8 +192,8 @@ const ProductsListView: React.FC = () => {
                       </td>
                       <td className="px-6 py-5">
                         <div className="flex items-center gap-2">
-                          <div 
-                            className="w-2 h-2 rounded-full" 
+                          <div
+                            className="w-2 h-2 rounded-full"
                             style={{ backgroundColor: category?.color || '#cbd5e1' }}
                           />
                           <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
@@ -214,14 +214,14 @@ const ProductsListView: React.FC = () => {
                       </td>
                       <td className="px-6 py-5 text-right">
                         <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
+                          <button
                             onClick={() => handleEdit(product.id)}
                             className="p-2 text-slate-400 hover:text-[#337ab7] dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
                             title="Edit"
                           >
                             <Edit2 size={16} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => removeProduct(product.id)}
                             className="p-2 text-slate-400 hover:text-red-500 hover:bg-white dark:hover:bg-slate-800 rounded-2xl transition-all shadow-sm border border-transparent hover:border-slate-100 dark:hover:border-slate-700"
                             title="Delete"
@@ -244,7 +244,7 @@ const ProductsListView: React.FC = () => {
             </tbody>
           </table>
         </div>
-        
+
         <div className="mt-6 flex items-center justify-between px-2">
           <p className="text-[10px] font-black text-slate-300 dark:text-slate-700 uppercase tracking-widest">
             Showing {filteredProducts.length} of {products.length} Products

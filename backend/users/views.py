@@ -46,12 +46,11 @@ class PublicUserDetailsView(UserDetailsView):
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    API endpoint that allows users to be viewed or edited.
+    API endpoint that allows admins to view all users.
     """
-
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAdminUser]
 
     def get_queryset(self):
         return User.objects.all()
@@ -157,7 +156,11 @@ from .serializers import BusinessTemplateSerializer
 class BusinessTemplateViewSet(viewsets.ModelViewSet):
     queryset = BusinessTemplate.objects.all()
     serializer_class = BusinessTemplateSerializer
-    permission_classes = [permissions.AllowAny]
+    
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 
 class AdminSubscriptionViewSet(viewsets.ReadOnlyModelViewSet):

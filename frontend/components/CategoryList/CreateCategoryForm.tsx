@@ -4,14 +4,14 @@ import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, 
 import { useStore } from '../../store/useStore';
 
 const CreateCategoryForm: React.FC = () => {
-  const { setView, addCategory, categories } = useStore();
+  const { setView, addCategory, categories, creatingSubcategoryParentId, setCreatingSubcategoryParentId } = useStore();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     rank: 0,
     color: '#4f46e5',
     thumbnail: '',
-    parent: ''
+    parent: creatingSubcategoryParentId || ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -26,8 +26,11 @@ const CreateCategoryForm: React.FC = () => {
       parent: formData.parent ? formData.parent : undefined,
       productCount: 0
     });
+    setCreatingSubcategoryParentId(null);
     setView('category-list');
   };
+
+  const isSubcategory = !!creatingSubcategoryParentId;
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950 p-8 lg:p-12 animate-in fade-in duration-500 transition-colors duration-300">
@@ -35,18 +38,20 @@ const CreateCategoryForm: React.FC = () => {
         <div className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
           <div>
             <button
-              onClick={() => setView('category-list')}
+              onClick={() => { setCreatingSubcategoryParentId(null); setView('category-list'); }}
               className="flex items-center gap-2 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:text-indigo-700 transition-colors mb-4"
             >
-              <ArrowLeft size={14} /> Back to Taxonomy
+              <ArrowLeft size={14} /> Back to {isSubcategory ? 'Subcategory' : 'Category'}
             </button>
-            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Create Taxonomy</h1>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">
+              {isSubcategory ? 'Create Subcategory' : 'Create Category'}
+            </h1>
             <p className="text-base text-slate-500 dark:text-slate-400 font-medium">Define a new classification layer for your digital inventory.</p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => setView('category-list')} className="px-8 py-3.5 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-900 rounded-2xl transition-all">Cancel</button>
+            <button onClick={() => { setCreatingSubcategoryParentId(null); setView('category-list'); }} className="px-8 py-3.5 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-900 rounded-2xl transition-all">Cancel</button>
             <button onClick={handleSubmit} className="px-8 py-3.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center gap-2">
-              <Save size={18} /> Save Taxonomy
+              <Save size={18} /> {isSubcategory ? 'Save Subcategory' : 'Save Category'}
             </button>
           </div>
         </div>
@@ -57,7 +62,9 @@ const CreateCategoryForm: React.FC = () => {
               <section className="space-y-6">
                 <div className="flex items-center gap-2 border-b border-slate-50 dark:border-slate-800 pb-4">
                   <FolderPlus className="text-indigo-600 dark:text-indigo-400" size={20} />
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Category Profile</h3>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">
+                    {isSubcategory ? 'Subcategory Profile' : 'Category Profile'}
+                  </h3>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Label Name</label>
@@ -80,30 +87,34 @@ const CreateCategoryForm: React.FC = () => {
                   />
                 </div>
               </section>
-
-              <section className="space-y-6">
-                <div className="flex items-center gap-2 border-b border-slate-50 dark:border-slate-800 pb-4">
-                  <AlignLeft className="text-indigo-600 dark:text-indigo-400" size={20} />
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Hierarchy Settings</h3>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-50 uppercase tracking-widest ml-1">Parent Category (Optional)</label>
-                  <select
-                    value={formData.parent}
-                    onChange={(e) => setFormData({ ...formData, parent: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 text-base font-bold text-slate-800 dark:text-white focus:border-indigo-600 dark:focus:border-indigo-400 outline-none appearance-none"
-                  >
-                    <option value="">-- No Parent (Top Level) --</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </section>
             </div>
           </div>
 
           <div className="space-y-8">
+            {isSubcategory && (
+              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 space-y-6">
+                <div className="flex items-center gap-2 border-b border-slate-50 dark:border-slate-800 pb-4">
+                  <AlignLeft className="text-indigo-600 dark:text-indigo-400" size={18} />
+                  <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Hierarchy Placement</h3>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-50 uppercase tracking-widest ml-1">Parent Category</label>
+                  <select
+                    value={formData.parent}
+                    onChange={(e) => setFormData({ ...formData, parent: e.target.value })}
+                    className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white focus:border-indigo-600 dark:focus:border-indigo-400 outline-none appearance-none"
+                  >
+                    <option value="">-- No Parent (Root) --</option>
+                    {categories
+                      .filter(cat => !cat.parent)
+                      .map(cat => (
+                        <option key={cat.id} value={cat.id}>{cat.name}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 space-y-6">
               <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Branding Parameters</h3>
               <div className="space-y-4">

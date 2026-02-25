@@ -5,7 +5,7 @@ import { useStore } from '../../store/useStore';
 
 // Note: In a real production app, you'd store this in .env
 // For demo purposes, we provide a placeholder. The user should replace this with their own API key.
-const UNSPLASH_ACCESS_KEY = '';
+const UNSPLASH_ACCESS_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '';
 
 interface UnsplashImage {
     id: string;
@@ -29,10 +29,21 @@ const StockImagesPanel: React.FC = () => {
     const [images, setImages] = useState<UnsplashImage[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [apiKey, setApiKey] = useState(UNSPLASH_ACCESS_KEY);
+    const [apiKey, setApiKey] = useState(() => {
+        return localStorage.getItem('unsplash_access_key') || UNSPLASH_ACCESS_KEY;
+    });
 
-    const fetchImages = async (query: string) => {
-        if (!apiKey) {
+    const handleSetKey = (key: string) => {
+        setApiKey(key);
+        localStorage.setItem('unsplash_access_key', key);
+        if (key) {
+            fetchImages(search, key);
+        }
+    };
+
+    const fetchImages = async (query: string, overridenKey?: string) => {
+        const activeKey = overridenKey || apiKey;
+        if (!activeKey) {
             setError('Please provide an Unsplash Access Key to search for stock images.');
             return;
         }
@@ -41,7 +52,7 @@ const StockImagesPanel: React.FC = () => {
         setError(null);
         try {
             const response = await fetch(
-                `https://api.unsplash.com/search/photos?query=${query}&per_page=10&client_id=${apiKey}`
+                `https://api.unsplash.com/search/photos?query=${query}&per_page=10&client_id=${activeKey}`
             );
 
             if (!response.ok) {
@@ -127,15 +138,14 @@ const StockImagesPanel: React.FC = () => {
                                 className={`flex-1 border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        setApiKey(e.currentTarget.value);
-                                        setSearch(search); // trigger fetch if key added
+                                        handleSetKey(e.currentTarget.value);
                                     }
                                 }}
                             />
                             <button
                                 onClick={(e) => {
                                     const input = e.currentTarget.previousElementSibling as HTMLInputElement;
-                                    setApiKey(input.value);
+                                    handleSetKey(input.value);
                                 }}
                                 className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors"
                             >

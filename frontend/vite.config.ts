@@ -11,7 +11,9 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['catalogmakerr.blueglobaltechnology.com'],
       proxy: {
         '/api': {
-          target: 'http://192.168.1.177:8003',
+          //target: 'http://192.168.1.177:8003',
+          //target: 'http://192.168.1.208:8003',
+          target: 'http://localhost:8003',
           changeOrigin: true,
           secure: false,
         }
