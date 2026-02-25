@@ -1336,7 +1336,7 @@ const EditorCanvas: React.FC = () => {
                   {/* Snap HUD */}
                   {isActive && snapTarget && (
                     <div className="absolute z-[110] px-4 py-2 bg-indigo-600 text-white rounded-[10px] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl" style={{ left: snapTarget.x * zoom, top: (snapTarget.y * zoom) - 45 }}>
-                      <Sparkles size={14} className="animate-pulse" /> Auto-Fitting Asset
+                      <Sparkles size={14} className="animate-pulse" /> Auto-Fitting Product
                     </div>
                   )}
 

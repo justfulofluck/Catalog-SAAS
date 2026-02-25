@@ -29,7 +29,7 @@ const BusinessSelection: React.FC = () => {
                     <div className="text-center space-y-4">
                         <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-indigo-100">Setup Wizard</span>
                         <h1 className="text-4xl md:text-5xl font-black text-slate-900 tracking-tight">Select Your Business Model</h1>
-                        <p className="text-lg text-slate-500 max-w-2xl mx-auto">Choose a pre-configured workspace template that matches your industry. This defines your product data structure and initial assets.</p>
+                        <p className="text-lg text-slate-500 max-w-2xl mx-auto">Choose a pre-configured workspace template that matches your industry. This defines your product data structure and initial products.</p>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

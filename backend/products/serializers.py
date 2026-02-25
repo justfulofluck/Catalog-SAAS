@@ -13,6 +13,12 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'uuid', 'user', 'name', 'description', 'rank', 'color', 'thumbnail', 'parent', 'parent_name', 'subcategories', 'created_at']
         read_only_fields = ['id', 'user', 'uuid', 'created_at']
 
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.thumbnail and getattr(instance.thumbnail, 'name', '').startswith(('http://', 'https://')):
+            ret['thumbnail'] = instance.thumbnail.name
+        return ret
+
     def get_subcategories(self, obj):
         if obj.parent:  # Only show subcategories for top-level categories
             return []
@@ -58,6 +64,12 @@ class ProductSerializer(serializers.ModelSerializer):
         model = Product
         fields = '__all__'
         read_only_fields = ['user', 'uuid', 'created_at', 'updated_at']
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.image and getattr(instance.image, 'name', '').startswith(('http://', 'https://')):
+            ret['image'] = instance.image.name
+        return ret
 
     def _process_custom_fields(self, custom_fields):
         """
@@ -106,9 +118,15 @@ class ProductSerializer(serializers.ModelSerializer):
         data = data.copy() if hasattr(data, 'copy') else data
 
         # Handle empty strings/nulls for optional fields
-        for field in ['image', 'category', 'description', 'sku']:
+        for field in ['image', 'category', 'description']:
             if field in data and (data[field] == '' or data[field] is None):
                 data[field] = None
+                
+        # Handle sku specifically to avoid null constraint violations
+        if 'sku' in data and data['sku'] is None:
+            data['sku'] = ""
+
+        external_image_url = None
 
         # Handle base64 image
         image = data.get('image')
@@ -123,7 +141,7 @@ class ProductSerializer(serializers.ModelSerializer):
                 print(f"DEBUG: ProductSerializer - Error decoding base64 image: {e}")
         elif isinstance(image, str) and image.startswith(('http', '/media')):
             # Avoid validating existing URLs as file uploads
-            data.pop('image')
+            external_image_url = data.pop('image')
 
         # Handle custom_fields - process any base64 images inside
         custom_fields = data.get("custom_fields")
@@ -138,13 +156,17 @@ class ProductSerializer(serializers.ModelSerializer):
             data["custom_fields"] = processed_fields
             
             # Promotion logic: If the primary image field is empty, try to fill it from custom fields
-            if not data.get("image"):
+            if not data.get("image") and not external_image_url:
                 # Look for the first field that contains a media URL
                 for field_val in processed_fields.values():
                     if isinstance(field_val, str) and field_val.startswith(("/media/", "http")):
                         # We found an image URL in custom fields!
                         # Promote it to the main image field
-                        data["image"] = field_val
+                        external_image_url = field_val
                         break
 
-        return super().to_internal_value(data)
+        ret = super().to_internal_value(data)
+        if external_image_url:
+            ret['image'] = external_image_url
+
+        return ret

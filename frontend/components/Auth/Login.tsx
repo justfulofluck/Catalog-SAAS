@@ -437,7 +437,7 @@ const Login: React.FC = () => {
               <span className="px-4 py-1.5 bg-indigo-600/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-indigo-600/30 inline-block">Enterprise v3.1</span>
               <h2 className="text-5xl font-black leading-[1.1] tracking-tight">Design At Scale. <br /><span className="text-indigo-500">Effortlessly.</span></h2>
               <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm">
-                Accelerate your go-to-market strategy with automated high-fidelity catalog generation and cloud asset management.
+                Accelerate your go-to-market strategy with automated high-fidelity catalog generation and cloud product management.
               </p>
             </div>
 

@@ -12,12 +12,35 @@ const api = axios.create({
     xsrfHeaderName: 'X-CSRFToken',
 });
 
-// Response interceptor to handle data extraction
+// Response interceptor to handle data extraction and token refresh
 api.interceptors.response.use(
     (response) => {
         return response.data;
     },
-    (error) => {
+    async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            if (originalRequest.url === '/auth/token/refresh/') {
+                return Promise.reject(error);
+            }
+
+            originalRequest._retry = true;
+
+            try {
+                await axios.post('/api/auth/token/refresh/', {}, {
+                    withCredentials: true
+                });
+                return api(originalRequest);
+            } catch (refreshError) {
+                // Force logout if refresh also fails
+                if (typeof window !== 'undefined') {
+                    // window.location.href = '/';
+                }
+                return Promise.reject(refreshError);
+            }
+        }
+
         return Promise.reject(error);
     }
 );

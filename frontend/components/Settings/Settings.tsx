@@ -79,7 +79,7 @@ const Settings: React.FC = () => {
                   Remove
                 </button>
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">Recommended: Square 512x512 Assets. Max size 5MB.</p>
+              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">Recommended: Square 512x512 Products. Max size 5MB.</p>
             </div>
           </div>
 

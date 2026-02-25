@@ -151,7 +151,7 @@ const EditorToolbar: React.FC = () => {
       await saveCatalog();
       const toast = document.createElement('div');
       toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
-      toast.innerText = 'Asset Workspace Synchronized';
+      toast.innerText = 'Product Workspace Synchronized';
       document.body.appendChild(toast);
       setTimeout(() => toast.remove(), 2500);
     } catch (error) {

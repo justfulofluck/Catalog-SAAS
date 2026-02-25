@@ -97,7 +97,7 @@ const CategoryListView: React.FC = () => {
               )}
             </div>
             <p className="text-xs font-medium text-slate-400 dark:text-slate-500 truncate max-w-md">
-              {cat.description || "Classification for company inventory assets."}
+              {cat.description || "Classification for company inventory products."}
             </p>
           </div>
 
@@ -285,7 +285,7 @@ const CategoryListView: React.FC = () => {
           <div className="flex items-start gap-3 p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <Info size={16} className="text-indigo-400 dark:text-indigo-500 shrink-0 mt-0.5" />
             <p className="text-[9px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed uppercase tracking-tighter">
-              <b>Category Sync:</b> Products shown here are filtered by active category assignment. Click to modify individual asset metadata.
+              <b>Category Sync:</b> Products shown here are filtered by active category assignment. Click to modify individual product metadata.
             </p>
           </div>
         </div>

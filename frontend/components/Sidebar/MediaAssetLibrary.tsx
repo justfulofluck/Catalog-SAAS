@@ -89,7 +89,7 @@ const MediaAssetLibrary: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             className="w-8 h-8 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-lg shadow-indigo-600/20 transition-all active:scale-95 group"
-            title="Upload Local Asset"
+            title="Upload Local Product"
           >
             <Upload size={14} className="group-hover:-translate-y-0.5 transition-transform" />
           </button>
@@ -134,7 +134,7 @@ const MediaAssetLibrary: React.FC = () => {
               <FileImage size={32} />
             </div>
             <p className={`text-[10px] font-black uppercase tracking-widest leading-relaxed ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
-              No matching assets <br /> found in cloud pool
+              No matching products <br /> found in cloud pool
             </p>
             <button
               onClick={() => fileInputRef.current?.click()}

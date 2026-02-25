@@ -258,7 +258,7 @@ export const useStore = create<State>((set, get) => ({
   isSidebarExpanded: true,
   uiTheme: 'light',
   shouldRenderOutlines: true,
-  defaultCurrency: '$',
+  defaultCurrency: '₹',
   isLoading: false,
   error: null,
 

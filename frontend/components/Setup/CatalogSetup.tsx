@@ -99,7 +99,7 @@ const CatalogSetup: React.FC = () => {
                   onClick={() => setStep(2)}
                   className="w-full py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-3 active:scale-95"
                 >
-                  Proceed to Assets <ChevronRight size={16} />
+                  Proceed to Products <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -114,7 +114,7 @@ const CatalogSetup: React.FC = () => {
                 <button onClick={() => setStep(1)} className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-4 hover:text-slate-600 dark:hover:text-slate-400 transition-colors group text-left">
                   <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Return to Title
                 </button>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Assign Asset Sources</h1>
+                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Assign Product Sources</h1>
                 <p className="text-slate-500 dark:text-slate-400 font-medium text-base">Select one or more taxonomies to populate your catalog.</p>
               </div>
               <div className="flex items-center gap-4">
@@ -132,47 +132,85 @@ const CatalogSetup: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {categories.map((cat) => {
+            <div className="flex flex-col gap-4 max-w-4xl mx-auto">
+              {categories.filter(c => !c.parent).map((cat) => {
                 const isSelected = selectedCategoryIds.includes(cat.id);
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => toggleCategory(cat.id)}
-                    className={`
-                      w-full relative overflow-hidden rounded-2xl p-8 flex items-center gap-6 transition-all group text-left border-2
-                      ${isSelected
-                        ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-xl dark:shadow-indigo-900/10'
-                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg'
-                      }
-                    `}
-                  >
-                    {/* Checkbox Indicator */}
-                    <div className={`absolute top-4 right-4 transition-colors ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-200 dark:text-slate-700 group-hover:text-indigo-300'}`}>
-                      {isSelected ? <CheckSquare size={24} /> : <Square size={24} />}
-                    </div>
+                const subcategories = categories.filter(c => c.parent === cat.id);
 
-                    <div
+                return (
+                  <div key={cat.id} className="space-y-2">
+                    <button
+                      onClick={() => toggleCategory(cat.id)}
                       className={`
-                        w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 shadow-lg transition-transform duration-300
-                        ${isSelected ? 'scale-110' : 'group-hover:scale-105'}
+                        w-full relative overflow-hidden rounded-2xl p-6 flex items-center gap-6 transition-all group text-left border-2
+                        ${isSelected
+                          ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-xl dark:shadow-indigo-900/10'
+                          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg'
+                        }
                       `}
-                      style={{ backgroundColor: cat.color + '20', color: cat.color }}
                     >
-                      <FolderOpen size={32} />
-                    </div>
-                    <div className="flex-1 min-w-0 pr-8">
-                      <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1 truncate">{cat.name}</h3>
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest">
-                        {products.filter(p => p.categoryId === cat.id).length} ACTIVE ASSETS
-                      </p>
-                    </div>
-                  </button>
+                      <div className={`absolute top-1/2 -translate-y-1/2 right-6 transition-colors ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-200 dark:text-slate-700 group-hover:text-indigo-300'}`}>
+                        {isSelected ? <CheckSquare size={24} /> : <Square size={24} />}
+                      </div>
+
+                      <div
+                        className={`
+                          w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300
+                          ${isSelected ? 'scale-105' : 'group-hover:scale-105'}
+                        `}
+                        style={{ backgroundColor: cat.color + '15', color: cat.color }}
+                      >
+                        <FolderOpen size={28} />
+                      </div>
+                      <div className="flex-1 min-w-0 pr-12">
+                        <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1 truncate">{cat.name}</h3>
+                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                          {products.filter(p => p.categoryId === cat.id).length} ACTIVE PRODUCTS
+                          {subcategories.length > 0 && ` • ${subcategories.length} SUBCATEGORIES`}
+                        </p>
+                      </div>
+                    </button>
+
+                    {/* Render Subcategories */}
+                    {subcategories.length > 0 && (
+                      <div className="pl-8 sm:pl-16 space-y-2 relative before:absolute before:inset-y-0 before:left-6 sm:before:left-10 before:w-px before:bg-slate-200 dark:before:bg-slate-800">
+                        {subcategories.map(sub => {
+                          const isSubSelected = selectedCategoryIds.includes(sub.id);
+                          return (
+                            <button
+                              key={sub.id}
+                              onClick={() => toggleCategory(sub.id)}
+                              className={`
+                                w-full relative overflow-hidden rounded-xl p-4 flex items-center gap-4 transition-all group text-left border-2
+                                ${isSubSelected
+                                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 shadow-md'
+                                  : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800'
+                                }
+                              `}
+                            >
+                              <div className="absolute left-0 top-1/2 -translate-x-[17px] sm:-translate-x-[25px] w-4 border-t border-slate-200 dark:border-slate-800"></div>
+
+                              <div className={`transition-colors ${isSubSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700 group-hover:text-indigo-300'}`}>
+                                {isSubSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                              </div>
+
+                              <div className="flex-1 min-w-0 pr-4">
+                                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{sub.name}</h4>
+                                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                  {products.filter(p => p.categoryId === sub.id).length} ACTIVE PRODUCTS
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })}
 
               {categories.length === 0 && (
-                <div className="col-span-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 p-12 rounded-2xl text-center space-y-6">
+                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 p-12 rounded-2xl text-center space-y-6">
                   <Box className="mx-auto text-amber-200 dark:text-amber-800" size={60} />
                   <div className="space-y-2">
                     <p className="text-xl font-black text-amber-700 dark:text-amber-400 tracking-tight">No taxonomies found!</p>
@@ -197,7 +235,7 @@ const CatalogSetup: React.FC = () => {
 
               <div className="space-y-6 text-center">
                 <button onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-400 transition-colors group">
-                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Return to Assets
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Return to Products
                 </button>
                 <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Final <span className="text-indigo-600 dark:text-indigo-400">Assembly.</span></h1>
                 <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed max-w-lg mx-auto">Configure the architectural components of your publication before compilation.</p>

@@ -170,9 +170,9 @@ const EditCategoryForm: React.FC = () => {
               <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center">
                 <Info size={20} className="text-indigo-400" />
               </div>
-              <h4 className="text-sm font-black uppercase tracking-widest">Asset Sync</h4>
+              <h4 className="text-sm font-black uppercase tracking-widest">Product Sync</h4>
               <p className="text-[10px] font-medium text-slate-400 leading-relaxed">
-                Changes to category properties will synchronize across all active publications. Assets belonging to this category will maintain their relative hierarchy.
+                Changes to category properties will synchronize across all active publications. Products belonging to this category will maintain their relative hierarchy.
               </p>
             </div>
           </div>

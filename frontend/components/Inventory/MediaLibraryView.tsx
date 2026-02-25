@@ -51,7 +51,7 @@ const MediaLibraryView: React.FC = () => {
   };
 
   const handleBulkDelete = () => {
-    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected assets?`)) {
+    if (confirm(`Are you sure you want to delete ${selectedIds.length} selected products?`)) {
       removeMediaBatch(selectedIds);
       setSelectedIds([]);
     }
@@ -60,7 +60,7 @@ const MediaLibraryView: React.FC = () => {
   const handleUploadClick = () => {
     const url = prompt('Enter an image resource URL:');
     if (url) {
-      const name = prompt('Enter a name for this asset:', 'New Asset');
+      const name = prompt('Enter a name for this product:', 'New Product');
       addMedia({
         id: `m-${Date.now()}`,
         name: name || 'Untitled',
@@ -85,7 +85,7 @@ const MediaLibraryView: React.FC = () => {
           onClick={handleUploadClick}
           className="px-6 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95"
         >
-          <Upload size={16} /> Upload Asset
+          <Upload size={16} /> Upload Product
         </button>
       </div>
 
@@ -95,7 +95,7 @@ const MediaLibraryView: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
           <input 
             type="text" 
-            placeholder="Search assets by name..." 
+            placeholder="Search products by name..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
@@ -155,11 +155,11 @@ const MediaLibraryView: React.FC = () => {
                      <button 
                         onClick={(e) => handleDelete(item.id, e)}
                         className="p-3 bg-white/20 hover:bg-white/30 rounded-full backdrop-blur-md transition-all"
-                        title="Delete Asset"
+                        title="Delete Product"
                       >
                         <Trash2 size={20} />
                       </button>
-                      <span className="text-[10px] font-black uppercase tracking-widest">Remove Asset</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest">Remove Product</span>
                   </div>
                 </div>
                 
@@ -241,7 +241,7 @@ const MediaLibraryView: React.FC = () => {
             <div className="w-8 h-8 bg-indigo-600 dark:bg-indigo-500 rounded-2xl flex items-center justify-center font-black text-sm">
               {selectedIds.length}
             </div>
-            <span className="text-xs font-black uppercase tracking-widest">Assets Selected</span>
+            <span className="text-xs font-black uppercase tracking-widest">Products Selected</span>
           </div>
           <div className="w-px h-8 bg-white/10 dark:bg-slate-800" />
           <div className="flex items-center gap-4">

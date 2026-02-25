@@ -23,7 +23,7 @@ const Dashboard: React.FC = () => {
 
   const stats = [
     { label: 'Total Inventory', value: products.length, icon: <Package size={22} />, color: 'bg-indigo-600/10 text-indigo-600 dark:bg-indigo-400/10 dark:text-indigo-400' },
-    { label: 'Asset Categories', value: categories.length, icon: <Layout size={22} />, color: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400' },
+    { label: 'Product Categories', value: categories.length, icon: <Layout size={22} />, color: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400' },
     { label: 'Pending Drafts', value: savedCatalogs.length, icon: <BookOpen size={22} />, color: 'bg-amber-500/10 text-amber-600 dark:bg-amber-400/10 dark:text-amber-400' }
   ];
 
@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
             <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
               <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between">
                 <div>
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Global Asset Library</h3>
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Global Product Library</h3>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-2">Latest inventory sync</p>
                 </div>
                 <button onClick={() => { setActiveCategoryId(null); setView('products-list'); }} className="p-3 text-slate-400 hover:text-indigo-600 bg-slate-50 dark:bg-slate-800 rounded-2xl transition-colors">

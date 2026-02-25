@@ -34,11 +34,20 @@ const EditProductForm: React.FC = () => {
         };
 
         activeTemplate.schema.forEach(field => {
-          // Try to map back from standard fields or custom fields
-          if (field.id === 'prod_name') initialData[field.id] = productToEdit.name;
-          else if (field.id === 'price') initialData[field.id] = productToEdit.price.toString();
-          else if (field.id === 'main_image') initialData[field.id] = productToEdit.image;
-          else if (field.id === 'description') initialData[field.id] = productToEdit.description;
+          const lowerLabel = (field.label || '').toLowerCase();
+
+          if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
+            initialData[field.id] = productToEdit.name;
+          }
+          else if (field.id === 'price' || lowerLabel.includes('price')) {
+            initialData[field.id] = productToEdit.price.toString();
+          }
+          else if (field.id === 'main_image' || lowerLabel.includes('main image') || lowerLabel.includes('main product image')) {
+            initialData[field.id] = productToEdit.image;
+          }
+          else if (field.id === 'description' || lowerLabel.includes('description')) {
+            initialData[field.id] = productToEdit.description;
+          }
           else {
             initialData[field.id] = productToEdit.customFields?.[field.id] || '';
           }
@@ -82,7 +91,7 @@ const EditProductForm: React.FC = () => {
 
     let finalProduct: any = {
       currency: formData.currency,
-      sku: formData.sku
+      sku: formData.sku || `GEN-${Math.random().toString(36).substring(2, 8).toUpperCase()}`
     };
 
     const customFields: Record<string, any> = {};
@@ -90,10 +99,20 @@ const EditProductForm: React.FC = () => {
     if (activeTemplate) {
       activeTemplate.schema.forEach(field => {
         const value = formData[field.id];
-        if (field.id === 'prod_name') finalProduct.name = value;
-        else if (field.id === 'price') finalProduct.price = parseFloat(value) || 0;
-        else if (field.id === 'main_image') finalProduct.image = value;
-        else if (field.id === 'description') finalProduct.description = value;
+        const lowerLabel = (field.label || '').toLowerCase();
+
+        if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
+          finalProduct.name = value;
+        }
+        else if (field.id === 'price' || lowerLabel.includes('price')) {
+          finalProduct.price = parseFloat(value) || 0;
+        }
+        else if (field.id === 'main_image' || lowerLabel.includes('main image') || lowerLabel.includes('main product image')) {
+          finalProduct.image = value;
+        }
+        else if (field.id === 'description' || lowerLabel.includes('description')) {
+          finalProduct.description = value;
+        }
         else {
           customFields[field.id] = value;
         }
@@ -103,6 +122,7 @@ const EditProductForm: React.FC = () => {
       if (!finalProduct.name) finalProduct.name = productToEdit?.name;
       if (!finalProduct.price && finalProduct.price !== 0) finalProduct.price = productToEdit?.price;
       if (!finalProduct.image) finalProduct.image = productToEdit?.image;
+      if (!finalProduct.description) finalProduct.description = productToEdit?.description;
       if (!finalProduct.categoryId) finalProduct.categoryId = formData.categoryId; // Use the direct formData mapping
 
     } else {
@@ -204,13 +224,13 @@ const EditProductForm: React.FC = () => {
             <button onClick={handleCancel} className="flex items-center gap-2 text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest hover:text-indigo-700 transition-all mb-4">
               <ArrowLeft size={14} /> Back to Library
             </button>
-            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Edit Asset</h1>
+            <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none mb-2">Edit Product</h1>
             <p className="text-base text-slate-500 dark:text-slate-400 font-medium">Refine metadata for <span className="text-indigo-600 dark:text-indigo-400 font-bold">{productToEdit.name}</span>.</p>
           </div>
           <div className="flex items-center gap-3">
             <button onClick={handleCancel} className="px-8 py-3.5 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest hover:bg-slate-100 dark:hover:bg-slate-900 rounded-2xl transition-all">Discard Changes</button>
             <button onClick={handleSubmit} className="px-8 py-3.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 hover:bg-indigo-700 transition-all flex items-center gap-2">
-              <Save size={18} /> Update Asset
+              <Save size={18} /> Update Product
             </button>
           </div>
         </div>
@@ -281,6 +301,35 @@ const EditProductForm: React.FC = () => {
                     </div>
                   ))}
 
+                  {/* Pricing Fallback if no price field is mapped in the template */}
+                  {!activeTemplate.schema.some(f => f.id === 'price') && (
+                    <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-700">
+                      <div className="space-y-2">
+                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Base Pricing (Required)</label>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={formData.currency}
+                            onChange={(e) => handleInputChange('currency', e.target.value)}
+                            className="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-4 py-4 text-sm font-bold text-slate-800 dark:text-white focus:border-indigo-600 dark:focus:border-indigo-400 outline-none appearance-none"
+                          >
+                            {CURRENCIES.map(c => (
+                              <option key={c.code} value={c.symbol}>{c.code} ({c.symbol})</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            step="0.01"
+                            required
+                            value={formData.price}
+                            onChange={(e) => handleInputChange('price', e.target.value)}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 text-lg font-bold text-slate-800 dark:text-white focus:border-indigo-600 dark:focus:border-indigo-400 outline-none"
+                            placeholder="0.00"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <div className="space-y-2 pt-4 border-t border-slate-50 dark:border-slate-700">
                     <div className="flex justify-between items-center ml-1">
                       <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">System SKU</label>
@@ -318,7 +367,7 @@ const EditProductForm: React.FC = () => {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Category Classification</label>
-                      <div className="relative"><FolderTree className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} /><select value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-10 py-4 text-base font-bold text-slate-800 dark:text-white focus:border-indigo-600 dark:focus:border-indigo-400 outline-none appearance-none"><option value="">Standard Asset</option>{categories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}</select><ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" /></div>
+                      <div className="relative"><FolderTree className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} /><select value={formData.categoryId} onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })} className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-10 py-4 text-base font-bold text-slate-800 dark:text-white focus:border-indigo-600 dark:focus:border-indigo-400 outline-none appearance-none"><option value="">Standard Product</option>{categories.map(cat => (<option key={cat.id} value={cat.id}>{cat.name}</option>))}</select><ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" /></div>
                     </div>
                   </div>
                 </section>
@@ -330,7 +379,7 @@ const EditProductForm: React.FC = () => {
             </div>
             <div className="space-y-8">
               <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 space-y-6">
-                <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Visual Asset</h3>
+                <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Visual Product</h3>
                 <div className="aspect-square bg-slate-50 dark:bg-slate-800 rounded-[28px] border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden">
                   {formData.image ? (
                     <img src={formData.image} className="w-full h-full object-cover" />
@@ -382,7 +431,7 @@ const EditProductForm: React.FC = () => {
                       <input type="number" step="0.01" required value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} className="w-full bg-white/10 dark:bg-slate-800/50 border border-white/10 dark:border-slate-700 rounded-2xl pl-14 pr-6 py-5 text-2xl font-black text-white focus:bg-white/20 outline-none" placeholder="0.00" />
                     </div>
                   </div>
-                  <div className="p-4 bg-indigo-600/20 border border-indigo-600/30 rounded-2xl flex items-start gap-3"><Info size={16} className="text-indigo-400 dark:text-indigo-500 shrink-0 mt-0.5" /><p className="text-[10px] font-bold text-indigo-100 dark:text-indigo-200 leading-relaxed">Changes here affect the SKU globally across all publications using this asset.</p></div>
+                  <div className="p-4 bg-indigo-600/20 border border-indigo-600/30 rounded-2xl flex items-start gap-3"><Info size={16} className="text-indigo-400 dark:text-indigo-500 shrink-0 mt-0.5" /><p className="text-[10px] font-bold text-indigo-100 dark:text-indigo-200 leading-relaxed">Changes here affect the SKU globally across all publications using this product.</p></div>
                 </div>
               </div>
             </div>
