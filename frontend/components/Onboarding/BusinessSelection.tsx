@@ -15,8 +15,7 @@ const BusinessSelection: React.FC = () => {
             {/* Header */}
             <div className="px-8 py-6 flex items-center justify-between bg-white border-b border-slate-200">
                 <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-600/20">C</div>
-                    <span className="font-black text-xl tracking-tight text-slate-900">Studio.</span>
+                    <span className="font-black text-xl tracking-tight text-slate-900">catalogmakerr.</span>
                 </div>
                 <div className="flex items-center gap-6">
                     <button onClick={() => setView('pricing')} className="text-sm font-black text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-widest px-4 py-2 bg-indigo-50 rounded-lg border border-indigo-100 shadow-sm shadow-indigo-600/5 hover:-translate-y-0.5 transform active:scale-95 transition-all">Upgrade Plan</button>

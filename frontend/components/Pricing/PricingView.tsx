@@ -156,8 +156,7 @@ const PricingView: React.FC = () => {
                         <ArrowLeft size={20} />
                     </button>
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-600/20">C</div>
-                        <span className="font-black text-xl tracking-tight text-slate-900">Studio.</span>
+                        <span className="font-black text-xl tracking-tight text-slate-900">catalogmakerr.</span>
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -237,10 +236,10 @@ const PricingView: React.FC = () => {
                                     disabled={isCurrent}
                                     onClick={() => handleSelectPlan(plan)}
                                     className={`w-full py-5 rounded-2xl font-black text-sm uppercase tracking-widest transition-all ${isCurrent
-                                            ? 'bg-slate-100 text-slate-400 cursor-default'
-                                            : isGrowth
-                                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95'
-                                                : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
+                                        ? 'bg-slate-100 text-slate-400 cursor-default'
+                                        : isGrowth
+                                            ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-xl shadow-indigo-600/20 active:scale-95'
+                                            : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95'
                                         }`}
                                 >
                                     {isCurrent ? 'Existing Plan' : 'Select Plan'}

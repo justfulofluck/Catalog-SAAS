@@ -135,7 +135,7 @@ const App: React.FC = () => {
       <div className="h-screen w-screen bg-[#f8fafc] flex flex-col items-center justify-center space-y-6">
         <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">CatalogStudio</h2>
+          <h2 className="text-xl font-bold text-slate-800 tracking-tight">catalogmakerr.</h2>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-1">Enterprise Asset Engine</p>
         </div>
       </div>
@@ -343,9 +343,12 @@ const App: React.FC = () => {
     <div className="flex h-screen w-screen overflow-hidden bg-[#f8fafc] dark:bg-slate-950 font-sans text-slate-700 dark:text-slate-200 transition-colors duration-300">
       <aside className={`${sidebarWidth} bg-slate-900 flex flex-col py-6 z-30 shrink-0 transition-all duration-300 ease-in-out`}>
         <div className={`flex ${isSidebarExpanded ? 'items-center justify-between px-6' : 'flex-col items-center gap-6 px-2'} mb-10`}>
-          <div onClick={() => setView('dashboard')} className="flex items-center gap-3 cursor-pointer group shrink-0">
-            <div className="w-10 h-10 bg-indigo-600 rounded-[10px] flex items-center justify-center text-white font-black text-xl shadow-lg shadow-indigo-600/20 group-hover:scale-105 transition-transform text-center shrink-0">C</div>
-            {isSidebarExpanded && <span className="text-white font-black text-xl tracking-tight animate-in fade-in slide-in-from-left-2 duration-300">Studio.</span>}
+          <div onClick={() => setView('dashboard')} className="flex items-center gap-3 cursor-pointer group shrink-0 overflow-hidden max-w-full">
+            {isSidebarExpanded ? (
+              <span className="text-white font-black text-xl tracking-tight animate-in fade-in slide-in-from-left-2 duration-300 truncate">catalogmakerr.</span>
+            ) : (
+              <span className="text-white font-black text-xl tracking-tight truncate">c.</span>
+            )}
           </div>
           <button
             onClick={() => setSidebarExpanded(!isSidebarExpanded)}

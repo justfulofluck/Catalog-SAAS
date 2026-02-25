@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft} from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../client';
 
 const Login: React.FC = () => {
@@ -429,8 +429,7 @@ const Login: React.FC = () => {
 
           <div className="relative z-10 flex flex-col h-full">
             <div className="flex items-center gap-4 mb-auto">
-              <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center font-black text-2xl shadow-xl shadow-indigo-600/30">C</div>
-              <span className="font-black text-2xl tracking-tighter">Studio.</span>
+              <span className="font-black text-2xl tracking-tighter">catalogmakerr.</span>
             </div>
 
             <div className="space-y-6">
