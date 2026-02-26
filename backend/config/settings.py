@@ -96,7 +96,7 @@ DATABASES = {
         "NAME": "catalog_studio_db",
         "USER": "catprocbase",
         "PASSWORD": "6dl@bTfNIg7T",
-        "HOST": "localhost",
+        "HOST": os.environ.get("DB_HOST", "localhost"),
         "PORT": "3306",
         "OPTIONS": {
             "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",

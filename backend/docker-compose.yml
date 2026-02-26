@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: catalogstudio_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: 'catalog_studio_db'
+      MYSQL_USER: 'catprocbase'
+      MYSQL_PASSWORD: '6dl@bTfNIg7T'
+      MYSQL_ROOT_PASSWORD: 'root_password_here'
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: --default-authentication-plugin=mysql_native_password
+
+  web:
+    build: .
+    container_name: catalogstudio_web
+    command: >
+      bash -c "python manage.py migrate && 
+               python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DB_HOST=db
+    depends_on:
+      - db
+
+volumes:
+  mysql_data:
