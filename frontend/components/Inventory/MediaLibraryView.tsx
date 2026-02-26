@@ -67,21 +67,12 @@ const MediaLibraryView: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const url = reader.result as string;
-        addMedia({
-          id: `m-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-          name: file.name,
-          type: 'image',
-          url,
-          thumbnailUrl: url,
-          createdAt: new Date().toISOString(),
-          size: `${(file.size / 1024).toFixed(1)} KB`
-        });
-      };
-      reader.readAsDataURL(file);
+    Array.from(files).forEach(async (file) => {
+      try {
+        await addMedia(file);
+      } catch (error) {
+        console.error("Upload failed for file:", file.name);
+      }
     });
 
     // Reset the input so the same files can be selected again if needed

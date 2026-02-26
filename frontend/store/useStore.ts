@@ -121,9 +121,10 @@ interface State {
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
 
-  addMedia: (item: MediaItem) => void;
-  removeMedia: (id: string) => void;
-  removeMediaBatch: (ids: string[]) => void;
+  addMedia: (file: File) => Promise<void>;
+  removeMedia: (id: string) => Promise<void>;
+  removeMediaBatch: (ids: string[]) => Promise<void>;
+  fetchMedia: () => Promise<void>;
 
   setActiveCategoryId: (id: string | null) => void;
   setSelectedCategoryId: (id: string | null) => void;
@@ -1132,17 +1133,73 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  addMedia: (item) => set((state) => ({
-    mediaItems: [item, ...state.mediaItems]
-  })),
+  fetchMedia: async () => {
+    const { mediaApi } = await import('../client');
+    try {
+      const response = await mediaApi.getAll();
+      const items = (response as any).data || response;
+      const mappedItems = items.map((m: any) => ({
+        id: String(m.id),
+        name: m.name,
+        type: 'image',
+        url: m.url,
+        createdAt: m.created_at || new Date().toISOString(),
+        size: m.size_bytes ? `${(m.size_bytes / 1024).toFixed(1)} KB` : '0 KB'
+      }));
+      set({ mediaItems: mappedItems });
+    } catch (error) {
+      console.error("Failed to fetch media", error);
+    }
+  },
 
-  removeMedia: (id) => set((state) => ({
-    mediaItems: state.mediaItems.filter(m => m.id !== id)
-  })),
+  addMedia: async (file: File) => {
+    const { mediaApi } = await import('../client');
+    try {
+      const response = await mediaApi.upload(file);
+      const m = (response as any).data || response;
+      const newItem: MediaItem = {
+        id: String(m.id),
+        name: m.name,
+        type: 'image',
+        url: m.url,
+        createdAt: m.created_at || new Date().toISOString(),
+        size: m.size_bytes ? `${(m.size_bytes / 1024).toFixed(1)} KB` : '0 KB'
+      };
+      set((state) => ({
+        mediaItems: [newItem, ...state.mediaItems]
+      }));
+    } catch (error) {
+      console.error("Failed to upload media", error);
+      set({ error: "Failed to upload media" });
+      throw error;
+    }
+  },
 
-  removeMediaBatch: (ids) => set((state) => ({
-    mediaItems: state.mediaItems.filter(m => !ids.includes(m.id))
-  })),
+  removeMedia: async (id: string) => {
+    const { mediaApi } = await import('../client');
+    try {
+      await mediaApi.delete(id);
+      set((state) => ({
+        mediaItems: state.mediaItems.filter(m => String(m.id) !== String(id))
+      }));
+    } catch (error) {
+      console.error("Failed to remove media", error);
+    }
+  },
+
+  removeMediaBatch: async (ids: string[]) => {
+    const { mediaApi } = await import('../client');
+    try {
+      for (const id of ids) {
+        await mediaApi.delete(id);
+      }
+      set((state) => ({
+        mediaItems: state.mediaItems.filter(m => !ids.map(String).includes(String(m.id)))
+      }));
+    } catch (error) {
+      console.error("Failed to remove media batch", error);
+    }
+  },
 
   setActiveCategoryId: (id) => set({ activeCategoryId: id }),
   setSelectedCategoryId: (id) => set({ selectedCategoryId: id }),
@@ -1241,8 +1298,8 @@ export const useStore = create<State>((set, get) => ({
 
     set({ isLoading: true });
     try {
-      let backendId = catalog.id;
-      let isNew = catalog.id.startsWith('cat-');
+      let backendId = String(catalog.id);
+      let isNew = backendId.startsWith('cat-');
 
       if (isNew) {
         // Create new catalog on backend
@@ -1259,14 +1316,14 @@ export const useStore = create<State>((set, get) => ({
           }
         });
         const data = (response as any).data || response;
-        backendId = data.id;
+        backendId = String(data.id);
 
         // Update local state with the real backend ID and UUID
         set((state) => ({
           catalog: { ...state.catalog, id: backendId, uuid: data.uuid },
           savedCatalogs: [
             { ...state.catalog, id: backendId, uuid: data.uuid, updatedAt: new Date().toISOString() },
-            ...state.savedCatalogs.filter(c => c.id !== catalog.id)
+            ...state.savedCatalogs.filter(c => String(c.id) !== String(catalog.id))
           ]
         }));
       } else {
@@ -1340,51 +1397,55 @@ export const useStore = create<State>((set, get) => ({
 
       const catalogs = rawCatalogs.map((data: any) => ({
         ...data,
+        id: String(data.id),
         pages: (data.pages || []).map((p: any) => ({
           ...p,
+          id: String(p.id),
           elements: p.layout_data || [],
           categoryId: p.category
         }))
       }));
 
-      set({ savedCatalogs: catalogs });
+      set({ savedCatalogs: catalogs, isLoading: false });
     } catch (error) {
       console.error("Failed to fetch catalogs", error);
+      set({ isLoading: false });
     }
   },
 
   publishCatalog: async (id) => {
     const { catalogsApi } = await import('../client');
     const state = get();
-    let catalog = state.savedCatalogs.find(c => c.id === id);
+    const stringId = String(id);
+    let catalog = state.savedCatalogs.find(c => String(c.id) === stringId);
 
-    if (!catalog && state.catalog.id === id) {
+    if (!catalog && String(state.catalog.id) === stringId) {
       catalog = state.catalog;
     }
 
     if (!catalog) {
-      console.error("Catalog not found locally");
+      console.error("Catalog not found locally", { id, stringId, saved: state.savedCatalogs.map(c => c.id) });
       return;
     }
 
     try {
-      let backendId = id;
+      let backendId = stringId;
 
       // If it's a frontend-only ID, create it on the backend first
-      if (id.startsWith('cat-')) {
+      if (stringId.startsWith('cat-')) {
         const createResponse = await catalogsApi.create({
           name: catalog.name,
           settings: catalog.settings || {}
         });
         const createdCatalog = (createResponse as any).data || createResponse;
-        backendId = createdCatalog.id;
+        backendId = String(createdCatalog.id);
 
         // Update local state with the new backend ID
         set((state) => ({
           savedCatalogs: state.savedCatalogs.map(c =>
-            c.id === id ? { ...c, id: backendId, uuid: createdCatalog.uuid } : c
+            String(c.id) === stringId ? { ...c, id: backendId, uuid: createdCatalog.uuid } : c
           ),
-          catalog: state.catalog.id === id ? { ...state.catalog, id: backendId, uuid: createdCatalog.uuid } : state.catalog
+          catalog: String(state.catalog.id) === stringId ? { ...state.catalog, id: backendId, uuid: createdCatalog.uuid } : state.catalog
         }));
 
         // Save all pages to the backend
@@ -1403,7 +1464,7 @@ export const useStore = create<State>((set, get) => ({
 
       set((state) => ({
         savedCatalogs: state.savedCatalogs.map(c =>
-          c.id === backendId ? { ...c, status: 'published', uuid: data.uuid, updatedAt: new Date().toISOString() } : c
+          String(c.id) === backendId ? { ...c, status: 'published', uuid: data.uuid, updatedAt: new Date().toISOString() } : c
         )
       }));
       return { id: backendId, uuid: data.uuid };
@@ -2808,6 +2869,7 @@ export const useStore = create<State>((set, get) => ({
         get().fetchBusinessTemplates();
         get().fetchUsers();
         get().fetchCatalogs();
+        get().fetchMedia();
       } else {
         set({
           isAuthenticated: true,
@@ -2819,6 +2881,7 @@ export const useStore = create<State>((set, get) => ({
         get().fetchCategories();
         get().fetchBusinessTemplates();
         get().fetchCatalogs();
+        get().fetchMedia();
       }
 
     } catch (error) {

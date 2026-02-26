@@ -49,29 +49,28 @@ const MediaAssetLibrary: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const url = event.target?.result as string;
-        const mediaId = `upload-sid-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+    Array.from(files).forEach(async (file) => {
+      try {
+        // 1. Save to global organizational media pool on backend
+        await addMedia(file);
 
-        const newItem: MediaItem = {
-          id: mediaId,
-          name: file.name,
-          type: 'image',
-          url,
-          thumbnailUrl: url,
-          createdAt: new Date().toISOString(),
-          size: `${(file.size / 1024).toFixed(1)} KB`
+        // 2. Automatically place on current page for better UX using a local preview URL
+        // (The added element will sync with the permanent URL once the store updates)
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const url = event.target?.result as string;
+          handleAddMedia({
+            id: `temp-${Date.now()}`,
+            name: file.name,
+            type: 'image',
+            url,
+            createdAt: new Date().toISOString()
+          });
         };
-
-        // 1. Save to global organizational media pool
-        addMedia(newItem);
-
-        // 2. Automatically place on current page for better UX
-        handleAddMedia(newItem);
-      };
-      reader.readAsDataURL(file);
+        reader.readAsDataURL(file);
+      } catch (error) {
+        console.error("Upload failed in sidebar:", file.name);
+      }
     });
 
     // Clear input so same file can be uploaded again if deleted
