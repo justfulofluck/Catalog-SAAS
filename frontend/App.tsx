@@ -106,6 +106,16 @@ const App: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       await checkAuth();
+
+      // Handle deep linking for public viewer
+      const path = window.location.pathname;
+      const viewerMatch = path.match(/\/viewer\/([^\/]+)/);
+      if (viewerMatch) {
+        const uuid = viewerMatch[1];
+        const { openPublicViewer } = useStore.getState();
+        openPublicViewer(uuid);
+      }
+
       setLoading(false);
     };
     init();

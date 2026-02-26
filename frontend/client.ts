@@ -97,6 +97,8 @@ export const catalogsApi = {
     update: (id: string, data: any) => api.patch<Catalog>(`/catalogs/${id}/`, data),
     delete: (id: string) => api.delete(`/catalogs/${id}/`),
     savePage: (catalogId: string, pageData: any) => api.post(`/catalogs/${catalogId}/save_page/`, pageData),
+    publish: (id: string) => api.post(`/catalogs/${id}/publish/`),
+    getPublic: (uuid: string) => api.get<Catalog>(`/catalogs/public/${uuid}/`),
 };
 
 // Media API

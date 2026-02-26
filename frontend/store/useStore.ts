@@ -158,11 +158,13 @@ interface State {
   setCatalogGlobalText: (header?: string, footer?: string) => void;
   updateCatalogVisuals: (updates: Partial<Catalog>) => void;
 
-  saveCatalog: () => void;
+  saveCatalog: () => Promise<string | undefined>;
   loadCatalog: (id: string) => void;
   deleteCatalog: (id: string) => void;
+  fetchCatalogs: () => Promise<void>;
   updateSavedCatalog: (id: string, updates: Partial<Catalog>) => void;
-  publishCatalog: (id: string) => void;
+  publishCatalog: (id: string) => Promise<{ id: string; uuid: string } | undefined>;
+  fetchPublicCatalog: (uuid: string) => Promise<Catalog | undefined>;
   openPublicViewer: (id: string) => void;
 
   addElement: (pageIndex: number, element: CanvasElement) => void;
@@ -1232,22 +1234,80 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  saveCatalog: () => set((state) => {
-    const updatedCatalog = { ...state.catalog, updatedAt: new Date().toISOString() };
-    const existingIndex = state.savedCatalogs.findIndex(c => c.id === updatedCatalog.id);
-    let newSavedCatalogs = [...state.savedCatalogs];
+  saveCatalog: async () => {
+    const { catalogsApi } = await import('../client');
+    const state = get();
+    const catalog = state.catalog;
 
-    if (existingIndex >= 0) {
-      newSavedCatalogs[existingIndex] = updatedCatalog;
-    } else {
-      newSavedCatalogs = [updatedCatalog, ...newSavedCatalogs];
+    set({ isLoading: true });
+    try {
+      let backendId = catalog.id;
+      let isNew = catalog.id.startsWith('cat-');
+
+      if (isNew) {
+        // Create new catalog on backend
+        const response = await catalogsApi.create({
+          name: catalog.name,
+          settings: {
+            backgroundColor: catalog.backgroundColor,
+            headerText: catalog.headerText,
+            footerText: catalog.footerText,
+            hasHeader: catalog.hasHeader,
+            hasFooter: catalog.hasFooter,
+            productIds: catalog.productIds,
+            selectedCategoryIds: catalog.selectedCategoryIds
+          }
+        });
+        const data = (response as any).data || response;
+        backendId = data.id;
+
+        // Update local state with the real backend ID and UUID
+        set((state) => ({
+          catalog: { ...state.catalog, id: backendId, uuid: data.uuid },
+          savedCatalogs: [
+            { ...state.catalog, id: backendId, uuid: data.uuid, updatedAt: new Date().toISOString() },
+            ...state.savedCatalogs.filter(c => c.id !== catalog.id)
+          ]
+        }));
+      } else {
+        // Update existing catalog metadata
+        await catalogsApi.update(backendId, {
+          name: catalog.name,
+          settings: {
+            backgroundColor: catalog.backgroundColor,
+            headerText: catalog.headerText,
+            footerText: catalog.footerText,
+            hasHeader: catalog.hasHeader,
+            hasFooter: catalog.hasFooter,
+            productIds: catalog.productIds,
+            selectedCategoryIds: catalog.selectedCategoryIds
+          }
+        });
+
+        set((state) => ({
+          savedCatalogs: state.savedCatalogs.map(c =>
+            c.id === backendId ? { ...state.catalog, updatedAt: new Date().toISOString() } : c
+          )
+        }));
+      }
+
+      // Save all pages (This could be optimized to only sav changed pages, but for now we save all)
+      for (const page of catalog.pages) {
+        await catalogsApi.savePage(backendId, {
+          pageNumber: page.pageNumber,
+          type: page.type,
+          elements: page.elements,
+          categoryId: page.categoryId
+        });
+      }
+
+      set({ isLoading: false });
+      return backendId;
+    } catch (error) {
+      console.error("Failed to save catalog", error);
+      set({ error: "Failed to save catalog to server", isLoading: false });
     }
-
-    return {
-      catalog: updatedCatalog,
-      savedCatalogs: newSavedCatalogs
-    };
-  }),
+  },
 
   loadCatalog: (id) => set((state) => {
     const catalogToLoad = state.savedCatalogs.find(c => c.id === id);
@@ -1272,9 +1332,109 @@ export const useStore = create<State>((set, get) => ({
     savedCatalogs: state.savedCatalogs.map(c => c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c)
   })),
 
-  publishCatalog: (id) => set((state) => ({
-    savedCatalogs: state.savedCatalogs.map(c => c.id === id ? { ...c, status: 'published', updatedAt: new Date().toISOString() } : c)
-  })),
+  fetchCatalogs: async () => {
+    const { catalogsApi } = await import('../client');
+    try {
+      const response = await catalogsApi.getAll();
+      const rawCatalogs = (response as any).data || response;
+
+      const catalogs = rawCatalogs.map((data: any) => ({
+        ...data,
+        pages: (data.pages || []).map((p: any) => ({
+          ...p,
+          elements: p.layout_data || [],
+          categoryId: p.category
+        }))
+      }));
+
+      set({ savedCatalogs: catalogs });
+    } catch (error) {
+      console.error("Failed to fetch catalogs", error);
+    }
+  },
+
+  publishCatalog: async (id) => {
+    const { catalogsApi } = await import('../client');
+    const state = get();
+    let catalog = state.savedCatalogs.find(c => c.id === id);
+
+    if (!catalog && state.catalog.id === id) {
+      catalog = state.catalog;
+    }
+
+    if (!catalog) {
+      console.error("Catalog not found locally");
+      return;
+    }
+
+    try {
+      let backendId = id;
+
+      // If it's a frontend-only ID, create it on the backend first
+      if (id.startsWith('cat-')) {
+        const createResponse = await catalogsApi.create({
+          name: catalog.name,
+          settings: catalog.settings || {}
+        });
+        const createdCatalog = (createResponse as any).data || createResponse;
+        backendId = createdCatalog.id;
+
+        // Update local state with the new backend ID
+        set((state) => ({
+          savedCatalogs: state.savedCatalogs.map(c =>
+            c.id === id ? { ...c, id: backendId, uuid: createdCatalog.uuid } : c
+          ),
+          catalog: state.catalog.id === id ? { ...state.catalog, id: backendId, uuid: createdCatalog.uuid } : state.catalog
+        }));
+
+        // Save all pages to the backend
+        for (const page of catalog.pages) {
+          await catalogsApi.savePage(backendId, {
+            pageNumber: page.pageNumber,
+            type: page.type,
+            elements: page.elements,
+            categoryId: page.categoryId
+          });
+        }
+      }
+
+      const response = await catalogsApi.publish(backendId);
+      const data = (response as any).data || response;
+
+      set((state) => ({
+        savedCatalogs: state.savedCatalogs.map(c =>
+          c.id === backendId ? { ...c, status: 'published', uuid: data.uuid, updatedAt: new Date().toISOString() } : c
+        )
+      }));
+      return { id: backendId, uuid: data.uuid };
+    } catch (error) {
+      console.error("Failed to publish catalog", error);
+      set({ error: "Failed to publish catalog" });
+    }
+  },
+
+  fetchPublicCatalog: async (uuid) => {
+    const { catalogsApi } = await import('../client');
+    set({ isLoading: true });
+    try {
+      const response = await catalogsApi.getPublic(uuid);
+      const data = (response as any).data || response;
+      // Map the backend data to our frontend format if needed
+      const mappedPages = data.pages.map((p: any) => ({
+        ...p,
+        elements: p.layout_data || []
+      }));
+      const mappedCatalog = {
+        ...data,
+        pages: mappedPages
+      };
+      set({ catalog: mappedCatalog, viewingCatalogId: data.id, isLoading: false });
+      return mappedCatalog;
+    } catch (error) {
+      console.error("Failed to fetch public catalog", error);
+      set({ error: "Catalog not found or not published", isLoading: false });
+    }
+  },
 
   openPublicViewer: (id) => set({
     currentView: 'public-viewer',
@@ -2647,6 +2807,7 @@ export const useStore = create<State>((set, get) => ({
         get().fetchCategories();
         get().fetchBusinessTemplates();
         get().fetchUsers();
+        get().fetchCatalogs();
       } else {
         set({
           isAuthenticated: true,
@@ -2657,6 +2818,7 @@ export const useStore = create<State>((set, get) => ({
         get().fetchProducts();
         get().fetchCategories();
         get().fetchBusinessTemplates();
+        get().fetchCatalogs();
       }
 
     } catch (error) {

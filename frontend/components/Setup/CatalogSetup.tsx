@@ -36,7 +36,7 @@ const CatalogSetup: React.FC = () => {
     );
   };
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     if (name && selectedCategoryIds.length > 0) {
       // Use a default template to seed the initial structure
       const defaultTemplate = GRID_TEMPLATES[1]; // 2x2
@@ -46,6 +46,11 @@ const CatalogSetup: React.FC = () => {
         selectedCategoryIds,
         { includeCover, includeIndex, includeCategoryCovers }
       );
+
+      // Save to backend immediately so refresh doesn't lose data
+      const { saveCatalog } = useStore.getState();
+      await saveCatalog();
+
       setView('editor');
     }
   };

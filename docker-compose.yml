@@ -11,25 +11,39 @@ services:
       MYSQL_PASSWORD: '6dl@bTfNIg7T'
       MYSQL_ROOT_PASSWORD: 'root_password_here'
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     command: --default-authentication-plugin=mysql_native_password
 
-  web:
-    build: .
-    container_name: catalogstudio_web
+  backend:
+    build: ./backend
+    container_name: catalogstudio_backend
     command: >
       bash -c "python manage.py migrate && 
                python manage.py runserver 0.0.0.0:8000"
     volumes:
-      - .:/app
+      - ./backend:/app
     ports:
       - "8000:8000"
     environment:
       - DB_HOST=db
     depends_on:
       - db
+
+  frontend:
+    build: ./frontend
+    container_name: catalogstudio_frontend
+    command: npm run dev -- --host 0.0.0.0 --port 3002
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3002:3002"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
 
 volumes:
   mysql_data:

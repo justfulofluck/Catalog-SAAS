@@ -183,6 +183,7 @@ export interface MediaItem {
 
 export interface Catalog {
   id: string;
+  uuid?: string;
   name: string;
   status: 'draft' | 'published';
   pages: CatalogPage[];

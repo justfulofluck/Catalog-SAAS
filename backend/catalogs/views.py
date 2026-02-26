@@ -26,6 +26,22 @@ class CatalogViewSet(viewsets.ModelViewSet):
         serializer.save(owner=self.request.user)
 
     @action(detail=True, methods=['post'])
+    def publish(self, request, pk=None):
+        catalog = self.get_object()
+        catalog.status = 'published'
+        catalog.save()
+        return Response({'status': 'published', 'uuid': catalog.uuid})
+
+    @action(detail=False, methods=['get'], url_path='public/(?P<uuid>[^/.]+)', permission_classes=[permissions.AllowAny])
+    def public(self, request, uuid=None):
+        try:
+            catalog = Catalog.objects.get(uuid=uuid, status='published')
+            serializer = CatalogSerializer(catalog)
+            return Response(serializer.data)
+        except Catalog.DoesNotExist:
+            return Response({'error': 'Catalog not found or not published'}, status=status.HTTP_404_NOT_FOUND)
+
+    @action(detail=True, methods=['post'])
     def save_page(self, request, pk=None):
         catalog = self.get_object()
         page_data = request.data

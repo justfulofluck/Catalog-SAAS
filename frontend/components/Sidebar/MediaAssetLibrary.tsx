@@ -46,12 +46,14 @@ const MediaAssetLibrary: React.FC = () => {
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
       const reader = new FileReader();
       reader.onload = (event) => {
         const url = event.target?.result as string;
-        const mediaId = `upload-sid-${Date.now()}`;
+        const mediaId = `upload-sid-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
 
         const newItem: MediaItem = {
           id: mediaId,
@@ -70,7 +72,8 @@ const MediaAssetLibrary: React.FC = () => {
         handleAddMedia(newItem);
       };
       reader.readAsDataURL(file);
-    }
+    });
+
     // Clear input so same file can be uploaded again if deleted
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -105,6 +108,7 @@ const MediaAssetLibrary: React.FC = () => {
           ref={fileInputRef}
           onChange={handleFileUpload}
           accept="image/*"
+          multiple
           className="hidden"
         />
       </div>
