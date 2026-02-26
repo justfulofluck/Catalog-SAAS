@@ -12,9 +12,10 @@ interface Props {
   onSelect: (multi: boolean) => void;
   onChange: (updates: Partial<ICanvasElement>) => void;
   isEditing?: boolean;
+  isReadOnly?: boolean;
 }
 
-const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChange, isEditing = false }) => {
+const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChange, isEditing = false, isReadOnly = false }) => {
   const shapeRef = useRef<any>(null);
   const trRef = useRef<any>(null);
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -509,7 +510,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   };
 
   const handleDragStart = (e: any) => {
-    if (element.locked) return;
+    if (element.locked || isReadOnly) return;
     pushHistory();
     dragStartPos.current = { x: e.target.x(), y: e.target.y() };
     const stage = e.target.getStage();
@@ -626,6 +627,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   };
 
   const handleMouseEnter = () => {
+    if (isReadOnly) return;
     setIsHovered(true);
     if (!element.locked) {
       document.body.style.cursor = 'pointer';
@@ -633,6 +635,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   };
 
   const handleMouseLeave = () => {
+    if (isReadOnly) return;
     setIsHovered(false);
     document.body.style.cursor = 'default';
   };
@@ -650,10 +653,10 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     height: element.type === 'text' ? undefined : element.height,
     rotation: element.rotation,
     opacity: element.opacity,
-    draggable: !element.locked && activeTool !== 'hand',
-    listening: activeTool !== 'hand', // Pass events through to stage when panning
-    onClick: handleSelect,
-    onTap: handleSelect,
+    draggable: !element.locked && activeTool !== 'hand' && !isReadOnly,
+    listening: activeTool !== 'hand' && !isReadOnly, // Pass events through to stage when panning or readOnly
+    onClick: isReadOnly ? undefined : handleSelect,
+    onTap: isReadOnly ? undefined : handleSelect,
     perfectDrawEnabled: false,
     shadowForStrokeEnabled: true,
     hitStrokeWidth: 5,

@@ -26,6 +26,7 @@ const CanvasHeader: React.FC<{ catalog: any; theme: any; pageIdx: number }> = ({
           isSelected={false}
           onSelect={() => { }}
           onChange={() => { }}
+          isReadOnly={true}
         />
       ))}
     </Group>
@@ -125,22 +126,23 @@ const PublicViewer: React.FC = () => {
             <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-all"><ZoomIn size={16} /></button>
           </div>
 
-          <div className="group relative">
-            <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20">
-              {isDownloading ? 'Saving...' : 'Download'} <ChevronLeft size={12} className="-rotate-90" />
-            </button>
-            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl overflow-hidden hidden group-hover:block animate-in fade-in zoom-in-95 duration-200 min-w-[160px]">
-              <button onClick={() => handleDownload('pdf')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
-                <FileDown size={16} /> <span className="text-xs font-bold">Export as PDF</span>
-              </button>
-              <button onClick={() => handleDownload('png')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
-                <ImageIcon size={16} /> <span className="text-xs font-bold">Export as PNG</span>
-              </button>
-              <button onClick={() => handleDownload('jpeg')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
-                <ImageIcon size={16} /> <span className="text-xs font-bold">Export as JPEG</span>
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={() => handleDownload('pdf')}
+            disabled={isDownloading}
+            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-50"
+          >
+            {isDownloading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <FileDown size={16} />
+                Download PDF
+              </>
+            )}
+          </button>
         </div>
       </div>
 
@@ -166,6 +168,7 @@ const PublicViewer: React.FC = () => {
                     isSelected={false}
                     onSelect={() => { }}
                     onChange={() => { }}
+                    isReadOnly={true}
                   />
                 ))}
               </Group>
@@ -187,6 +190,7 @@ const PublicViewer: React.FC = () => {
                       isSelected={false}
                       onSelect={() => { }}
                       onChange={() => { }}
+                      isReadOnly={true}
                     />
                   );
                 })}
