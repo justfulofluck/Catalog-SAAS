@@ -4,18 +4,25 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
+  const isDocker = process.env.DOCKER_ENV === 'true';
+  
   return {
     server: {
       port: 3000,
       host: '0.0.0.0',
-      allowedHosts: ['catalogmakerr.blueglobaltechnology.com'],
+      allowedHosts: ['catalogmakerr.blueglobaltechnology.com', 'localhost', '.'],
       proxy: {
         '/api': {
-          //target: 'http://192.168.1.177:8003',
-          //target: 'http://192.168.1.208:8003',
-          target: 'http://localhost:8003',
+          target: isDocker ? 'http://backend:8000' : 'http://localhost:8000',
           changeOrigin: true,
           secure: false,
+          configure: (proxy, options) => {
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              if (isDocker) {
+                proxyReq.setHeader('host', 'backend:8000');
+              }
+            });
+          }
         }
       }
     },

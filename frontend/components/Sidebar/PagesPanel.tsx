@@ -191,7 +191,7 @@ const PagesPanel: React.FC = () => {
     };
 
     return (
-        <div className={`flex flex-col h-full w-[200px] border-r overflow-hidden ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+        <div className={`flex flex-col h-full w-full border-r overflow-hidden ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
             {/* Header */}
             <div className={`flex items-center justify-between px-3 py-3 border-b shrink-0 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
                 <span className={`text-[11px] font-black uppercase tracking-widest ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Pages</span>
@@ -237,16 +237,6 @@ const PagesPanel: React.FC = () => {
 
                             {hoveredIndex === index && (
                                 <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
-                                    <button
-                                        onClick={(e) => { e.stopPropagation(); useStore.getState().setPageOrientation(index, page.orientation === 'landscape' ? 'portrait' : 'landscape'); }}
-                                        className="p-1.5 bg-white text-indigo-600 rounded-lg shadow-lg hover:bg-indigo-50 border border-indigo-100 transition-all active:scale-95"
-                                        title={`Switch to ${page.orientation === 'landscape' ? 'Portrait' : 'Landscape'}`}
-                                    >
-                                        <div className={`transition-transform duration-300 ${page.orientation === 'landscape' ? 'rotate-90' : ''}`}>
-                                            <div className="w-2.5 h-3.5 border-2 border-current rounded-[2px]" />
-                                        </div>
-                                    </button>
-                                    <div className="h-px bg-slate-100 my-0.5" />
                                     <button
                                         onClick={(e) => { e.stopPropagation(); duplicatePage(index); }}
                                         className="p-1.5 bg-white text-slate-600 rounded-lg shadow-md hover:bg-slate-50 border border-slate-200"

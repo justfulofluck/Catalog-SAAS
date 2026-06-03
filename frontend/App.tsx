@@ -20,7 +20,6 @@ import ProductLibrary from './components/Sidebar/ProductLibrary';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
 import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import StockImagesPanel from './components/Sidebar/StockImagesPanel';
-import EffectsPanel from './components/Sidebar/EffectsPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
 import ProjectSettingsPanel from './components/Sidebar/ProjectSettingsPanel';
 import ButtonsPanel from './components/Sidebar/ButtonsPanel';
@@ -269,21 +268,6 @@ const App: React.FC = () => {
 
                 <button
                   onClick={() => {
-                    if (editorTab === 'effects' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('effects');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'effects' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                  title="Effects"
-                >
-                  <Sparkles size={22} />
-                </button>
-
-                <button
-                  onClick={() => {
                     if (editorTab === 'buttons' && isSidebarExpanded) {
                       setSidebarExpanded(false);
                     } else {
@@ -307,7 +291,7 @@ const App: React.FC = () => {
                   {editorTab === 'stock' && <StockImagesPanel />}
                   {editorTab === 'templates' && <TemplatesPanel />}
                   {editorTab === 'buttons' && <ButtonsPanel />}
-                  {editorTab === 'effects' && <EffectsPanel />}
+
                 </div>
               )}
             </div>

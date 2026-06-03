@@ -243,8 +243,8 @@ const ProductLibrary: React.FC = () => {
                     {(() => {
                       const imgSrc = product.image || (product.customFields && Object.values(product.customFields).find(
                         val => typeof val === 'string' && (val.startsWith('/media') || val.startsWith('http'))
-                      )) || '';
-                      return <img src={imgSrc as string} alt={product.name} className="w-full h-full object-cover" />;
+                      )) || null;
+                      return imgSrc ? <img src={imgSrc as string} alt={product.name} className="w-full h-full object-cover" /> : null;
                     })()}
                   </div>
 

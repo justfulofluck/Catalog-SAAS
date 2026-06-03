@@ -23,7 +23,9 @@ interface Props {
 const Divider = () => <div className="w-[1px] h-5 bg-slate-200/80 mx-1 shrink-0" />;
 
 export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }) => {
-    const { setIsPropertyPanelOpen, setEditorTab, setSidebarExpanded } = useStore();
+    const setIsPropertyPanelOpen = useStore(state => state.setIsPropertyPanelOpen);
+    const setEditorTab = useStore(state => state.setEditorTab);
+    const setSidebarExpanded = useStore(state => state.setSidebarExpanded);
     const [isFontMenuOpen, setIsFontMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
@@ -423,23 +425,6 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                 </div>
             </div>
 
-            <Divider />
-
-            {/* Effects */}
-            <div className="flex items-center gap-1 px-2">
-                <button
-                    onClick={() => {
-                        setEditorTab('effects');
-                        setIsPropertyPanelOpen(true);
-                        setSidebarExpanded(true);
-                    }}
-                    onMouseDown={preventFocusSteal}
-                    className="text-[11px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 px-3 py-2 rounded-full transition-all flex items-center gap-2 group"
-                >
-                    <Wand2 size={13} className="text-indigo-500 group-hover:scale-110 transition-transform" />
-                    Effects
-                </button>
-            </div>
         </div>
     );
 };

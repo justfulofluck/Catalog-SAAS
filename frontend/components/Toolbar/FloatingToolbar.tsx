@@ -1,5 +1,6 @@
 
 import React, { useRef, useState, useEffect, useMemo } from 'react';
+import { useShallow } from 'zustand/react/shallow';
 import {
   Link as LinkIcon,
   MessageSquare,
@@ -38,32 +39,38 @@ const FloatingToolbar: React.FC<Props> = ({
   onLayerChange
 }) => {
   const {
-    catalog,
-    currentPageIndex,
-    selectedElementIds,
-    setSelectedElementIds,
-    zoom,
-    toggleLock,
-    removeElement,
-    duplicateElement,
-    updateElement,
-    removeProductFromPage,
-    pushHistory,
-    updateHeaderElement,
-    updateFooterElement,
-    removeHeaderElement,
-    removeFooterElement,
-    duplicateHeaderElement,
-    duplicateFooterElement
-  } = useStore();
+    catalog, currentPageIndex, selectedElementIds, setSelectedElementIds, zoom,
+    toggleLock, removeElement, duplicateElement, updateElement,
+    removeProductFromPage, pushHistory, updateHeaderElement, updateFooterElement,
+    removeHeaderElement, removeFooterElement, duplicateHeaderElement, duplicateFooterElement
+  } = useStore(useShallow(state => ({
+    catalog: state.catalog,
+    currentPageIndex: state.currentPageIndex,
+    selectedElementIds: state.selectedElementIds || [],
+    setSelectedElementIds: state.setSelectedElementIds,
+    zoom: state.zoom,
+    toggleLock: state.toggleLock,
+    removeElement: state.removeElement,
+    duplicateElement: state.duplicateElement,
+    updateElement: state.updateElement,
+    removeProductFromPage: state.removeProductFromPage,
+    pushHistory: state.pushHistory,
+    updateHeaderElement: state.updateHeaderElement,
+    updateFooterElement: state.updateFooterElement,
+    removeHeaderElement: state.removeHeaderElement,
+    removeFooterElement: state.removeFooterElement,
+    duplicateHeaderElement: state.duplicateHeaderElement,
+    duplicateFooterElement: state.duplicateFooterElement,
+  })));
 
-  const currentPage = catalog.pages[currentPageIndex];
+  const currentPage = catalog.pages?.[currentPageIndex];
 
   // Find selected elements across page, header, and footer
   const selectedElements = useMemo(() => {
-    const pageElems = currentPage?.elements.filter(el => selectedElementIds.includes(el.id)) || [];
-    const headerElems = catalog.headerElements.filter(el => selectedElementIds.includes(el.id));
-    const footerElems = catalog.footerElements.filter(el => selectedElementIds.includes(el.id));
+    if (!selectedElementIds || selectedElementIds.length === 0) return [];
+    const pageElems = currentPage?.elements?.filter(el => el && selectedElementIds.includes(el.id)) || [];
+    const headerElems = catalog.headerElements?.filter(el => el && selectedElementIds.includes(el.id)) || [];
+    const footerElems = catalog.footerElements?.filter(el => el && selectedElementIds.includes(el.id)) || [];
     return [...pageElems, ...headerElems, ...footerElems];
   }, [currentPage?.elements, catalog.headerElements, catalog.footerElements, selectedElementIds]);
 
@@ -148,8 +155,8 @@ const FloatingToolbar: React.FC<Props> = ({
     e.stopPropagation();
     pushHistory();
     selectedElementIds.forEach(id => {
-      if (catalog.headerElements.some(h => h.id === id)) duplicateHeaderElement(id);
-      else if (catalog.footerElements.some(f => f.id === id)) duplicateFooterElement(id);
+      if (catalog.headerElements?.some(h => h.id === id)) duplicateHeaderElement(id);
+      else if (catalog.footerElements?.some(f => f.id === id)) duplicateFooterElement(id);
       else duplicateElement(currentPageIndex, id);
     });
     setShowMoreMenu(false);
@@ -159,29 +166,29 @@ const FloatingToolbar: React.FC<Props> = ({
     e.stopPropagation();
     const newVisible = isAnyHidden;
     selectedElementIds.forEach(id => {
-      if (catalog.headerElements.some(h => h.id === id)) updateHeaderElement(id, { visible: newVisible });
-      else if (catalog.footerElements.some(f => f.id === id)) updateFooterElement(id, { visible: newVisible });
+      if (catalog.headerElements?.some(h => h.id === id)) updateHeaderElement(id, { visible: newVisible });
+      else if (catalog.footerElements?.some(f => f.id === id)) updateFooterElement(id, { visible: newVisible });
       else updateElement(currentPageIndex, id, { visible: newVisible });
     });
     setShowMoreMenu(false);
   };
 
   const internalUpdate = (id: string, updates: any) => {
-    if (catalog.headerElements.some(h => h.id === id)) updateHeaderElement(id, updates);
-    else if (catalog.footerElements.some(f => f.id === id)) updateFooterElement(id, updates);
+    if (catalog.headerElements?.some(h => h.id === id)) updateHeaderElement(id, updates);
+    else if (catalog.footerElements?.some(f => f.id === id)) updateFooterElement(id, updates);
     else updateElement(currentPageIndex, id, updates);
   };
 
   const internalRemove = (id: string) => {
-    if (catalog.headerElements.some(h => h.id === id)) removeHeaderElement(id);
-    else if (catalog.footerElements.some(f => f.id === id)) removeFooterElement(id);
+    if (catalog.headerElements?.some(h => h.id === id)) removeHeaderElement(id);
+    else if (catalog.footerElements?.some(f => f.id === id)) removeFooterElement(id);
     else removeElement(currentPageIndex, id);
   };
 
   const handleBringToFront = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushHistory();
-    const allElements = [...currentPage.elements, ...catalog.headerElements, ...catalog.footerElements];
+    const allElements = [...(currentPage?.elements || []), ...(catalog.headerElements || []), ...(catalog.footerElements || [])];
     const maxZ = Math.max(...allElements.map(el => el.zIndex || 0));
     selectedElementIds.forEach((id, i) => internalUpdate(id, { zIndex: maxZ + 1 + i }));
   };
@@ -189,7 +196,7 @@ const FloatingToolbar: React.FC<Props> = ({
   const handleSendToBack = (e: React.MouseEvent) => {
     e.stopPropagation();
     pushHistory();
-    const allElements = [...currentPage.elements, ...catalog.headerElements, ...catalog.footerElements];
+    const allElements = [...(currentPage?.elements || []), ...(catalog.headerElements || []), ...(catalog.footerElements || [])];
     const minZ = Math.min(...allElements.map(el => el.zIndex || 0));
     selectedElementIds.forEach((id, i) => internalUpdate(id, { zIndex: minZ - 1 - i }));
   };

@@ -5,7 +5,7 @@ import { useStore } from '../../store/useStore';
 
 // Note: In a real production app, you'd store this in .env
 // For demo purposes, we provide a placeholder. The user should replace this with their own API key.
-const UNSPLASH_ACCESS_KEY = import.meta.env.VITE_UNSPLASH_ACCESS_KEY || '';
+const UNSPLASH_ACCESS_KEY = (import.meta as any).env.VITE_UNSPLASH_ACCESS_KEY || '';
 
 interface UnsplashImage {
     id: string;

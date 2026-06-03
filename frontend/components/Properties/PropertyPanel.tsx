@@ -125,10 +125,10 @@ const PropertyPanel: React.FC = () => {
     </div>
   );
 
-  const handleOpenEffects = () => {
-    setEditorTab('effects');
-    setSidebarExpanded(true);
-  };
+const handleOpenEffects = () => {
+     setEditorTab('components');
+     setSidebarExpanded(true);
+   };
 
   const activeFill = selectedElement?.fill || '#000000';
 

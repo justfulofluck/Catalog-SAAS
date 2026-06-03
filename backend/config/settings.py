@@ -26,7 +26,7 @@ SECRET_KEY = "django-insecure-65shkrq$m$pr63md-%8yaikcu*yy916=f&(^8ctp8!_u=s51+b
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["0.0.0.0", "192.168.1.208", "192.168.1.177", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["*", "backend", "localhost", "127.0.0.1"]
 
 # Application definition
 
@@ -144,11 +144,8 @@ MEDIA_ROOT = BASE_DIR / "media"
 
 # Authentication Settings
 # Updated for allauth >= 0.63
-ACCOUNT_USER_MODEL_USERNAME_FIELD = "username"
+ACCOUNT_LOGIN_METHODS = {"email", "username"}
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_AUTHENTICATION_METHOD = "username_email"
-ACCOUNT_SIGNUP_PASSWORD_ENTER_TWICE = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
 
 # Deprecated settings removed to resolve warnings:

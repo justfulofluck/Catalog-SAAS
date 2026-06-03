@@ -146,8 +146,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'effects' | 'components' | 'buttons' | 'stock' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'effects' | 'components' | 'buttons' | 'stock' | null) => void;
+  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | null) => void;
 
   renameCatalog: (newName: string) => void;
   updateCatalogCategories: (categoryIds: string[]) => void;
@@ -187,6 +187,7 @@ interface State {
   duplicatePage: (index: number) => void;
   reorderPages: (newPageIds: string[]) => void;
   setPageOrientation: (pageIndex: number, orientation: 'portrait' | 'landscape') => void;
+  setCatalogOrientation: (orientation: 'portrait' | 'landscape') => void;
   setPageBackground: (pageIndex: number, color: string) => void;
 
   toggleCatalogProduct: (productId: string) => void;
@@ -222,6 +223,8 @@ interface State {
   addFooterElement: (element: CanvasElement) => void;
   removeHeaderElement: (elementId: string) => void;
   removeFooterElement: (elementId: string) => void;
+  duplicateHeaderElement: (elementId: string) => void;
+  duplicateFooterElement: (elementId: string) => void;
 
 
   // Clipboard
@@ -460,7 +463,11 @@ export const useStore = create<State>((set, get) => ({
   login: async (email, username, password) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await authApi.login({ email, username, password });
+      const payload: any = { password };
+      if (email) payload.email = email;
+      if (username) payload.username = username;
+      
+      const response = await authApi.login(payload);
 
       // 2. Fetch User Details
       const userData: any = await authApi.user();
@@ -494,8 +501,8 @@ export const useStore = create<State>((set, get) => ({
 
       // Fetch templates on login
       get().fetchBusinessTemplates();
-      // Fetch users for admin dashboard
-      get().fetchUsers();
+      // Only fetch users if it's an admin (but regular login usually returns user role)
+      if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
       const errorMessage = error.response?.data?.non_field_errors?.[0] || 'Login failed';
       if (errorMessage.includes('Unable to log in with provided credentials')) {
@@ -1435,7 +1442,13 @@ export const useStore = create<State>((set, get) => ({
       if (stringId.startsWith('cat-')) {
         const createResponse = await catalogsApi.create({
           name: catalog.name,
-          settings: catalog.settings || {}
+          settings: {
+            backgroundColor: catalog.backgroundColor,
+            headerText: catalog.headerText,
+            footerText: catalog.footerText,
+            hasHeader: catalog.hasHeader,
+            hasFooter: catalog.hasFooter,
+          }
         });
         const createdCatalog = (createResponse as any).data || createResponse;
         backendId = String(createdCatalog.id);
@@ -1910,6 +1923,47 @@ export const useStore = create<State>((set, get) => ({
 
       return {
         catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
+      };
+    });
+  },
+
+  setCatalogOrientation: (orientation) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = state.catalog.pages.map(page => {
+        const oldOrientation = page.orientation || 'portrait';
+        if (oldOrientation === orientation) return page;
+
+        // Swap dimensions for shift logic
+        const oldW = oldOrientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH;
+        const oldH = oldOrientation === 'landscape' ? PAGE_WIDTH : PAGE_HEIGHT;
+        const newW = orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH;
+        const newH = orientation === 'landscape' ? PAGE_WIDTH : PAGE_HEIGHT;
+
+        return {
+          ...page,
+          orientation,
+          elements: page.elements.map(el => {
+            // Scale positions proportionally
+            const scaleX = newW / oldW;
+            const scaleY = newH / oldH;
+
+            // Product blocks might have complex structure, but they inherit from CanvasElement
+            return {
+              ...el,
+              x: el.x * scaleX,
+              y: el.y * scaleY,
+              // We don't necessarily want to scale width/height here as it might distort elements, 
+              // but for orientation change, often we want elements to stay relatively positioned.
+              // However, if we want to be thorough, we could adjust them too.
+              // For now, let's just scale position to keep them on page.
+            };
+          })
+        };
+      });
+
+      return {
+        catalog: { ...state.catalog, pages: newPages }
       };
     });
   },

@@ -25,66 +25,64 @@ export interface BusinessTemplate {
 }
 
 export interface CanvasElement {
-  id: string;
-  type: ElementType;
-  shapeType?: ShapeType;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  rotation: number;
-  opacity: number;
-  fill?: string;
-  stroke?: string;
-  strokeWidth?: number;
-  text?: string;
-  fontSize?: number;
-  fontFamily?: string;
-  fontWeight?: string; // '400', '700', '900'
-  fontStyle?: 'normal' | 'italic';
-  textDecoration?: string;
-  textAlign?: 'left' | 'center' | 'right' | 'justify';
-  verticalAlign?: 'top' | 'middle' | 'bottom';
-  lineHeight?: number;
-  letterSpacing?: number;
-  src?: string;
-  productId?: string;
-  zIndex: number;
-  author?: string;
-  groupId?: string;
-  locked?: boolean;
-  visible?: boolean;
+   id: string;
+   type: ElementType;
+   shapeType?: ShapeType;
+   x: number;
+   y: number;
+   width: number;
+   height: number;
+   rotation: number;
+   opacity: number;
+   fill?: string;
+   stroke?: string;
+   strokeWidth?: number;
+   text?: string;
+   fontSize?: number;
+   fontFamily?: string;
+   fontWeight?: string;
+   fontStyle?: 'normal' | 'italic';
+   textDecoration?: string;
+   textAlign?: 'left' | 'center' | 'right' | 'justify';
+   verticalAlign?: 'top' | 'middle' | 'bottom';
+   lineHeight?: number;
+   letterSpacing?: number;
+   src?: string;
+   productId?: string;
+   zIndex: number;
+   author?: string;
+   groupId?: string;
+   locked?: boolean;
+   visible?: boolean;
+   effectStyle?: 'none' | 'hollow' | 'outline' | 'shadow' | 'lift' | 'neon' | 'glitch' | 'echo' | 'splice' | 'background';
+   effectColor?: string;
+   effectColor2?: string;
+   shadowBlur?: number;
+   shadowOpacity?: number;
+   shadowOffsetX?: number;
+   shadowOffsetY?: number;
+   textStrokeWidth?: number;
+   effectSpread?: number;
+   effectRoundness?: number;
 
-  // Effects
-  effectStyle?: 'none' | 'shadow' | 'lift' | 'hollow' | 'splice' | 'outline' | 'echo' | 'glitch' | 'neon' | 'background';
-  shadowBlur?: number;
-  shadowOpacity?: number;
-  shadowColor?: string;
-  shadowOffsetX?: number;
-  shadowOffsetY?: number;
-  textStrokeWidth?: number;
-  effectColor?: string;
-  effectColor2?: string;
-  effectSpread?: number;
-  effectRoundness?: number;
-
-  // Product Block specific
-  cardTheme?: CardTheme;
-  showPrice?: boolean;
-  showSku?: boolean;
-  showName?: boolean;
-  filters?: {
-    brightness?: number;
-    blur?: number;
-    contrast?: number;
-    saturation?: number;
-  };
-  iconConfig?: {
-    iconName: string;
-    iconLibrary: 'fontawesome';
-    color?: string;
-    size?: number;
-  };
+   // Product Block specific
+   productData?: Product;
+   cardTheme?: CardTheme;
+   showPrice?: boolean;
+   showSku?: boolean;
+   showName?: boolean;
+   filters?: {
+     brightness?: number;
+     blur?: number;
+     contrast?: number;
+     saturation?: number;
+   };
+   iconConfig?: {
+     iconName: string;
+     iconLibrary: 'fontawesome';
+     color?: string;
+     size?: number;
+   };
 }
 
 export interface GridTemplate {
@@ -176,7 +174,7 @@ export interface MediaItem {
   type: MediaType;
   url: string;
   thumbnailUrl?: string;
-  size?: string;
+  size?: string | number;
   dimensions?: string;
   createdAt: string;
 }

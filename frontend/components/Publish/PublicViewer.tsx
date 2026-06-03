@@ -1,6 +1,5 @@
-
 import React, { useRef, useState } from 'react';
-import { Download, Share2, ArrowLeft, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileDown, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { Download, Share2, ArrowLeft, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileDown, Image as ImageIcon } from 'lucide-react';
 import { Stage, Layer, Rect, Group, Line, Image as KonvaImage, Text } from 'react-konva';
 import useImage from 'use-image';
 import { useStore } from '../../store/useStore';
@@ -26,7 +25,7 @@ const CanvasHeader: React.FC<{ catalog: any; theme: any; pageIdx: number }> = ({
           isSelected={false}
           onSelect={() => { }}
           onChange={() => { }}
-          isReadOnly={true}
+          isViewerMode={true}
         />
       ))}
     </Group>
@@ -34,45 +33,15 @@ const CanvasHeader: React.FC<{ catalog: any; theme: any; pageIdx: number }> = ({
 };
 
 const PublicViewer: React.FC = () => {
-  const { savedCatalogs, viewingCatalogId, setView, activeThemeId, fetchPublicCatalog, isLoading, error, catalog: currentCatalog } = useStore();
-
-  // First try to find it in savedCatalogs (if we are the owner)
-  // If not found, it might be a public UUID from a shared link
-  const catalog = savedCatalogs.find(c => c.id === viewingCatalogId || c.uuid === viewingCatalogId) || currentCatalog;
+  const { savedCatalogs, viewingCatalogId, setView, activeThemeId } = useStore();
+  const catalog = savedCatalogs.find(c => c.id === viewingCatalogId);
 
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [zoom, setZoom] = useState(0.8);
   const [isDownloading, setIsDownloading] = useState(false);
   const stageRef = useRef<any>(null);
 
-  React.useEffect(() => {
-    // If we have an ID/UUID but no catalog data, fetch it
-    if (viewingCatalogId && (!catalog || (catalog.id !== viewingCatalogId && catalog.uuid !== viewingCatalogId))) {
-      fetchPublicCatalog(viewingCatalogId);
-    }
-  }, [viewingCatalogId, catalog, fetchPublicCatalog]);
-
-  if (isLoading) return (
-    <div className="h-screen w-screen bg-slate-900 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-4">
-        <Loader2 className="w-10 h-10 text-indigo-500 animate-spin" />
-        <p className="text-white/60 font-black text-xs uppercase tracking-widest">Loading Catalog...</p>
-      </div>
-    </div>
-  );
-
-  if (error || !catalog) return (
-    <div className="h-screen w-screen bg-slate-900 flex items-center justify-center p-10 text-center">
-      <div className="max-w-md space-y-6">
-        <div className="w-20 h-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto">
-          <X size={40} />
-        </div>
-        <h1 className="text-2xl font-black text-white">Oops! Catalog Not Visible</h1>
-        <p className="text-slate-400 font-medium">{error || "This catalog might be private or doesn't exist anymore."}</p>
-        <button onClick={() => setView('dashboard')} className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-black text-xs uppercase tracking-widest hover:bg-indigo-700 transition-all">Back to Dashboard</button>
-      </div>
-    </div>
-  );
+  if (!catalog) return <div className="p-10 text-center">Catalog not found.</div>;
 
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const currentPage = catalog.pages[currentPageIndex];
@@ -87,7 +56,7 @@ const PublicViewer: React.FC = () => {
         // NOTE: In a real implementation, we would need to iterate through all pages and render them one by one.
         // Since we only display one page at a time here, this simple export only does the current page.
         // For a full multi-page export in a viewer, we'd need to programmatically render each page to a hidden canvas.
-        // For this demo, we'll export the *current view* or simulate multi-page if possible. 
+        // For this demo, we'll export the *current view* or simulate multi-page if possible.
         // Given constraints, let's just export current page for visual proof or simulate full download.
 
         const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/jpeg' });
@@ -126,23 +95,22 @@ const PublicViewer: React.FC = () => {
             <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-all"><ZoomIn size={16} /></button>
           </div>
 
-          <button
-            onClick={() => handleDownload('pdf')}
-            disabled={isDownloading}
-            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20 disabled:opacity-50"
-          >
-            {isDownloading ? (
-              <>
-                <Loader2 size={16} className="animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <FileDown size={16} />
-                Download PDF
-              </>
-            )}
-          </button>
+          <div className="group relative">
+            <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+              {isDownloading ? 'Saving...' : 'Download'} <ChevronLeft size={12} className="-rotate-90" />
+            </button>
+            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl overflow-hidden hidden group-hover:block animate-in fade-in zoom-in-95 duration-200 min-w-[160px]">
+              <button onClick={() => handleDownload('pdf')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+                <FileDown size={16} /> <span className="text-xs font-bold">Export as PDF</span>
+              </button>
+              <button onClick={() => handleDownload('png')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+                <ImageIcon size={16} /> <span className="text-xs font-bold">Export as PNG</span>
+              </button>
+              <button onClick={() => handleDownload('jpeg')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+                <ImageIcon size={16} /> <span className="text-xs font-bold">Export as JPEG</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -168,7 +136,7 @@ const PublicViewer: React.FC = () => {
                     isSelected={false}
                     onSelect={() => { }}
                     onChange={() => { }}
-                    isReadOnly={true}
+                    isViewerMode={true}
                   />
                 ))}
               </Group>
@@ -190,7 +158,7 @@ const PublicViewer: React.FC = () => {
                       isSelected={false}
                       onSelect={() => { }}
                       onChange={() => { }}
-                      isReadOnly={true}
+                      isViewerMode={true}
                     />
                   );
                 })}

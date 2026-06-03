@@ -187,7 +187,7 @@ const CategoryListView: React.FC = () => {
                 <p className="text-lg font-black text-slate-400 dark:text-slate-600">No categories found.</p>
                 <button
                   onClick={() => setView('create-category')}
-                  className="mt-4 text-indigo-600 dark:text-indigo-400 font-black hover:underline text-sm uppercase tracking-widest"
+                  className="mt-4 text-indigo-600 dark:text-indigo-400 font-black hover:underline text-scdm uppercase tracking-widest"
                 >
                   Initialize first category
                 </button>

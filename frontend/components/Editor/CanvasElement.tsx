@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { Text, Image, Rect, Circle, RegularPolygon, Star, Line, Arrow, Group, Transformer } from 'react-konva';
 import useImage from 'use-image';
 import Konva from 'konva';
@@ -13,6 +13,7 @@ interface Props {
   onChange: (updates: Partial<ICanvasElement>) => void;
   isEditing?: boolean;
   isReadOnly?: boolean;
+  isViewerMode?: boolean;
 }
 
 const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChange, isEditing = false, isReadOnly = false }) => {
@@ -23,22 +24,23 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
   const [richTextImage, setRichTextImage] = useState<HTMLImageElement | null>(null);
 
   const peerNodes = useRef<any[]>([]);
+  const animationFrameRef = useRef<number | null>(null);
 
-  const {
-    selectedElementIds,
-    hoveredElementId,
-    moveElements,
-    currentPageIndex,
-    draggingItem,
-    catalog,
-    products,
-    pushHistory,
-    activeTool,
-    setGuides,
-    setDragPosition: setActiveDragPosition,
-    user,
-    businessTemplates
-  } = useStore();
+const {
+     selectedElementIds,
+     hoveredElementId,
+     moveElements,
+     currentPageIndex,
+     draggingItem,
+     catalog,
+     products,
+     pushHistory,
+     activeTool,
+     setGuides,
+     setDragPosition,
+     user,
+     businessTemplates
+   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
   const isLandscape = currentPage?.orientation === 'landscape';
@@ -455,7 +457,6 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     }
 
     const layer = node.getLayer();
-    if (layer) layer.batchDraw();
   };
 
   const handleTransformEnd = () => {
@@ -553,7 +554,6 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     });
 
     const layer = e.target.getLayer();
-    if (layer) layer.batchDraw();
 
     // Snapping Logic
     const SNAP_THRESHOLD = 5;
@@ -598,8 +598,12 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     }
     if (snappedV) e.target.y(snappedY);
 
-    setGuides(guides);
-    setActiveDragPosition({ x: Math.round(e.target.x()), y: Math.round(e.target.y()) });
+    // Debounce guide updates via rAF
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    animationFrameRef.current = requestAnimationFrame(() => {
+      setGuides(guides);
+      setDragPosition({ x: Math.round(e.target.x()), y: Math.round(e.target.y()) });
+    });
   };
 
   const handleDragEnd = (e: any) => {
@@ -623,7 +627,7 @@ const CanvasElement: React.FC<Props> = ({ element, isSelected, onSelect, onChang
     }
     peerNodes.current = [];
     setGuides([]);
-    setActiveDragPosition(null);
+    setDragPosition(null);
   };
 
   const handleMouseEnter = () => {

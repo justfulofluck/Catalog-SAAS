@@ -52,7 +52,8 @@ const EditorToolbar: React.FC = () => {
     zoom, setZoom, addElement, currentPageIndex, catalog, setView, user,
     isPropertyPanelOpen, setIsPropertyPanelOpen,
     undo, redo, undoStack, redoStack, uiTheme, toggleUiTheme,
-    saveCatalog, activeTool, setActiveTool, isSceneTreeOpen, setIsSceneTreeOpen
+    saveCatalog, activeTool, setActiveTool, isSceneTreeOpen, setIsSceneTreeOpen,
+    setCatalogOrientation
   } = useStore();
   const [isCommiting, setIsCommiting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -357,9 +358,29 @@ const EditorToolbar: React.FC = () => {
               )}
             </div>
             <button onClick={handleAddComment} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
-              ? 'hover:bg-slate-700 text-amber-400 hover:text-amber-300'
+              ? 'hover:bg-slate-700 text-amber-500 hover:text-amber-400'
               : 'hover:bg-white text-amber-500 hover:text-amber-600'
               }`} title="Add Annotation"><MessageSquare size={18} /></button>
+          </div>
+
+          {/* Orientation Toggle */}
+          <div className={`flex items-center gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
+            <button
+               onClick={() => {
+                 const newOrientation = catalog.pages[currentPageIndex]?.orientation === 'landscape' ? 'portrait' : 'landscape';
+                 setCatalogOrientation(newOrientation);
+               }}
+               className={`flex items-center gap-2 p-2 rounded-xl transition-all ${isDark
+                 ? 'hover:bg-slate-800 text-slate-400 hover:text-white'
+                 : 'hover:bg-white text-slate-500 hover:text-indigo-600'
+                 }`}
+               title={`Switch all pages to ${catalog.pages[currentPageIndex]?.orientation === 'landscape' ? 'Portrait' : 'Landscape'}`}
+            >
+               <div className={`p-1 rounded bg-slate-100 flex items-center justify-center transition-transform duration-300 ${catalog.pages[currentPageIndex]?.orientation === 'landscape' ? 'rotate-90' : ''}`}>
+                  <div className="w-2.5 h-3.5 border-2 border-slate-600 rounded-[1px]" />
+               </div>
+               <span className="text-[10px] font-black uppercase tracking-widest hidden xl:inline">{catalog.pages[currentPageIndex]?.orientation === 'landscape' ? 'Landscape' : 'Portrait'}</span>
+            </button>
           </div>
 
           <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
