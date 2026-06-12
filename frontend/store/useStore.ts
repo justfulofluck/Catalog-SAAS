@@ -1584,7 +1584,7 @@ export const useStore = create<State>((set, get) => ({
 
   updateElement: (pageIndex, elementId, updates) => set((state) => {
     const newPages = [...state.catalog.pages];
-    const page = newPages[pageIndex];
+    const page = { ...newPages[pageIndex] }; // CLONE the page object
     const element = page.elements.find(el => el.id === elementId);
 
     if (!element) return state;
@@ -1609,6 +1609,8 @@ export const useStore = create<State>((set, get) => ({
         el.id === elementId ? { ...el, ...updates } : el
       );
     }
+    
+    newPages[pageIndex] = page; // Set the cloned page back
 
     return {
       catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
