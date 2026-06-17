@@ -1,36 +1,10 @@
-import React, { useRef, useState } from 'react';
-import { Download, Share2, ArrowLeft, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileDown, Image as ImageIcon } from 'lucide-react';
-import { Stage, Layer, Rect, Group, Line, Image as KonvaImage, Text } from 'react-konva';
-import useImage from 'use-image';
+import React, { useRef, useState, useEffect } from 'react';
+import { ArrowLeft, ZoomIn, ZoomOut, ChevronLeft, ChevronRight, FileDown, Image as ImageIcon } from 'lucide-react';
+import { Canvas } from 'fabric';
 import { useStore } from '../../store/useStore';
-import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, HEADER_FOOTER_HEIGHT } from '../../constants';
-import CanvasElementComponent from '../Editor/CanvasElement';
+import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
+import { elementToFabricObject } from '../Editor/fabricRenderer';
 import { jsPDF } from 'jspdf';
-
-// Reusing CanvasHeader for consistent rendering
-const CanvasHeader: React.FC<{ catalog: any; theme: any; pageIdx: number }> = ({ catalog, theme, pageIdx }) => {
-  const height = catalog.headerHeight ?? HEADER_FOOTER_HEIGHT;
-
-  return (
-    <Group>
-      {/* Background for Header Area */}
-      <Rect width={PAGE_WIDTH} height={height} fill={catalog.backgroundColor || theme.backgroundColor} />
-      <Line points={[40, height, PAGE_WIDTH - 40, height]} stroke="#f1f5f9" strokeWidth={1} />
-
-      {/* Render Master Header Elements */}
-      {catalog.headerElements?.map((el: any) => (
-        <CanvasElementComponent
-          key={`header-master-${el.id}`}
-          element={el}
-          isSelected={false}
-          onSelect={() => { }}
-          onChange={() => { }}
-          isViewerMode={true}
-        />
-      ))}
-    </Group>
-  );
-};
 
 const PublicViewer: React.FC = () => {
   const { savedCatalogs, viewingCatalogId, setView, activeThemeId } = useStore();
@@ -39,39 +13,81 @@ const PublicViewer: React.FC = () => {
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
   const [zoom, setZoom] = useState(0.8);
   const [isDownloading, setIsDownloading] = useState(false);
-  const stageRef = useRef<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const fabricRef = useRef<Canvas | null>(null);
 
   if (!catalog) return <div className="p-10 text-center">Catalog not found.</div>;
 
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const currentPage = catalog.pages[currentPageIndex];
+  const { products } = useStore.getState();
+
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const canvas = new Canvas(canvasRef.current, {
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
+      selection: false,
+      interactive: false,
+    });
+    fabricRef.current = canvas;
+
+    const render = async () => {
+      canvas.clear();
+      canvas.backgroundColor = catalog.backgroundColor || '#ffffff';
+
+      const allElements = [
+        ...(catalog.headerElements || []),
+        ...currentPage.elements,
+        ...(catalog.footerElements || []).map(el => ({
+          ...el,
+          y: (el.y || 0) + PAGE_HEIGHT - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0),
+          text: el.type === 'text' && el.text?.includes('{{page}}')
+            ? el.text.replace(/\{\{page\}\}/gi, String(currentPageIndex + 1))
+            : el.text,
+        })),
+      ];
+
+      const objects = await Promise.all(
+        allElements
+          .filter(el => el.visible !== false)
+          .map(el => elementToFabricObject(el, products)),
+      );
+
+      objects.filter(Boolean).forEach((obj: any, i: number) => {
+        obj.set('zIndex', allElements[i]?.zIndex || 0);
+        obj.set({ selectable: false, evented: false });
+        canvas.add(obj);
+      });
+
+      canvas._objects.sort((a: any, b: any) => (a.get('zIndex') || 0) - (b.get('zIndex') || 0));
+      canvas.renderAll();
+    };
+
+    render();
+
+    return () => { canvas.dispose(); fabricRef.current = null; };
+  }, [currentPage, catalog]);
 
   const handleDownload = async (format: 'pdf' | 'png' | 'jpeg') => {
     setIsDownloading(true);
-    const stage = stageRef.current;
+    const canvas = fabricRef.current;
+    if (!canvas) { setIsDownloading(false); return; }
 
-    if (stage) {
-      if (format === 'pdf') {
-        const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [PAGE_WIDTH, PAGE_HEIGHT] });
-        // NOTE: In a real implementation, we would need to iterate through all pages and render them one by one.
-        // Since we only display one page at a time here, this simple export only does the current page.
-        // For a full multi-page export in a viewer, we'd need to programmatically render each page to a hidden canvas.
-        // For this demo, we'll export the *current view* or simulate multi-page if possible.
-        // Given constraints, let's just export current page for visual proof or simulate full download.
-
-        const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType: 'image/jpeg' });
-        pdf.addImage(dataUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
-        pdf.save(`${catalog.name}_Page_${currentPageIndex + 1}.pdf`);
-      } else {
-        const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
-        const dataUrl = stage.toDataURL({ pixelRatio: 2, mimeType });
-        const link = document.createElement('a');
-        link.download = `${catalog.name}_Page_${currentPageIndex + 1}.${format}`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      }
+    if (format === 'pdf') {
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [PAGE_WIDTH, PAGE_HEIGHT] });
+      const dataUrl = canvas.toDataURL({ multiplier: 2, format: 'jpeg' });
+      pdf.addImage(dataUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+      pdf.save(`${catalog!.name}_Page_${currentPageIndex + 1}.pdf`);
+    } else {
+      const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';
+      const dataUrl = canvas.toDataURL({ multiplier: 2, format });
+      const link = document.createElement('a');
+      link.download = `${catalog!.name}_Page_${currentPageIndex + 1}.${format}`;
+      link.href = dataUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
     setTimeout(() => setIsDownloading(false), 500);
   };
@@ -85,7 +101,7 @@ const PublicViewer: React.FC = () => {
             <ArrowLeft size={16} /> Exit
           </button>
           <div className="h-6 w-px bg-white/10" />
-          <h1 className="text-white font-black text-lg tracking-tight">{catalog.name}</h1>
+          <h1 className="text-white font-black text-lg tracking-tight">{catalog!.name}</h1>
         </div>
 
         <div className="flex items-center gap-4">
@@ -117,54 +133,7 @@ const PublicViewer: React.FC = () => {
       {/* Main Canvas Area */}
       <div className="flex-1 overflow-auto flex justify-center p-8 relative bg-slate-900/50">
         <div className="relative shadow-2xl shadow-black/50 transition-transform duration-200 ease-out origin-top" style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}>
-          <Stage
-            ref={stageRef}
-            width={PAGE_WIDTH * zoom}
-            height={PAGE_HEIGHT * zoom}
-            scaleX={zoom}
-            scaleY={zoom}
-          >
-            <Layer>
-              <Rect width={PAGE_WIDTH} height={PAGE_HEIGHT} fill={catalog.backgroundColor || '#ffffff'} />
-              {/* Header Render */}
-              <CanvasHeader catalog={catalog} theme={theme} pageIdx={currentPageIndex} />
-              <Group>
-                {currentPage.elements.map((el) => (
-                  <CanvasElementComponent
-                    key={el.id}
-                    element={el}
-                    isSelected={false}
-                    onSelect={() => { }}
-                    onChange={() => { }}
-                    isViewerMode={true}
-                  />
-                ))}
-              </Group>
-
-              {/* Footer Render */}
-              <Group y={PAGE_HEIGHT - (catalog.footerHeight ?? 38)}>
-                <Rect width={PAGE_WIDTH} height={catalog.footerHeight ?? 38} fill={catalog.backgroundColor || '#ffffff'} />
-                <Line points={[40, 0, PAGE_WIDTH - 40, 0]} stroke="#f1f5f9" strokeWidth={1} />
-
-                {catalog.footerElements?.map((el: any) => {
-                  const elementWithPage = el.type === 'text' && el.text?.toLowerCase().includes('{{page}}')
-                    ? { ...el, text: el.text.replace(/\{\{page\}\}/gi, String(currentPageIndex + 1)) }
-                    : el;
-
-                  return (
-                    <CanvasElementComponent
-                      key={`footer-master-${el.id}`}
-                      element={elementWithPage}
-                      isSelected={false}
-                      onSelect={() => { }}
-                      onChange={() => { }}
-                      isViewerMode={true}
-                    />
-                  );
-                })}
-              </Group>
-            </Layer>
-          </Stage>
+          <canvas ref={canvasRef} width={PAGE_WIDTH} height={PAGE_HEIGHT} style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom, transform: `scale(${zoom})`, transformOrigin: 'top left' }} />
         </div>
       </div>
 
@@ -178,11 +147,11 @@ const PublicViewer: React.FC = () => {
           <ChevronLeft size={20} />
         </button>
         <span className="text-white/80 font-mono font-bold text-sm">
-          Page {currentPageIndex + 1} <span className="text-white/30 mx-2">/</span> {catalog.pages.length}
+          Page {currentPageIndex + 1} <span className="text-white/30 mx-2">/</span> {catalog!.pages.length}
         </span>
         <button
-          onClick={() => setCurrentPageIndex(Math.min(catalog.pages.length - 1, currentPageIndex + 1))}
-          disabled={currentPageIndex === catalog.pages.length - 1}
+          onClick={() => setCurrentPageIndex(Math.min(catalog!.pages.length - 1, currentPageIndex + 1))}
+          disabled={currentPageIndex === catalog!.pages.length - 1}
           className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
         >
           <ChevronRight size={20} />

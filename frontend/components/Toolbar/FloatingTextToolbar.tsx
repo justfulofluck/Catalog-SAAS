@@ -30,7 +30,8 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
     const [fontSearch, setFontSearch] = useState('');
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+    const dragOffsetRef = useRef({ x: 0, y: 0 });
+    const toolbarRef = useRef<HTMLDivElement>(null);
     const dragStartPos = useRef<{ x: number; y: number } | null>(null);
 
     const fontMenuRef = useRef<HTMLDivElement>(null);
@@ -47,23 +48,34 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
     const color = element.fill || '#1e293b';
 
     const handleDragStart = (e: React.MouseEvent) => {
-        dragStartPos.current = { x: e.clientX - dragOffset.x, y: e.clientY - dragOffset.y };
+        dragStartPos.current = { x: e.clientX - dragOffsetRef.current.x, y: e.clientY - dragOffsetRef.current.y };
         document.addEventListener('mousemove', handleDragMove);
         document.addEventListener('mouseup', handleDragEnd);
+        if (toolbarRef.current) {
+            toolbarRef.current.style.transition = 'none';
+        }
     };
 
     const handleDragMove = (e: MouseEvent) => {
-        if (!dragStartPos.current) return;
-        setDragOffset({
-            x: e.clientX - dragStartPos.current.x,
-            y: e.clientY - dragStartPos.current.y
-        });
+        if (!dragStartPos.current || !toolbarRef.current) return;
+        const newX = e.clientX - dragStartPos.current.x;
+        const newY = e.clientY - dragStartPos.current.y;
+        dragOffsetRef.current = { x: newX, y: newY };
+        
+        const baseLeft = element.x * zoom;
+        const baseTop = Math.max(0, (element.y * zoom) - 85);
+        
+        toolbarRef.current.style.left = `${baseLeft + newX}px`;
+        toolbarRef.current.style.top = `${baseTop + newY}px`;
     };
 
     const handleDragEnd = () => {
         dragStartPos.current = null;
         document.removeEventListener('mousemove', handleDragMove);
         document.removeEventListener('mouseup', handleDragEnd);
+        if (toolbarRef.current) {
+            toolbarRef.current.style.transition = '';
+        }
     };
 
     useEffect(() => {
@@ -125,10 +137,11 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
 
     return (
         <div
+            ref={toolbarRef}
             className="floating-toolbar absolute z-[2000] flex items-center gap-0.5 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-100 rounded-full p-1.5 select-none transition-all animate-in zoom-in-95 duration-200"
             style={{
-                left: (element.x * zoom) + dragOffset.x,
-                top: Math.max(0, (element.y * zoom) - 85) + dragOffset.y,
+                left: (element.x * zoom) + dragOffsetRef.current.x,
+                top: Math.max(0, (element.y * zoom) - 85) + dragOffsetRef.current.y,
                 whiteSpace: 'nowrap',
             }}
         >

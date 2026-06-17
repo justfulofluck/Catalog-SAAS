@@ -1,5 +1,4 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import useImage from 'use-image';
 import { Plus, Sparkles, BookOpen, List, FileText, Settings, ChevronUp, ChevronDown, Copy, Trash2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
@@ -682,15 +681,14 @@ const EditorCanvas: React.FC = () => {
       } catch { }
     }
     if (e.dataTransfer.files?.length) {
-      Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')).forEach((file, i) => {
+      const files = Array.from<File>(e.dataTransfer.files);
+      files.filter(f => f.type.startsWith('image/')).forEach((file, i) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
           const url = ev.target?.result as string;
           if (targetId && i === 0 && currentPage.type === 'interior') { updateElement(currentPageIndex, targetId, { type: 'image', src: url, opacity: 1 }); }
 else { addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${i}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: url, zIndex: 60 }); }
-           // Note: addMedia expects File for upload; this local drop doesn't need server upload
-           // addMedia({ ... }) // Removed due to type mismatch - addMedia takes File, not MediaItem object
-         };
+          };
         reader.readAsDataURL(file);
       });
     }
@@ -1201,17 +1199,17 @@ else { addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${i}`, type: 
                           }
 
                           // 2. Update store
-                          if (catalog.headerElements.some(el => el.id === editingId)) {
+                          if (catalog.headerElements?.some(el => el.id === editingId)) {
                             updateHeaderElement(editingId, updates);
-                          } else if (catalog.footerElements.some(el => el.id === editingId)) {
+                          } else if (catalog.footerElements?.some(el => el.id === editingId)) {
                             updateFooterElement(editingId, updates);
                           } else {
                             updateElement(currentPageIndex, editingId, updates);
                           }
                         } else if (selectedTextElement) {
-                          if (catalog.headerElements.some(el => el.id === selectedTextElement.id)) {
+                          if (catalog.headerElements?.some(el => el.id === selectedTextElement.id)) {
                             updateHeaderElement(selectedTextElement.id, updates);
-                          } else if (catalog.footerElements.some(el => el.id === selectedTextElement.id)) {
+                          } else if (catalog.footerElements?.some(el => el.id === selectedTextElement.id)) {
                             updateFooterElement(selectedTextElement.id, updates);
                           } else {
                             updateElement(currentPageIndex, selectedTextElement.id, updates);

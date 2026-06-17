@@ -67,7 +67,7 @@ const MediaLibraryView: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(async (file) => {
+    Array.from<File>(files).forEach(async (file) => {
       try {
         await addMedia(file);
       } catch (error) {

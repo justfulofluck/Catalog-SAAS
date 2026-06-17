@@ -14,13 +14,10 @@
     "axios": "^1.13.5",
     "fabric": "^7.4.0",
     "jspdf": "^4.2.0",
-    "konva": "^10.0.12",
     "lucide-react": "^0.460.0",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-konva": "^19.2.1",
     "sortablejs": "1.15.2",
-    "use-image": "^1.1.4",
     "zustand": "^5.0.9"
   },
   "devDependencies": {

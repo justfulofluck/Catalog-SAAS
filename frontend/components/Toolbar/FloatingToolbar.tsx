@@ -94,7 +94,7 @@ const FloatingToolbar: React.FC<Props> = ({
   const isAnyLocked = selectedElements.some(el => el.locked);
   const isAnyHidden = selectedElements.some(el => el.visible === false);
   const productElements = selectedElements.filter(el => el.productId);
-  const productIds = Array.from(new Set(productElements.map(el => el.productId!)));
+  const productIds: string[] = Array.from(new Set(productElements.map(el => el.productId!)));
 
   // Compute the actual visual bounding box after rotation
   // Konva rotates around the element's (x, y) top-left corner

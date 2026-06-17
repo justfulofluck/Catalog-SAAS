@@ -1,8 +1,9 @@
 import React, { useEffect, useRef } from 'react';
-import { Canvas, Rect, Textbox, Image, Circle, Triangle, Group } from 'fabric';
+import { Canvas, Circle } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
-import { CatalogPage, CanvasElement, ElementType } from '../../types';
+import { CatalogPage, CanvasElement } from '../../types';
+import { elementToFabricObject } from './fabricRenderer';
 
 interface Props {
   page: CatalogPage;
@@ -16,7 +17,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const renderThrottleRef = useRef<number | null>(null);
-  const { selectedElementIds, setSelectedElements, updateElement } = useStore();
+  const { setSelectedElements, updateElement } = useStore();
+  const products = useStore((state) => state.products);
 
   const isLandscape = page.orientation === 'landscape';
   const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
@@ -52,6 +54,21 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
       }, 16);
     });
 
+    canvas.on('object:modified', (e: any) => {
+      const obj = e.target as any;
+      if (obj && obj.id) {
+        const updates: any = { x: obj.left || 0, y: obj.top || 0, rotation: obj.angle || 0 };
+        if (obj instanceof Circle) {
+          updates.width = (obj.radius || 0) * 2 * Math.abs(obj.scaleX || 1);
+          updates.height = (obj.radius || 0) * 2 * Math.abs(obj.scaleY || 1);
+        } else {
+          updates.width = (obj.width || 0) * Math.abs(obj.scaleX || 1);
+          updates.height = (obj.height || 0) * Math.abs(obj.scaleY || 1);
+        }
+        updateElement(pageIdx, obj.id, updates);
+      }
+    });
+
     return () => {
       if (renderThrottleRef.current) clearTimeout(renderThrottleRef.current);
       canvas.dispose();
@@ -63,12 +80,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
-    const { products } = useStore.getState();
 
     const existingObjects = canvas.getObjects();
     const elIds = new Set(page.elements.map(e => e.id));
 
-    // Remove deleted elements
     existingObjects.forEach((obj: any) => {
       if (obj.id && !elIds.has(obj.id)) {
         canvas.remove(obj);
@@ -81,206 +96,108 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
 
         const existingObj = existingObjects.find((o: any) => o.id === el.id);
 
-        // Update existing object to avoid recreating and interrupting drag
         if (existingObj) {
-          const isActiveObj = canvas.getActiveObjects().includes(existingObj);
-
-          // Always sync styling and non-transform properties
-          existingObj.set({
-            opacity: el.opacity ?? 1,
-            selectable: isActive && !el.locked,
-            originX: 'left', originY: 'top',
-          });
-
-          // Only skip syncing transform properties if the user is actively manipulating it
-          if (!isActiveObj) {
+          if (el.type === 'product-block') {
+            canvas.remove(existingObj);
+          } else {
+            const isActiveObj = canvas.getActiveObjects().includes(existingObj);
             existingObj.set({
-              left: el.x, top: el.y, angle: el.rotation || 0
+              opacity: el.opacity ?? 1,
+              selectable: isActive && !el.locked,
+              originX: 'left', originY: 'top',
             });
-          }
 
-          if (el.type === 'text') {
-            existingObj.set({
-              text: el.text || '', 
-              fontSize: el.fontSize || 16, fontFamily: el.fontFamily || 'Inter',
-              fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal',
-              fill: el.fill || '#000000', textAlign: el.textAlign || 'left',
-              width: el.width // ALWAYS sync width for text to allow font-size changes to expand the box
-            });
-          } else if (el.type === 'shape' || el.type === 'comment') {
-            existingObj.set({
-              fill: el.fill || '#ffffff', stroke: el.stroke || undefined,
-              strokeWidth: el.strokeWidth || 0,
-            });
             if (!isActiveObj) {
-              existingObj.set({ width: el.width, height: el.height });
-              if (el.shapeType === 'circle') {
-                existingObj.set({ radius: Math.min(el.width, el.height) / 2 });
-              }
+              existingObj.set({ left: el.x, top: el.y, angle: el.rotation || 0 });
             }
-          } else if (el.type === 'image' || el.type === 'product-block') {
-            if (!isActiveObj) {
-              const unscaledW = existingObj.width || 1;
-              const unscaledH = existingObj.height || 1;
+
+            if (el.type === 'text') {
               existingObj.set({
-                scaleX: el.width / unscaledW,
-                scaleY: el.height / unscaledH
+                text: (el.text || '').replace(/<[^>]*>/g, ''),
+                fontSize: el.fontSize || 16, fontFamily: el.fontFamily || 'Inter',
+                fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal',
+                fill: el.fill || '#000000', textAlign: el.textAlign || 'left',
+                width: el.width, lineHeight: el.lineHeight || 1.2,
               });
-            }
-          }
-
-          existingObj.set('zIndex', el.zIndex || 0);
-          existingObj.setCoords();
-          existingObj.dirty = true;
-          return existingObj;
-        }
-
-        // Create new object
-        let obj: any = null;
-        const elType = el.type as ElementType;
-
-        switch (elType) {
-          case 'text':
-            obj = new Textbox(el.text || '', {
-              left: el.x, top: el.y, width: el.width,
-              originX: 'left', originY: 'top',
-              fontSize: el.fontSize || 16,
-              fontFamily: el.fontFamily || 'Inter',
-              fontWeight: el.fontWeight || 'normal',
-              fontStyle: el.fontStyle || 'normal',
-              textAlign: el.textAlign || 'left',
-              fill: el.fill || '#000000',
-              lineHeight: el.lineHeight || 1.2,
-              id: el.id,
-              splitByGrapheme: false,
-            });
-            break;
-
-          case 'image':
-            if (el.src) {
-              try {
-                const img: any = await Image.fromURL(el.src);
-                img.set({
-                  left: el.x, top: el.y, 
-                  originX: 'left', originY: 'top',
-                  scaleX: el.width / img.width, 
-                  scaleY: el.height / img.height,
-                  id: el.id,
-                });
-                obj = img;
-              } catch (err) {
-                console.error('Failed to load image:', err);
+            } else if (el.type === 'shape' || el.type === 'comment') {
+              existingObj.set({
+                fill: el.fill || '#ffffff', stroke: el.stroke || undefined,
+                strokeWidth: el.strokeWidth || 0,
+              });
+              if (!isActiveObj) {
+                existingObj.set({ width: el.width, height: el.height });
+                if (el.shapeType === 'circle' && existingObj instanceof Circle) {
+                  existingObj.set({ radius: Math.min(el.width, el.height) / 2 });
+                }
+              }
+            } else if (el.type === 'image' || el.type === 'product-block') {
+              if (!isActiveObj) {
+                const unscaledW = (existingObj as any).width || 1;
+                const unscaledH = (existingObj as any).height || 1;
+                existingObj.set({ scaleX: el.width / unscaledW, scaleY: el.height / unscaledH });
               }
             }
-            break;
 
-          case 'product-block': {
-            const objs: any[] = [];
-            
-            objs.push(new Rect({
-               left: 0, top: 0, width: el.width, height: el.height,
-               originX: 'left', originY: 'top',
-               fill: '#ffffff', stroke: '#e2e8f0', strokeWidth: 2, rx: 8, ry: 8
-            }));
-
-            const product = products.find(p => p.id === el.productId);
-
-            if (product) {
-              if (product.mainImage || el.src) {
-                try {
-                  const img: any = await Image.fromURL(el.src || product.mainImage);
-                  const targetH = el.height * 0.6;
-                  img.set({
-                    left: 0, top: 0,
-                    originX: 'left', originY: 'top',
-                    scaleX: el.width / img.width,
-                    scaleY: targetH / img.height
-                  });
-                  objs.push(img);
-                } catch (e) { console.error('Failed to load product image', e); }
-              }
-
-              objs.push(new Textbox(product.name || 'Unnamed Product', {
-                left: 10, top: el.height * 0.6 + 10, width: el.width - 20,
-                originX: 'left', originY: 'top',
-                fontSize: Math.max(12, el.width * 0.05),
-                fontFamily: 'Inter', fontWeight: 'bold', fill: '#0f172a',
-                splitByGrapheme: false
-              }));
-
-              objs.push(new Textbox(`₹${product.price || '0'}`, {
-                left: 10, top: el.height * 0.6 + Math.max(12, el.width * 0.05) + 15, width: el.width - 20,
-                originX: 'left', originY: 'top',
-                fontSize: Math.max(10, el.width * 0.04),
-                fontFamily: 'Inter', fill: '#4f46e5', fontWeight: 'bold',
-                splitByGrapheme: false
-              }));
-            } else {
-              objs.push(new Textbox('EMPTY SLOT', {
-                left: 0, top: el.height / 2 - 10, width: el.width,
-                originX: 'left', originY: 'top',
-                fontSize: 14, fontFamily: 'Inter', fontWeight: 'bold', fill: '#94a3b8',
-                textAlign: 'center', splitByGrapheme: false
-              }));
-            }
-
-            obj = new Group(objs, {
-              left: el.x, top: el.y,
-              originX: 'left', originY: 'top',
-              id: el.id,
-            });
-            break;
-          }
-
-          case 'shape':
-          case 'comment': {
-            const commonProps = {
-              left: el.x, top: el.y, width: el.width, height: el.height,
-              originX: 'left', originY: 'top',
-              fill: el.fill || '#ffffff',
-              stroke: el.stroke || undefined,
-              strokeWidth: el.strokeWidth || 0,
-              id: el.id,
-            };
-            
-            if (el.shapeType === 'circle') {
-               obj = new Circle({ ...commonProps, radius: Math.min(el.width, el.height) / 2 });
-            } else if (el.shapeType === 'triangle') {
-               obj = new Triangle(commonProps);
-            } else {
-               obj = new Rect(commonProps);
-            }
-            break;
+            existingObj.set('zIndex', el.zIndex || 0);
+            existingObj.setCoords();
+            existingObj.dirty = true;
+            return existingObj;
           }
         }
 
+        const obj = await elementToFabricObject(el, products);
         if (obj) {
-          obj.set({ selectable: isActive && !el.locked });
-          // Store zIndex inside object for sorting
           obj.set('zIndex', el.zIndex || 0);
+          obj.set({ selectable: isActive && !el.locked, evented: isActive && !el.locked });
         }
         return obj;
       });
 
       const resolvedObjects = await Promise.all(objectPromises);
       const validObjects = resolvedObjects.filter(Boolean);
-      
-      // Add any new objects that aren't on the canvas yet
       const currentCanvasObjects = canvas.getObjects();
+
       validObjects.forEach((obj) => {
         if (!currentCanvasObjects.includes(obj)) {
           canvas.add(obj);
         }
       });
-      
-      // Ensure z-index order by sorting the internal array directly (Fabric v7 compatible)
+
       canvas._objects.sort((a: any, b: any) => (a.get('zIndex') || 0) - (b.get('zIndex') || 0));
-      
       canvas.renderAll();
     };
 
     loadObjects();
-  }, [page.elements, isActive]);
+  }, [page.elements, isActive, products]);
+
+  useEffect(() => {
+    const forceRender = () => {
+      if (fabricCanvasRef.current) {
+        const canvas = fabricCanvasRef.current;
+        canvas.getObjects().forEach((obj: any) => {
+          obj.dirty = true;
+          if (obj.type === 'group') {
+            obj._objects?.forEach((child: any) => { child.dirty = true; });
+          }
+        });
+        canvas.renderAll();
+      }
+    };
+
+    // Force re-render after fonts are loaded
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(forceRender);
+    }
+
+    // Fallback timeouts just in case
+    const timer1 = setTimeout(forceRender, 200);
+    const timer2 = setTimeout(forceRender, 1000);
+
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+    };
+  }, []);
 
   return (
     <div style={{ width: curW * zoom, height: curH * zoom, border: isActive ? '2px solid #4f46e5' : '1px solid #e2e8f0', overflow: 'hidden', position: 'relative' }}>

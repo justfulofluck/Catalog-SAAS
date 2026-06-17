@@ -3,7 +3,7 @@
 
 ## 1. System Architecture
 - **Multi-tenant Core**: The database schema uses a `tenant_id` on every table. All API requests are scoped to the authenticated tenant.
-- **Frontend**: React + TypeScript with `react-konva` for the graphics engine.
+- **Frontend**: React + TypeScript with `fabric.js` for the graphics engine.
 - **State Management**: Zustand for UI and Editor state. Optimized for high-frequency updates (dragging/resizing).
 - **Storage**: S3 for high-res product assets. CDN (CloudFront) for fast global delivery.
 - **PDF Generation**: Hybrid approach. `jsPDF` for client-side quick previews and an AWS Lambda (Puppeteer/Playwright) for high-fidelity, CMYK print-ready exports.

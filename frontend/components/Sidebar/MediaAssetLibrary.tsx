@@ -49,13 +49,10 @@ const MediaAssetLibrary: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(async (file) => {
+    Array.from<File>(files).forEach(async (file) => {
       try {
-        // 1. Save to global organizational media pool on backend
         await addMedia(file);
 
-        // 2. Automatically place on current page for better UX using a local preview URL
-        // (The added element will sync with the permanent URL once the store updates)
         const reader = new FileReader();
         reader.onload = (event) => {
           const url = event.target?.result as string;
