@@ -295,10 +295,10 @@ export async function elementToFabricObject(
   };
 
   if (elType === 'text') {
-    const hasMixedStyles = /<span\s+style=|<b\s+style=|<i\s+style=|<u\s+style=|style="|color:|font-size:|font-family:/.test(el.text || '');
+    const hasMixedStyles = /<[a-z]+[^>]*style\s*=|color:\s*|font-size:\s*|font-family:\s*/.test(el.text || '');
     const isRichText = hasMixedStyles || (el.fill?.includes('gradient') ?? false);
     const hasEffect = el.effectStyle && el.effectStyle !== 'none';
-    const useSvgFallback = isRichText && !hasEffect;
+    const useSvgFallback = isRichText;
 
     if (useSvgFallback) {
       try {

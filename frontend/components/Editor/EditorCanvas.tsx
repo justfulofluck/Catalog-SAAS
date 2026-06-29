@@ -640,24 +640,31 @@ const EditorCanvas: React.FC = () => {
   }, [catalog.pages, currentPageIndex, catalog.headerElements, catalog.footerElements, setSelectedElements, selectedElementIds, setIsPropertyPanelOpen]);
 
   // Drag & drop
+  const getDragCoords = (e: React.DragEvent) => {
+    if (!scrollContainerRef.current) return null;
+    const rect = scrollContainerRef.current.getBoundingClientRect();
+    return {
+      x: (e.clientX - rect.left - panRef.current.x) / zoom,
+      y: (e.clientY - rect.top - panRef.current.y) / zoom,
+    };
+  };
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault(); setIsDragOver(true);
     if (!currentPage || currentPage.type !== 'interior') return;
-    const stage = stageRef.current; if (!stage) return;
-    const rect = stage.container().getBoundingClientRect();
-    const node = stage.getIntersection({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    if (node) { const el = currentPage.elements.find(e => e.id === node.id()); if (el && (el.type === 'shape' || el.type === 'image')) { setDragOverTargetId(node.id()); return; } }
-    setDragOverTargetId(null);
+    const coords = getDragCoords(e);
+    if (!coords) return;
+    const overEl = currentPage.elements.find(el =>
+      el.visible !== false && !el.locked && coords.x >= el.x && coords.x <= el.x + el.width && coords.y >= el.y && coords.y <= el.y + el.height
+    );
+    setDragOverTargetId(overEl?.id || null);
   };
   const handleDragLeave = () => { setIsDragOver(false); setDragOverTargetId(null); };
   const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault(); setIsDragOver(false);
     const targetId = dragOverTargetId; setDragOverTargetId(null);
-    const stage = stageRef.current; if (!stage) return;
-    const rect = stage.container().getBoundingClientRect();
-    const pos = stage.getPointerPosition();
-    const dropX = pos ? (pos.x - panRef.current.x) / zoom : (e.clientX - rect.left - panRef.current.x) / zoom;
-    const dropY = pos ? (pos.y - panRef.current.y) / zoom : (e.clientY - rect.top - panRef.current.y) / zoom;
+    const coords = getDragCoords(e);
+    if (!coords) return;
+    const { x: dropX, y: dropY } = coords;
     const json = e.dataTransfer.getData('application/json');
     if (json) {
       try {

@@ -21,12 +21,15 @@ const PublicViewer: React.FC = () => {
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const currentPage = catalog.pages[currentPageIndex];
   const { products } = useStore.getState();
+  const isLandscape = currentPage?.orientation === 'landscape';
+  const pageW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+  const pageH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
 
   useEffect(() => {
     if (!canvasRef.current) return;
     const canvas = new Canvas(canvasRef.current, {
-      width: PAGE_WIDTH,
-      height: PAGE_HEIGHT,
+      width: pageW,
+      height: pageH,
       selection: false,
       interactive: false,
     });
@@ -36,12 +39,13 @@ const PublicViewer: React.FC = () => {
       canvas.clear();
       canvas.backgroundColor = catalog.backgroundColor || '#ffffff';
 
+      const footerYOffset = pageH - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
       const allElements = [
         ...(catalog.headerElements || []),
         ...currentPage.elements,
         ...(catalog.footerElements || []).map(el => ({
           ...el,
-          y: (el.y || 0) + PAGE_HEIGHT - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0),
+          y: (el.y || 0) + footerYOffset,
           text: el.type === 'text' && el.text?.includes('{{page}}')
             ? el.text.replace(/\{\{page\}\}/gi, String(currentPageIndex + 1))
             : el.text,
@@ -67,7 +71,7 @@ const PublicViewer: React.FC = () => {
     render();
 
     return () => { canvas.dispose(); fabricRef.current = null; };
-  }, [currentPage, catalog]);
+  }, [currentPageIndex, catalog]);
 
   const handleDownload = async (format: 'pdf' | 'png' | 'jpeg') => {
     setIsDownloading(true);
@@ -132,8 +136,8 @@ const PublicViewer: React.FC = () => {
 
       {/* Main Canvas Area */}
       <div className="flex-1 overflow-auto flex justify-center p-8 relative bg-slate-900/50">
-        <div className="relative shadow-2xl shadow-black/50 transition-transform duration-200 ease-out origin-top" style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom }}>
-          <canvas ref={canvasRef} width={PAGE_WIDTH} height={PAGE_HEIGHT} style={{ width: PAGE_WIDTH * zoom, height: PAGE_HEIGHT * zoom, transform: `scale(${zoom})`, transformOrigin: 'top left' }} />
+        <div className="relative shadow-2xl shadow-black/50 transition-transform duration-200 ease-out origin-top" style={{ width: pageW * zoom, height: pageH * zoom }}>
+          <canvas ref={canvasRef} width={pageW} height={pageH} style={{ width: pageW * zoom, height: pageH * zoom, transform: `scale(${zoom})`, transformOrigin: 'top left' }} />
         </div>
       </div>
 

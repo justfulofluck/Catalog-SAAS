@@ -2070,80 +2070,91 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  addPage: (type: PageType = 'interior') => set((state) => {
-    const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
-    const elements: CanvasElement[] = [];
+  addPage: (type: PageType = 'interior') => {
+    get().pushHistory();
+    set((state) => {
+      const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
+      const elements: CanvasElement[] = [];
 
-    let template: PageTemplate | undefined;
-    if (type === 'cover') template = COVER_TEMPLATES[0];
-    else if (type === 'index') template = INDEX_TEMPLATES[0];
-    else if (type === 'closing') template = CLOSING_TEMPLATES[0];
+      let template: PageTemplate | undefined;
+      if (type === 'cover') template = COVER_TEMPLATES[0];
+      else if (type === 'index') template = INDEX_TEMPLATES[0];
+      else if (type === 'closing') template = CLOSING_TEMPLATES[0];
 
-    if (template) {
-      elements.push(...template.elements.map((el, idx) => {
-        const isHeading = el.type === 'text' && (el.fontSize && el.fontSize >= 30);
-        return {
-          rotation: 0,
-          opacity: 1,
-          ...el,
-          id: `page-el-${Date.now()}-${idx}`,
-          fontFamily: el.fontFamily || (el.type === 'text' ? (isHeading ? theme.headingFont : theme.fontFamily) : undefined),
-          fill: el.fill || (el.type === 'text' ? (isHeading ? theme.headingColor : theme.bodyColor) : undefined)
-        } as CanvasElement;
-      }));
-    }
+      if (template) {
+        elements.push(...template.elements.map((el, idx) => {
+          const isHeading = el.type === 'text' && (el.fontSize && el.fontSize >= 30);
+          return {
+            rotation: 0,
+            opacity: 1,
+            ...el,
+            id: `page-el-${Date.now()}-${idx}`,
+            fontFamily: el.fontFamily || (el.type === 'text' ? (isHeading ? theme.headingFont : theme.fontFamily) : undefined),
+            fill: el.fill || (el.type === 'text' ? (isHeading ? theme.headingColor : theme.bodyColor) : undefined)
+          } as CanvasElement;
+        }));
+      }
 
-    const newPage: CatalogPage = {
-      id: `page-${Date.now()}`,
-      pageNumber: state.catalog.pages.length + 1,
-      elements,
-      type,
-      orientation: 'portrait'
-    };
-    return {
-      catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
-      currentPageIndex: state.catalog.pages.length
-    };
-  }),
+      const newPage: CatalogPage = {
+        id: `page-${Date.now()}`,
+        pageNumber: state.catalog.pages.length + 1,
+        elements,
+        type,
+        orientation: 'portrait'
+      };
+      return {
+        catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
+        currentPageIndex: state.catalog.pages.length
+      };
+    });
+  },
 
-  addInteriorPageWithInheritedLayout: () => set((state) => {
-    const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
-    const lastInteriorPage = [...state.catalog.pages].reverse().find(p => p.type === 'interior');
-    const inheritedElements: CanvasElement[] = [];
-    if (lastInteriorPage) {
-      const slots = lastInteriorPage.elements.filter(el => el.id.includes('slot') || el.type === 'shape' || (el.type === 'text' && el.id.includes('gen')));
-      slots.forEach((el, idx) => {
-        inheritedElements.push({
-          ...JSON.parse(JSON.stringify(el)),
-          id: `inherited-slot-${idx}-${Date.now()}`,
-          productId: undefined,
-          src: undefined,
-          text: el.type === 'text' ? (el.id.includes('txt-n') ? 'Product Name' : el.id.includes('txt-p') ? '$0.00' : el.text) : el.text
+  addInteriorPageWithInheritedLayout: () => {
+    get().pushHistory();
+    set((state) => {
+      const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
+      const lastInteriorPage = [...state.catalog.pages].reverse().find(p => p.type === 'interior');
+      const inheritedElements: CanvasElement[] = [];
+      if (lastInteriorPage) {
+        const slots = lastInteriorPage.elements.filter(el => el.id.includes('slot') || el.type === 'shape' || (el.type === 'text' && el.id.includes('gen')));
+        slots.forEach((el, idx) => {
+          inheritedElements.push({
+            ...JSON.parse(JSON.stringify(el)),
+            id: `inherited-slot-${idx}-${Date.now()}`,
+            productId: undefined,
+            src: undefined,
+            text: el.type === 'text' ? (el.id.includes('txt-n') ? 'Product Name' : el.id.includes('txt-p') ? '$0.00' : el.text) : el.text
+          });
         });
-      });
-    }
-    const newPage: CatalogPage = {
-      id: `page-inherited-${Date.now()}`,
-      pageNumber: state.catalog.pages.length + 1,
-      elements: inheritedElements,
-      type: 'interior',
-      categoryId: lastInteriorPage?.categoryId,
-      orientation: lastInteriorPage?.orientation || 'portrait'
-    };
-    return {
-      catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
-      currentPageIndex: state.catalog.pages.length
-    };
-  }),
+      }
+      const newPage: CatalogPage = {
+        id: `page-inherited-${Date.now()}`,
+        pageNumber: state.catalog.pages.length + 1,
+        elements: inheritedElements,
+        type: 'interior',
+        categoryId: lastInteriorPage?.categoryId,
+        orientation: lastInteriorPage?.orientation || 'portrait'
+      };
+      return {
+        catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
+        currentPageIndex: state.catalog.pages.length
+      };
+    });
+  },
 
-  removePage: (index) => set((state) => {
-    if (state.catalog.pages.length <= 1) return state;
-    const newPages = state.catalog.pages.filter((_, i) => i !== index);
-    return {
-      catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
-      currentPageIndex: Math.max(0, index - 1)
-    };
-  }),
+  removePage: (index) => {
+    get().pushHistory();
+    set((state) => {
+      if (state.catalog.pages.length <= 1) return state;
+      const newPages = state.catalog.pages
+        .filter((_, i) => i !== index)
+        .map((p, i) => ({ ...p, pageNumber: i + 1 }));
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: Math.min(Math.max(0, index), newPages.length - 1)
+      };
+    });
+  },
 
   duplicatePage: (index) => {
     const { catalog } = get();
