@@ -166,7 +166,7 @@ export interface UserSubscription {
   is_active: boolean;
 }
 
-export type MediaType = 'image';
+export type MediaType = 'image' | 'video' | 'audio';
 
 export interface MediaItem {
   id: string;

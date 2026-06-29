@@ -141,6 +141,7 @@ STATIC_URL = "static/"
 # Media Files
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
+BASE_URL = "http://localhost:8000"
 
 # Authentication Settings
 # Updated for allauth >= 0.63

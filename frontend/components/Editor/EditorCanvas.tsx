@@ -682,15 +682,21 @@ const EditorCanvas: React.FC = () => {
     }
     if (e.dataTransfer.files?.length) {
       const files = Array.from<File>(e.dataTransfer.files);
-      files.filter(f => f.type.startsWith('image/')).forEach((file, i) => {
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          const url = ev.target?.result as string;
-          if (targetId && i === 0 && currentPage.type === 'interior') { updateElement(currentPageIndex, targetId, { type: 'image', src: url, opacity: 1 }); }
-else { addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${i}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: url, zIndex: 60 }); }
-          };
-        reader.readAsDataURL(file);
-      });
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (!file.type.startsWith('image/')) continue;
+        try {
+          const { addMedia } = useStore.getState();
+          const mediaItem = await addMedia(file);
+          if (targetId && i === 0 && currentPage.type === 'interior') {
+            updateElement(currentPageIndex, targetId, { type: 'image', src: mediaItem.url, opacity: 1 });
+          } else {
+            addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${i}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: mediaItem.url, zIndex: 60 });
+          }
+        } catch (err) {
+          console.error("Failed to upload dropped file:", err);
+        }
+      }
     }
   };
 

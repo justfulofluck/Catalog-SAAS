@@ -121,7 +121,7 @@ interface State {
   updateCategory: (id: string, updates: Partial<Category>) => Promise<void>;
   removeCategory: (id: string) => Promise<void>;
 
-  addMedia: (file: File) => Promise<void>;
+  addMedia: (file: File) => Promise<MediaItem>;
   removeMedia: (id: string) => Promise<void>;
   removeMediaBatch: (ids: string[]) => Promise<void>;
   fetchMedia: () => Promise<void>;
@@ -499,9 +499,14 @@ export const useStore = create<State>((set, get) => ({
         isLoading: false
       });
 
-      // Fetch templates on login
+      sessionStorage.setItem('cs_session', '1');
+
+      // Fetch data on login
+      get().fetchProducts();
+      get().fetchCategories();
       get().fetchBusinessTemplates();
-      // Only fetch users if it's an admin (but regular login usually returns user role)
+      get().fetchCatalogs();
+      get().fetchMedia();
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
       const errorMessage = error.response?.data?.non_field_errors?.[0] || 'Login failed';
@@ -586,6 +591,8 @@ export const useStore = create<State>((set, get) => ({
     try {
       await authApi.logout();
     } catch (e) { console.error(e); }
+
+    sessionStorage.removeItem('cs_session');
 
     set({
       isAuthenticated: false,
@@ -1159,27 +1166,22 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  addMedia: async (file: File) => {
+  addMedia: async (file: File): Promise<MediaItem> => {
     const { mediaApi } = await import('../client');
-    try {
-      const response = await mediaApi.upload(file);
-      const m = (response as any).data || response;
-      const newItem: MediaItem = {
-        id: String(m.id),
-        name: m.name,
-        type: 'image',
-        url: m.url,
-        createdAt: m.created_at || new Date().toISOString(),
-        size: m.size_bytes ? `${(m.size_bytes / 1024).toFixed(1)} KB` : '0 KB'
-      };
-      set((state) => ({
-        mediaItems: [newItem, ...state.mediaItems]
-      }));
-    } catch (error) {
-      console.error("Failed to upload media", error);
-      set({ error: "Failed to upload media" });
-      throw error;
-    }
+    const response = await mediaApi.upload(file);
+    const m = (response as any).data || response;
+    const newItem: MediaItem = {
+      id: String(m.id),
+      name: m.name,
+      type: m.type || 'image',
+      url: m.url,
+      createdAt: m.created_at || new Date().toISOString(),
+      size: m.size_bytes ? `${(m.size_bytes / 1024).toFixed(1)} KB` : '0 KB'
+    };
+    set((state) => ({
+      mediaItems: [newItem, ...state.mediaItems]
+    }));
+    return newItem;
   },
 
   removeMedia: async (id: string) => {
@@ -2941,7 +2943,7 @@ export const useStore = create<State>((set, get) => ({
       }
 
     } catch (error) {
-      console.log("Not authenticated", error);
+      sessionStorage.removeItem('cs_session');
       set({ isAuthenticated: false, isAdminAuthenticated: false, user: null });
     }
   }

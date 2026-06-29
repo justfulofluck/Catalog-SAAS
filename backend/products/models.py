@@ -1,18 +1,22 @@
+import re
 from django.db import models
 from django.utils import timezone
 import uuid
 
 from django.conf import settings
 
+def _biz_path(instance, subfolder, filename):
+    if not instance.user:
+        return f'unknown/{subfolder}/{filename}'
+    biz = (instance.user.business_name or f'user_{instance.user.id}').strip().lower()
+    biz = re.sub(r'[^a-z0-9]+', '_', biz).strip('_') or f'user_{instance.user.id}'
+    return f'{biz}/{subfolder}/{filename}'
+
 def category_image_path(instance, filename):
-    if not instance.user or instance.user.is_staff or instance.user.is_superuser:
-        return f'admin_media/categories/{filename}'
-    return f'user_media/{instance.user.id}/categories/{filename}'
+    return _biz_path(instance, 'categories', filename)
 
 def product_image_path(instance, filename):
-    if not instance.user or instance.user.is_staff or instance.user.is_superuser:
-        return f'admin_media/products/{filename}'
-    return f'user_media/{instance.user.id}/products/{filename}'
+    return _biz_path(instance, 'products', filename)
 
 class Category(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)

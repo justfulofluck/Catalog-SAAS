@@ -104,7 +104,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const init = async () => {
-      await checkAuth();
+      if (sessionStorage.getItem('cs_session')) {
+        await checkAuth();
+      }
 
       // Handle deep linking for public viewer
       const path = window.location.pathname;
