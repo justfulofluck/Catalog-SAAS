@@ -57,8 +57,15 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
     canvas.on('object:modified', (e: any) => {
       const obj = e.target as any;
       if (obj && obj.id) {
+        const el = page.elements.find((e: CanvasElement) => e.id === obj.id);
         const updates: any = { x: obj.left || 0, y: obj.top || 0, rotation: obj.angle || 0 };
-        if (obj instanceof Circle) {
+        
+        if (el && el.type === 'product-block') {
+          if (obj.scaleX !== 1 || obj.scaleY !== 1) {
+            updates.width = (obj.width || 0) * Math.abs(obj.scaleX || 1);
+            updates.height = (obj.height || 0) * Math.abs(obj.scaleY || 1);
+          }
+        } else if (obj instanceof Circle) {
           updates.width = (obj.radius || 0) * 2 * Math.abs(obj.scaleX || 1);
           updates.height = (obj.radius || 0) * 2 * Math.abs(obj.scaleY || 1);
         } else {
@@ -97,10 +104,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
         const existingObj = existingObjects.find((o: any) => o.id === el.id);
 
         if (existingObj) {
-          if (el.type === 'product-block') {
+          const isActiveObj = canvas.getActiveObjects().includes(existingObj);
+          
+          if (el.type === 'product-block' && !isActiveObj) {
             canvas.remove(existingObj);
           } else {
-            const isActiveObj = canvas.getActiveObjects().includes(existingObj);
             existingObj.set({
               opacity: el.opacity ?? 1,
               selectable: isActive && !el.locked,

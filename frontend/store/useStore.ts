@@ -1498,7 +1498,8 @@ export const useStore = create<State>((set, get) => ({
       // Map the backend data to our frontend format if needed
       const mappedPages = data.pages.map((p: any) => ({
         ...p,
-        elements: p.layout_data || []
+        elements: p.layout_data || [],
+        categoryId: p.category
       }));
       const mappedCatalog = {
         ...data,
@@ -2009,10 +2010,6 @@ export const useStore = create<State>((set, get) => ({
       const nonSelectedElements = page.elements.filter(el => !selectedElementIds.includes(el.id));
 
       // 3. Re-insert selected elements as a contiguous block at the highest index
-      // Number of non-selected elements that were below the maxIndex selection
-      const elementsBefore = nonSelectedElements.filter((_, idx) => idx < (maxIndex - selectedElements.length + 1));
-      const elementsAfter = nonSelectedElements.filter((_, idx) => idx >= (maxIndex - selectedElements.length + 1));
-
       // More robust approach:
       // Replace the elements at the positions where they were, but move them all to the 'topmost' selection slot.
       const finalElements: CanvasElement[] = [];

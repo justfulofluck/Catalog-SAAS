@@ -64,6 +64,7 @@ const EditorCanvas: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<any>(null);
   const textInputRef = useRef<HTMLDivElement>(null);
+  const idCounterRef = useRef(0);
   const panRef = useRef({ x: 0, y: 0 });
   const isPanning = useRef(false);
   const lastPointerPosition = useRef({ x: 0, y: 0 });
@@ -119,6 +120,7 @@ const EditorCanvas: React.FC = () => {
 
   // Zoom-to-fit on mount
   useEffect(() => {
+    const timerRef = { current: 0 as unknown as ReturnType<typeof setTimeout> };
     const fit = () => {
       if (containerRef.current && containerRef.current.clientWidth > 0) {
         const padding = 80;
@@ -127,10 +129,10 @@ const EditorCanvas: React.FC = () => {
         const newZoom = Math.min(Math.min(scaleX, scaleY), 1);
         setZoom(Math.max(newZoom, 0.2));
         setPan({ x: 0, y: 0 }); panRef.current = { x: 0, y: 0 };
-      } else { setTimeout(fit, 100); }
+      } else { timerRef.current = setTimeout(fit, 100); }
     };
-    const t = setTimeout(fit, 50);
-    return () => clearTimeout(t);
+    timerRef.current = setTimeout(fit, 50);
+    return () => clearTimeout(timerRef.current);
   }, []);
 
   // Auto-migrate legacy header/footer text to elements once and cleanup pages
@@ -669,12 +671,12 @@ const EditorCanvas: React.FC = () => {
             updateElement(currentPageIndex, targetId, { type: tEl?.type === 'product-block' ? 'product-block' : 'image', src: data.url, productId: data.productId, cardTheme: tEl?.cardTheme, opacity: 1 });
           } else if (isHeaderDrop) {
             const headerY = marginTop + 10;
-            useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: headerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
+            useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: headerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
           } else if (isFooterDrop) {
             const footerY = curH - marginBottom - footerHeight + 10;
-            useStore.getState().addFooterElement({ id: `footer-el-${Date.now()}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: footerY, width: 200, height: footerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
+            useStore.getState().addFooterElement({ id: `footer-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: footerY, width: 200, height: footerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
           } else {
-            addElement(currentPageIndex, { id: `drop-${Date.now()}`, type: 'image', x: dropX - 150, y: dropY - 150, width: 300, height: 300, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
+            addElement(currentPageIndex, { id: `drop-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: dropX - 150, y: dropY - 150, width: 300, height: 300, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
           }
           return;
         }
@@ -691,7 +693,7 @@ const EditorCanvas: React.FC = () => {
           if (targetId && i === 0 && currentPage.type === 'interior') {
             updateElement(currentPageIndex, targetId, { type: 'image', src: mediaItem.url, opacity: 1 });
           } else {
-            addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${i}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: mediaItem.url, zIndex: 60 });
+            addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: mediaItem.url, zIndex: 60 });
           }
         } catch (err) {
           console.error("Failed to upload dropped file:", err);

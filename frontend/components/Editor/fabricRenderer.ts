@@ -529,7 +529,7 @@ export async function elementToFabricObject(
         textAlign: 'center', splitByGrapheme: false,
       }));
     }
-    const group = new Group(objs, { left: el.x, top: el.y, originX: 'left', originY: 'top' });
+    const group = new Group(objs, { left: el.x, top: el.y, width: el.width, height: el.height, originX: 'left', originY: 'top' });
     (group as any).id = el.id;
     (group as any).angle = el.rotation || 0;
     (group as any).opacity = el.opacity ?? 1;
