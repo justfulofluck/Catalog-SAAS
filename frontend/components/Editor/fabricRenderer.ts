@@ -414,7 +414,10 @@ export async function elementToFabricObject(
   }
 
   if (elType === 'image') {
-    if (!el.src) return null;
+    if (!el.src) {
+      const rect = new Rect({ ...common, fill: '#e2e8f0', stroke: '#94a3b8', strokeWidth: 1 });
+      return rect;
+    }
     try {
       const img = await FabricImage.fromURL(el.src);
       img.set({
@@ -439,7 +442,11 @@ export async function elementToFabricObject(
         }
       }
       return img;
-    } catch { return null; }
+    } catch {
+      // Fallback if image fails to load (CORS, broken link, etc.)
+      const rect = new Rect({ ...common, fill: '#e2e8f0', stroke: '#94a3b8', strokeWidth: 1, strokeDashArray: [5, 5] });
+      return rect;
+    }
   }
 
   if (elType === 'shape' || elType === 'comment') {
@@ -494,42 +501,102 @@ export async function elementToFabricObject(
 
   if (elType === 'product-block') {
     const objs: any[] = [];
+
     objs.push(new Rect({
       left: 0, top: 0, width: el.width, height: el.height,
+      originX: 'left', originY: 'top',
       fill: '#ffffff', stroke: '#e2e8f0', strokeWidth: 2, rx: 8, ry: 8,
     }));
     const product = products.find(p => p.id === el.productId);
     if (product) {
       if (product.image || el.src) {
         try {
-          const img = await FabricImage.fromURL(el.src || product.image);
-          const targetH = el.height * 0.6;
+          const imgUrl = (el.src || product.image).startsWith('/') ? `http://127.0.0.1:8000${el.src || product.image}` : (el.src || product.image);
+          const img = await FabricImage.fromURL(imgUrl);
+          const targetH = el.height * 0.5; // Changed to 50% to leave more room for details
           img.set({
             left: 0, top: 0,
+            originX: 'left', originY: 'top',
             scaleX: el.width / (img.width || 1),
             scaleY: targetH / (img.height || 1),
           });
           objs.push(img);
         } catch {}
       }
-      objs.push(new Textbox(product.name || 'Unnamed Product', {
-        left: 10, top: el.height * 0.6 + 10, width: el.width - 20,
+      const nameText = new Textbox(product.name || 'Unnamed Product', {
+        left: 10, top: el.height * 0.5 + 10, width: el.width - 20,
+        originX: 'left', originY: 'top',
         fontSize: Math.max(12, el.width * 0.05),
         fontFamily: 'Inter', fontWeight: 'bold', fill: '#0f172a', splitByGrapheme: false,
-      }));
-      objs.push(new Textbox(`₹${product.price || '0'}`, {
-        left: 10, top: el.height * 0.6 + Math.max(12, el.width * 0.05) + 15, width: el.width - 20,
+      });
+      objs.push(nameText);
+      
+      const nameHeight = nameText.height || (Math.max(12, el.width * 0.05) * 1.2);
+      const priceText = new Textbox(`₹${product.price || '0'}`, {
+        left: 10, top: el.height * 0.5 + 10 + nameHeight + 5, width: el.width - 20,
+        originX: 'left', originY: 'top',
         fontSize: Math.max(10, el.width * 0.04),
         fontFamily: 'Inter', fill: '#4f46e5', fontWeight: 'bold', splitByGrapheme: false,
-      }));
+      });
+      objs.push(priceText);
+      
+      const priceHeight = priceText.height || (Math.max(10, el.width * 0.04) * 1.2);
+      
+      let fullDescription = `SKU: ${product.sku || 'N/A'}\n\n${product.description || ''}`;
+      
+      let customFieldsText = '';
+      if (product.customFields && Object.keys(product.customFields).length > 0) {
+        customFieldsText = Object.entries(product.customFields)
+          .filter(([k, v]) => v !== undefined && v !== null && v !== '') 
+          .map(([k, v]) => {
+             // Clean up generated FIELD-xxx labels if possible
+             let label = k.replace(/_/g, ' ').toUpperCase();
+             if (label.startsWith('FIELD-')) label = 'SPEC';
+             return `• ${label}: ${v}`;
+          })
+          .join('\n');
+      }
+      
+      if (customFieldsText) {
+         fullDescription += (fullDescription ? '\n\n' : '') + customFieldsText;
+      }
+      
+      if (!fullDescription.trim()) {
+         fullDescription = 'Product details and specifications will appear here...';
+      }
+
+      const descText = new Textbox(fullDescription.substring(0, 150) + (fullDescription.length > 150 ? '...' : ''), {
+        left: 10, top: el.height * 0.5 + 10 + nameHeight + 5 + priceHeight + 5, width: el.width - 20,
+        originX: 'left', originY: 'top',
+        fontSize: Math.max(8, el.width * 0.035), // slightly smaller text
+        fontFamily: 'Inter', fill: '#64748b', splitByGrapheme: false,
+        lineHeight: 1.1,
+      });
+      objs.push(descText);
     } else {
       objs.push(new Textbox('EMPTY SLOT', {
         left: 0, top: el.height / 2 - 10, width: el.width,
+        originX: 'left', originY: 'top',
         fontSize: 14, fontFamily: 'Inter', fontWeight: 'bold', fill: '#94a3b8',
         textAlign: 'center', splitByGrapheme: false,
       }));
     }
-    const group = new Group(objs, { left: el.x, top: el.y, width: el.width, height: el.height, originX: 'left', originY: 'top' });
+    
+    // Add clipPath to the group to ensure nothing bleeds out of the rounded card
+    const clipPath = new Rect({
+      left: -el.width / 2, top: -el.height / 2, // Group clipPath is relative to group center
+      width: el.width, height: el.height,
+      originX: 'left', originY: 'top',
+      rx: 8, ry: 8
+    });
+    
+    const group = new Group(objs, { 
+      left: el.x, top: el.y, 
+      width: el.width, height: el.height,
+      originX: 'left', originY: 'top',
+      clipPath: clipPath
+    });
+
     (group as any).id = el.id;
     (group as any).angle = el.rotation || 0;
     (group as any).opacity = el.opacity ?? 1;

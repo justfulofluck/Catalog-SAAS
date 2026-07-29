@@ -2133,7 +2133,7 @@ export const useStore = create<State>((set, get) => ({
         elements: inheritedElements,
         type: 'interior',
         categoryId: lastInteriorPage?.categoryId,
-        orientation: lastInteriorPage?.orientation || 'portrait'
+        orientation: 'portrait'
       };
       return {
         catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
@@ -2720,17 +2720,24 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          const headerH = HEADER_FOOTER_HEIGHT;
+          const curCatalog = state.catalog;
+          const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
+          const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
+          const marginTop = curCatalog.marginTop || 0;
+          const marginBottom = curCatalog.marginBottom || 0;
+
           const padding = template.padding;
           const spacing = template.spacing;
-          const slotWidth = (PAGE_WIDTH - (padding * 2) - (template.cols - 1) * spacing) / template.cols;
-          const slotHeight = (PAGE_HEIGHT - (padding * 2) - (HEADER_FOOTER_HEIGHT * 2) - (template.rows - 1) * spacing) / template.rows;
+          const availableWidth = PAGE_WIDTH - (padding * 2);
+          const availableHeight = PAGE_HEIGHT - (padding * 2) - headerH - footerH - marginTop - marginBottom;
+          const slotWidth = (availableWidth - (template.cols - 1) * spacing) / template.cols;
+          const slotHeight = (availableHeight - (template.rows - 1) * spacing) / template.rows;
 
           chunk.forEach((product, index) => {
             const col = index % template.cols;
             const row = Math.floor(index / template.cols);
             const x = padding + col * (slotWidth + spacing);
-            const y = headerH + padding + row * (slotHeight + spacing);
+            const y = headerH + marginTop + padding + row * (slotHeight + spacing);
 
             gridElements.push({
               id: `pb-reflow-${Date.now()}-${pageOrder}-${index}`,
@@ -2802,7 +2809,7 @@ export const useStore = create<State>((set, get) => ({
   addHeaderElement: (element) => set((state) => ({
     catalog: {
       ...state.catalog,
-      headerElements: [...state.catalog.headerElements, element],
+      headerElements: [...(state.catalog.headerElements || []), element],
       updatedAt: new Date().toISOString()
     }
   })),
@@ -2810,7 +2817,7 @@ export const useStore = create<State>((set, get) => ({
   addFooterElement: (element) => set((state) => ({
     catalog: {
       ...state.catalog,
-      footerElements: [...state.catalog.footerElements, element],
+      footerElements: [...(state.catalog.footerElements || []), element],
       updatedAt: new Date().toISOString()
     }
   })),
@@ -2820,7 +2827,7 @@ export const useStore = create<State>((set, get) => ({
     set((state) => ({
       catalog: {
         ...state.catalog,
-        headerElements: state.catalog.headerElements.map(el => el.id === elementId ? { ...el, ...updates } : el),
+        headerElements: (state.catalog.headerElements || []).map(el => el.id === elementId ? { ...el, ...updates } : el),
         updatedAt: new Date().toISOString()
       }
     }));
@@ -2831,7 +2838,7 @@ export const useStore = create<State>((set, get) => ({
     set((state) => ({
       catalog: {
         ...state.catalog,
-        footerElements: state.catalog.footerElements.map(el => el.id === elementId ? { ...el, ...updates } : el),
+        footerElements: (state.catalog.footerElements || []).map(el => el.id === elementId ? { ...el, ...updates } : el),
         updatedAt: new Date().toISOString()
       }
     }));
@@ -2840,7 +2847,7 @@ export const useStore = create<State>((set, get) => ({
   removeHeaderElement: (elementId) => set((state) => ({
     catalog: {
       ...state.catalog,
-      headerElements: state.catalog.headerElements.filter(el => el.id !== elementId),
+      headerElements: (state.catalog.headerElements || []).filter(el => el.id !== elementId),
       updatedAt: new Date().toISOString()
     }
   })),
@@ -2848,7 +2855,7 @@ export const useStore = create<State>((set, get) => ({
   removeFooterElement: (elementId) => set((state) => ({
     catalog: {
       ...state.catalog,
-      footerElements: state.catalog.footerElements.filter(el => el.id !== elementId),
+      footerElements: (state.catalog.footerElements || []).filter(el => el.id !== elementId),
       updatedAt: new Date().toISOString()
     }
   })),

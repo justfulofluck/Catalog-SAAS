@@ -135,7 +135,7 @@ const ProjectSettingsPanel: React.FC = () => {
                                                     }}
                                                     className="flex-1 flex items-center justify-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 hover:border-indigo-200 text-indigo-700 transition-all text-[11px] font-black uppercase tracking-tight"
                                                 >
-                                                    <Type size={14} /> Configure Text
+                                                    <Type size={14} /> Select Text
                                                 </button>
                                             ) : (
                                                 <button
@@ -146,7 +146,10 @@ const ProjectSettingsPanel: React.FC = () => {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => setEditorTab('media')}
+                                                onClick={() => {
+                                                    addHeaderElement({ id: `header-img-${Date.now()}`, type: 'image', x: (catalog.marginLeft || 0) + 10, y: catalog.marginTop || 0, width: 80, height: 80, src: 'https://via.placeholder.com/150', rotation: 0, opacity: 1, zIndex: 10 });
+                                                    setEditorTab('media');
+                                                }}
                                                 className="flex-1 flex items-center justify-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-[11px] font-bold text-slate-600"
                                             >
                                                 <Image size={14} /> Add Image
@@ -223,7 +226,7 @@ const ProjectSettingsPanel: React.FC = () => {
                                                     }}
                                                     className="flex-1 flex items-center justify-center gap-2 p-2 bg-indigo-50 border border-indigo-100 rounded-xl hover:bg-indigo-100 hover:border-indigo-200 text-indigo-700 transition-all text-[11px] font-black uppercase tracking-tight"
                                                 >
-                                                    <Type size={14} /> Configure Text
+                                                    <Type size={14} /> Select Text
                                                 </button>
                                             ) : (
                                                 <button
@@ -234,7 +237,10 @@ const ProjectSettingsPanel: React.FC = () => {
                                                 </button>
                                             )}
                                             <button
-                                                onClick={() => setEditorTab('media')}
+                                                onClick={() => {
+                                                    addFooterElement({ id: `footer-img-${Date.now()}`, type: 'image', x: (catalog.marginLeft || 0) + 10, y: PAGE_HEIGHT - (catalog.marginBottom || 0) - (catalog.footerHeight || 0), width: 80, height: 80, src: 'https://via.placeholder.com/150', rotation: 0, opacity: 1, zIndex: 10 });
+                                                    setEditorTab('media');
+                                                }}
                                                 className="flex-1 flex items-center justify-center gap-2 p-2 bg-slate-50 border border-slate-100 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all text-[11px] font-bold text-slate-600"
                                             >
                                                 <Image size={14} /> Add Image

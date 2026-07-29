@@ -13,9 +13,8 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
 
   useEffect(() => {
     if (!canvasRef.current) return;
-    const isLandscape = page.orientation === 'landscape';
-    const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
-    const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+    const curW = PAGE_WIDTH;
+    const curH = PAGE_HEIGHT;
     const thumbW = THUMB_BASE;
     const thumbH = Math.round(thumbW * (curH / curW));
 
@@ -28,7 +27,7 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
 
     const render = async () => {
       canvas.clear();
-      canvas.backgroundColor = canvasBg;
+      canvas.backgroundColor = page.backgroundColor || canvasBg;
       const scale = thumbW / curW;
 
       const allElements = [
@@ -71,13 +70,19 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
     return () => { canvas.dispose(); };
   }, [page, canvasBg, catalog]);
 
+  const thumbW = THUMB_BASE;
+  const thumbH = Math.round(thumbW * (PAGE_HEIGHT / PAGE_WIDTH));
+
   return (
-    <canvas
-      ref={canvasRef}
-      width={THUMB_BASE}
-      height={Math.round(THUMB_BASE * ((page.orientation === 'landscape' ? PAGE_WIDTH : PAGE_HEIGHT) / (page.orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH)))}
-      style={{ width: '100%', height: 'auto' }}
-    />
+    <div className="flex justify-center items-center py-1 w-full bg-slate-50/50 rounded">
+      <canvas
+        ref={canvasRef}
+        width={thumbW}
+        height={thumbH}
+        className="rounded shadow-sm border border-slate-200 bg-white"
+        style={{ width: `${thumbW}px`, height: `${thumbH}px` }}
+      />
+    </div>
   );
 };
 
@@ -163,9 +168,7 @@ const PagesPanel: React.FC = () => {
               onMouseEnter={() => setHoveredIndex(index)}
               onMouseLeave={() => setHoveredIndex(null)}
             >
-              <div className="overflow-hidden rounded-sm border border-slate-200" style={{ width: '100%' }}>
-                <FabricThumb page={page} canvasBg={canvasBg} catalog={catalog} products={products} pageNum={index} />
-              </div>
+              <FabricThumb page={page} canvasBg={canvasBg} catalog={catalog} products={products} pageNum={index} />
 
               <div className="flex items-center justify-between mt-1.5 px-0.5">
                 <span className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-indigo-600' : (isDark ? 'text-slate-400' : 'text-slate-500')}`}>Page {index + 1}</span>

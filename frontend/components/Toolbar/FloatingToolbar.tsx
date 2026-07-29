@@ -201,10 +201,7 @@ const FloatingToolbar: React.FC<Props> = ({
     selectedElementIds.forEach((id, i) => internalUpdate(id, { zIndex: minZ - 1 - i }));
   };
 
-  const handleClearProduct = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    productIds.forEach(pid => removeProductFromPage(currentPageIndex, pid));
-  };
+
 
   const btnClass = 'p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-50 transition-all';
 
@@ -320,18 +317,7 @@ const FloatingToolbar: React.FC<Props> = ({
         <Trash2 size={16} strokeWidth={2} />
       </button>
 
-      {productIds.length > 0 && (
-        <>
-          <div className="w-[1px] h-6 bg-slate-100 mx-0.5" />
-          <button
-            onClick={handleClearProduct}
-            className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg transition-all"
-            title="Clear Product"
-          >
-            <Trash2 size={16} strokeWidth={2.5} />
-          </button>
-        </>
-      )}
+
     </div>
   );
 };

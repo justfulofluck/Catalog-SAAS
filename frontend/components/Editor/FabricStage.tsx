@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Canvas, Circle } from 'fabric';
+import { Canvas, Circle, ActiveSelection } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
@@ -11,18 +11,19 @@ interface Props {
   isActive: boolean;
   zoom: number;
   canvasBg: string;
+  headerElements?: CanvasElement[];
+  footerElements?: CanvasElement[];
 }
 
-const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg }) => {
+const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = [], footerElements = [] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const renderThrottleRef = useRef<number | null>(null);
   const { setSelectedElements, updateElement, pushHistory } = useStore();
   const products = useStore((state) => state.products);
 
-  const isLandscape = page.orientation === 'landscape';
-  const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
-  const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+  const curW = PAGE_WIDTH;
+  const curH = PAGE_HEIGHT;
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -42,6 +43,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
       setSelectedElements(ids);
     });
 
+    canvas.on('selection:updated', (e: any) => {
+      const ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
+      setSelectedElements(ids);
+    });
+
     canvas.on('selection:cleared', () => setSelectedElements([]));
 
     let dragTimer: number | null = null;
@@ -54,7 +60,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
       renderThrottleRef.current = window.setTimeout(() => {
         const obj = e.target as any;
         if (obj && obj.id) {
-          updateElement(pageIdx, obj.id, { x: obj.left || 0, y: obj.top || 0 });
+          const isHeader = headerElements?.some(el => el.id === obj.id);
+          const isFooter = footerElements?.some(el => el.id === obj.id);
+          const updates = { x: obj.left || 0, y: obj.top || 0 };
+          
+          if (isHeader) useStore.getState().updateHeaderElement(obj.id, updates);
+          else if (isFooter) useStore.getState().updateFooterElement(obj.id, updates);
+          else updateElement(pageIdx, obj.id, updates);
         }
       }, 16);
     });
@@ -63,7 +75,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
       dragTimer = null;
       const obj = e.target as any;
       if (obj && obj.id) {
-        const el = page.elements.find((e: CanvasElement) => e.id === obj.id);
+        const isHeader = headerElements?.some(el => el.id === obj.id);
+        const isFooter = footerElements?.some(el => el.id === obj.id);
+        const el = page.elements.find((e: CanvasElement) => e.id === obj.id) ||
+                   headerElements?.find(e => e.id === obj.id) ||
+                   footerElements?.find(e => e.id === obj.id);
+        
         const updates: any = { x: obj.left || 0, y: obj.top || 0, rotation: obj.angle || 0 };
         
         if (el && el.type === 'product-block') {
@@ -79,7 +96,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
           updates.height = (obj.height || 0) * Math.abs(obj.scaleY || 1);
         }
         pushHistory();
-        updateElement(pageIdx, obj.id, updates);
+        
+        if (isHeader) useStore.getState().updateHeaderElement(obj.id, updates);
+        else if (isFooter) useStore.getState().updateFooterElement(obj.id, updates);
+        else updateElement(pageIdx, obj.id, updates);
       }
     });
 
@@ -99,7 +119,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
     const loadObjects = async () => {
       try {
         const existingObjects = canvas.getObjects();
-        const elIds = new Set(page.elements.map(e => e.id));
+        const allElements = [
+          ...page.elements,
+          ...(headerElements || []),
+          ...(footerElements || [])
+        ];
+        const elIds = new Set(allElements.map(e => e.id));
 
         existingObjects.forEach((obj: any) => {
           if (obj.id && !elIds.has(obj.id)) {
@@ -115,10 +140,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
           const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
           const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
           return el.productId !== existingObj._productId || el.src !== existingObj._src ||
-            Math.abs(el.width - oldW) > 1 || Math.abs(el.height - oldH) > 1;
+            Math.abs(el.width - oldW) > 5 || Math.abs(el.height - oldH) > 5;
         };
 
-        const objectPromises = page.elements.map(async (el: CanvasElement) => {
+        const objectPromises = allElements.map(async (el: CanvasElement) => {
           if (el.locked && !isActive) return null;
 
           const existingObj = existingElMap.get(el.id);
@@ -132,7 +157,6 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
               existingObj.set({
                 opacity: el.opacity ?? 1,
                 selectable: isActive && !el.locked,
-                originX: 'left', originY: 'top',
               });
 
               if (!isActiveObj) {
@@ -140,8 +164,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
               }
 
               if (el.type === 'text') {
+                let parsedText = (el.text || '').replace(/<[^>]*>/g, '');
+                if (parsedText.includes('{{page}}')) {
+                  parsedText = parsedText.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
+                }
                 existingObj.set({
-                  text: (el.text || '').replace(/<[^>]*>/g, ''),
+                  text: parsedText,
                   fontSize: el.fontSize || 16, fontFamily: el.fontFamily || 'Inter',
                   fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal',
                   fill: el.fill || '#000000', textAlign: el.textAlign || 'left',
@@ -185,7 +213,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
             }
           }
 
-          const obj = await elementToFabricObject(el, products);
+          const tempEl = { ...el };
+          if (tempEl.type === 'text' && tempEl.text && tempEl.text.includes('{{page}}')) {
+            tempEl.text = tempEl.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
+          }
+          const obj = await elementToFabricObject(tempEl, products);
           if (obj) {
             obj.set('zIndex', el.zIndex || 0);
             obj.set({ selectable: isActive && !el.locked, evented: isActive && !el.locked });
@@ -213,9 +245,37 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg 
         console.error('FabricStage render error:', err);
       }
     };
-
     loadObjects();
-  }, [page.elements, isActive, products]);
+  }, [page.elements, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber]);
+
+  useEffect(() => {
+    const unsub = useStore.subscribe((newState, prevState) => {
+      const newIds = newState.selectedElementIds || [];
+      const oldIds = prevState?.selectedElementIds || [];
+      
+      if (newIds !== oldIds) {
+        if (fabricCanvasRef.current) {
+          const canvas = fabricCanvasRef.current;
+          const currentActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
+          
+          if (JSON.stringify(currentActiveIds.sort()) !== JSON.stringify([...newIds].sort())) {
+            canvas.discardActiveObject();
+            if (newIds.length > 0) {
+              const objsToSelect = canvas.getObjects().filter((o: any) => newIds.includes(o.id));
+              if (objsToSelect.length === 1) {
+                canvas.setActiveObject(objsToSelect[0]);
+              } else if (objsToSelect.length > 1) {
+                const sel = new ActiveSelection(objsToSelect, { canvas });
+                canvas.setActiveObject(sel);
+              }
+            }
+            canvas.renderAll();
+          }
+        }
+      }
+    });
+    return unsub;
+  }, []);
 
   useEffect(() => {
     const forceRender = () => {

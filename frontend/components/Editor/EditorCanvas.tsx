@@ -24,16 +24,15 @@ const EditorCanvas: React.FC = () => {
     addHeaderElement, addFooterElement,
     updateHeaderElement, updateFooterElement,
     removeHeaderElement, removeFooterElement,
-    copySelectedElements, pasteElements
+    copySelectedElements, pasteElements, addInteriorPageWithInheritedLayout
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
-  const isLandscape = currentPage?.orientation === 'landscape';
-  const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
-  const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+  const curW = PAGE_WIDTH;
+  const curH = PAGE_HEIGHT;
 
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
-  const canvasBg = catalog.backgroundColor || theme.backgroundColor;
+  const canvasBg = currentPage?.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff';
 
   const marginTop = catalog.marginTop || 0;
   const marginBottom = catalog.marginBottom || 0;
@@ -981,9 +980,8 @@ const EditorCanvas: React.FC = () => {
         >
           {catalog.pages.map((page, pageIdx) => {
             const isActive = pageIdx === currentPageIndex;
-            const isLandscape = page.orientation === 'landscape';
-            const curW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
-            const curH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+            const curW = PAGE_WIDTH;
+            const curH = PAGE_HEIGHT;
 
             return (
               <div
@@ -1003,34 +1001,50 @@ const EditorCanvas: React.FC = () => {
                     }`}
                   style={{ width: curW * zoom, height: curH * zoom }}
                 >
-                  {/* Floating Labels (Outside Stage) */}
+                  {/* Floating Labels and Boundaries */}
                   {page.type === 'interior' && (
                     <div className="absolute inset-0 pointer-events-none z-[50]">
                       {catalog.hasHeader && (
-                        <div
-                          className="absolute bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-lg transition-all"
-                          style={{
-                            left: -5 * zoom,
-                            top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
-                            transform: 'translate(-100%, -50%)',
-                            opacity: isActive ? 1 : 0.4
-                          }}
-                        >
-                          Header
-                        </div>
+                        <>
+                          <div
+                            className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
+                            style={{
+                              left: 0,
+                              top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
+                              transform: 'translate(-100%, -50%)',
+                              opacity: isActive ? 1 : 0.4
+                            }}
+                          >
+                            Header
+                          </div>
+                          {isActive && (
+                            <div
+                              className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-500/30 pointer-events-none"
+                              style={{ top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom }}
+                            />
+                          )}
+                        </>
                       )}
                       {catalog.hasFooter && (
-                        <div
-                          className="absolute bg-indigo-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded shadow-lg transition-all"
-                          style={{
-                            left: -5 * zoom,
-                            top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
-                            transform: 'translate(-100%, -50%)',
-                            opacity: isActive ? 1 : 0.4
-                          }}
-                        >
-                          Footer
-                        </div>
+                        <>
+                          <div
+                            className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
+                            style={{
+                              left: 0,
+                              top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
+                              transform: 'translate(-100%, -50%)',
+                              opacity: isActive ? 1 : 0.4
+                            }}
+                          >
+                            Footer
+                          </div>
+                          {isActive && (
+                            <div
+                              className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-500/30 pointer-events-none"
+                              style={{ top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40)) * zoom }}
+                            />
+                          )}
+                        </>
                       )}
                     </div>
                   )}
@@ -1059,6 +1073,8 @@ const EditorCanvas: React.FC = () => {
                     isActive={isActive}
                     zoom={zoom}
                     canvasBg={canvasBg}
+                    headerElements={(catalog.hasHeader && page.type === 'interior') ? catalog.headerElements : []}
+                    footerElements={(catalog.hasFooter && page.type === 'interior') ? catalog.footerElements : []}
                   />
 
                   {/* Text editing overlay (active page only) */}
@@ -1309,7 +1325,7 @@ const EditorCanvas: React.FC = () => {
                     ))}
                     <div className={`h-px mx-2 my-1 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`} />
                     <button
-                      onClick={() => { addPage('interior'); setShowAddPageMenu(false); }}
+                      onClick={() => { addInteriorPageWithInheritedLayout(); setShowAddPageMenu(false); }}
                       className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
                         }`}
                     >

@@ -145,8 +145,8 @@ const PageNavigator: React.FC = () => {
                     : (isDark ? 'border-slate-700 hover:border-slate-500' : 'border-slate-200 hover:border-slate-300')}
                 `}
                 style={{
-                  width: page.orientation === 'landscape' ? '106px' : '80px',
-                  height: page.orientation === 'landscape' ? '80px' : '106px'
+                  width: '80px',
+                  height: '106px'
                 }}
               >
                 {page.elements.length === 0 ? (
@@ -156,8 +156,8 @@ const PageNavigator: React.FC = () => {
                 ) : (
                   <div className="w-full h-full relative" style={{ backgroundColor: page.backgroundColor || '#ffffff' }}>
                     {page.elements.slice(0, 15).map((el) => {
-                      const curW = page.orientation === 'landscape' ? 1123 : 794;
-                      const curH = page.orientation === 'landscape' ? 794 : 1123;
+                      const curW = 794;
+                      const curH = 1123;
                       return (
                         <div
                           key={el.id}
@@ -182,20 +182,7 @@ const PageNavigator: React.FC = () => {
 
                 {/* Hover Overlay Actions */}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-wrap items-center justify-center gap-1.5 p-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); useStore.getState().setPageOrientation(index, 'portrait'); }}
-                    className={`p-1.5 rounded-md transition-colors ${page.orientation !== 'landscape' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
-                    title="Portrait"
-                  >
-                    <div className="w-2 h-3 border-2 border-current rounded-[1px]" />
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); useStore.getState().setPageOrientation(index, 'landscape'); }}
-                    className={`p-1.5 rounded-md transition-colors ${page.orientation === 'landscape' ? 'bg-indigo-600 text-white' : 'bg-white text-slate-700 hover:bg-slate-100'}`}
-                    title="Landscape"
-                  >
-                    <div className="w-3 h-2 border-2 border-current rounded-[1px]" />
-                  </button>
+
                   <div className="w-full flex justify-center gap-1.5 mt-1">
                     <button
                       onClick={(e) => { e.stopPropagation(); duplicatePage(index); }}
