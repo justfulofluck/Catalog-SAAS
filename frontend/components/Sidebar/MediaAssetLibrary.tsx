@@ -2,18 +2,21 @@
 import React, { useState, useRef } from 'react';
 import { Images, Search, X, Upload, Plus, FileImage } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { MediaItem } from '../../types';
+import { MediaItem, AdminAsset } from '../../types';
 
 const MediaAssetLibrary: React.FC = () => {
-  const { mediaItems, addElement, currentPageIndex, addMedia, setDraggingItem, uiTheme, setEditorTab } = useStore();
+  const { mediaItems, adminAssets, addElement, currentPageIndex, addMedia, setDraggingItem, uiTheme, setEditorTab } = useStore();
   const [search, setSearch] = useState('');
+  const [activeTab, setActiveTab] = useState<'uploads' | 'system'>('uploads');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredMedia = mediaItems.filter(m =>
+  const activeSource = activeTab === 'uploads' ? mediaItems : adminAssets;
+
+  const filteredMedia = activeSource.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleAddMedia = (item: MediaItem) => {
+  const handleAddMedia = (item: MediaItem | AdminAsset) => {
     addElement(currentPageIndex, {
       id: `media-${Date.now()}`,
       type: 'image',
@@ -28,7 +31,7 @@ const MediaAssetLibrary: React.FC = () => {
     });
   };
 
-  const handleDragStart = (e: React.DragEvent, item: MediaItem) => {
+  const handleDragStart = (e: React.DragEvent, item: MediaItem | AdminAsset) => {
     // Store media metadata in the drag event for the canvas drop handler
     const dragData = {
       type: 'image',
@@ -109,6 +112,29 @@ const MediaAssetLibrary: React.FC = () => {
         />
       </div>
 
+      <div className={`flex border-b transition-colors ${uiTheme === 'dark' ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-white'}`}>
+        <button
+          onClick={() => setActiveTab('uploads')}
+          className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors border-b-2 ${
+            activeTab === 'uploads' 
+              ? 'border-indigo-600 text-indigo-600' 
+              : uiTheme === 'dark' ? 'border-transparent text-slate-500 hover:text-slate-300' : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          My Uploads
+        </button>
+        <button
+          onClick={() => setActiveTab('system')}
+          className={`flex-1 py-3 text-[10px] font-black uppercase tracking-widest transition-colors border-b-2 ${
+            activeTab === 'system' 
+              ? 'border-indigo-600 text-indigo-600' 
+              : uiTheme === 'dark' ? 'border-transparent text-slate-500 hover:text-slate-300' : 'border-transparent text-slate-400 hover:text-slate-600'
+          }`}
+        >
+          System Assets
+        </button>
+      </div>
+
       <div className={`p-4 border-b transition-colors ${uiTheme === 'dark' ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'}`}>
         <div className="relative group">
           <Search size={14} className={`absolute left-3.5 top-1/2 -translate-y-1/2 transition-colors ${uiTheme === 'dark' ? 'text-slate-500 group-focus-within:text-indigo-400' : 'text-slate-300 group-focus-within:text-indigo-600'}`} />
@@ -116,7 +142,7 @@ const MediaAssetLibrary: React.FC = () => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search Global Media..."
+            placeholder="Search Assets..."
             className={`w-full border rounded-2xl pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all focus:ring-4 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-indigo-500/20 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:ring-indigo-600/5 focus:border-indigo-600'}`}
           />
           {search && (
@@ -134,14 +160,16 @@ const MediaAssetLibrary: React.FC = () => {
               <FileImage size={32} />
             </div>
             <p className={`text-[10px] font-black uppercase tracking-widest leading-relaxed ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
-              No matching products <br /> found in cloud pool
+              No assets found
             </p>
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className={`mt-6 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${uiTheme === 'dark' ? 'bg-slate-800 text-indigo-400 border-slate-700 hover:bg-slate-700' : 'bg-slate-50 text-indigo-600 hover:bg-indigo-50 border-indigo-100'}`}
-            >
-              Upload New
-            </button>
+            {activeTab === 'uploads' && (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className={`mt-6 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${uiTheme === 'dark' ? 'bg-slate-800 text-indigo-400 border-slate-700 hover:bg-slate-700' : 'bg-slate-50 text-indigo-600 hover:bg-indigo-50 border-indigo-100'}`}
+              >
+                Upload New
+              </button>
+            )}
           </div>
         ) : (
           filteredMedia.map((item) => (

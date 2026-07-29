@@ -39,3 +39,32 @@ class MediaItem(models.Model):
 
     def __str__(self):
         return self.name
+
+def admin_asset_upload_path(instance, filename):
+    ext = os.path.splitext(filename)[1].lower()
+    if ext in ('.mp4', '.webm', '.mov', '.avi', '.mkv'):
+        sub = 'videos'
+    elif ext in ('.mp3', '.wav', '.ogg', '.aac', '.flac'):
+        sub = 'audio'
+    else:
+        sub = 'images'
+    return f'admin_assets/{sub}/{filename}'
+
+class AdminAsset(models.Model):
+    MEDIA_TYPES = [
+        ('image', 'Image'),
+        ('video', 'Video'),
+        ('audio', 'Audio'),
+    ]
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    file = models.FileField(upload_to=admin_asset_upload_path)
+    name = models.CharField(max_length=255)
+    type = models.CharField(max_length=50, choices=MEDIA_TYPES, default='image')
+    width = models.IntegerField(null=True, blank=True)
+    height = models.IntegerField(null=True, blank=True)
+    size_bytes = models.IntegerField(null=True, blank=True)
+    created_at = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return self.name

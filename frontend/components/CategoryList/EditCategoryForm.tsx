@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, Info, FolderEdit } from 'lucide-react';
+import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, Info, FolderEdit, Package } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { CustomFieldsEditor } from '../Settings/CustomFieldsEditor';
+import { FormField } from '../../types';
 
 const EditCategoryForm: React.FC = () => {
   const { setView, categories, updateCategory, editingCategoryId, setEditingCategoryId } = useStore();
@@ -14,7 +16,8 @@ const EditCategoryForm: React.FC = () => {
     rank: 0,
     color: '#4f46e5',
     thumbnail: '',
-    parent: ''
+    parent: '',
+    customSchema: [] as FormField[]
   });
 
   useEffect(() => {
@@ -25,7 +28,8 @@ const EditCategoryForm: React.FC = () => {
         rank: categoryToEdit.rank || 0,
         color: categoryToEdit.color || '#4f46e5',
         thumbnail: categoryToEdit.thumbnail || '',
-        parent: categoryToEdit.parent ? categoryToEdit.parent.toString() : ''
+        parent: categoryToEdit.parent ? categoryToEdit.parent.toString() : '',
+        customSchema: categoryToEdit.customSchema || []
       });
     } else {
       setView('category-list');
@@ -41,7 +45,8 @@ const EditCategoryForm: React.FC = () => {
         rank: formData.rank,
         color: formData.color,
         thumbnail: formData.thumbnail,
-        parent: formData.parent ? formData.parent : undefined
+        parent: formData.parent ? formData.parent : undefined,
+        customSchema: formData.customSchema
       });
       setEditingCategoryId(null);
       setView('category-list');
@@ -176,6 +181,23 @@ const EditCategoryForm: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* New Schema Configuration Section */}
+        <div className="mt-8 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 p-8 space-y-8">
+          <div className="flex items-center gap-2 border-b border-slate-50 dark:border-slate-800 pb-4">
+            <Package className="text-indigo-600 dark:text-indigo-400" size={20} />
+            <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">
+              Schema & Custom Fields
+            </h3>
+          </div>
+          
+
+            <CustomFieldsEditor 
+              fields={formData.customSchema} 
+              onChange={(fields) => setFormData({ ...formData, customSchema: fields })} 
+              maxFields={10} 
+            />
         </div>
       </div>
     </div>

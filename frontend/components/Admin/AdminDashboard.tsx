@@ -15,16 +15,14 @@ import {
     CreditCard
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import BusinessManager from './BusinessManager';
 import SubscriptionManagement from './SubscriptionManagement';
 
 const AdminDashboard: React.FC = () => {
-    const { registeredUsers, logout, user, fetchUsers, fetchBusinessTemplates, error } = useStore();
-    const [activeTab, setActiveTab] = useState<'users' | 'businesses' | 'subscriptions'>('users');
+    const { registeredUsers, logout, user, fetchUsers, error } = useStore();
+    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions'>('users');
 
     React.useEffect(() => {
         fetchUsers();
-        fetchBusinessTemplates();
     }, []);
 
     const totalUsers = registeredUsers.length;
@@ -74,12 +72,7 @@ const AdminDashboard: React.FC = () => {
                     >
                         <Users size={16} /> User Accounts
                     </button>
-                    <button
-                        onClick={() => setActiveTab('businesses')}
-                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'businesses' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-                    >
-                        <Store size={16} /> Business Templates
-                    </button>
+
                     <button
                         onClick={() => setActiveTab('subscriptions')}
                         className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'subscriptions' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
@@ -223,8 +216,6 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </>
-                    ) : activeTab === 'businesses' ? (
-                        <BusinessManager />
                     ) : (
                         <SubscriptionManagement />
                     )}

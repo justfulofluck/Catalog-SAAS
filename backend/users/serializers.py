@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from dj_rest_auth.registration.serializers import RegisterSerializer
-from .models import User, BusinessTemplate, SubscriptionPlan, UserSubscription
+from .models import User, SubscriptionPlan, UserSubscription
 from django.utils import timezone
 import datetime
 
@@ -40,7 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('id', 'email', 'name', 'avatar', 'is_verified', 'business_name', 'business_id', 'is_staff', 'is_superuser', 
+        fields = ('id', 'email', 'name', 'avatar', 'is_verified', 'business_name', 'is_staff', 'is_superuser', 
                   'date_joined', 'is_active', 'subscription_plan', 'subscription_end_date', 'subscription_features')
         read_only_fields = ('email', 'is_verified', 'is_staff', 'is_superuser')
 
@@ -59,7 +59,4 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
         model = SubscriptionPlan
         fields = '__all__'
 
-class BusinessTemplateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BusinessTemplate
-        fields = '__all__'
+

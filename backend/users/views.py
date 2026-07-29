@@ -148,21 +148,6 @@ class ResetPasswordWithOTP(APIView):
                 {"error": "Invalid request"}, status=status.HTTP_400_BAD_REQUEST
             )
 
-
-from .models import BusinessTemplate
-from .serializers import BusinessTemplateSerializer
-
-
-class BusinessTemplateViewSet(viewsets.ModelViewSet):
-    queryset = BusinessTemplate.objects.all()
-    serializer_class = BusinessTemplateSerializer
-    
-    def get_permissions(self):
-        if self.action in ['list', 'retrieve']:
-            return [permissions.AllowAny()]
-        return [permissions.IsAdminUser()]
-
-
 class AdminSubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UserSubscription.objects.all().select_related('user', 'plan').order_by('-start_date')
     serializer_class = UserSubscriptionSerializer

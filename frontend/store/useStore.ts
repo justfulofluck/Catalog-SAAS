@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
 import { authApi } from '../client';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, BusinessTemplate, FormField, SubscriptionPlan, UserSubscription } from '../types';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription } from '../types';
 import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES } from '../constants';
 
 interface User {
@@ -12,7 +12,6 @@ interface User {
   role: 'user' | 'admin';
   status: 'active' | 'suspended';
   joinedAt: string;
-  businessId?: string; // Links user to a specific business template/instance
   businessName?: string;
   subscription_plan?: string;
   subscription_end_date?: string;
@@ -37,6 +36,7 @@ interface State {
   plans: SubscriptionPlan[];
   allSubscriptions: UserSubscription[];
   mediaItems: MediaItem[];
+  adminAssets: AdminAsset[];
   activeCategoryId: string | null;
   editingProductId: string | null;
   editingCategoryId: string | null;
@@ -44,9 +44,7 @@ interface State {
 
   registeredUsers: User[];
 
-  // Business / Admin State
-  businessTemplates: BusinessTemplate[];
-  selectedBusinessTemplateId: string | null;
+
 
   catalog: Catalog;
   savedCatalogs: Catalog[];
@@ -103,14 +101,7 @@ interface State {
   fetchCategories: () => Promise<void>;
   fetchAllSubscriptions: () => Promise<void>;
 
-  // Business Actions
   fetchUsers: () => Promise<void>;
-  fetchBusinessTemplates: () => Promise<void>;
-  addBusinessTemplate: (template: BusinessTemplate) => Promise<void>;
-  updateBusinessTemplate: (id: string, updates: Partial<BusinessTemplate>) => Promise<void>;
-  deleteBusinessTemplate: (id: string) => Promise<void>;
-  selectBusinessTemplate: (id: string | null) => void;
-  completeOnboarding: (businessId: string, businessName: string) => void;
 
   addProduct: (product: Product) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
@@ -125,6 +116,7 @@ interface State {
   removeMedia: (id: string) => Promise<void>;
   removeMediaBatch: (ids: string[]) => Promise<void>;
   fetchMedia: () => Promise<void>;
+  fetchAdminAssets: () => Promise<void>;
 
   setActiveCategoryId: (id: string | null) => void;
   setSelectedCategoryId: (id: string | null) => void;
@@ -203,6 +195,7 @@ interface State {
   applyIndexTemplate: (pageIndex: number | null, template: PageTemplate) => void;
   applyClosingTemplate: (pageIndex: number | null, template: PageTemplate) => void;
   applyInventoryLayout: (pageIndex: number | null, template: GridTemplate) => void;
+  reflowAllProductPages: (updatedCatalog?: Catalog) => void;
 
   groupSelected: (pageIndex: number) => void;
 
@@ -271,19 +264,11 @@ export const useStore = create<State>((set, get) => ({
   products: [],
   categories: [],
   mediaItems: INITIAL_MEDIA,
+  adminAssets: [],
   registeredUsers: [],
   plans: [],
   allSubscriptions: [],
 
-  businessTemplates: [
-    {
-      id: 'tech-nova',
-      name: 'TechNova Electronics',
-      description: 'Specialized template for consumer electronics retail with technical specification support.',
-      schema: TECHNOVA_SCHEMA
-    }
-  ],
-  selectedBusinessTemplateId: null,
 
   activeCategoryId: null,
   editingProductId: null,
@@ -325,7 +310,15 @@ export const useStore = create<State>((set, get) => ({
     marginColor: '#4f46e5',
     pageNumberAlignment: 'right',
     headerElements: [],
-    footerElements: []
+    footerElements: [],
+    showPrice: true,
+    showSKU: true,
+    showTitle: true,
+    gridCols: 2,
+    gridRows: 2,
+    gridSpacing: 30,
+    gridPadding: 50,
+    gridCardTheme: 'classic-stack'
   },
   savedCatalogs: [], // Initialized empty for new user scenario
   activeThemeId: 'default',
@@ -355,10 +348,28 @@ export const useStore = create<State>((set, get) => ({
     const oldCatalog = state.catalog;
     const newCatalog = { ...oldCatalog, ...updates };
 
+    const isGridConfigChanged = 
+      updates.gridCols !== undefined ||
+      updates.gridRows !== undefined ||
+      updates.gridSpacing !== undefined ||
+      updates.gridPadding !== undefined ||
+      updates.gridCardTheme !== undefined;
+
+    if (isGridConfigChanged) {
+      setTimeout(() => {
+        get().reflowAllProductPages(newCatalog);
+      }, 0);
+      return {
+        catalog: newCatalog
+      };
+    }
+
     // Calculate old and new safe boundaries for shifting
     // Y Axis: Margins + Header
-    const oldSafeY1 = (oldCatalog.marginTop || 0) + (oldCatalog.hasHeader ? (oldCatalog.headerHeight || 0) : 0);
-    const newSafeY1 = (newCatalog.marginTop || 0) + (newCatalog.hasHeader ? (newCatalog.headerHeight || 0) : 0);
+    const oldHasHeader = oldCatalog.hasHeader !== false;
+    const newHasHeader = newCatalog.hasHeader !== false;
+    const oldSafeY1 = (oldCatalog.marginTop || 0) + (oldHasHeader ? (oldCatalog.headerHeight || 113.4) : 0);
+    const newSafeY1 = (newCatalog.marginTop || 0) + (newHasHeader ? (newCatalog.headerHeight || 113.4) : 0);
     const deltaY = newSafeY1 - oldSafeY1;
 
     // X Axis: Left Margin
@@ -385,6 +396,9 @@ export const useStore = create<State>((set, get) => ({
       const updatedPages = oldCatalog.pages.map(page => ({
         ...page,
         elements: page.elements.map(el => {
+          const isBackground = (typeof el.id === 'string' && el.id.endsWith('-bg')) || (el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT);
+          if (isBackground) return el;
+
           let newX = el.x + deltaX;
           let newY = el.y + deltaY;
 
@@ -400,7 +414,8 @@ export const useStore = create<State>((set, get) => ({
           // But here we might just care about margin for now, or the total safe area?
           // The user specifically mentioned "bottom margin".
           // Let's calculate the effective bottom safe line.
-          const effectiveFooterHeight = newCatalog.hasFooter ? (newCatalog.footerHeight || 0) : 0;
+          const newHasFooter = newCatalog.hasFooter !== false;
+          const effectiveFooterHeight = newHasFooter ? (newCatalog.footerHeight || 75.6) : 0;
           const bottomBoundary = pageHeight - newMarginBottomCalc - effectiveFooterHeight;
 
           if (newY + el.height > bottomBoundary) {
@@ -464,7 +479,10 @@ export const useStore = create<State>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const payload: any = { password };
-      if (email) payload.email = email;
+      if (email) {
+        payload.email = email;
+        payload.username = email;
+      }
       if (username) payload.username = username;
       
       const response = await authApi.login(payload);
@@ -473,29 +491,21 @@ export const useStore = create<State>((set, get) => ({
       const userData: any = await authApi.user();
       // const userData = userResponse.data; // Removed redundant unwrapping
 
-      // 3. Enforce Customer Role (Staff cannot log in here)
-      if (userData.is_staff) {
-        await authApi.logout();
-        set({ isLoading: false, error: 'Administrators must use the Admin Login portal.' });
-        return;
-      }
-
-      // 4. Set State
+      // 3. Enforce Customer Role (Allow staff to log in as admin or user)
       const userObj: User = {
         id: userData.id || `u-${Date.now()}`,
         name: userData.name || 'User',
         email: userData.email,
-        role: 'user',
+        role: userData.is_staff ? 'admin' : 'user',
         status: 'active',
         joinedAt: new Date().toISOString(),
-        businessId: userData.business_id, // synced from serializer
         businessName: userData.business_name
       };
 
       set({
         isAuthenticated: true,
         user: userObj,
-        currentView: userObj.businessId ? 'dashboard' : 'business-selection',
+        currentView: 'dashboard',
         isLoading: false
       });
 
@@ -507,6 +517,7 @@ export const useStore = create<State>((set, get) => ({
       get().fetchBusinessTemplates();
       get().fetchCatalogs();
       get().fetchMedia();
+      get().fetchAdminAssets();
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
       const errorMessage = error.response?.data?.non_field_errors?.[0] || 'Login failed';
@@ -523,7 +534,10 @@ export const useStore = create<State>((set, get) => ({
     try {
       // 1. Authenticate
       const payload: any = { password: password || 'admin123' };
-      if (email) payload.email = email;
+      if (email) {
+        payload.email = email;
+        payload.username = email;
+      }
       if (username) payload.username = username;
 
       await authApi.login(payload);
@@ -557,6 +571,7 @@ export const useStore = create<State>((set, get) => ({
       // Fetch data for admin
       get().fetchBusinessTemplates();
       get().fetchUsers();
+      get().fetchAdminAssets();
 
     } catch (error: any) {
       set({ error: error.response?.data?.non_field_errors?.[0] || 'Admin login failed', isLoading: false });
@@ -847,57 +862,7 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  fetchBusinessTemplates: async () => {
-    try {
-      const response = await import('../client').then(m => m.businessTemplatesApi.getAll());
-      const data = (response as any).data || response;
-      set(state => ({
-        businessTemplates: Array.isArray(data) ? data : []
-      }));
-    } catch (error) {
-      console.error("Failed to fetch business templates", error);
-    }
-  },
 
-  addBusinessTemplate: async (template) => {
-    try {
-      const response = await import('../client').then(m => m.businessTemplatesApi.create(template));
-      const data = (response as any).data || response;
-      set(state => ({
-        businessTemplates: [...state.businessTemplates, data]
-      }));
-    } catch (error) {
-      console.error("Failed to create business template", error);
-    }
-  },
-
-  updateBusinessTemplate: async (id, updates) => {
-    try {
-      const response = await import('../client').then(m => m.businessTemplatesApi.update(id, updates));
-      const data = (response as any).data || response;
-      set(state => ({
-        businessTemplates: state.businessTemplates.map(b => b.id === id ? data : b)
-      }));
-    } catch (error) {
-      console.error("Failed to update business template", error);
-    }
-  },
-
-  deleteBusinessTemplate: async (id) => {
-    try {
-      await import('../client').then(m => m.businessTemplatesApi.delete(id));
-      set(state => ({
-        businessTemplates: state.businessTemplates.filter(b => b.id !== id)
-      }));
-    } catch (error) {
-      console.error("Failed to delete business template", error);
-    }
-  },
-
-  selectBusinessTemplate: (id) => set({
-    selectedBusinessTemplateId: id,
-    currentView: id ? 'business-onboarding' : 'business-selection'
-  }),
 
   completeOnboarding: async (businessId, businessName) => {
     set({ isLoading: true });
@@ -1166,6 +1131,15 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
+  fetchAdminAssets: async () => {
+    try {
+      const response = await adminAssetsApi.getAll();
+      set({ adminAssets: response.data });
+    } catch (error) {
+      console.error('Error fetching admin assets:', error);
+    }
+  },
+
   addMedia: async (file: File): Promise<MediaItem> => {
     const { mediaApi } = await import('../client');
     const response = await mediaApi.upload(file);
@@ -1404,16 +1378,29 @@ export const useStore = create<State>((set, get) => ({
       const response = await catalogsApi.getAll();
       const rawCatalogs = (response as any).data || response;
 
-      const catalogs = rawCatalogs.map((data: any) => ({
-        ...data,
-        id: String(data.id),
-        pages: (data.pages || []).map((p: any) => ({
-          ...p,
-          id: String(p.id),
-          elements: p.layout_data || [],
-          categoryId: p.category
-        }))
-      }));
+      const catalogs = rawCatalogs.map((data: any) => {
+        let settings = data.settings || {};
+        if (typeof settings === 'string') {
+          try {
+            settings = JSON.parse(settings);
+          } catch (e) {
+            settings = {};
+          }
+        }
+        return {
+          ...data,
+          ...settings,
+          id: String(data.id),
+          headerElements: data.headerElements || settings.headerElements || [],
+          footerElements: data.footerElements || settings.footerElements || [],
+          pages: (data.pages || []).map((p: any) => ({
+            ...p,
+            id: String(p.id),
+            elements: p.layout_data || [],
+            categoryId: p.category
+          }))
+        };
+      });
 
       set({ savedCatalogs: catalogs, isLoading: false });
     } catch (error) {
@@ -2300,16 +2287,22 @@ export const useStore = create<State>((set, get) => ({
 
       const padding = template.padding;
       const spacing = template.spacing;
-      const availableWidth = PAGE_WIDTH - (padding * 2);
-      const availableHeight = PAGE_HEIGHT - (padding * 2) - headerH - footerH - marginTop - marginBottom;
+
+      const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
+      const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
+      const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
+      const bottomMargin = curCatalog.marginBottom !== undefined ? curCatalog.marginBottom : padding;
+
+      const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
+      const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
       const slotWidth = (availableWidth - (template.cols - 1) * spacing) / template.cols;
       const slotHeight = (availableHeight - (template.rows - 1) * spacing) / template.rows;
 
       productsForPage.forEach((product, index) => {
         const col = index % template.cols;
         const row = Math.floor(index / template.cols);
-        const x = padding + col * (slotWidth + spacing);
-        const y = headerH + marginTop + padding + row * (slotHeight + spacing);
+        const x = leftMargin + col * (slotWidth + spacing);
+        const y = headerH + topMargin + row * (slotHeight + spacing);
 
         gridElements.push({
           id: `product-block-${row}-${col}-${Date.now()}-${Math.random()}`,
@@ -2720,24 +2713,29 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          const curCatalog = state.catalog;
+           const curCatalog = state.catalog;
           const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
           const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
-          const marginTop = curCatalog.marginTop || 0;
-          const marginBottom = curCatalog.marginBottom || 0;
-
+          
           const padding = template.padding;
           const spacing = template.spacing;
-          const availableWidth = PAGE_WIDTH - (padding * 2);
-          const availableHeight = PAGE_HEIGHT - (padding * 2) - headerH - footerH - marginTop - marginBottom;
+
+          // Align directly to page margins instead of double-adding padding
+          const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
+          const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
+          const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
+          const bottomMargin = curCatalog.marginBottom !== undefined ? curCatalog.marginBottom : padding;
+
+          const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
+          const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
           const slotWidth = (availableWidth - (template.cols - 1) * spacing) / template.cols;
           const slotHeight = (availableHeight - (template.rows - 1) * spacing) / template.rows;
 
           chunk.forEach((product, index) => {
             const col = index % template.cols;
             const row = Math.floor(index / template.cols);
-            const x = padding + col * (slotWidth + spacing);
-            const y = headerH + marginTop + padding + row * (slotHeight + spacing);
+            const x = leftMargin + col * (slotWidth + spacing);
+            const y = headerH + topMargin + row * (slotHeight + spacing);
 
             gridElements.push({
               id: `pb-reflow-${Date.now()}-${pageOrder}-${index}`,
@@ -2800,6 +2798,118 @@ export const useStore = create<State>((set, get) => ({
         },
         // Keep current page if it still exists or reset to safe
         currentPageIndex: pageIndex === null ? state.currentPageIndex : Math.min(pageIndex, renumberedPages.length - 1),
+        selectedElementIds: []
+      };
+    });
+  },
+
+  reflowAllProductPages: (updatedCatalog) => {
+    set((state) => {
+      const catalog = updatedCatalog || state.catalog;
+      
+      // 1. Gather all unique category IDs from existing interior pages
+      const interiorPages = catalog.pages.filter(p => p.type === 'interior');
+      const categoryIds = Array.from(new Set(interiorPages.map(p => p.categoryId).filter(Boolean))) as string[];
+      
+      if (categoryIds.length === 0) {
+        categoryIds.push(catalog.selectedCategoryIds?.[0] || 'cat1');
+      }
+
+      const newPages: CatalogPage[] = [];
+
+      // 2. Add prefix pages (covers/index before first interior page)
+      const firstInteriorIndex = catalog.pages.findIndex(p => p.type === 'interior');
+      const prefixPages = firstInteriorIndex !== -1 ? catalog.pages.slice(0, firstInteriorIndex) : [];
+      newPages.push(...prefixPages);
+
+      const cols = catalog.gridCols || 2;
+      const rows = catalog.gridRows || 2;
+      const itemsPerPage = cols * rows;
+
+      const spacing = catalog.gridSpacing ?? 30;
+      const padding = catalog.gridPadding ?? 50;
+
+      const headerH = catalog.hasHeader ? (catalog.headerHeight || 113.4) : 0;
+      const footerH = catalog.hasFooter ? (catalog.footerHeight || 75.6) : 0;
+      const leftMargin = catalog.marginLeft ?? padding;
+      const rightMargin = catalog.marginRight ?? padding;
+      const topMargin = catalog.marginTop ?? padding;
+      const bottomMargin = catalog.marginBottom ?? padding;
+
+      const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
+      const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
+      const slotWidth = (availableWidth - (cols - 1) * spacing) / cols;
+      const slotHeight = (availableHeight - (rows - 1) * spacing) / rows;
+
+      let pageOrder = newPages.length + 1;
+
+      categoryIds.forEach(targetCategoryId => {
+        const catProducts = state.products.filter(p => p.categoryId && String(p.categoryId) === String(targetCategoryId));
+        const numPagesNeeded = Math.max(1, Math.ceil(catProducts.length / itemsPerPage));
+
+        for (let i = 0; i < numPagesNeeded; i++) {
+          const chunk = catProducts.slice(i * itemsPerPage, (i + 1) * itemsPerPage);
+          const gridElements: CanvasElement[] = [];
+
+          gridElements.push({
+            id: `int-bg-${Date.now()}-${pageOrder}-${i}`,
+            type: 'shape',
+            shapeType: 'rect',
+            x: 0,
+            y: 0,
+            width: PAGE_WIDTH,
+            height: PAGE_HEIGHT,
+            fill: '#ffffff',
+            zIndex: 0
+          } as CanvasElement);
+
+          chunk.forEach((product, index) => {
+            const col = index % cols;
+            const row = Math.floor(index / cols);
+            const x = leftMargin + col * (slotWidth + spacing);
+            const y = headerH + topMargin + row * (slotHeight + spacing);
+
+            gridElements.push({
+              id: `pb-reflow-${Date.now()}-${pageOrder}-${index}`,
+              type: 'product-block',
+              x,
+              y,
+              width: slotWidth,
+              height: slotHeight,
+              rotation: 0,
+              opacity: 1,
+              productId: product.id,
+              zIndex: 1,
+              cardTheme: catalog.gridCardTheme || 'classic-stack'
+            } as CanvasElement);
+          });
+
+          newPages.push({
+            id: `p-reflow-${targetCategoryId}-${Date.now()}-${i}`,
+            pageNumber: pageOrder++,
+            elements: gridElements,
+            type: 'interior',
+            categoryId: targetCategoryId
+          });
+        }
+      });
+
+      // 3. Add suffix pages (outro/closing pages after last interior page)
+      const lastInteriorIndex = catalog.pages.map(p => p.type).lastIndexOf('interior');
+      const suffixPages = lastInteriorIndex !== -1 ? catalog.pages.slice(lastInteriorIndex + 1) : [];
+      suffixPages.forEach((p) => {
+        newPages.push({
+          ...p,
+          pageNumber: pageOrder++
+        });
+      });
+
+      return {
+        catalog: {
+          ...catalog,
+          pages: newPages,
+          updatedAt: new Date().toISOString()
+        },
         selectedElementIds: []
       };
     });
@@ -2934,8 +3044,7 @@ export const useStore = create<State>((set, get) => ({
         set({
           isAdminAuthenticated: true,
           isAuthenticated: false,
-          user: userObj,
-          currentView: 'admin-dashboard'
+          user: userObj
         });
         get().fetchProducts();
         get().fetchCategories();
@@ -2943,12 +3052,12 @@ export const useStore = create<State>((set, get) => ({
         get().fetchUsers();
         get().fetchCatalogs();
         get().fetchMedia();
+        get().fetchAdminAssets();
       } else {
         set({
           isAuthenticated: true,
           isAdminAuthenticated: false,
-          user: userObj,
-          currentView: userObj.businessId ? 'dashboard' : 'business-selection'
+          user: userObj
         });
         get().fetchProducts();
         get().fetchCategories();

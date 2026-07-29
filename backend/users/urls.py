@@ -4,7 +4,6 @@ from .views import (
     UserViewSet,
     RequestPasswordResetOTP,
     ResetPasswordWithOTP,
-    BusinessTemplateViewSet,
     ForceLogoutView,
     SubscriptionPlanViewSet,
     DebugJWTSettingsView,
@@ -14,7 +13,6 @@ from .views import (
 
 router = DefaultRouter()
 router.register(r"users", UserViewSet)
-router.register(r"business-templates", BusinessTemplateViewSet)
 router.register(r"plans", SubscriptionPlanViewSet)
 router.register(r"admin-subscriptions", AdminSubscriptionViewSet, basename="admin-subscriptions")
 

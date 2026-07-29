@@ -436,6 +436,119 @@ const ProjectSettingsPanel: React.FC = () => {
                         </div>
                     </div>
                 </section>
+
+                {/* Product Grid Settings Section */}
+                <section className="space-y-4 pt-4 border-t border-slate-100 animate-in fade-in duration-300">
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${uiTheme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-100/80'}`}>
+                        <Layout size={14} className="text-indigo-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Product Grid Settings</span>
+                    </div>
+
+                    <div className="space-y-4 px-1">
+                        {/* Columns Selection */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Columns</span>
+                                <span className="text-xs font-black text-slate-700">{catalog.gridCols || 2}</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="4"
+                                step="1"
+                                value={catalog.gridCols || 2}
+                                onChange={(e) => updateProjectSettings({ gridCols: parseInt(e.target.value) })}
+                                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                        </div>
+
+                        {/* Rows Selection */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Rows</span>
+                                <span className="text-xs font-black text-slate-700">{catalog.gridRows || 2}</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="1"
+                                max="4"
+                                step="1"
+                                value={catalog.gridRows || 2}
+                                onChange={(e) => updateProjectSettings({ gridRows: parseInt(e.target.value) })}
+                                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                        </div>
+
+                        {/* Spacing Selection */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Spacing</span>
+                                <span className="text-xs font-black text-slate-700">{catalog.gridSpacing ?? 30} px</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="10"
+                                max="80"
+                                step="5"
+                                value={catalog.gridSpacing ?? 30}
+                                onChange={(e) => updateProjectSettings({ gridSpacing: parseInt(e.target.value) })}
+                                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                        </div>
+
+                        {/* Padding Selection */}
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-[10px] font-black text-slate-400 uppercase">Padding</span>
+                                <span className="text-xs font-black text-slate-700">{catalog.gridPadding ?? 50} px</span>
+                            </div>
+                            <input
+                                type="range"
+                                min="10"
+                                max="100"
+                                step="5"
+                                value={catalog.gridPadding ?? 50}
+                                onChange={(e) => updateProjectSettings({ gridPadding: parseInt(e.target.value) })}
+                                className="w-full h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                            />
+                        </div>
+
+                        {/* Details Visibility Toggle */}
+                        <div className="space-y-3 pt-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase block font-semibold">Card Details</span>
+                            
+                            <label className="flex items-center justify-between cursor-pointer group py-1">
+                                <span className={`text-xs font-bold ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Show Title</span>
+                                <input
+                                    type="checkbox"
+                                    checked={catalog.showTitle !== false}
+                                    onChange={(e) => updateProjectSettings({ showTitle: e.target.checked })}
+                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                />
+                            </label>
+
+                            <label className="flex items-center justify-between cursor-pointer group py-1">
+                                <span className={`text-xs font-bold ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Show Price</span>
+                                <input
+                                    type="checkbox"
+                                    checked={catalog.showPrice !== false}
+                                    onChange={(e) => updateProjectSettings({ showPrice: e.target.checked })}
+                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                />
+                            </label>
+
+                            <label className="flex items-center justify-between cursor-pointer group py-1">
+                                <span className={`text-xs font-bold ${uiTheme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>Show SKU</span>
+                                <input
+                                    type="checkbox"
+                                    checked={catalog.showSKU !== false}
+                                    onChange={(e) => updateProjectSettings({ showSKU: e.target.checked })}
+                                    className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                />
+                            </label>
+                        </div>
+                    </div>
+                </section>
             </div>
 
             {/* Footer Hint */}

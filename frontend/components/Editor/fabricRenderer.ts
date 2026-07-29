@@ -1,5 +1,5 @@
 import { Rect, Textbox, Image as FabricImage, Circle, Polygon, Line, Group, Shadow, Gradient, filters } from 'fabric';
-import { CanvasElement, ElementType, Product } from '../../types';
+import { CanvasElement, ElementType, Product, Catalog } from '../../types';
 
 // ── Custom shape classes ──────────────────────────────────────────────
 class CloudShape extends Rect {
@@ -258,7 +258,7 @@ function generateRichTextSvg(el: CanvasElement): string {
     <foreignObject width="100%" height="100%">
       <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:${el.verticalAlign === 'middle' ? 'center' : (el.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start')};justify-content:${el.textAlign || 'left'};box-sizing:border-box;">
         <style>${fontImport}</style>
-        <div style="font-size:${el.fontSize || 16}px;font-family:${el.fontFamily || 'Inter'};font-weight:${el.fontWeight || 'normal'};font-style:${el.fontStyle || 'normal'};text-decoration:${el.textDecoration || 'none'};text-align:${el.textAlign || 'left'};line-height:${el.lineHeight || 1.2};letter-spacing:${el.letterSpacing || 0}px;${gradientStyle}width:100%;padding:5px;box-sizing:border-box;${effectStyles}white-space:pre-wrap;word-break:break-word;">${safeText}</div>
+        <div style="font-size:${el.fontSize || 16}px;font-family:${el.fontFamily || 'Inter'};font-weight:${el.fontWeight || 'normal'};font-style:${el.fontStyle || 'normal'};text-decoration:${el.textDecoration || 'none'};text-align:${el.textAlign || 'left'};line-height:${el.lineHeight || 1.2};letter-spacing:${(el.letterSpacing || 0) / 1000}em;${gradientStyle}width:100%;padding:5px;box-sizing:border-box;${effectStyles}white-space:pre-wrap;word-break:break-word;">${safeText}</div>
       </div>
     </foreignObject>
   </svg>`;
@@ -277,6 +277,7 @@ async function loadSvgAsImage(svgString: string): Promise<HTMLImageElement> {
 export async function elementToFabricObject(
   el: CanvasElement,
   products: Product[],
+  catalog?: Catalog,
 ): Promise<any> {
   const elType = el.type as ElementType;
   const common: Record<string, any> = {
@@ -322,6 +323,8 @@ export async function elementToFabricObject(
       fontStyle: el.fontStyle || 'normal',
       textAlign: el.textAlign || 'left',
       lineHeight: el.lineHeight || 1.2,
+      underline: el.textDecoration?.includes('underline') || false,
+      charSpacing: el.letterSpacing || 0,
       splitByGrapheme: false,
     };
     applyFill(textProps, el.fill, el.width, el.height);
@@ -523,33 +526,43 @@ export async function elementToFabricObject(
           objs.push(img);
         } catch {}
       }
-      const nameText = new Textbox(product.name || 'Unnamed Product', {
-        left: 10, top: el.height * 0.5 + 10, width: el.width - 20,
-        originX: 'left', originY: 'top',
-        fontSize: Math.max(12, el.width * 0.05),
-        fontFamily: 'Inter', fontWeight: 'bold', fill: '#0f172a', splitByGrapheme: false,
-      });
-      objs.push(nameText);
+      let currentTop = el.height * 0.5 + 10;
+
+      if (catalog?.showTitle !== false) {
+        const nameText = new Textbox(product.name || 'Unnamed Product', {
+          left: 10, top: currentTop, width: el.width - 20,
+          originX: 'left', originY: 'top',
+          fontSize: Math.max(12, el.width * 0.05),
+          fontFamily: 'Inter', fontWeight: 'bold', fill: '#0f172a', splitByGrapheme: false,
+        });
+        objs.push(nameText);
+        currentTop += (nameText.height || (Math.max(12, el.width * 0.05) * 1.2)) + 5;
+      }
       
-      const nameHeight = nameText.height || (Math.max(12, el.width * 0.05) * 1.2);
-      const priceText = new Textbox(`₹${product.price || '0'}`, {
-        left: 10, top: el.height * 0.5 + 10 + nameHeight + 5, width: el.width - 20,
-        originX: 'left', originY: 'top',
-        fontSize: Math.max(10, el.width * 0.04),
-        fontFamily: 'Inter', fill: '#4f46e5', fontWeight: 'bold', splitByGrapheme: false,
-      });
-      objs.push(priceText);
+      if (catalog?.showPrice !== false) {
+        const priceText = new Textbox(`₹${product.price || '0'}`, {
+          left: 10, top: currentTop, width: el.width - 20,
+          originX: 'left', originY: 'top',
+          fontSize: Math.max(10, el.width * 0.04),
+          fontFamily: 'Inter', fill: '#4f46e5', fontWeight: 'bold', splitByGrapheme: false,
+        });
+        objs.push(priceText);
+        currentTop += (priceText.height || (Math.max(10, el.width * 0.04) * 1.2)) + 5;
+      }
       
-      const priceHeight = priceText.height || (Math.max(10, el.width * 0.04) * 1.2);
-      
-      let fullDescription = `SKU: ${product.sku || 'N/A'}\n\n${product.description || ''}`;
+      let fullDescription = '';
+      if (catalog?.showSKU !== false && product.sku) {
+        fullDescription += `SKU: ${product.sku}`;
+      }
+      if (product.description) {
+        fullDescription += (fullDescription ? '\n\n' : '') + product.description;
+      }
       
       let customFieldsText = '';
       if (product.customFields && Object.keys(product.customFields).length > 0) {
         customFieldsText = Object.entries(product.customFields)
           .filter(([k, v]) => v !== undefined && v !== null && v !== '') 
           .map(([k, v]) => {
-             // Clean up generated FIELD-xxx labels if possible
              let label = k.replace(/_/g, ' ').toUpperCase();
              if (label.startsWith('FIELD-')) label = 'SPEC';
              return `• ${label}: ${v}`;
@@ -561,18 +574,16 @@ export async function elementToFabricObject(
          fullDescription += (fullDescription ? '\n\n' : '') + customFieldsText;
       }
       
-      if (!fullDescription.trim()) {
-         fullDescription = 'Product details and specifications will appear here...';
+      if (fullDescription.trim()) {
+        const descText = new Textbox(fullDescription.substring(0, 150) + (fullDescription.length > 150 ? '...' : ''), {
+          left: 10, top: currentTop, width: el.width - 20,
+          originX: 'left', originY: 'top',
+          fontSize: Math.max(8, el.width * 0.035),
+          fontFamily: 'Inter', fill: '#64748b', splitByGrapheme: false,
+          lineHeight: 1.1,
+        });
+        objs.push(descText);
       }
-
-      const descText = new Textbox(fullDescription.substring(0, 150) + (fullDescription.length > 150 ? '...' : ''), {
-        left: 10, top: el.height * 0.5 + 10 + nameHeight + 5 + priceHeight + 5, width: el.width - 20,
-        originX: 'left', originY: 'top',
-        fontSize: Math.max(8, el.width * 0.035), // slightly smaller text
-        fontFamily: 'Inter', fill: '#64748b', splitByGrapheme: false,
-        lineHeight: 1.1,
-      });
-      objs.push(descText);
     } else {
       objs.push(new Textbox('EMPTY SLOT', {
         left: 0, top: el.height / 2 - 10, width: el.width,

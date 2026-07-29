@@ -8,6 +8,7 @@ const ProductLibrary: React.FC = () => {
   const { products, categories, addElement, currentPageIndex, catalog, reorderProducts, removeProductFromCanvas, setDraggingItem, uiTheme, setEditorTab, selectedCategoryId, setSelectedCategoryId } = useStore();
   const [search, setSearch] = useState('');
   const sortableRef = useRef<HTMLDivElement>(null);
+  const dragOccurred = useRef(false);
 
   // Filter products based on selected category (if any) AND search
   const filteredProducts = products.filter(p =>
@@ -91,6 +92,7 @@ const ProductLibrary: React.FC = () => {
   };
 
   const handleDragStart = (e: React.DragEvent, product: Product) => {
+    dragOccurred.current = true;
     const getProductImage = (p: Product) => {
       if (p.image) return p.image;
       if (p.customFields) {
@@ -115,6 +117,9 @@ const ProductLibrary: React.FC = () => {
 
   const handleDragEnd = () => {
     setDraggingItem(null);
+    setTimeout(() => {
+      dragOccurred.current = false;
+    }, 50);
   };
 
   const handleClearFromCanvas = (productId: string, e: React.MouseEvent) => {
@@ -230,7 +235,10 @@ const ProductLibrary: React.FC = () => {
                   onDragStart={(e) => handleDragStart(e, product)}
                   onDragEnd={handleDragEnd}
                   className={`group flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all border relative hover:shadow-md ${uiTheme === 'dark' ? 'bg-slate-800/40 border-slate-800 hover:bg-slate-800 hover:border-indigo-500/30 hover:shadow-black/20' : 'bg-white border-slate-100 hover:bg-slate-50 hover:border-indigo-100 hover:shadow-slate-200/40'}`}
-                  onClick={() => handleAddProduct(product)}
+                  onClick={() => {
+                    if (dragOccurred.current) return;
+                    handleAddProduct(product);
+                  }}
                 >
                   <span className={`absolute left-1.5 top-1.5 text-[8px] font-black ${uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>
                     {String(idx + 1).padStart(2, '0')}

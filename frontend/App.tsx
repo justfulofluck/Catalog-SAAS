@@ -2,8 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import Login from './components/Auth/Login';
 import AdminLogin from './components/Admin/AdminLogin';
 import AdminDashboard from './components/Admin/AdminDashboard';
-import BusinessSelection from './components/Onboarding/BusinessSelection';
-import OnboardingForm from './components/Onboarding/BusinessOnboardingForm';
 import Dashboard from './components/Dashboard/Dashboard';
 import SettingsView from './components/Settings/Settings';
 import ProductsListView from './components/Products/ProductsListView';
@@ -103,25 +101,62 @@ const App: React.FC = () => {
   }, [isSidebarExpanded, isProjectSettingsOpen, setSidebarExpanded, setIsProjectSettingsOpen]);
 
   useEffect(() => {
+    const getViewFromPath = (pathname: string): View => {
+      if (pathname === '/admin/dashboard') return 'admin-dashboard';
+      if (pathname === '/admin') return 'admin-login';
+      if (pathname === '/editor') return 'editor';
+      if (pathname === '/catalog-setup') return 'catalog-setup';
+      if (pathname === '/your-work') return 'your-work';
+      if (pathname === '/publish') return 'publish';
+      if (pathname === '/pricing') return 'pricing';
+      if (pathname === '/settings') return 'settings';
+      return currentView;
+    };
+
     const init = async () => {
       if (sessionStorage.getItem('cs_session')) {
         await checkAuth();
       }
 
-      // Handle deep linking for public viewer
       const path = window.location.pathname;
+
       const viewerMatch = path.match(/\/viewer\/([^\/]+)/);
       if (viewerMatch) {
         const uuid = viewerMatch[1];
         const { openPublicViewer } = useStore.getState();
         openPublicViewer(uuid);
+      } else {
+        const viewFromPath = getViewFromPath(path);
+        if (viewFromPath !== currentView) {
+          setView(viewFromPath);
+        }
       }
 
       setLoading(false);
     };
     init();
 
-    // Wait for Font Awesome fonts to load before enabling editor
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      const viewerMatch = path.match(/\/viewer\/([^\/]+)/);
+      if (viewerMatch) {
+        const uuid = viewerMatch[1];
+        const { openPublicViewer } = useStore.getState();
+        openPublicViewer(uuid);
+      } else {
+        const viewFromPath = getViewFromPath(path);
+        setView(viewFromPath);
+      }
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [checkAuth]); // Removed currentView and setView from dependencies to prevent re-running checkAuth on view change
+
+  useEffect(() => {
     if (document.fonts) {
       document.fonts.ready.then(() => {
         setFontsLoaded(true);
@@ -129,9 +164,7 @@ const App: React.FC = () => {
     } else {
       setFontsLoaded(true);
     }
-
-    return () => { };
-  }, [checkAuth]);
+  }, []);
 
   useEffect(() => {
     if (uiTheme === 'dark' && currentView !== 'editor' && currentView !== 'admin-dashboard') {
@@ -175,15 +208,6 @@ const App: React.FC = () => {
   // Standard Authentication Check
   if (!isAuthenticated) {
     return <Login />;
-  }
-
-  // Business Onboarding Flow
-  if (isAuthenticated && !user?.businessId) {
-    if (currentView === 'business-onboarding') {
-      return <OnboardingForm />;
-    }
-    // Default to selection if no business and not already on form
-    return <BusinessSelection />;
   }
 
   // Editor View (Fullscreen)

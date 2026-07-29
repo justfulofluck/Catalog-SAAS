@@ -17,12 +17,6 @@ export interface FormField {
   placeholder?: string;
 }
 
-export interface BusinessTemplate {
-  id: string;
-  name: string;
-  description: string;
-  schema: FormField[];
-}
 
 export interface CanvasElement {
    id: string;
@@ -128,6 +122,7 @@ export interface Category {
   parent?: string | number;
   parentName?: string;
   productCount: number;
+  customSchema?: FormField[];
 }
 
 export interface Product {
@@ -169,6 +164,17 @@ export interface UserSubscription {
 export type MediaType = 'image' | 'video' | 'audio';
 
 export interface MediaItem {
+  id: string;
+  name: string;
+  type: MediaType;
+  url: string;
+  thumbnailUrl?: string;
+  size?: string | number;
+  dimensions?: string;
+  createdAt: string;
+}
+
+export interface AdminAsset {
   id: string;
   name: string;
   type: MediaType;
@@ -238,6 +244,16 @@ export interface Catalog {
   // Master Layers (Editable Header/Footer)
   headerElements: CanvasElement[];
   footerElements: CanvasElement[];
+
+  // Product Grid settings
+  showPrice?: boolean;
+  showSKU?: boolean;
+  showTitle?: boolean;
+  gridCols?: number;
+  gridRows?: number;
+  gridSpacing?: number;
+  gridPadding?: number;
+  gridCardTheme?: string;
 }
 
 export interface FullCatalogTemplate {

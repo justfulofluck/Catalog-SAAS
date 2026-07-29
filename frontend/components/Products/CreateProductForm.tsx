@@ -6,12 +6,7 @@ import { CURRENCIES } from '../../constants';
 import { FormField } from '../../types';
 
 const CreateProductForm: React.FC = () => {
-  const { setView, addProduct, categories, defaultCurrency, user, businessTemplates } = useStore();
-
-  // Identify active business template for dynamic fields
-  const activeTemplate = user?.businessId
-    ? businessTemplates.find(t => t.id === user.businessId)
-    : null;
+  const { setView, addProduct, categories, defaultCurrency } = useStore();
 
   const [formData, setFormData] = useState<Record<string, any>>({
     name: '',
@@ -23,14 +18,22 @@ const CreateProductForm: React.FC = () => {
     categoryId: ''
   });
 
+  const [combinedSchema, setCombinedSchema] = useState<FormField[]>([]);
   const [isAutoSku, setIsAutoSku] = useState(true);
 
-  // Initialize form with template defaults if available
+  // Update schema when category changes
   useEffect(() => {
-    if (activeTemplate) {
-      // We can pre-fill or set up validation logic here if needed
+    if (formData.categoryId) {
+      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      if (selectedCategory) {
+        setCombinedSchema([...(selectedCategory.customSchema || [])]);
+      } else {
+        setCombinedSchema([]);
+      }
+    } else {
+      setCombinedSchema([]);
     }
-  }, [activeTemplate]);
+  }, [formData.categoryId, categories]);
 
   // Automatic SKU Generation Logic
   useEffect(() => {

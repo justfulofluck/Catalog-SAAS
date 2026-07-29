@@ -136,8 +136,10 @@ const EditorCanvas: React.FC = () => {
 
   // Auto-migrate legacy header/footer text to elements once and cleanup pages
   useEffect(() => {
-    const headerNeeded = catalog.hasHeader && catalog.headerText && catalog.headerElements.length === 0 && !catalog.headerMigrated;
-    const footerNeeded = catalog.hasFooter && catalog.footerText && catalog.footerElements.length === 0 && !catalog.footerMigrated;
+    const headerElements = catalog.headerElements || [];
+    const footerElements = catalog.footerElements || [];
+    const headerNeeded = catalog.hasHeader && catalog.headerText && headerElements.length === 0 && !catalog.headerMigrated;
+    const footerNeeded = catalog.hasFooter && catalog.footerText && footerElements.length === 0 && !catalog.footerMigrated;
 
     if (headerNeeded || footerNeeded) {
       if (headerNeeded) {

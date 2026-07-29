@@ -6,12 +6,10 @@ import { CURRENCIES } from '../../constants';
 import { FormField } from '../../types';
 
 const EditProductForm: React.FC = () => {
-  const { setView, updateProduct, categories, products, editingProductId, setEditingProductId, user, businessTemplates } = useStore();
+  const { setView, updateProduct, categories, products, editingProductId, setEditingProductId } = useStore();
 
   const productToEdit = products.find(p => p.id === editingProductId);
-  const activeTemplate = user?.businessId
-    ? businessTemplates.find(t => t.id === user.businessId)
-    : null;
+  const [combinedSchema, setCombinedSchema] = useState<FormField[]>([]);
 
   const [formData, setFormData] = useState<Record<string, any>>({
     name: '',
@@ -23,52 +21,84 @@ const EditProductForm: React.FC = () => {
     categoryId: ''
   });
 
+  // Initialize formData once when productToEdit is available
   useEffect(() => {
-    if (productToEdit) {
-      if (activeTemplate) {
-        // Initialize dynamic form data from product + custom fields
-        const initialData: Record<string, any> = {
-          sku: productToEdit.sku,
-          currency: productToEdit.currency,
-          categoryId: productToEdit.categoryId // Ensure standard category is loaded
-        };
+    if (productToEdit && !formData.categoryId) { // Run only initially
+      setFormData({
+        name: productToEdit.name,
+        sku: productToEdit.sku,
+        price: productToEdit.price,
+        currency: productToEdit.currency || '$',
+        description: productToEdit.description || '',
+        image: productToEdit.image || '',
+        categoryId: productToEdit.categoryId || ''
+      });
+    }
+  }, [productToEdit]);
 
-        activeTemplate.schema.forEach(field => {
-          const lowerLabel = (field.label || '').toLowerCase();
-
-          if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
-            initialData[field.id] = productToEdit.name;
-          }
-          else if (field.id === 'price' || lowerLabel.includes('price')) {
-            initialData[field.id] = productToEdit.price.toString();
-          }
-          else if (field.id === 'main_image' || lowerLabel.includes('main image') || lowerLabel.includes('main product image')) {
-            initialData[field.id] = productToEdit.image;
-          }
-          else if (field.id === 'description' || lowerLabel.includes('description')) {
-            initialData[field.id] = productToEdit.description;
-          }
-          else {
-            initialData[field.id] = productToEdit.customFields?.[field.id] || '';
-          }
-        });
-        setFormData(initialData);
+  // Update schema when category changes
+  useEffect(() => {
+    if (formData.categoryId) {
+      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      if (selectedCategory) {
+        setCombinedSchema([...(selectedCategory.customSchema || [])]);
       } else {
-        // Standard Initialization
-        setFormData({
-          name: productToEdit.name,
-          sku: productToEdit.sku,
-          price: productToEdit.price.toString(),
-          currency: productToEdit.currency,
-          description: productToEdit.description,
-          image: productToEdit.image,
-          categoryId: productToEdit.categoryId || ''
-        });
+        setCombinedSchema([]);
       }
     } else {
-      setView('products-list');
+      setCombinedSchema([]);
     }
-  }, [productToEdit, activeTemplate]);
+  }, [formData.categoryId, categories]);
+
+  // Load custom fields into formData once schema is resolved
+  useEffect(() => {
+    if (productToEdit && combinedSchema.length > 0) {
+      const initialData: Record<string, any> = { ...formData };
+      let updated = false;
+
+      combinedSchema.forEach(field => {
+        const lowerLabel = (field.label || '').toLowerCase();
+
+        if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
+          if (initialData[field.id] !== productToEdit.name) {
+            initialData[field.id] = productToEdit.name;
+            updated = true;
+          }
+        }
+        else if (field.id === 'price' || lowerLabel.includes('price')) {
+          if (initialData[field.id] !== productToEdit.price.toString()) {
+            initialData[field.id] = productToEdit.price.toString();
+            updated = true;
+          }
+        }
+        else if (field.id === 'main_image' || lowerLabel.includes('main image') || lowerLabel.includes('main product image')) {
+          if (initialData[field.id] !== productToEdit.image) {
+            initialData[field.id] = productToEdit.image;
+            updated = true;
+          }
+        }
+        else if (field.id === 'description' || lowerLabel.includes('description')) {
+          if (initialData[field.id] !== productToEdit.description) {
+            initialData[field.id] = productToEdit.description;
+            updated = true;
+          }
+        }
+        else {
+          const val = productToEdit.customFields?.[field.id] || '';
+          // Retain user input if they just changed category and custom field names match, 
+          // or load from product if available and not set yet.
+          if (initialData[field.id] === undefined) {
+             initialData[field.id] = val;
+             updated = true;
+          }
+        }
+      });
+      
+      if (updated) {
+        setFormData(initialData);
+      }
+    }
+  }, [combinedSchema, productToEdit]);
 
   const handleInputChange = (key: string, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -96,8 +126,8 @@ const EditProductForm: React.FC = () => {
 
     const customFields: Record<string, any> = {};
 
-    if (activeTemplate) {
-      activeTemplate.schema.forEach(field => {
+    if (combinedSchema.length > 0) {
+      combinedSchema.forEach(field => {
         const value = formData[field.id];
         const lowerLabel = (field.label || '').toLowerCase();
 
@@ -235,7 +265,7 @@ const EditProductForm: React.FC = () => {
           </div>
         </div>
 
-        {activeTemplate ? (
+        {combinedSchema.length > 0 ? (
           /* DYNAMIC FORM BASED ON TEMPLATE */
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
             <div className="bg-white dark:bg-slate-900 rounded-[32px] shadow-sm border border-slate-100 dark:border-slate-800 p-8 space-y-8">
@@ -244,7 +274,7 @@ const EditProductForm: React.FC = () => {
                 <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Basic Information</h3>
               </div>
               <div className="space-y-6">
-                {activeTemplate.schema.filter(f => f.section === 'basic').map(field => (
+                {combinedSchema.filter(f => f.section === 'basic').map(field => (
                   <div key={field.id} className="space-y-2">
                     <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{field.label} {field.required && '*'}</label>
                     {renderDynamicField(field)}
@@ -278,7 +308,7 @@ const EditProductForm: React.FC = () => {
                   <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Technical Specifications</h3>
                 </div>
                 <div className="space-y-6">
-                  {activeTemplate.schema.filter(f => f.section === 'technical').map(field => (
+                  {combinedSchema.filter(f => f.section === 'technical').map(field => (
                     <div key={field.id} className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{field.label} {field.required && '*'}</label>
                       {renderDynamicField(field)}
@@ -294,7 +324,7 @@ const EditProductForm: React.FC = () => {
                   <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Commercial Details</h3>
                 </div>
                 <div className="space-y-6">
-                  {activeTemplate.schema.filter(f => f.section === 'commercial').map(field => (
+                  {combinedSchema.filter(f => f.section === 'commercial').map(field => (
                     <div key={field.id} className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">{field.label} {field.required && '*'}</label>
                       {renderDynamicField(field)}
@@ -302,7 +332,7 @@ const EditProductForm: React.FC = () => {
                   ))}
 
                   {/* Pricing Fallback if no price field is mapped in the template */}
-                  {!activeTemplate.schema.some(f => f.id === 'price') && (
+                  {!combinedSchema.some(f => f.id === 'price') && (
                     <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-slate-700">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Base Pricing (Required)</label>

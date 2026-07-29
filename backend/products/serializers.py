@@ -10,7 +10,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'uuid', 'user', 'name', 'description', 'rank', 'color', 'thumbnail', 'parent', 'parent_name', 'subcategories', 'created_at']
+        fields = ['id', 'uuid', 'user', 'name', 'description', 'rank', 'color', 'thumbnail', 'custom_schema', 'parent', 'parent_name', 'subcategories', 'created_at']
         read_only_fields = ['id', 'user', 'uuid', 'created_at']
 
     def to_representation(self, instance):

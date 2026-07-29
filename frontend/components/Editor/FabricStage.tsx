@@ -19,7 +19,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const renderThrottleRef = useRef<number | null>(null);
-  const { setSelectedElements, updateElement, pushHistory } = useStore();
+  const { setSelectedElements, updateElement, pushHistory, catalog } = useStore();
   const products = useStore((state) => state.products);
 
   const curW = PAGE_WIDTH;
@@ -49,6 +49,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     });
 
     canvas.on('selection:cleared', () => setSelectedElements([]));
+
+    canvas.on('mouse:down', () => {
+      useStore.getState().setCurrentPageIndex(pageIdx);
+    });
 
     let dragTimer: number | null = null;
     canvas.on('object:moving', (e: any) => {
@@ -115,6 +119,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     if (!fabricCanvasRef.current) return;
 
     const canvas = fabricCanvasRef.current;
+    let isCurrent = true;
 
     const loadObjects = async () => {
       try {
@@ -139,8 +144,17 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           if (el.type !== 'product-block') return false;
           const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
           const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
+          
+          const oldShowTitle = existingObj._showTitle ?? true;
+          const oldShowPrice = existingObj._showPrice ?? true;
+          const oldShowSKU = existingObj._showSKU ?? true;
+          const newShowTitle = catalog.showTitle !== false;
+          const newShowPrice = catalog.showPrice !== false;
+          const newShowSKU = catalog.showSKU !== false;
+
           return el.productId !== existingObj._productId || el.src !== existingObj._src ||
-            Math.abs(el.width - oldW) > 5 || Math.abs(el.height - oldH) > 5;
+            Math.abs(el.width - oldW) > 5 || Math.abs(el.height - oldH) > 5 ||
+            oldShowTitle !== newShowTitle || oldShowPrice !== newShowPrice || oldShowSKU !== newShowSKU;
         };
 
         const objectPromises = allElements.map(async (el: CanvasElement) => {
@@ -157,6 +171,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               existingObj.set({
                 opacity: el.opacity ?? 1,
                 selectable: isActive && !el.locked,
+                evented: isActive && !el.locked,
               });
 
               if (!isActiveObj) {
@@ -174,6 +189,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal',
                   fill: el.fill || '#000000', textAlign: el.textAlign || 'left',
                   width: el.width, lineHeight: el.lineHeight || 1.2,
+                  underline: el.textDecoration?.includes('underline') || false,
+                  charSpacing: el.letterSpacing || 0,
                 });
               } else if (el.type === 'shape' || el.type === 'comment') {
                 existingObj.set({
@@ -217,19 +234,24 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           if (tempEl.type === 'text' && tempEl.text && tempEl.text.includes('{{page}}')) {
             tempEl.text = tempEl.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
           }
-          const obj = await elementToFabricObject(tempEl, products);
+          const obj = await elementToFabricObject(tempEl, products, catalog);
           if (obj) {
             obj.set('zIndex', el.zIndex || 0);
             obj.set({ selectable: isActive && !el.locked, evented: isActive && !el.locked });
             if (el.type === 'product-block') {
               obj._productId = el.productId;
               obj._src = el.src;
+              obj._showTitle = catalog.showTitle !== false;
+              obj._showPrice = catalog.showPrice !== false;
+              obj._showSKU = catalog.showSKU !== false;
             }
           }
           return obj;
         });
 
         const resolvedObjects = await Promise.all(objectPromises);
+        if (!isCurrent) return;
+
         const validObjects = resolvedObjects.filter(Boolean);
         const currentCanvasObjects = canvas.getObjects();
 
@@ -246,7 +268,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       }
     };
     loadObjects();
-  }, [page.elements, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber]);
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [page.elements, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber, catalog]);
 
   useEffect(() => {
     const unsub = useStore.subscribe((newState, prevState) => {

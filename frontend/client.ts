@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Product, Category, Catalog, MediaItem } from './types';
+import { Product, Category, Catalog, User, AuthResponse, MediaItem, AdminAsset, UserSubscription, PricingPlan } from './types';
 
 // Create Axios instance
 const api = axios.create({
@@ -21,7 +21,7 @@ api.interceptors.response.use(
         const originalRequest = error.config;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
-            if (originalRequest.url === '/auth/token/refresh/') {
+            if (originalRequest.url?.includes('/auth/login/') || originalRequest.url === '/auth/token/refresh/') {
                 return Promise.reject(error);
             }
 
@@ -62,13 +62,6 @@ export const subscriptionApi = {
     getPlans: () => api.get('/plans/'),
     updatePlan: (data: { plan_slug: string }) => api.post('/subscriptions/update/', data),
     adminGetAllSubscriptions: () => api.get('/admin-subscriptions/'),
-};
-
-export const businessTemplatesApi = {
-    getAll: () => api.get('/business-templates/'),
-    create: (data: any) => api.post('/business-templates/', data),
-    update: (id: string, data: any) => api.patch(`/business-templates/${id}/`, data),
-    delete: (id: string) => api.delete(`/business-templates/${id}/`),
 };
 
 // Products API
@@ -114,6 +107,11 @@ export const mediaApi = {
         });
     },
     delete: (id: string) => api.delete(`/media/${id}/`),
+};
+
+// Admin Assets API
+export const adminAssetsApi = {
+    getAll: () => api.get<AdminAsset[]>('/admin-assets/'),
 };
 
 export default api;
