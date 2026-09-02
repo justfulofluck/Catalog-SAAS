@@ -1,8 +1,8 @@
 
 import { create } from 'zustand';
 import { authApi } from '../client';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription } from '../types';
-import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES } from '../constants';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription } from '../types';
+import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES } from '../constants';
 
 interface User {
   id: string;
@@ -145,6 +145,8 @@ interface State {
   updateCatalogCategories: (categoryIds: string[]) => void;
   setCatalogBackgroundColor: (color: string) => void;
   updateAllPageBackgrounds: (color: string) => void;
+  applyGlobalProductCardStyle: (updates: { cardTheme?: any; fontFamily?: string; fontColor?: string; showTitle?: boolean; showPrice?: boolean; showSKU?: boolean }) => void;
+  applyGlobalPageBackground: (color: string) => void;
 
   applyTheme: (themeId: string) => void;
   applyFullCatalogTemplate: (templateId: string) => void;
@@ -195,6 +197,8 @@ interface State {
   applyIndexTemplate: (pageIndex: number | null, template: PageTemplate) => void;
   applyClosingTemplate: (pageIndex: number | null, template: PageTemplate) => void;
   applyInventoryLayout: (pageIndex: number | null, template: GridTemplate) => void;
+  applyHeaderTemplate: (template: HeaderFooterTemplate) => void;
+  applyFooterTemplate: (template: HeaderFooterTemplate) => void;
   reflowAllProductPages: (updatedCatalog?: Catalog) => void;
 
   groupSelected: (pageIndex: number) => void;
@@ -307,10 +311,64 @@ export const useStore = create<State>((set, get) => ({
     marginBottom: 37.8,
     marginLeft: 37.8,
     marginRight: 37.8,
-    marginColor: '#4f46e5',
-    pageNumberAlignment: 'right',
-    headerElements: [],
-    footerElements: [],
+    headerElements: [
+      {
+        id: 'default-header-title',
+        type: 'text',
+        text: 'Company Catalog 2026',
+        x: 40,
+        y: 15,
+        width: 714,
+        height: 25,
+        fontSize: 11,
+        fontFamily: 'Inter',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        fill: '#475569',
+        zIndex: 10,
+        rotation: 0,
+        opacity: 1,
+        verticalAlign: 'middle',
+      }
+    ],
+    footerElements: [
+      {
+        id: 'default-footer-text',
+        type: 'text',
+        text: 'Proprietary & Confidential',
+        x: 40,
+        y: 15,
+        width: 350,
+        height: 25,
+        fontSize: 9,
+        fontFamily: 'Inter',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        fill: '#94a3b8',
+        zIndex: 10,
+        rotation: 0,
+        opacity: 1,
+        verticalAlign: 'middle',
+      },
+      {
+        id: 'default-footer-page',
+        type: 'text',
+        text: 'Page {{page}}',
+        x: 600,
+        y: 15,
+        width: 154,
+        height: 25,
+        fontSize: 9,
+        fontFamily: 'Inter',
+        fontWeight: 'bold',
+        textAlign: 'right',
+        fill: '#94a3b8',
+        zIndex: 10,
+        rotation: 0,
+        opacity: 1,
+        verticalAlign: 'middle',
+      }
+    ],
     showPrice: true,
     showSKU: true,
     showTitle: true,
@@ -617,7 +675,37 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  setView: (view) => set({ currentView: view }),
+  setView: (view) => {
+    set({ currentView: view });
+    // Keep browser URL pathname synced with currentView
+    if (typeof window !== 'undefined') {
+      const pathToView: Record<string, string> = {
+        'dashboard': '/',
+        'editor': '/editor',
+        'products-list': '/inventory/products',
+        'create-product': '/inventory/products/create',
+        'edit-product': '/inventory/products/edit',
+        'category-list': '/inventory/categories',
+        'create-category': '/inventory/categories/create',
+        'edit-category': '/inventory/categories/edit',
+        'media-library': '/inventory/media',
+        'catalog-setup': '/catalog-setup',
+        'catalog-products': '/catalog-products',
+        'your-work': '/your-work',
+        'publish': '/publish',
+        'pricing': '/pricing',
+        'settings': '/settings',
+        'admin-login': '/admin',
+        'admin-dashboard': '/admin/dashboard',
+        'business-selection': '/onboarding',
+        'business-onboarding': '/onboarding/business',
+      };
+      const targetPath = pathToView[view];
+      if (targetPath && window.location.pathname !== targetPath) {
+        window.history.pushState({ view }, '', targetPath);
+      }
+    }
+  },
   setSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),
   setCreatingSubcategoryParentId: (id) => set({ creatingSubcategoryParentId: id }),
 
@@ -1238,6 +1326,60 @@ export const useStore = create<State>((set, get) => ({
         updatedAt: new Date().toISOString()
       }
     }));
+  },
+
+  applyGlobalPageBackground: (color) => {
+    get().pushHistory();
+    set((state) => ({
+      catalog: {
+        ...state.catalog,
+        backgroundColor: color,
+        pages: state.catalog.pages.map(p => ({ ...p, backgroundColor: color })),
+        updatedAt: new Date().toISOString()
+      }
+    }));
+  },
+
+  applyGlobalProductCardStyle: (updates) => {
+    get().pushHistory();
+    set((state) => {
+      const updatedCatalog = {
+        ...state.catalog,
+        ...(updates.showTitle !== undefined ? { showTitle: updates.showTitle } : {}),
+        ...(updates.showPrice !== undefined ? { showPrice: updates.showPrice } : {}),
+        ...(updates.showSKU !== undefined ? { showSKU: updates.showSKU } : {}),
+        updatedAt: new Date().toISOString()
+      };
+
+      const updatedPages = state.catalog.pages.map(page => ({
+        ...page,
+        elements: page.elements.map(el => {
+          if (el.type === 'product-block') {
+            return {
+              ...el,
+              ...(updates.cardTheme ? { cardTheme: updates.cardTheme } : {}),
+              ...(updates.fontFamily ? { fontFamily: updates.fontFamily } : {}),
+              ...(updates.fontColor ? { fill: updates.fontColor } : {})
+            };
+          }
+          if (el.type === 'text' && updates.fontFamily) {
+            return {
+              ...el,
+              fontFamily: updates.fontFamily,
+              ...(updates.fontColor ? { fill: updates.fontColor } : {})
+            };
+          }
+          return el;
+        })
+      }));
+
+      return {
+        catalog: {
+          ...updatedCatalog,
+          pages: updatedPages
+        }
+      };
+    });
   },
 
   setCatalogGlobalText: (header, footer) => set((state) => ({
@@ -2364,7 +2506,7 @@ export const useStore = create<State>((set, get) => ({
           id: `p-section-${categoryId}`,
           pageNumber: contentPageCounter,
           elements: sectionCoverElements,
-          type: 'interior',
+          type: 'intro',
           categoryId: categoryId,
           backgroundColor: category?.color || theme.backgroundColor
         });
@@ -2378,7 +2520,7 @@ export const useStore = create<State>((set, get) => ({
           id: `p-grid-${categoryId}-${i}-${Date.now()}`,
           pageNumber: contentPageCounter,
           elements: generatePageElements(catProducts.slice(i, i + productsPerPage)),
-          type: 'interior',
+          type: 'product',
           categoryId: categoryId
         });
         contentPageCounter++;
@@ -2487,6 +2629,13 @@ export const useStore = create<State>((set, get) => ({
       const newPages = [...state.catalog.pages];
 
       const applyToPage = (idx: number) => {
+        const targetPage = newPages[idx];
+        // Guard: Cannot apply cover to intro, index, closing, etc.
+        if (targetPage && targetPage.type !== 'cover' && targetPage.type !== 'blank') {
+          console.warn(`Cannot apply cover template to a ${targetPage.type} page.`);
+          return;
+        }
+
         const themedElements = template.elements
           .filter(el => !(el.type === 'shape' && el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT))
           .map((el, eIdx) => {
@@ -2528,6 +2677,13 @@ export const useStore = create<State>((set, get) => ({
       const newPages = [...state.catalog.pages];
 
       const applyToPage = (idx: number) => {
+        const targetPage = newPages[idx];
+        // Guard: Cannot apply index template to intro, cover, product, closing pages
+        if (targetPage && targetPage.type !== 'index' && targetPage.type !== 'blank') {
+          console.warn(`Cannot apply index template to a ${targetPage.type} page.`);
+          return;
+        }
+
         const themedElements = template.elements
           .filter(el => !(el.type === 'shape' && el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT))
           .map((el, eIdx) => {
@@ -2569,6 +2725,13 @@ export const useStore = create<State>((set, get) => ({
       const newPages = [...state.catalog.pages];
 
       const applyToPage = (idx: number) => {
+        const targetPage = newPages[idx];
+        // Guard: Cannot apply closing template to intro, cover, product, index pages
+        if (targetPage && targetPage.type !== 'closing' && targetPage.type !== 'blank') {
+          console.warn(`Cannot apply closing template to a ${targetPage.type} page.`);
+          return;
+        }
+
         const themedElements = template.elements
           .filter(el => !(el.type === 'shape' && el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT))
           .map((el, eIdx) => {
@@ -2600,6 +2763,56 @@ export const useStore = create<State>((set, get) => ({
       }
 
       return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }, selectedElementIds: [] };
+    });
+  },
+
+  applyHeaderTemplate: (template: HeaderFooterTemplate) => {
+    get().pushHistory();
+    set((state) => {
+      const newHeaderElements = template.elements.map((el, i) => ({
+        ...el,
+        id: `hdr-el-${Date.now()}-${i}`,
+        locked: false,
+        zIndex: el.zIndex ?? (i + 1),
+        opacity: el.opacity ?? 1,
+        rotation: el.rotation ?? 0
+      })) as CanvasElement[];
+
+      return {
+        catalog: {
+          ...state.catalog,
+          hasHeader: true,
+          headerHeight: template.height,
+          headerElements: newHeaderElements,
+          headerMigrated: true,
+          updatedAt: new Date().toISOString()
+        }
+      };
+    });
+  },
+
+  applyFooterTemplate: (template: HeaderFooterTemplate) => {
+    get().pushHistory();
+    set((state) => {
+      const newFooterElements = template.elements.map((el, i) => ({
+        ...el,
+        id: `ftr-el-${Date.now()}-${i}`,
+        locked: false,
+        zIndex: el.zIndex ?? (i + 1),
+        opacity: el.opacity ?? 1,
+        rotation: el.rotation ?? 0
+      })) as CanvasElement[];
+
+      return {
+        catalog: {
+          ...state.catalog,
+          hasFooter: true,
+          footerHeight: template.height,
+          footerElements: newFooterElements,
+          footerMigrated: true,
+          updatedAt: new Date().toISOString()
+        }
+      };
     });
   },
 
@@ -2678,15 +2891,104 @@ export const useStore = create<State>((set, get) => ({
         });
       }
 
-      // 1. Determine categories to process
-      // If pageIndex is null, we apply to ALL interior pages, grouping by their existing categoryIds
-      const pagesToProcess = pageIndex === null
-        ? state.catalog.pages.filter(p => p.type === 'interior')
-        : [state.catalog.pages[pageIndex]];
+      // If pageIndex is NOT null, we ONLY update that specific single page!
+      if (pageIndex !== null && pageIndex >= 0 && pageIndex < currentCatalogPages.length) {
+        const targetPage = currentCatalogPages[pageIndex];
+
+        // STRICT RULE: Body Grid CANNOT be applied to Cover, Intro, Index, or Closing pages!
+        if (targetPage.type === 'cover' || targetPage.type === 'intro' || targetPage.type === 'index' || targetPage.type === 'closing') {
+          console.warn(`Cannot apply body grid layout to a ${targetPage.type} page.`);
+          return state;
+        }
+        const existingProductIds = targetPage.elements
+          .filter(el => el.type === 'product-block' && el.productId)
+          .map(el => el.productId as string);
+        
+        let targetProducts: Product[] = existingProductIds
+          .map(id => state.products.find(p => p.id === id))
+          .filter(Boolean) as Product[];
+
+        if (targetProducts.length === 0) {
+          const catId = targetPage.categoryId || state.catalog.selectedCategoryIds?.[0] || state.categories[0]?.id;
+          targetProducts = state.products.filter(p => p.categoryId === catId);
+        }
+
+        const itemsPerPage = template.cols * template.rows;
+        const pageProducts = targetProducts.slice(0, itemsPerPage);
+
+        const curCatalog = state.catalog;
+        const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
+        const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
+        
+        const padding = template.padding || 35;
+        const spacing = template.spacing || 20;
+
+        const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
+        const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
+        const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
+        const bottomMargin = curCatalog.marginBottom !== undefined ? curCatalog.marginBottom : padding;
+
+        const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
+        const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
+        const slotWidth = (availableWidth - (template.cols - 1) * spacing) / template.cols;
+        const slotHeight = (availableHeight - (template.rows - 1) * spacing) / template.rows;
+
+        const newGridElements: CanvasElement[] = [];
+
+        // Add decorations if any
+        if (template.decorations) {
+          template.decorations.forEach((dec, idx) => {
+            newGridElements.push({
+              ...dec,
+              id: `dec-${Date.now()}-${pageIndex}-${idx}`,
+              zIndex: dec.zIndex || -1
+            } as CanvasElement);
+          });
+        }
+
+        // Keep non-product elements (like user added text, shapes, stamps)
+        const preservedElements = targetPage.elements.filter(
+          el => el.type !== 'product-block' && !el.id?.startsWith('dec-') && !el.id?.startsWith('pb-')
+        );
+
+        pageProducts.forEach((product, index) => {
+          const col = index % template.cols;
+          const row = Math.floor(index / template.cols);
+          const x = leftMargin + col * (slotWidth + spacing);
+          const y = headerH + topMargin + row * (slotHeight + spacing);
+
+          newGridElements.push({
+            id: `pb-${Date.now()}-${pageIndex}-${index}`,
+            type: 'product-block',
+            x, y, width: slotWidth, height: slotHeight,
+            rotation: 0, opacity: 1, productId: product.id, zIndex: 1,
+            cardTheme: template.cardTheme || 'classic-stack'
+          } as CanvasElement);
+        });
+
+        currentCatalogPages[pageIndex] = {
+          ...targetPage,
+          elements: [...preservedElements, ...newGridElements],
+          type: 'product',
+          backgroundColor: template.backgroundColor || targetPage.backgroundColor || state.catalog.backgroundColor
+        };
+
+        return {
+          catalog: {
+            ...state.catalog,
+            pages: currentCatalogPages,
+            updatedAt: new Date().toISOString()
+          },
+          currentPageIndex: pageIndex,
+          selectedElementIds: []
+        };
+      }
+
+      // Global mode (pageIndex === null): Reflow all product/interior pages across categories
+      const pagesToProcess = state.catalog.pages.filter(p => p.type === 'product' || p.type === 'interior');
 
       const categoryIdsToProcess = Array.from(new Set(pagesToProcess.map(p => {
         if (p.categoryId) return p.categoryId;
-        // Infer if missing
         const firstProd = p.elements.find(el => el.productId);
         if (firstProd?.productId) return state.products.find(prod => prod.id === firstProd.productId)?.categoryId;
         return null;
@@ -2695,11 +2997,9 @@ export const useStore = create<State>((set, get) => ({
       if (categoryIdsToProcess.length === 0) categoryIdsToProcess.push(state.catalog.selectedCategoryIds?.[0] || 'cat1');
 
       categoryIdsToProcess.forEach(targetCategoryId => {
-        // 2. Gather all products for this category
         const catProducts = state.products.filter(p => p.categoryId === targetCategoryId);
         const itemsPerPage = template.cols * template.rows;
 
-        // 3. Helper: generate elements for one page-worth of products
         const generatePageElements = (chunk: Product[], pageOrder: number) => {
           const gridElements: CanvasElement[] = [];
 
@@ -2713,14 +3013,13 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-           const curCatalog = state.catalog;
+          const curCatalog = state.catalog;
           const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
           const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
           
-          const padding = template.padding;
-          const spacing = template.spacing;
+          const padding = template.padding || 35;
+          const spacing = template.spacing || 20;
 
-          // Align directly to page margins instead of double-adding padding
           const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
           const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
           const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
@@ -2749,16 +3048,10 @@ export const useStore = create<State>((set, get) => ({
           return gridElements;
         };
 
-        // 4. Find where this category's pages are
         const categoryPageIndices: number[] = [];
         currentCatalogPages.forEach((p, i) => {
           if (p.categoryId === targetCategoryId) categoryPageIndices.push(i);
         });
-
-        // Ensure we have at least one page index to replace
-        if (categoryPageIndices.length === 0 && pageIndex !== null) {
-          categoryPageIndices.push(pageIndex);
-        }
 
         if (categoryPageIndices.length > 0) {
           const insertPosition = categoryPageIndices[0];
@@ -2771,7 +3064,7 @@ export const useStore = create<State>((set, get) => ({
               id: `p-gen-${targetCategoryId}-${Date.now()}-${i}`,
               pageNumber: 0,
               elements: generatePageElements(chunk, i),
-              type: 'interior' as PageType,
+              type: 'product' as PageType,
               categoryId: targetCategoryId
             });
           }
@@ -2796,8 +3089,7 @@ export const useStore = create<State>((set, get) => ({
           updatedAt: new Date().toISOString(),
           backgroundColor: template.backgroundColor || state.catalog.backgroundColor
         },
-        // Keep current page if it still exists or reset to safe
-        currentPageIndex: pageIndex === null ? state.currentPageIndex : Math.min(pageIndex, renumberedPages.length - 1),
+        currentPageIndex: Math.min(state.currentPageIndex, renumberedPages.length - 1),
         selectedElementIds: []
       };
     });
@@ -3043,7 +3335,7 @@ export const useStore = create<State>((set, get) => ({
       if (isStaff) {
         set({
           isAdminAuthenticated: true,
-          isAuthenticated: false,
+          isAuthenticated: true,
           user: userObj
         });
         get().fetchProducts();

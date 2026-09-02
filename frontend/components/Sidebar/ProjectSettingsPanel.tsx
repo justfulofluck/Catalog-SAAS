@@ -337,13 +337,104 @@ const ProjectSettingsPanel: React.FC = () => {
                         {/* Apply to All Pages Button */}
                         <button
                             onClick={() => updateAllPageBackgrounds(catalog.pages[currentPageIndex]?.backgroundColor || '#ffffff')}
-                            className="w-full py-4 px-6 rounded-[22px] bg-slate-900 text-white font-black text-[11px] uppercase tracking-[0.15em] shadow-xl shadow-slate-200/50 hover:bg-indigo-600 hover:shadow-indigo-200/50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-3 group"
+                            className="w-full py-3.5 px-6 rounded-[20px] bg-slate-900 text-white font-black text-[11px] uppercase tracking-[0.15em] shadow-xl hover:bg-indigo-600 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-300 flex items-center justify-center gap-3 group"
                         >
-                            <div className="p-1.5 rounded-lg bg-white/10 group-hover:bg-white/20 transition-colors">
+                            <div className="p-1 rounded-lg bg-white/10 group-hover:bg-white/20 transition-colors">
                                 <Sparkles size={14} className="text-white animate-pulse" />
                             </div>
-                            <span>Apply to All Pages</span>
+                            <span>Apply Background to All Pages</span>
                         </button>
+                    </div>
+                </section>
+
+                {/* Global Typography & Product Cards Section */}
+                <section className="space-y-4 pt-4 border-t border-slate-100">
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${uiTheme === 'dark' ? 'bg-slate-800/50' : 'bg-slate-100/80'}`}>
+                        <Type size={14} className="text-indigo-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Global Fonts & Cards</span>
+                    </div>
+
+                    <div className="space-y-4 px-1">
+                        {/* Global Font Family Selector */}
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase block">Global Font Family</span>
+                            <div className="relative">
+                                <select
+                                    onChange={(e) => {
+                                        if (e.target.value) {
+                                            useStore.getState().applyGlobalProductCardStyle({ fontFamily: e.target.value });
+                                        }
+                                    }}
+                                    className="w-full appearance-none bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 outline-none hover:border-indigo-200 transition-all"
+                                    defaultValue=""
+                                >
+                                    <option value="" disabled>Change Font on All Pages...</option>
+                                    {CATEGORIZED_FONTS.map(group => (
+                                        <optgroup key={group.label} label={group.label}>
+                                            {group.fonts.map(f => (
+                                                <option key={f} value={f}>{f}</option>
+                                            ))}
+                                        </optgroup>
+                                    ))}
+                                </select>
+                                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                            </div>
+                        </div>
+
+                        {/* Global Product Card Theme */}
+                        <div className="space-y-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase block">Product Card Style</span>
+                            <div className="grid grid-cols-2 gap-2">
+                                {[
+                                    { id: 'classic-stack', label: 'Classic Stack' },
+                                    { id: 'minimal-pill', label: 'Minimal Pill' },
+                                    { id: 'split-row', label: 'Split Row' },
+                                    { id: 'specs-table', label: 'Spec Sheet' }
+                                ].map(theme => (
+                                    <button
+                                        key={theme.id}
+                                        onClick={() => useStore.getState().applyGlobalProductCardStyle({ cardTheme: theme.id })}
+                                        className="p-2.5 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 text-slate-700 hover:text-indigo-600 text-[11px] font-black text-center transition-all"
+                                    >
+                                        {theme.label}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Global Visibility Toggles */}
+                        <div className="space-y-2 pt-1">
+                            <span className="text-[10px] font-black text-slate-400 uppercase block">Product Data Display</span>
+                            <div className="space-y-2">
+                                <label className="flex items-center justify-between cursor-pointer p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    <span className="text-xs font-bold text-slate-700">Show Product Title</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={catalog.showTitle !== false}
+                                        onChange={(e) => useStore.getState().applyGlobalProductCardStyle({ showTitle: e.target.checked })}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                </label>
+                                <label className="flex items-center justify-between cursor-pointer p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    <span className="text-xs font-bold text-slate-700">Show Price</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={catalog.showPrice !== false}
+                                        onChange={(e) => useStore.getState().applyGlobalProductCardStyle({ showPrice: e.target.checked })}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                </label>
+                                <label className="flex items-center justify-between cursor-pointer p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+                                    <span className="text-xs font-bold text-slate-700">Show SKU / Code</span>
+                                    <input
+                                        type="checkbox"
+                                        checked={catalog.showSKU !== false}
+                                        onChange={(e) => useStore.getState().applyGlobalProductCardStyle({ showSKU: e.target.checked })}
+                                        className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </section>
 

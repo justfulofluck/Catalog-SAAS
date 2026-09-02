@@ -132,9 +132,9 @@ const ProductLibrary: React.FC = () => {
 
       {/* Left Column: Categories */}
       <div className={`w-[150px] flex flex-col border-r ${uiTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
-        <div className={`p-3 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-          <h2 className={`text-[10px] font-black uppercase tracking-widest mb-0.5 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Categories</h2>
-          <p className="text-[8px] font-semibold text-slate-400">{categories.length} total</p>
+        <div className={`h-[58px] px-3 py-2.5 border-b flex flex-col justify-center transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+          <h2 className={`text-[10px] font-black uppercase tracking-widest mb-0.5 leading-none ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Categories</h2>
+          <p className="text-[8px] font-semibold text-slate-400 leading-tight">{categories.length} total</p>
         </div>
         <div
           className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar cursor-default"
@@ -177,18 +177,18 @@ const ProductLibrary: React.FC = () => {
 
       {/* Right Column: Products */}
       <div className="flex-1 flex flex-col w-[230px]">
-        <div className={`p-3 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between mb-1.5">
-            <h2 className={`text-[10px] font-black uppercase tracking-widest ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Products</h2>
+        <div className={`h-[58px] px-3 py-2.5 border-b flex flex-col justify-center transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+          <div className="flex items-center justify-between mb-0.5">
+            <h2 className={`text-[10px] font-black uppercase tracking-widest leading-none ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Products</h2>
             <button
               onClick={() => setEditorTab(null)}
-              className={`p-1 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+              className={`p-0.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
             >
               <X size={12} />
             </button>
           </div>
-          <h3 className="text-[9px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5">
-            <Package size={10} />
+          <h3 className="text-[8px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5 leading-tight">
+            <Package size={9} />
             {filteredProducts.length} total
           </h3>
         </div>

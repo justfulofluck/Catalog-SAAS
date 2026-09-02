@@ -1,5 +1,5 @@
 
-import { FullCatalogTemplate, GridTemplate, PageTemplate, Theme } from './types';
+import { FullCatalogTemplate, GridTemplate, PageTemplate, Theme, HeaderFooterTemplate } from './types';
 
 // A4 proportions at 96 DPI
 export const PAGE_WIDTH = 794;
@@ -143,10 +143,36 @@ export const GRID_TEMPLATES: GridTemplate[] = [
       { type: 'shape', shapeType: 'rect', x: 40, y: 40, width: 714, height: 2, fill: '#4a3f35', zIndex: 0, opacity: 0.2 },
       { type: 'text', x: 40, y: 15, width: 714, height: 20, text: 'AUTUMN WINTER COLLECTION // CURATED ASSETS', fontSize: 9, fontWeight: '900', fill: '#4a3f35', textAlign: 'center', letterSpacing: 4, zIndex: 5 }
     ]
+  },
+  {
+    id: 'vtac-lighting-sheet',
+    name: 'V-TAC Spec Sheet Grid (2x3)',
+    cols: 2,
+    rows: 3,
+    padding: 35,
+    spacing: 20,
+    arrangement: 'row',
+    group: 'Premium',
+    cardTheme: 'minimal-pill',
+    backgroundColor: '#ffffff'
   }
 ];
 
 export const COVER_TEMPLATES: PageTemplate[] = [
+  {
+    id: 'vtac-led-cover-2025',
+    name: 'V-TAC LED Lights 2025',
+    description: 'Modern industrial lighting cover with product highlights & badge.',
+    elements: [
+      { type: 'shape', x: 0, y: 0, width: 794, height: 1123, fill: '#0a0f1d', zIndex: 0 },
+      { type: 'image', x: 0, y: 0, width: 794, height: 580, src: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=1000', zIndex: 1 },
+      { type: 'shape', x: 50, y: 620, width: 694, height: 3, fill: '#3b82f6', zIndex: 2 },
+      { type: 'text', x: 50, y: 640, width: 694, height: 110, text: 'INTRODUCING OUR NEW RANGE OF\nV-TAC LED LIGHTS 2025', fontSize: 32, fontWeight: '900', fill: '#ffffff', letterSpacing: 1, zIndex: 3 },
+      { type: 'shape', x: 50, y: 770, width: 694, height: 260, fill: '#1e293b', opacity: 0.7, zIndex: 2 },
+      { type: 'text', x: 80, y: 790, width: 634, height: 220, text: '• Bling Series COB Range\n• Smart Lighting & Sensors\n• Mirror Lights & Picture Lights\n• Designer Wall Lights & Table Lamps\n• LED Solar Series & Street Lights', fontSize: 16, lineHeight: 1.8, fontWeight: '600', fill: '#94a3b8', zIndex: 4 },
+      { type: 'text', x: 50, y: 1060, width: 694, height: 25, text: 'WWW.VTACEXPORTS.COM  |  PREMIUM COMMERCIAL & INDUSTRIAL LIGHTING', fontSize: 11, fontWeight: '800', fill: '#60a5fa', textAlign: 'center', letterSpacing: 2, zIndex: 3 }
+    ]
+  },
   {
     id: 'modern-apex',
     name: 'Apex Portfolio',
@@ -186,6 +212,88 @@ export const CLOSING_TEMPLATES: PageTemplate[] = [
       { type: 'shape', x: 0, y: 0, width: 794, height: 1123, fill: '#0f172a', zIndex: 0 },
       { type: 'text', x: 0, y: 450, width: 794, height: 60, text: 'THANK YOU', fontSize: 64, fontWeight: '900', fill: '#ffffff', textAlign: 'center', zIndex: 1 },
       { type: 'text', x: 100, y: 530, width: 594, height: 40, text: 'For inquiries, contact our sales department', fontSize: 14, fontWeight: '400', fill: '#94a3b8', textAlign: 'center', zIndex: 2 }
+    ]
+  }
+];
+
+export const HEADER_TEMPLATES: HeaderFooterTemplate[] = [
+  {
+    id: 'hdr-corporate-split',
+    name: 'Corporate Minimal Split',
+    description: 'Brand title left, category/date right with subtle bottom border.',
+    type: 'header',
+    height: 38,
+    previewText: 'COMPANY CATALOG 2026  |  COLLECTION',
+    elements: [
+      { id: 'hdr-line', type: 'shape', x: 40, y: 36, width: 714, height: 1, fill: '#cbd5e1', zIndex: 1 },
+      { id: 'hdr-left', type: 'text', x: 40, y: 10, width: 350, height: 20, text: 'COMPANY CATALOG 2026', fontSize: 10, fontWeight: '800', fill: '#1e293b', letterSpacing: 1, zIndex: 2 },
+      { id: 'hdr-right', type: 'text', x: 400, y: 10, width: 354, height: 20, text: 'PREMIUM SELECTION', fontSize: 9, fontWeight: '600', fill: '#64748b', textAlign: 'right', letterSpacing: 1, zIndex: 2 }
+    ]
+  },
+  {
+    id: 'hdr-vtac-dark-bar',
+    name: 'Industrial Dark Ribbon',
+    description: 'High-contrast bold banner with series title and website URL.',
+    type: 'header',
+    height: 46,
+    previewText: 'CRETA SERIES // COB DOWNLIGHT  |  VTACEXPORTS.COM',
+    elements: [
+      { id: 'hdr-bg', type: 'shape', x: 0, y: 0, width: 794, height: 44, fill: '#0f172a', zIndex: 0 },
+      { id: 'hdr-accent', type: 'shape', x: 0, y: 44, width: 794, height: 2, fill: '#38bdf8', zIndex: 1 },
+      { id: 'hdr-title', type: 'text', x: 35, y: 12, width: 450, height: 24, text: 'CRETA SERIES // COB DOWNLIGHTER', fontSize: 12, fontWeight: '900', fill: '#ffffff', letterSpacing: 2, zIndex: 2 },
+      { id: 'hdr-url', type: 'text', x: 500, y: 14, width: 259, height: 20, text: 'VTACEXPORTS.COM', fontSize: 10, fontWeight: 'bold', fill: '#38bdf8', textAlign: 'right', zIndex: 2 }
+    ]
+  },
+  {
+    id: 'hdr-center-editorial',
+    name: 'Editorial Vogue Center',
+    description: 'Refined serif centered title with delicate accent bar.',
+    type: 'header',
+    height: 38,
+    previewText: '— THE EDITORIAL LOOKBOOK —',
+    elements: [
+      { id: 'hdr-center', type: 'text', x: 40, y: 10, width: 714, height: 20, text: '— THE EDITORIAL LOOKBOOK —', fontSize: 11, fontFamily: 'Playfair Display', fontWeight: 'bold', fill: '#475569', textAlign: 'center', letterSpacing: 3, zIndex: 2 }
+    ]
+  }
+];
+
+export const FOOTER_TEMPLATES: HeaderFooterTemplate[] = [
+  {
+    id: 'ftr-standard-b2b',
+    name: 'B2B Standard Page Counter',
+    description: 'Confidentiality notice on the left, dynamic page number on the right.',
+    type: 'footer',
+    height: 38,
+    previewText: 'Proprietary & Confidential  |  Page {{page}}',
+    elements: [
+      { id: 'ftr-line', type: 'shape', x: 40, y: 4, width: 714, height: 1, fill: '#e2e8f0', zIndex: 1 },
+      { id: 'ftr-left', type: 'text', x: 40, y: 14, width: 350, height: 20, text: 'Proprietary & Confidential', fontSize: 9, fontWeight: 'normal', fill: '#94a3b8', zIndex: 2 },
+      { id: 'ftr-right', type: 'text', x: 400, y: 14, width: 354, height: 20, text: 'Page {{page}}', fontSize: 10, fontWeight: '700', fill: '#475569', textAlign: 'right', zIndex: 2 }
+    ]
+  },
+  {
+    id: 'ftr-vtac-specs-strip',
+    name: 'V-TAC Technical Spec Bar',
+    description: 'Product options & dimming summary badge with page count.',
+    type: 'footer',
+    height: 48,
+    previewText: 'BODY COLOR : WHITE, BLACK  |  DIMMABLE  |  PAGE - {{page}}',
+    elements: [
+      { id: 'ftr-line', type: 'shape', x: 35, y: 2, width: 724, height: 1, fill: '#cbd5e1', zIndex: 1 },
+      { id: 'ftr-specs', type: 'text', x: 35, y: 10, width: 550, height: 18, text: 'BODY COLOR : WHITE, TITANIUM, BLACK  |  DIMMABLE OPTIONS AVAILABLE', fontSize: 8.5, fontWeight: '700', fill: '#64748b', letterSpacing: 0.5, zIndex: 2 },
+      { id: 'ftr-page', type: 'text', x: 600, y: 10, width: 159, height: 18, text: 'PAGE - {{page}}', fontSize: 9, fontWeight: '900', fill: '#0f172a', textAlign: 'right', zIndex: 2 }
+    ]
+  },
+  {
+    id: 'ftr-modern-contact',
+    name: 'Modern Contact & URL Strip',
+    description: 'Website, email and clean boxed page number.',
+    type: 'footer',
+    height: 38,
+    previewText: 'info@brand.com  |  www.brand.com  |  [ {{page}} ]',
+    elements: [
+      { id: 'ftr-left', type: 'text', x: 40, y: 12, width: 500, height: 20, text: 'sales@company.com  •  www.company.com', fontSize: 9, fontWeight: '600', fill: '#6366f1', zIndex: 2 },
+      { id: 'ftr-right', type: 'text', x: 550, y: 12, width: 204, height: 20, text: 'PAGE {{page}}', fontSize: 10, fontWeight: '900', fill: '#1e293b', textAlign: 'right', letterSpacing: 2, zIndex: 2 }
     ]
   }
 ];

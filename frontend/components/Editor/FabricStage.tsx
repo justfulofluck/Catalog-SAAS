@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from 'react';
-import { Canvas, Circle, ActiveSelection } from 'fabric';
+import React, { useEffect, useRef, useState } from 'react';
+import { Canvas, Circle, ActiveSelection, config } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
 import { elementToFabricObject } from './fabricRenderer';
+import { globalSpatialIndex } from '../../utils/spatialIndex';
 
 interface Props {
   page: CatalogPage;
@@ -19,6 +20,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const renderThrottleRef = useRef<number | null>(null);
+  const [activeGuides, setActiveGuides] = useState<{ type: 'horizontal' | 'vertical'; pos: number }[]>([]);
   const { setSelectedElements, updateElement, pushHistory, catalog } = useStore();
   const products = useStore((state) => state.products);
 
@@ -34,6 +36,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       backgroundColor: page.backgroundColor || canvasBg,
       selection: false,
       preserveObjectStacking: true,
+      enableRetinaScaling: true,
     });
 
     fabricCanvasRef.current = canvas;
@@ -56,13 +59,35 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
     let dragTimer: number | null = null;
     canvas.on('object:moving', (e: any) => {
+      const obj = e.target as any;
+      if (obj && obj.id) {
+        const objW = (obj.width || 0) * (obj.scaleX || 1);
+        const objH = (obj.height || 0) * (obj.scaleY || 1);
+        const currentBox = {
+          id: obj.id,
+          minX: obj.left || 0,
+          minY: obj.top || 0,
+          maxX: (obj.left || 0) + objW,
+          maxY: (obj.top || 0) + objH,
+          zIndex: obj.zIndex || 0,
+        };
+
+        const { snapX, snapY, guideLines } = globalSpatialIndex.findSnapTargets(currentBox, 6);
+        if (snapX !== null) {
+          obj.set('left', snapX);
+        }
+        if (snapY !== null) {
+          obj.set('top', snapY);
+        }
+        setActiveGuides(guideLines);
+      }
+
       if (renderThrottleRef.current) clearTimeout(renderThrottleRef.current);
       if (!dragTimer) {
         pushHistory();
         dragTimer = window.setTimeout(() => { dragTimer = null; }, 300);
       }
       renderThrottleRef.current = window.setTimeout(() => {
-        const obj = e.target as any;
         if (obj && obj.id) {
           const isHeader = headerElements?.some(el => el.id === obj.id);
           const isFooter = footerElements?.some(el => el.id === obj.id);
@@ -76,6 +101,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     });
 
     canvas.on('object:modified', (e: any) => {
+      setActiveGuides([]);
       dragTimer = null;
       const obj = e.target as any;
       if (obj && obj.id) {
@@ -261,7 +287,27 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           }
         });
 
+        // Update Spatial Index for high-performance snapping & culling
+        globalSpatialIndex.clear();
+        const boxes = validObjects.map((obj: any) => {
+          const w = (obj.width || 0) * (obj.scaleX || 1);
+          const h = (obj.height || 0) * (obj.scaleY || 1);
+          return {
+            id: obj.id || '',
+            minX: obj.left || 0,
+            minY: obj.top || 0,
+            maxX: (obj.left || 0) + w,
+            maxY: (obj.top || 0) + h,
+            zIndex: obj.get?.('zIndex') || 0,
+          };
+        }).filter(b => !!b.id);
+        globalSpatialIndex.insertMany(boxes);
+
         canvas._objects.sort((a: any, b: any) => (a.get('zIndex') || 0) - (b.get('zIndex') || 0));
+        
+        // Dynamically update canvas background color
+        const targetBg = page.backgroundColor || canvasBg || '#ffffff';
+        canvas.backgroundColor = targetBg;
         canvas.renderAll();
       } catch (err) {
         console.error('FabricStage render error:', err);
@@ -272,7 +318,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     return () => {
       isCurrent = false;
     };
-  }, [page.elements, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber, catalog]);
+  }, [page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber, catalog]);
 
   useEffect(() => {
     const unsub = useStore.subscribe((newState, prevState) => {
@@ -334,8 +380,23 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
   return (
     <div style={{ width: curW * zoom, height: curH * zoom, border: isActive ? '2px solid #4f46e5' : '1px solid #e2e8f0', overflow: 'hidden', position: 'relative' }}>
-      <div style={{ width: curW, height: curH, transform: `scale(${zoom})`, transformOrigin: 'top left' }}>
+      <div style={{ width: curW, height: curH, transform: `scale(${zoom})`, transformOrigin: 'top left', position: 'relative' }}>
         <canvas ref={canvasRef} width={curW} height={curH} />
+        {/* Real-time spatial alignment guide overlays */}
+        {activeGuides.map((guide, idx) => (
+          <div
+            key={`guide-${idx}`}
+            style={{
+              position: 'absolute',
+              pointerEvents: 'none',
+              zIndex: 9999,
+              backgroundColor: '#ec4899', // Hot pink guide line
+              ...(guide.type === 'vertical'
+                ? { left: `${guide.pos}px`, top: 0, width: '1px', height: '100%' }
+                : { top: `${guide.pos}px`, left: 0, height: '1px', width: '100%' }),
+            }}
+          />
+        ))}
       </div>
     </div>
   );

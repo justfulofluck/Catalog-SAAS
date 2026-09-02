@@ -80,25 +80,20 @@ const App: React.FC = () => {
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
 
-  // Global click listener for "click-outside-to-close" behavior
+  // Global click listener for "click-outside-to-close" behavior (for right panel only)
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      // 1. Sidebar closing (Left)
-      if (isSidebarExpanded && leftPanelRef.current && !leftPanelRef.current.contains(e.target as Node)) {
-        setSidebarExpanded(false);
-      }
-
-      // 2. Project Settings closing (Right)
+      // 1. Project Settings closing (Right)
       if (isProjectSettingsOpen && rightPanelRef.current && !rightPanelRef.current.contains(e.target as Node)) {
         setIsProjectSettingsOpen(false);
       }
     };
 
-    if (isSidebarExpanded || isProjectSettingsOpen) {
+    if (isProjectSettingsOpen) {
       document.addEventListener('mousedown', handleOutsideClick);
     }
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isSidebarExpanded, isProjectSettingsOpen, setSidebarExpanded, setIsProjectSettingsOpen]);
+  }, [isProjectSettingsOpen, setIsProjectSettingsOpen]);
 
   useEffect(() => {
     const getViewFromPath = (pathname: string): View => {
@@ -106,16 +101,29 @@ const App: React.FC = () => {
       if (pathname === '/admin') return 'admin-login';
       if (pathname === '/editor') return 'editor';
       if (pathname === '/catalog-setup') return 'catalog-setup';
+      if (pathname === '/catalog-products') return 'catalog-products';
       if (pathname === '/your-work') return 'your-work';
       if (pathname === '/publish') return 'publish';
       if (pathname === '/pricing') return 'pricing';
       if (pathname === '/settings') return 'settings';
+      if (pathname === '/inventory/products') return 'products-list';
+      if (pathname === '/inventory/products/create') return 'create-product';
+      if (pathname === '/inventory/products/edit') return 'edit-product';
+      if (pathname === '/inventory/categories') return 'category-list';
+      if (pathname === '/inventory/categories/create') return 'create-category';
+      if (pathname === '/inventory/categories/edit') return 'edit-category';
+      if (pathname === '/inventory/media') return 'media-library';
+      if (pathname === '/onboarding') return 'business-selection';
+      if (pathname === '/onboarding/business') return 'business-onboarding';
+      if (pathname === '/' || pathname === '') return 'dashboard';
       return currentView;
     };
 
     const init = async () => {
-      if (sessionStorage.getItem('cs_session')) {
+      try {
         await checkAuth();
+      } catch (err) {
+        console.debug('No active session found.');
       }
 
       const path = window.location.pathname;
@@ -277,20 +285,6 @@ const App: React.FC = () => {
                 >
                   <ImageIcon size={22} />
                 </button>
-                <button
-                  onClick={() => {
-                    if (editorTab === 'templates' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('templates');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'templates' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                  title="Templates"
-                >
-                  <LayoutTemplate size={22} />
-                </button>
 
                 <button
                   onClick={() => {
@@ -307,27 +301,26 @@ const App: React.FC = () => {
                   <MousePointer2 size={22} />
                 </button>
               </div>
-
-              {/* Floating Sidebar Content (Attached to rail) */}
-              {isSidebarExpanded && (
-                <div className="absolute left-full top-0 h-[calc(100%-48px)] z-30 shadow-2xl bg-white min-w-[300px]">
-                  {editorTab === 'pages' && <PagesPanel />}
-                  {editorTab === 'products' && <ProductLibrary />}
-                  {editorTab === 'media' && <MediaAssetLibrary />}
-                  {editorTab === 'stock' && <StockImagesPanel />}
-                  {editorTab === 'templates' && <TemplatesPanel />}
-                  {editorTab === 'buttons' && <ButtonsPanel />}
-
-                </div>
-              )}
             </div>
+
+            {/* Docked Sidebar Content */}
+            {isSidebarExpanded && (
+              <div className="h-full z-30 shadow-xl bg-white w-[280px] shrink-0 border-r border-slate-200">
+                {editorTab === 'pages' && <PagesPanel />}
+                {editorTab === 'products' && <ProductLibrary />}
+                {editorTab === 'media' && <MediaAssetLibrary />}
+                {editorTab === 'stock' && <StockImagesPanel />}
+                {editorTab === 'templates' && <TemplatesPanel />}
+                {editorTab === 'buttons' && <ButtonsPanel />}
+              </div>
+            )}
           </div>
 
           {/* Main Content Area */}
           <div className="flex-1 flex overflow-hidden relative">
             <EditorCanvas />
 
-            <div ref={rightPanelRef} className="absolute top-0 right-0 h-[calc(100%-48px)] z-40 flex pointer-events-none">
+            <div ref={rightPanelRef} className="absolute top-0 right-0 h-full z-40 flex pointer-events-none">
               <div className="flex h-full pointer-events-auto shadow-[-20px_0_50px_rgba(0,0,0,0.02)]">
                 {isProjectSettingsOpen && <ProjectSettingsPanel />}
               </div>

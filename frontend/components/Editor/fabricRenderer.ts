@@ -1,5 +1,6 @@
-import { Rect, Textbox, Image as FabricImage, Circle, Polygon, Line, Group, Shadow, Gradient, filters } from 'fabric';
+import { Rect, Textbox, Image as FabricImage, Circle, Polygon, Line, Group, Shadow, Gradient, filters, config } from 'fabric';
 import { CanvasElement, ElementType, Product, Catalog } from '../../types';
+import { workerPool } from '../../utils/workerPool';
 
 // ── Custom shape classes ──────────────────────────────────────────────
 class CloudShape extends Rect {
@@ -422,13 +423,31 @@ export async function elementToFabricObject(
       return rect;
     }
     try {
-      const img = await FabricImage.fromURL(el.src);
+      let finalSrc = el.src;
+      // Offload heavy image filtering and decoding to background worker if filters are present
+      if (el.filters && (el.filters.brightness || el.filters.contrast || el.filters.blur)) {
+        try {
+          const processed = await workerPool.processImage(el.src, {
+            brightness: el.filters.brightness ? el.filters.brightness / 100 : 0,
+            contrast: el.filters.contrast ? el.filters.contrast / 100 : 0,
+            blur: el.filters.blur || 0,
+          }, el.width, el.height);
+          if (processed?.processedUrl) {
+            finalSrc = processed.processedUrl;
+          }
+        } catch (workerErr) {
+          console.warn('Worker filter failed, falling back to WebGL/Canvas:', workerErr);
+        }
+      }
+
+      const img = await FabricImage.fromURL(finalSrc);
       img.set({
         ...common,
         scaleX: el.width / (img.width || 1),
         scaleY: el.height / (img.height || 1),
       });
-      if (el.filters) {
+
+      if (finalSrc === el.src && el.filters) {
         const fabricFilters: any[] = [];
         if (el.filters.brightness !== undefined && el.filters.brightness !== 0) {
           fabricFilters.push(new filters.Brightness({ brightness: el.filters.brightness / 100 }));

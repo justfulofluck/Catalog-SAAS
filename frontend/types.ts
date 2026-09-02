@@ -1,5 +1,5 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
-export type PageType = 'cover' | 'interior' | 'index' | 'closing';
+export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
 export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line';
 export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
@@ -110,6 +110,16 @@ export interface PageTemplate {
   description: string;
   elements: Partial<CanvasElement>[];
   backgroundColor?: string;
+}
+
+export interface HeaderFooterTemplate {
+  id: string;
+  name: string;
+  description: string;
+  type: 'header' | 'footer';
+  height: number;
+  previewText: string;
+  elements: Partial<CanvasElement>[];
 }
 
 export interface Category {

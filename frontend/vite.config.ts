@@ -13,16 +13,9 @@ export default defineConfig(({ mode }) => {
       allowedHosts: ['catalogmakerr.blueglobaltechnology.com', 'localhost', '.'],
       proxy: {
         '/api': {
-          target: isDocker ? 'http://backend:8000' : 'http://localhost:8000',
+          target: 'http://127.0.0.1:8000',
           changeOrigin: true,
           secure: false,
-          configure: (proxy, options) => {
-            proxy.on('proxyReq', (proxyReq, req, res) => {
-              if (isDocker) {
-                proxyReq.setHeader('host', 'backend:8000');
-              }
-            });
-          }
         }
       }
     },

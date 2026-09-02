@@ -132,10 +132,11 @@ const FloatingToolbar: React.FC<Props> = ({
 
   const toolbarStyle: React.CSSProperties = {
     position: 'absolute',
-    left: `${centerX * zoom + 30}px`, // Shift 30px to the right of center to clear the rotate handle
+    left: `${centerX * zoom}px`,
     top: `${toolbarTop}px`,
-    transform: 'none', // Remove centering transform to keep it to the right
+    transform: 'translateX(-50%)',
     zIndex: 900,
+    pointerEvents: 'auto',
   };
 
   const handleLockClick = (e: React.MouseEvent) => {

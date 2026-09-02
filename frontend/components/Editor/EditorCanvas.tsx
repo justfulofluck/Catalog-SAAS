@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { Plus, Sparkles, BookOpen, List, FileText, Settings, ChevronUp, ChevronDown, Copy, Trash2 } from 'lucide-react';
+import { Plus, Sparkles, BookOpen, List, FileText, Settings, ChevronUp, ChevronDown, Copy, Trash2, ChevronsUp, ChevronsDown, Navigation } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import FabricStage from './FabricStage';
@@ -41,7 +41,6 @@ const EditorCanvas: React.FC = () => {
   const headerHeight = catalog.headerHeight || 40;
   const footerHeight = catalog.footerHeight || 40;
 
-  const [selectionBox, setSelectionBox] = useState({ x1: 0, y1: 0, x2: 0, y2: 0, visible: false });
   const [isDragOver, setIsDragOver] = useState(false);
   const [dragOverTargetId, setDragOverTargetId] = useState<string | null>(null);
   const [showTextToolbar, setShowTextToolbar] = useState(false);
@@ -59,9 +58,7 @@ const EditorCanvas: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editConfig, setEditConfig] = useState<any | null>(null);
 
-  const isSelecting = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const stageRef = useRef<any>(null);
   const textInputRef = useRef<HTMLDivElement>(null);
   const idCounterRef = useRef(0);
   const panRef = useRef({ x: 0, y: 0 });
@@ -71,17 +68,59 @@ const EditorCanvas: React.FC = () => {
   const panContentRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
 
-  // Listen for panel page click → scroll canvas to that page
+  // Constraint helper (Defined early so all hooks can access it)
+  const getClampedPan = useCallback((nextX: number, nextY: number) => {
+    if (!containerRef.current || !panContentRef.current) return { x: nextX, y: nextY };
+
+    const vW = containerRef.current.clientWidth;
+    const vH = containerRef.current.clientHeight;
+    const cW = panContentRef.current.scrollWidth;
+    const cH = panContentRef.current.scrollHeight;
+
+    let clampedX = nextX;
+    let clampedY = nextY;
+
+    if (cW <= vW) {
+      clampedX = (vW - cW) / 2;
+    } else {
+      clampedX = Math.min(0, Math.max(vW - cW, nextX));
+    }
+
+    if (cH <= vH) {
+      clampedY = (vH - cH) / 2;
+    } else {
+      clampedY = Math.min(0, Math.max(vH - cH, nextY));
+    }
+
+    return { x: clampedX, y: clampedY };
+  }, []);
+
+  // Smoothly pan canvas to center a specific page
+  const scrollToPageIndex = useCallback((pageIndex: number) => {
+    if (!containerRef.current || !catalog.pages[pageIndex]) return;
+    const vH = containerRef.current.clientHeight;
+    const curPageH = PAGE_HEIGHT * zoom;
+    const gap = 32; // gap-8 = 2rem = 32px
+    const topPadding = 40; // py-10 = 2.5rem = 40px
+
+    // Calculate Y offset of this specific page in content
+    const pageTopInContent = topPadding + pageIndex * (curPageH + gap);
+    const targetPanY = (vH / 2) - (pageTopInContent + curPageH / 2);
+
+    const next = getClampedPan(panRef.current.x, targetPanY);
+    panRef.current = next;
+    setPan(next);
+  }, [catalog.pages, zoom, getClampedPan]);
+
+  // Listen for panel page click → smoothly pan canvas to that page
   useEffect(() => {
     const handler = (e: Event) => {
       const { pageIndex } = (e as CustomEvent).detail;
-      if (!scrollContainerRef.current) return;
-      const target = scrollContainerRef.current.querySelector(`[data-page-index="${pageIndex}"]`) as HTMLElement;
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      scrollToPageIndex(pageIndex);
     };
     window.addEventListener('catalog:scrollToPage', handler);
     return () => window.removeEventListener('catalog:scrollToPage', handler);
-  }, []);
+  }, [scrollToPageIndex]);
 
   const handleBatchUpdate = (updates: Partial<any>) => {
     if (editConfig?.id) {
@@ -146,7 +185,7 @@ const EditorCanvas: React.FC = () => {
         addHeaderElement({
           id: `header-txt-migrated-${Date.now()}`,
           type: 'text',
-          text: '',
+          text: catalog.headerText || 'Company Catalog 2026',
           x: (catalog.marginLeft || 0) + 10,
           y: (catalog.marginTop || 0),
           width: PAGE_WIDTH - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
@@ -161,7 +200,7 @@ const EditorCanvas: React.FC = () => {
           rotation: 0,
           opacity: 1,
           verticalAlign: 'middle',
-          locked: false // Allow header to be edited
+          locked: false
         });
         updateProjectSettings({ headerMigrated: true });
       }
@@ -169,7 +208,7 @@ const EditorCanvas: React.FC = () => {
         addFooterElement({
           id: `footer-txt-migrated-${Date.now()}`,
           type: 'text',
-          text: '',
+          text: catalog.footerText || 'Proprietary & Confidential',
           x: (catalog.marginLeft || 0) + 10,
           y: PAGE_HEIGHT - (catalog.marginBottom || 0) - (catalog.footerHeight || 0),
           width: PAGE_WIDTH - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
@@ -184,7 +223,7 @@ const EditorCanvas: React.FC = () => {
           rotation: 0,
           opacity: 1,
           verticalAlign: 'middle',
-          locked: false // Allow footer to be edited
+          locked: false
         });
         updateProjectSettings({ footerMigrated: true });
       }
@@ -223,30 +262,79 @@ const EditorCanvas: React.FC = () => {
     return () => window.removeEventListener('wheel', h);
   }, []);
 
-  // Canvas-wide scroll (pan) and Ctrl+scroll (zoom)
+  // Natural Smooth Web-style scrolling (pan) and Ctrl+scroll (zoom)
   const zoomRef = useRef(zoom);
   useEffect(() => { zoomRef.current = zoom; }, [zoom]);
+
+  // Inertial smooth scroll animation state
+  const velocityRef = useRef({ x: 0, y: 0 });
+  const animFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
+    const stopInertia = () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      velocityRef.current = { x: 0, y: 0 };
+    };
+
+    const updateInertia = () => {
+      const friction = 0.82; // Natural web scrolling deceleration
+      velocityRef.current.x *= friction;
+      velocityRef.current.y *= friction;
+
+      if (Math.abs(velocityRef.current.x) > 0.2 || Math.abs(velocityRef.current.y) > 0.2) {
+        const next = getClampedPan(
+          panRef.current.x + velocityRef.current.x,
+          panRef.current.y + velocityRef.current.y
+        );
+        panRef.current = next;
+        setPan(next);
+        animFrameRef.current = requestAnimationFrame(updateInertia);
+      } else {
+        stopInertia();
+      }
+    };
+
     const handleContainerWheel = (e: WheelEvent) => {
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
+        stopInertia();
         // Zoom
         const delta = e.deltaY > 0 ? -0.05 : 0.05;
         const newZoom = Math.min(3, Math.max(0.1, zoomRef.current + delta));
         setZoom(newZoom);
       } else {
-        // Pan
-        const next = getClampedPan(panRef.current.x - e.deltaX, panRef.current.y - e.deltaY);
+        // Natural calibrated scroll speed (like regular web pages)
+        const speedScale = 0.45;
+        const deltaX = -e.deltaX * speedScale;
+        const deltaY = -e.deltaY * speedScale;
+
+        // Add soft momentum
+        velocityRef.current.x += deltaX * 0.25;
+        velocityRef.current.y += deltaY * 0.25;
+
+        // Apply immediate smooth translation
+        const next = getClampedPan(panRef.current.x + deltaX, panRef.current.y + deltaY);
         panRef.current = next;
         setPan(next);
+
+        if (!animFrameRef.current) {
+          animFrameRef.current = requestAnimationFrame(updateInertia);
+        }
       }
     };
+
     container.addEventListener('wheel', handleContainerWheel, { passive: false });
-    return () => container.removeEventListener('wheel', handleContainerWheel);
-  }, [setZoom]);
+    return () => {
+      container.removeEventListener('wheel', handleContainerWheel);
+      stopInertia();
+    };
+  }, [setZoom, getClampedPan]);
 
   // Keyboard shortcuts
   // Keyboard shortcuts
@@ -441,37 +529,6 @@ const EditorCanvas: React.FC = () => {
 
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleKeyDown]);
 
-  // Constraint helper
-  const getClampedPan = useCallback((nextX: number, nextY: number) => {
-    if (!containerRef.current || !panContentRef.current) return { x: nextX, y: nextY };
-
-    const vW = containerRef.current.clientWidth;
-    const vH = containerRef.current.clientHeight;
-    // We add a little extra room for the "Add Page" menu and top padding
-    const cW = panContentRef.current.scrollWidth;
-    const cH = panContentRef.current.scrollHeight;
-
-    let clampedX = nextX;
-    let clampedY = nextY;
-
-    if (cW <= vW) {
-      clampedX = (vW - cW) / 2;
-    } else {
-      // Allow panning horizontally between [viewport - content, 0]
-      clampedX = Math.min(0, Math.max(vW - cW, nextX));
-    }
-
-    if (cH <= vH) {
-      clampedY = (vH - cH) / 2;
-    } else {
-      // Constrain vertical pan between [viewport - content, 0]
-      // This stops scrolling at the top items and bottom items
-      clampedY = Math.min(0, Math.max(vH - cH, nextY));
-    }
-
-    return { x: clampedX, y: clampedY };
-  }, []);
-
   // Sync pan constraints when zoom or pages change
   useEffect(() => {
     setPan(prev => {
@@ -510,99 +567,6 @@ const EditorCanvas: React.FC = () => {
   };
 
   // Keyboard shortcuts
-
-  // Stage events (active page only)
-  const handleStageMouseDown = useCallback((e: any) => {
-    if (activeTool === 'hand') {
-      // Start panning on stage click
-      e.evt.preventDefault();
-      isPanning.current = true;
-      setIsPanActive(true);
-      lastPointerPosition.current = { x: e.evt.clientX, y: e.evt.clientY };
-      return;
-    }
-    if (e.target === e.target.getStage() || e.target.name() === 'grid-background' || e.target.name() === 'margin-bg' || e.target.name() === 'header-bg' || e.target.name() === 'footer-bg' || e.target.name() === 'margin-rect') {
-      const stage = e.target.getStage();
-      if (!stage) return;
-      const pos = stage.getPointerPosition();
-      if (!pos) return;
-
-      // Coordinates within the stage are already relative to its top-left.
-      // We only need to account for zoom.
-      const x = pos.x / zoom;
-      const y = pos.y / zoom;
-
-      setSelectionBox({ x1: x, y1: y, x2: x, y2: y, visible: true });
-      isSelecting.current = true;
-      if (!e.evt.shiftKey) {
-        setSelectedElements([]);
-        setIsPropertyPanelOpen(false);
-        setEditingId(null);
-        setEditConfig(null);
-      }
-    }
-  }, [activeTool, zoom, setSelectedElements, setIsPropertyPanelOpen]);
-
-  const handleStageMouseMove = useCallback((e: any) => {
-    if (!isSelecting.current) return;
-    const stage = e.target.getStage();
-    if (!stage) return;
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
-    const x = pos.x / zoom;
-    const y = pos.y / zoom;
-    setSelectionBox(prev => ({ ...prev, x2: x, y2: y }));
-  }, [zoom]);
-
-  const handleStageMouseUp = useCallback((e: any) => {
-    if (!isSelecting.current) return;
-    isSelecting.current = false;
-    const x = Math.min(selectionBox.x1, selectionBox.x2);
-    const y = Math.min(selectionBox.y1, selectionBox.y2);
-    const w = Math.abs(selectionBox.x2 - selectionBox.x1);
-    const h = Math.abs(selectionBox.y2 - selectionBox.y1);
-
-    if (w < 2 && h < 2) {
-      setSelectionBox(prev => ({ ...prev, visible: false }));
-      return;
-    }
-
-    // AABB intersection check across all layers
-    const allEls = [
-      ...(currentPage?.elements || []),
-      ...(catalog.headerElements || []),
-      ...(catalog.footerElements || [])
-    ];
-
-    const newlySelectedIds = allEls
-      .filter(el => {
-        const elX = el.x;
-        const elY = el.y;
-        const elW = el.width;
-        const elH = el.height;
-        return elX < x + w && elX + elW > x && elY < y + h && elY + elH > y;
-      })
-      .map(el => el.id);
-
-    if (e.evt.shiftKey) {
-      setSelectedElements([...new Set([...selectedElementIds, ...newlySelectedIds])]);
-    } else {
-      setSelectedElements(newlySelectedIds);
-    }
-
-    setSelectionBox(prev => ({ ...prev, visible: false }));
-  }, [currentPage?.elements, selectionBox, setSelectedElements, selectedElementIds]);
-
-  const handleWheel = useCallback((e: any) => {
-    if (e.evt.ctrlKey || e.evt.metaKey) {
-      e.evt.preventDefault();
-      setZoom(Math.min(3, Math.max(0.1, zoom + (e.evt.deltaY > 0 ? -1 : 1) * 0.05)));
-    } else {
-      e.evt.preventDefault();
-      const newPan = { x: panRef.current.x - e.evt.deltaX, y: panRef.current.y - e.evt.deltaY };
-      panRef.current = newPan; setPan(newPan);
-    }
-  }, [zoom, setZoom]);
 
   const handleSelectElement = useCallback((id: string, isMulti: boolean) => {
     // Find where this element belongs
@@ -710,175 +674,7 @@ const EditorCanvas: React.FC = () => {
     }
   };
 
-  const handleStageDblClick = useCallback((e: any) => {
-    if (activeTool === 'hand') return;
 
-    // Check for Header/Footer areas first (by name or by position)
-    const stage = e.target.getStage();
-    const pos = stage.getPointerPosition();
-    if (!pos) return;
-
-    const x = (pos.x - panRef.current.x) / zoom;
-    const y = (pos.y - panRef.current.y) / zoom;
-    const targetName = e.target.name();
-    const parentName = e.target.getParent()?.name();
-
-    // 1. Header Area Check
-    const isHeaderArea = targetName === 'header-bg' || targetName === 'header-text' || parentName === 'header-group';
-    const inHeaderZone = catalog.hasHeader && y >= (catalog.marginTop || 0) && y <= (catalog.marginTop || 0) + (catalog.headerHeight || 0);
-
-    if (isHeaderArea || inHeaderZone) {
-      if (catalog.hasHeader) {
-        // Double-click on header background with NO text node -> Create one or Open Media Library
-        if (targetName === 'header-bg' || targetName === 'header-group' || targetName === 'margin-bg' || targetName === 'margin-rect') {
-          // If already has elements, maybe just ignore or open media
-          if (catalog.headerElements.length > 0) {
-            useStore.getState().setEditorTab('media');
-            return;
-          }
-        }
-
-        // Try to find an existing text element in the header
-        let textEl = catalog.headerElements.find(el => el.type === 'text');
-
-        if (!textEl) {
-          // Migration: Create first text element from legacy headerText
-          const newId = `header-txt-${Date.now()}`;
-          const newEl: any = {
-            id: newId,
-            type: 'text',
-            text: catalog.headerText || 'Header Text',
-            x: (catalog.marginLeft || 0) + 10,
-            y: (catalog.marginTop || 0),
-            width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
-            height: (catalog.headerHeight || 0),
-            fontSize: catalog.headerFontSize || 12,
-            fontFamily: catalog.headerFontFamily || 'Inter',
-            fontWeight: catalog.headerFontWeight || 'bold',
-            fontStyle: catalog.headerFontStyle || 'normal',
-            textAlign: catalog.headerTextAlignment || 'left',
-            fill: catalog.headerColor || '#475569',
-            lineHeight: catalog.headerLineHeight || 1.2,
-            letterSpacing: catalog.headerLetterSpacing || 0,
-            opacity: catalog.headerOpacity ?? 1,
-            zIndex: 10,
-            rotation: 0,
-            verticalAlign: 'middle'
-          };
-          addHeaderElement(newEl);
-          updateProjectSettings({ headerMigrated: true });
-          textEl = newEl;
-        }
-
-        setEditingId(textEl.id);
-        setEditConfig({
-          ...textEl,
-          color: textEl.fill || '#000000',
-          align: textEl.textAlign || 'left',
-          verticalAlign: textEl.verticalAlign || 'middle'
-        });
-        return;
-      }
-    }
-
-    // 2. Footer Area Check
-    const isFooterArea = targetName === 'footer-bg' || targetName === 'footer-text' || parentName === 'footer-group';
-    const footerTopY = curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 0);
-    const inFooterZone = catalog.hasFooter && y >= footerTopY && y <= footerTopY + (catalog.footerHeight || 0);
-
-    if (isFooterArea || inFooterZone) {
-      if (catalog.hasFooter) {
-        // Double-click on footer background -> Open Media Library
-        if (targetName === 'footer-bg' || targetName === 'footer-group') {
-          if (catalog.footerElements.length > 0) {
-            useStore.getState().setEditorTab('media');
-            return;
-          }
-        }
-
-        // Try to find an existing text element in the footer
-        let textEl = catalog.footerElements.find(el => el.type === 'text');
-
-        if (!textEl) {
-          // Migration: Create first text element from legacy footerText
-          const newId = `footer-txt-${Date.now()}`;
-          const newEl: any = {
-            id: newId,
-            type: 'text',
-            text: catalog.footerText || 'Footer Text',
-            x: (catalog.marginLeft || 0) + 10,
-            y: footerTopY,
-            width: curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0) - 20,
-            height: (catalog.footerHeight || 0),
-            fontSize: catalog.footerFontSize || 10,
-            fontFamily: catalog.footerFontFamily || 'Inter',
-            fontWeight: catalog.footerFontWeight || 'normal',
-            fontStyle: catalog.footerFontStyle || 'normal',
-            textAlign: catalog.footerTextAlignment || 'left',
-            fill: catalog.footerColor || '#64748b',
-            lineHeight: catalog.footerLineHeight || 1.2,
-            letterSpacing: catalog.footerLetterSpacing || 0,
-            opacity: catalog.footerOpacity ?? 1,
-            zIndex: 10,
-            rotation: 0,
-            verticalAlign: 'middle'
-          };
-          addFooterElement(newEl);
-          updateProjectSettings({ footerMigrated: true });
-          textEl = newEl;
-        }
-
-        setEditingId(textEl.id);
-        setEditConfig({
-          ...textEl,
-          color: textEl.fill || '#000000',
-          align: textEl.textAlign || 'left',
-          verticalAlign: textEl.verticalAlign || 'middle'
-        });
-        return;
-      }
-    }
-
-    if (e.target === e.target.getStage()) { setEditingId(null); setEditConfig(null); return; }
-    const node = e.target;
-    // Standard elements
-    const element = currentPage.elements.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name()) ||
-      catalog.headerElements?.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name()) ||
-      catalog.footerElements?.find(el => el.id === node.id() || el.id === node.name() || el.id === node.getParent()?.id() || el.id === node.getParent()?.name());
-    if (element && element.type === 'text' && !element.locked) {
-      pushHistory();
-      setEditingId(element.id);
-      setEditConfig({
-        id: element.id,
-        text: element.text || '',
-        x: element.x,
-        y: element.y,
-        width: element.width,
-        height: element.height,
-        rotation: element.rotation || 0,
-        fontSize: element.fontSize,
-        fontFamily: element.fontFamily,
-        fontWeight: element.fontWeight,
-        fontStyle: element.fontStyle,
-        align: element.textAlign || 'left',
-        color: element.fill || '#000000',
-        lineHeight: element.lineHeight || 1.2,
-        letterSpacing: element.letterSpacing || 0,
-        opacity: element.opacity ?? 1,
-        effectStyle: element.effectStyle,
-        effectColor: element.effectColor,
-        effectColor2: element.effectColor2,
-        shadowBlur: element.shadowBlur,
-        shadowOpacity: element.shadowOpacity,
-        shadowOffsetX: element.shadowOffsetX,
-        shadowOffsetY: element.shadowOffsetY,
-        textStrokeWidth: element.textStrokeWidth,
-        effectSpread: element.effectSpread,
-        effectRoundness: element.effectRoundness,
-        verticalAlign: element.verticalAlign || 'top'
-      });
-    } else { setEditingId(null); setEditConfig(null); }
-  }, [activeTool, currentPage?.elements, pushHistory, catalog, zoom]);
 
   useEffect(() => {
     if (editingId && currentPage) {
@@ -1003,8 +799,8 @@ const EditorCanvas: React.FC = () => {
                     }`}
                   style={{ width: curW * zoom, height: curH * zoom }}
                 >
-                  {/* Floating Labels and Boundaries */}
-                  {page.type === 'interior' && (
+                  {/* Floating Labels and Boundaries (Only on product and index pages) */}
+                  {(page.type === 'product' || page.type === 'interior' || page.type === 'index') && (
                     <div className="absolute inset-0 pointer-events-none z-[50]">
                       {catalog.hasHeader && (
                         <>
@@ -1074,9 +870,15 @@ const EditorCanvas: React.FC = () => {
                     pageIdx={pageIdx}
                     isActive={isActive}
                     zoom={zoom}
-                    canvasBg={canvasBg}
-                    headerElements={(catalog.hasHeader && page.type === 'interior') ? catalog.headerElements : []}
-                    footerElements={(catalog.hasFooter && page.type === 'interior') ? catalog.footerElements : []}
+                    canvasBg={page.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff'}
+                    headerElements={(catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? catalog.headerElements : []}
+                    footerElements={(catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? (catalog.footerElements || []).map((el: any) => ({
+                      ...el,
+                      y: (el.y || 0) + (el.y < 200 ? PAGE_HEIGHT - (catalog.footerHeight || 38) : 0),
+                      text: el.type === 'text' && el.text?.includes('{{page}}')
+                        ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
+                        : el.text
+                    })) : []}
                   />
 
                   {/* Text editing overlay (active page only) */}

@@ -1,169 +1,366 @@
 
-import React from 'react';
-import { LayoutTemplate, Check, Info, Sparkles, BookOpen, Lock, LayoutGrid, Layout, Layers, BookCheck, List, Flag, X } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  LayoutTemplate, Check, Info, BookOpen, 
+  List, Flag, X, ArrowUpToLine, ArrowDownToLine, Grid3X3
+} from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { COVER_TEMPLATES, GRID_TEMPLATES, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES } from '../../constants';
+import { 
+  COVER_TEMPLATES, GRID_TEMPLATES, 
+  INDEX_TEMPLATES, CLOSING_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES 
+} from '../../constants';
+
+type TemplateCategory = 'headers' | 'grids' | 'footers' | 'covers' | 'toc_outro';
 
 const TemplatesPanel: React.FC = () => {
-  const { catalog, selectedPageIndex, applyCoverTemplate, applyIndexTemplate, applyClosingTemplate, applyInventoryLayout, uiTheme, setEditorTab } = useStore();
+  const { 
+    catalog, currentPageIndex, 
+    applyCoverTemplate, applyIndexTemplate, applyClosingTemplate, 
+    applyInventoryLayout, applyHeaderTemplate, applyFooterTemplate, 
+    uiTheme, setEditorTab 
+  } = useStore();
 
-  const isGlobalMode = selectedPageIndex === null;
-  const currentPage = !isGlobalMode ? catalog.pages[selectedPageIndex as number] : null;
+  const [activeCategory, setActiveCategory] = useState<TemplateCategory>('headers');
+  const [appliedId, setAppliedId] = useState<string | null>(null);
 
-  const isCoverPage = isGlobalMode || currentPage?.type === 'cover';
-  const isIndexPage = isGlobalMode || currentPage?.type === 'index';
-  const isClosingPage = isGlobalMode || currentPage?.type === 'closing';
-  const isInteriorPage = isGlobalMode || currentPage?.type === 'interior';
+  const isDark = uiTheme === 'dark';
+  const currentPage = catalog.pages[currentPageIndex] || null;
 
-  const renderInventoryPreview = (tmpl: any) => {
-    const isStacked = tmpl.arrangement === 'stacked';
-    const isRow = tmpl.arrangement === 'row';
-    const isRowReverse = tmpl.arrangement === 'row-reverse';
-
-    return (
-      <div className={`w-full h-full rounded-xl overflow-hidden transform group-hover:scale-105 transition-transform border-2 border-dashed flex flex-col items-center justify-center p-2 gap-2 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-        <div className={`grid gap-2 w-full h-full p-1`} style={{ gridTemplateColumns: `repeat(${tmpl.cols}, minmax(0, 1fr))`, gridTemplateRows: `repeat(${tmpl.rows}, minmax(0, 1fr))` }}>
-          {Array.from({ length: tmpl.cols * tmpl.rows }).map((_, i) => (
-            <div key={i} className={`flex gap-1 border rounded-sm ${isStacked ? 'flex-col' : 'flex-row'} ${isRowReverse ? 'flex-row-reverse' : ''} ${uiTheme === 'dark' ? 'border-slate-700' : 'border-slate-50'}`}>
-              <div className={`${isStacked ? 'w-full h-3/5' : 'w-2/5 h-full'} rounded-sm shrink-0 ${uiTheme === 'dark' ? 'bg-indigo-500/30' : 'bg-indigo-100'}`} />
-              <div className={`flex flex-col gap-0.5 justify-center ${isStacked ? 'p-0.5' : 'px-0.5'} overflow-hidden`}>
-                <div className={`h-1 w-full rounded-full ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`} />
-                <div className={`h-1 w-2/3 rounded-full ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
+  const triggerFeedback = (id: string) => {
+    setAppliedId(id);
+    setTimeout(() => setAppliedId(null), 1600);
   };
 
+  const categories = [
+    { id: 'headers', label: 'Header', icon: ArrowUpToLine, desc: 'Top banners & branding' },
+    { id: 'grids', label: 'Body Grids', icon: Grid3X3, desc: 'Product table & cards' },
+    { id: 'footers', label: 'Footer', icon: ArrowDownToLine, desc: 'Bottom specs & page num' },
+    { id: 'covers', label: 'Covers', icon: BookOpen, desc: 'Front hero showcases' },
+    { id: 'toc_outro', label: 'TOC / Outro', icon: List, desc: 'Index & closing page' },
+  ];
+
   return (
-    <div className={`flex flex-col h-full border-r w-[300px] shrink-0 z-10 shadow-sm animate-in slide-in-from-left-4 relative transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-      <div className={`p-6 border-b transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${uiTheme === 'dark' ? 'text-white' : 'text-slate-400'}`}>
-            <LayoutTemplate size={14} className={uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />
-            Template Studio
-          </h3>
+    <div className={`flex flex-col h-full w-full shrink-0 relative transition-colors ${isDark ? 'bg-[#0f172a]' : 'bg-white'}`}>
+      
+      {/* Top Header */}
+      <div className={`p-4 border-b shrink-0 ${isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-100'}`}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md">
+              <LayoutTemplate size={13} />
+            </div>
+            <div>
+              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                Template Studio
+              </h3>
+              <p className="text-[9px] text-slate-400 font-medium">Modular Page Outfits</p>
+            </div>
+          </div>
           <button
             onClick={() => setEditorTab(null)}
-            className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+            className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
           >
             <X size={14} />
           </button>
         </div>
 
-        <div className={`flex items-center justify-center p-2 rounded-xl border border-dashed ${isGlobalMode ? (uiTheme === 'dark' ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-emerald-50 border-emerald-100') : (uiTheme === 'dark' ? 'bg-indigo-500/5 border-indigo-500/30' : 'bg-indigo-50 border-indigo-100')}`}>
-          <Layers size={14} className={isGlobalMode ? "text-emerald-500 mr-2" : "text-indigo-500 mr-2"} />
-          <span className={`text-[10px] font-bold uppercase tracking-widest ${isGlobalMode ? 'text-emerald-600' : 'text-indigo-600'}`}>
-            {isGlobalMode ? 'Global Catalog Mode' : 'Single Page Layout'}
-          </span>
+        {/* Category Pill Navigation */}
+        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-slate-800">
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                onClick={() => setActiveCategory(cat.id as TemplateCategory)}
+                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-lg text-[10px] font-black transition-all ${
+                  isActive
+                    ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-sm'
+                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                }`}
+                title={cat.desc}
+              >
+                <Icon size={13} className="mb-0.5" />
+                <span className="truncate max-w-full text-[9px] tracking-tight">{cat.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar relative">
-        <>
-          <div className="px-2 mb-2 flex items-center justify-between">
-            <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">
-              Available Designs
-            </p>
-            {!isGlobalMode && currentPage && (
-              <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${uiTheme === 'dark' ? 'bg-indigo-500/20 text-indigo-300' : 'bg-indigo-50 text-indigo-600'}`}>{currentPage.type}</span>
-            )}
-            {isGlobalMode && (
-              <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-widest ${uiTheme === 'dark' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-emerald-50 text-emerald-600'}`}>Full Catalog</span>
+      {/* Templates Content Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">
+
+        {/* 1. HEADERS SECTION */}
+        {activeCategory === 'headers' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Master Headers</span>
+              <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">All Interior Pages</span>
+            </div>
+
+            {HEADER_TEMPLATES.map((tmpl) => (
+              <div
+                key={tmpl.id}
+                onClick={() => {
+                  applyHeaderTemplate(tmpl);
+                  triggerFeedback(tmpl.id);
+                }}
+                className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                  isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                }`}
+              >
+                {/* Visual Header Mockup */}
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                  {tmpl.previewText}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                    <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description}</p>
+                  </div>
+                  {appliedId === tmpl.id ? (
+                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
+                      <Check size={11} /> Applied
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 2. BODY GRIDS SECTION */}
+        {activeCategory === 'grids' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Product Grid Outfits</span>
+              <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">Product Pages Only</span>
+            </div>
+
+            {currentPage && (currentPage.type === 'cover' || currentPage.type === 'intro' || currentPage.type === 'index' || currentPage.type === 'closing') ? (
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
+                <Info size={20} className="text-amber-600 mx-auto" />
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  Body Grids cannot be applied to a <strong>{currentPage.type.toUpperCase()}</strong> page.
+                </p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                  Please select a <strong>Product Page</strong> from the Pages panel to change its grid layout.
+                </p>
+              </div>
+            ) : (
+              GRID_TEMPLATES.map((tmpl) => (
+                <div
+                  key={tmpl.id}
+                  onClick={() => {
+                    applyInventoryLayout(currentPageIndex, tmpl);
+                    triggerFeedback(tmpl.id);
+                  }}
+                  className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                    isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                  }`}
+                >
+                  {/* Mini Visual Grid Box */}
+                  <div className="aspect-[16/7] rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
+                    <div className="grid gap-1 w-full h-full" style={{ gridTemplateColumns: `repeat(${tmpl.cols}, minmax(0, 1fr))` }}>
+                      {Array.from({ length: Math.min(tmpl.cols * tmpl.rows, 6) }).map((_, i) => (
+                        <div key={i} className="bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-sm flex items-center justify-center">
+                          <span className="text-[7px] text-indigo-700 dark:text-indigo-300 font-bold">Item {i+1}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      <span className="text-[9px] font-bold text-slate-400">{tmpl.cols} Columns × {tmpl.rows} Rows</span>
+                    </div>
+                    {appliedId === tmpl.id ? (
+                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full">
+                        <Check size={11} /> Applied
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
+                    )}
+                  </div>
+                </div>
+              ))
             )}
           </div>
+        )}
 
-          {isCoverPage && (
-            <div className="space-y-4">
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Cover Designs</p>
-              {COVER_TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => applyCoverTemplate(selectedPageIndex, tmpl)}
-                  className={`w-full text-left rounded-2xl border transition-all group p-4 shadow-sm ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-100 hover:border-indigo-600'}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className={`text-xs font-black ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                    <BookOpen size={14} className={`group-hover:text-indigo-600 ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
-                  </div>
-                  <p className="text-[9px] font-medium text-slate-400 leading-tight">{tmpl.description}</p>
-                </button>
-              ))}
+        {/* 3. FOOTERS SECTION */}
+        {activeCategory === 'footers' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Master Footers</span>
+              <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">All Interior Pages</span>
             </div>
-          )}
 
-          {isIndexPage && (
-            <div className="space-y-4">
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Table of Contents</p>
-              {INDEX_TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => applyIndexTemplate(selectedPageIndex, tmpl)}
-                  className={`w-full text-left rounded-2xl border transition-all group p-4 shadow-sm ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-100 hover:border-indigo-600'}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className={`text-xs font-black ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                    <List size={14} className={`group-hover:text-indigo-600 ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
-                  </div>
-                  <p className="text-[9px] font-medium text-slate-400 leading-tight">{tmpl.description}</p>
-                </button>
-              ))}
-            </div>
-          )}
+            {FOOTER_TEMPLATES.map((tmpl) => (
+              <div
+                key={tmpl.id}
+                onClick={() => {
+                  applyFooterTemplate(tmpl);
+                  triggerFeedback(tmpl.id);
+                }}
+                className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                  isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                }`}
+              >
+                {/* Visual Footer Mockup */}
+                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                  {tmpl.previewText}
+                </div>
 
-          {isInteriorPage && (
-            <div className="space-y-4">
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Product Grid Layouts</p>
-              {GRID_TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => applyInventoryLayout(selectedPageIndex, tmpl)}
-                  className={`w-full text-left rounded-2xl border transition-all overflow-hidden group hover:shadow-xl ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-100 hover:border-indigo-600'}`}
-                >
-                  <div className={`aspect-[4/3] flex items-center justify-center p-4 ${uiTheme === 'dark' ? 'bg-slate-800' : 'bg-slate-50'}`}>
-                    {renderInventoryPreview(tmpl)}
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                    <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description}</p>
                   </div>
-                  <div className={`p-4 border-t ${uiTheme === 'dark' ? 'border-slate-800' : 'border-slate-50'}`}>
-                    <h4 className={`text-xs font-black ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                  </div>
-                </button>
-              ))}
-            </div>
-          )}
+                  {appliedId === tmpl.id ? (
+                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full">
+                      <Check size={11} /> Applied
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
-          {isClosingPage && (
-            <div className="space-y-4">
-              <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest px-2">Closing Styles</p>
-              {CLOSING_TEMPLATES.map((tmpl) => (
-                <button
-                  key={tmpl.id}
-                  onClick={() => applyClosingTemplate(selectedPageIndex, tmpl)}
-                  className={`w-full text-left rounded-2xl border transition-all group p-4 shadow-sm ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-100 hover:border-indigo-600'}`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className={`text-xs font-black ${uiTheme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                    <Flag size={14} className={`group-hover:text-indigo-600 ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-300'}`} />
-                  </div>
-                  <p className="text-[9px] font-medium text-slate-400 leading-tight">{tmpl.description}</p>
-                </button>
-              ))}
+        {/* 4. COVERS SECTION */}
+        {activeCategory === 'covers' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">Front Cover Showcase</span>
+              <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">Cover Pages Only</span>
             </div>
-          )}
-        </>
+
+            {currentPage && currentPage.type !== 'cover' && currentPage.type !== 'blank' ? (
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
+                <Info size={20} className="text-amber-600 mx-auto" />
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  Cover Templates cannot be applied to a <strong>{currentPage.type.toUpperCase()}</strong> page.
+                </p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                  Please select a <strong>Cover Page</strong> (Page 1) or a Blank Page.
+                </p>
+              </div>
+            ) : (
+              COVER_TEMPLATES.map((tmpl) => (
+                <div
+                  key={tmpl.id}
+                  onClick={() => {
+                    applyCoverTemplate(currentPageIndex, tmpl);
+                    triggerFeedback(tmpl.id);
+                  }}
+                  className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                    isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                    {appliedId === tmpl.id ? (
+                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                        <Check size={10} /> Applied
+                      </span>
+                    ) : (
+                      <BookOpen size={13} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                    )}
+                  </div>
+                  <p className="text-[9px] text-slate-400 leading-normal">{tmpl.description}</p>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* 5. TOC & OUTRO SECTION */}
+        {activeCategory === 'toc_outro' && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400">TOC & Closing Templates</span>
+              <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">Index / Closing Pages</span>
+            </div>
+
+            {currentPage && currentPage.type !== 'index' && currentPage.type !== 'closing' && currentPage.type !== 'blank' ? (
+              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
+                <Info size={20} className="text-amber-600 mx-auto" />
+                <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
+                  Index & Outro templates cannot be applied to a <strong>{currentPage.type.toUpperCase()}</strong> page.
+                </p>
+                <p className="text-[10px] text-amber-700 dark:text-amber-300">
+                  Please select an <strong>Index Page</strong> or <strong>Closing Page</strong> from the Pages panel.
+                </p>
+              </div>
+            ) : (
+              <>
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1">Table of Contents</span>
+                {INDEX_TEMPLATES.map((tmpl) => (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => {
+                      applyIndexTemplate(currentPageIndex, tmpl);
+                      triggerFeedback(tmpl.id);
+                    }}
+                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                      isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      <List size={13} className="text-slate-400 group-hover:text-indigo-600" />
+                    </div>
+                    <p className="text-[9px] text-slate-400 leading-tight">{tmpl.description}</p>
+                  </div>
+                ))}
+
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-1 block pt-2">Closing & Contact Page</span>
+                {CLOSING_TEMPLATES.map((tmpl) => (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => {
+                      applyClosingTemplate(currentPageIndex, tmpl);
+                      triggerFeedback(tmpl.id);
+                    }}
+                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                      isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      <Flag size={13} className="text-slate-400 group-hover:text-indigo-600" />
+                    </div>
+                    <p className="text-[9px] text-slate-400 leading-tight">{tmpl.description}</p>
+                  </div>
+                ))}
+              </>
+            )}
+          </div>
+        )}
+
       </div>
 
-      <div className={`p-6 border-t ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-slate-50/50 border-slate-200'}`}>
-        <div className={`flex items-start gap-3 p-4 rounded-2xl border shadow-sm ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-          <Info size={16} className="text-indigo-600 shrink-0 mt-0.5" />
-          <p className="text-[9px] font-bold text-slate-500 leading-relaxed uppercase tracking-tighter">
-            {isGlobalMode ? 'Applying a template here will update every relevant page in the entire catalog.' : 'Templates reflow products automatically and preserve your catalog content.'}
+      {/* Footer Info / Tip */}
+      <div className={`p-3 border-t shrink-0 ${isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+        <div className="flex items-center gap-2">
+          <Info size={13} className="text-indigo-600 shrink-0" />
+          <p className="text-[8.5px] font-semibold text-slate-500 dark:text-slate-400 leading-tight">
+            Click any modular piece to update Header, Body or Footer across your catalog.
           </p>
         </div>
       </div>
+
     </div>
   );
 };
 
 export default TemplatesPanel;
+
