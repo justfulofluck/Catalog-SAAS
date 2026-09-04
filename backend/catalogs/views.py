@@ -6,8 +6,17 @@ from django.core.files.storage import default_storage
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Catalog, CatalogPage, Theme
-from .serializers import CatalogSerializer, CatalogCreateSerializer, CatalogPageSerializer, ThemeSerializer
+from .models import Catalog, CatalogPage, Theme, SystemTemplate
+from .serializers import CatalogSerializer, CatalogCreateSerializer, CatalogPageSerializer, ThemeSerializer, SystemTemplateSerializer
+
+class SystemTemplateViewSet(viewsets.ModelViewSet):
+    queryset = SystemTemplate.objects.all()
+    serializer_class = SystemTemplateSerializer
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 class ThemeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Theme.objects.all()
@@ -83,13 +92,22 @@ class CatalogViewSet(viewsets.ModelViewSet):
                 src = el.get('src', '')
                 el['src'] = self._save_base64_src(src, catalog)
 
+        category_id = page_data.get('categoryId')
+        # Validate that category_id is a valid integer or None
+        valid_cat_id = None
+        if category_id:
+            try:
+                valid_cat_id = int(category_id)
+            except (ValueError, TypeError):
+                valid_cat_id = None
+
         page, created = CatalogPage.objects.update_or_create(
             catalog=catalog,
             page_number=page_number,
             defaults={
                 'type': page_data.get('type', 'interior'),
                 'layout_data': elements,
-                'category_id': page_data.get('categoryId')
+                'category_id': valid_cat_id
             }
         )
         return Response({'status': 'saved', 'page_id': page.id})

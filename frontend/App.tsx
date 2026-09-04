@@ -214,7 +214,7 @@ const App: React.FC = () => {
   }
 
   // Standard Authentication Check
-  if (!isAuthenticated) {
+  if (!isAuthenticated && !isAdminAuthenticated) {
     return <Login />;
   }
 
@@ -267,23 +267,9 @@ const App: React.FC = () => {
                     }
                   }}
                   className={`p-3 rounded-[10px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                  title="My Images"
+                  title="Media & Stock Images"
                 >
                   <Images size={22} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (editorTab === 'stock' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('stock');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'stock' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
-                  title="Stock Images"
-                >
-                  <ImageIcon size={22} />
                 </button>
 
                 <button
@@ -305,11 +291,10 @@ const App: React.FC = () => {
 
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
-              <div className="h-full z-30 shadow-xl bg-white w-[280px] shrink-0 border-r border-slate-200">
+              <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${editorTab === 'products' ? 'w-[360px]' : 'w-[300px]'} shrink-0 ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'products' && <ProductLibrary />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
-                {editorTab === 'stock' && <StockImagesPanel />}
                 {editorTab === 'templates' && <TemplatesPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
               </div>

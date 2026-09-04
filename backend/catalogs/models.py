@@ -54,3 +54,31 @@ class CatalogPage(models.Model):
 
     def __str__(self):
         return f"{self.catalog.name} - Page {self.page_number}"
+
+class SystemTemplate(models.Model):
+    TEMPLATE_TYPES = [
+        ('full_catalog', 'Full Catalog Blueprint'),
+        ('cover', 'Cover Page Template'),
+        ('product_grid', 'Product Grid Layout'),
+        ('header', 'Master Header Template'),
+        ('footer', 'Master Footer Template'),
+    ]
+
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    name = models.CharField(max_length=255)
+    category = models.CharField(max_length=100, default='General')
+    type = models.CharField(max_length=50, choices=TEMPLATE_TYPES, default='full_catalog')
+    description = models.TextField(blank=True, default='')
+    thumbnail = models.TextField(blank=True, default='')
+    theme_id = models.CharField(max_length=100, blank=True, default='modern-slate')
+    pages_data = models.JSONField(default=list, blank=True)
+    grid_data = models.JSONField(default=dict, blank=True)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(default=timezone.now)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.type}] {self.name} ({self.category})"

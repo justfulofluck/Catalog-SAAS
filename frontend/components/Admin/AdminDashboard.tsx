@@ -12,14 +12,16 @@ import {
     LogOut,
     Store,
     Layout,
-    CreditCard
+    CreditCard,
+    Sparkles
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import SubscriptionManagement from './SubscriptionManagement';
+import { AdminTemplateManager } from './AdminTemplateManager';
 
 const AdminDashboard: React.FC = () => {
     const { registeredUsers, logout, user, fetchUsers, error } = useStore();
-    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions' | 'templates'>('users');
 
     React.useEffect(() => {
         fetchUsers();
@@ -79,6 +81,13 @@ const AdminDashboard: React.FC = () => {
                     >
                         <CreditCard size={16} /> Subscription Factory
                     </button>
+
+                    <button
+                        onClick={() => setActiveTab('templates')}
+                        className={`pb-4 text-xs font-black uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'templates' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
+                    >
+                        <Sparkles size={16} /> Template Studio
+                    </button>
                 </div>
             </div>
 
@@ -113,77 +122,72 @@ const AdminDashboard: React.FC = () => {
                                     <p className="text-xs font-black text-indigo-200 uppercase tracking-widest mb-1">System Status</p>
                                     <div className="flex items-center gap-2">
                                         <div className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" />
-                                        <p className="text-xl font-bold">All Systems Operational</p>
+                                        <span className="text-sm font-black tracking-wide">All Systems Operational</span>
                                     </div>
                                 </div>
                             </div>
 
                             {/* User Management Table */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                                <div className="px-8 py-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+                                <div className="p-8 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
                                     <div>
-                                        <h2 className="text-xl font-black text-slate-900">User Management</h2>
-                                        <p className="text-sm text-slate-500 font-medium mt-1">View and manage registered accounts.</p>
+                                        <h2 className="text-lg font-black tracking-tight text-slate-900">User Management</h2>
+                                        <p className="text-xs text-slate-400 font-medium">View and manage registered accounts.</p>
                                     </div>
+
                                     <div className="flex items-center gap-3">
                                         <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                                             <input
                                                 type="text"
                                                 placeholder="Search users..."
-                                                className="bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-xs font-bold focus:ring-2 focus:ring-indigo-600/10 outline-none w-64"
+                                                className="pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-indigo-600 transition-all w-64"
                                             />
                                         </div>
-                                        <button className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-colors">
-                                            <Filter size={16} />
+                                        <button className="p-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+                                            <Filter size={14} />
                                         </button>
-                                        <button className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-500 transition-colors">
-                                            <Download size={16} />
+                                        <button className="p-2 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-colors">
+                                            <Download size={14} />
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="overflow-x-auto">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50/50 border-b border-slate-100">
-                                            <tr>
-                                                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest w-16">
-                                                    Avatar
-                                                </th>
-                                                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    Identity
-                                                </th>
-                                                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    Role
-                                                </th>
-                                                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    Status
-                                                </th>
-                                                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                    Joined Date
-                                                </th>
-                                                <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">
-                                                    Actions
-                                                </th>
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                                <th className="px-8 py-4">Avatar</th>
+                                                <th className="px-8 py-4">Identity</th>
+                                                <th className="px-8 py-4">Role</th>
+                                                <th className="px-8 py-4">Status</th>
+                                                <th className="px-8 py-4">Joined Date</th>
+                                                <th className="px-8 py-4 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-100">
-                                            {registeredUsers.map(u => (
-                                                <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                                            {registeredUsers.map((u) => (
+                                                <tr key={u.id} className="hover:bg-slate-50/80 transition-colors group">
                                                     <td className="px-8 py-4">
-                                                        <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-xs font-black text-slate-500">
-                                                            {u.avatar || u.name.substring(0, 2).toUpperCase()}
+                                                        <div className="w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-center font-black text-slate-600 text-xs">
+                                                            {u.avatar ? (
+                                                                <img src={u.avatar} alt={u.name} className="w-full h-full object-cover rounded-xl" />
+                                                            ) : (
+                                                                u.name.slice(0, 2).toUpperCase()
+                                                            )}
                                                         </div>
                                                     </td>
                                                     <td className="px-8 py-4">
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-900">{u.name}</p>
-                                                            <p className="text-xs text-slate-500">{u.email}</p>
-                                                            {u.businessName && <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[9px] font-bold uppercase">{u.businessName}</span>}
-                                                        </div>
+                                                        <p className="text-xs font-black text-slate-900">{u.name}</p>
+                                                        <p className="text-[11px] text-slate-400 font-medium">{u.email}</p>
+                                                        {u.businessName && (
+                                                            <span className="inline-block mt-1 px-1.5 py-0.5 bg-blue-50 text-blue-600 rounded text-[9px] font-bold uppercase tracking-wider">
+                                                                {u.businessName}
+                                                            </span>
+                                                        )}
                                                     </td>
                                                     <td className="px-8 py-4">
-                                                        <span className={`px-2.5 py-1 rounded-md text-[10px] font-black uppercase tracking-widest border ${u.role === 'admin' ? 'bg-indigo-50 text-indigo-700 border-indigo-100' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
+                                                        <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-wider ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'}`}>
                                                             {u.role}
                                                         </span>
                                                     </td>
@@ -216,8 +220,10 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
                         </>
-                    ) : (
+                    ) : activeTab === 'subscriptions' ? (
                         <SubscriptionManagement />
+                    ) : (
+                        <AdminTemplateManager />
                     )}
                 </div>
             </div>

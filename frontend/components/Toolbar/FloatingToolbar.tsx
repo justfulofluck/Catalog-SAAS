@@ -14,7 +14,9 @@ import {
   EyeOff,
   Eye,
   Pipette,
-  Palette
+  Palette,
+  Table as TableIcon,
+  Sliders
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH } from '../../constants';
@@ -42,7 +44,8 @@ const FloatingToolbar: React.FC<Props> = ({
     catalog, currentPageIndex, selectedElementIds, setSelectedElementIds, zoom,
     toggleLock, removeElement, duplicateElement, updateElement,
     removeProductFromPage, pushHistory, updateHeaderElement, updateFooterElement,
-    removeHeaderElement, removeFooterElement, duplicateHeaderElement, duplicateFooterElement
+    removeHeaderElement, removeFooterElement, duplicateHeaderElement, duplicateFooterElement,
+    setIsTableEditorOpen
   } = useStore(useShallow(state => ({
     catalog: state.catalog,
     currentPageIndex: state.currentPageIndex,
@@ -61,6 +64,8 @@ const FloatingToolbar: React.FC<Props> = ({
     removeFooterElement: state.removeFooterElement,
     duplicateHeaderElement: state.duplicateHeaderElement,
     duplicateFooterElement: state.duplicateFooterElement,
+    setIsPropertyPanelOpen: state.setIsPropertyPanelOpen,
+    setIsTableEditorOpen: state.setIsTableEditorOpen,
   })));
 
   const currentPage = catalog.pages?.[currentPageIndex];
@@ -206,6 +211,8 @@ const FloatingToolbar: React.FC<Props> = ({
 
   const btnClass = 'p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-50 transition-all';
 
+  const isTableElement = element.type === 'table' || !!element.tableData;
+
   return (
     <div
       className="flex flex-row items-center gap-1 bg-white rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-100 p-1.5 animate-in zoom-in-95 duration-200 backdrop-blur-sm"
@@ -213,6 +220,25 @@ const FloatingToolbar: React.FC<Props> = ({
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
+      {/* If Table is selected: Add Edit Table Columns & Rows shortcut */}
+      {isTableElement && (
+        <button
+          className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+          title="Edit Table Columns & Rows"
+          onClick={() => {
+            if (typeof setIsTableEditorOpen === 'function') {
+              setIsTableEditorOpen(true, element.id);
+            } else {
+              useStore.getState().setIsTableEditorOpen(true, element.id);
+            }
+            window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: element.id, pageIndex: currentPageIndex } }));
+          }}
+        >
+          <TableIcon size={14} />
+          <span>Edit Table</span>
+        </button>
+      )}
+
       {/* Fill color */}
       <button
         className={btnClass}

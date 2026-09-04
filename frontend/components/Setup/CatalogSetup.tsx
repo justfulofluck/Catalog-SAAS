@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import {
   ArrowLeft,
@@ -10,20 +9,24 @@ import {
   Layers,
   CheckSquare,
   Square,
-  Check,
   LayoutTemplate,
-  FileText,
   List,
-  SeparatorHorizontal
+  SeparatorHorizontal,
+  Sparkles,
+  FilePlus,
+  Palette,
+  Eye,
+  Check
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { GRID_TEMPLATES } from '../../constants';
+import { GRID_TEMPLATES, FULL_CATALOG_TEMPLATES } from '../../constants';
 
 const CatalogSetup: React.FC = () => {
   const { setView, categories, products, generateCatalogFromTemplate } = useStore();
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('tpl-v-tac');
 
   // Configuration State
   const [includeCover, setIncludeCover] = useState(true);
@@ -38,13 +41,19 @@ const CatalogSetup: React.FC = () => {
 
   const handleGenerate = async () => {
     if (name && selectedCategoryIds.length > 0) {
-      // Use a default template to seed the initial structure
+      // Find matching grid template or default
       const defaultTemplate = GRID_TEMPLATES[1]; // 2x2
+      
       generateCatalogFromTemplate(
         name,
         defaultTemplate,
         selectedCategoryIds,
-        { includeCover, includeIndex, includeCategoryCovers }
+        { 
+          includeCover, 
+          includeIndex, 
+          includeCategoryCovers,
+          selectedTemplateId
+        }
       );
 
       // Save to backend immediately so refresh doesn't lose data
@@ -55,26 +64,38 @@ const CatalogSetup: React.FC = () => {
     }
   };
 
+  const phases = [
+    { num: 1, label: 'Identity' },
+    { num: 2, label: 'Products' },
+    { num: 3, label: 'Template' },
+    { num: 4, label: 'Assembly' }
+  ];
+
   return (
     <div className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950 flex items-center justify-center p-8 lg:p-12 animate-in fade-in duration-500 transition-colors duration-300">
       <div className="w-full max-w-5xl space-y-10">
 
-        {/* Progress Navigation */}
-        <div className="flex items-center gap-4 md:gap-8 mb-16 max-w-3xl mx-auto">
-          {[1, 2, 3].map(i => (
-            <div key={i} className="flex-1 flex flex-col gap-3 group cursor-default">
-              <div className={`h-2 rounded-full transition-all duration-700 ${step >= i ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`} />
+        {/* 4-Phase Progress Navigation */}
+        <div className="flex items-center gap-3 md:gap-6 mb-16 max-w-3xl mx-auto">
+          {phases.map((p) => (
+            <div key={p.num} className="flex-1 flex flex-col gap-2.5 group cursor-default">
+              <div className={`h-2 rounded-full transition-all duration-700 ${step >= p.num ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`} />
               <div className="flex justify-between items-center px-1">
-                <p className={`text-[10px] font-black uppercase tracking-widest transition-colors ${step >= i ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700'}`}>
-                  Phase 0{i}
-                </p>
-                {step > i && <CheckCircle2 size={12} className="text-indigo-600 dark:text-indigo-400 animate-in zoom-in" />}
+                <div>
+                  <p className={`text-[9px] font-black uppercase tracking-widest transition-colors ${step >= p.num ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                    Phase 0{p.num}
+                  </p>
+                  <p className={`text-[11px] font-bold transition-colors ${step >= p.num ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}>
+                    {p.label}
+                  </p>
+                </div>
+                {step > p.num && <CheckCircle2 size={13} className="text-indigo-600 dark:text-indigo-400 animate-in zoom-in" />}
               </div>
             </div>
           ))}
         </div>
 
-        {/* Step 1: Catalog Name */}
+        {/* Phase 1: Catalog Name & Identity */}
         {step === 1 && (
           <div className="grid grid-cols-1 gap-12 items-start animate-in slide-in-from-bottom-8 duration-500 max-w-xl mx-auto">
             <div className="space-y-8">
@@ -91,7 +112,7 @@ const CatalogSetup: React.FC = () => {
                     <BookOpen className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" size={20} />
                     <input
                       type="text"
-                      placeholder="e.g. Q4 Furniture Collection 2025"
+                      placeholder="e.g. Q4 Lighting Collection 2025"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-6 py-4 text-base font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 focus:border-indigo-600 dark:focus:border-indigo-400 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
@@ -111,7 +132,7 @@ const CatalogSetup: React.FC = () => {
           </div>
         )}
 
-        {/* Step 2: Category Selection */}
+        {/* Phase 2: Category Selection */}
         {step === 2 && (
           <div className="space-y-8 animate-in slide-in-from-right-12 duration-500">
             <div className="flex justify-between items-end">
@@ -132,7 +153,7 @@ const CatalogSetup: React.FC = () => {
                   disabled={selectedCategoryIds.length === 0}
                   className="px-8 py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 active:scale-95"
                 >
-                  Proceed to Layout <ChevronRight size={16} />
+                  Proceed to Template <ChevronRight size={16} />
                 </button>
               </div>
             </div>
@@ -233,14 +254,121 @@ const CatalogSetup: React.FC = () => {
           </div>
         )}
 
-        {/* Step 3: Layout Configuration */}
+        {/* Phase 3: Template Selection (All Templates & Blank Template Option) */}
         {step === 3 && (
+          <div className="space-y-8 animate-in slide-in-from-right-12 duration-500">
+            <div className="flex justify-between items-end">
+              <div>
+                <button onClick={() => setStep(2)} className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-4 hover:text-slate-600 dark:hover:text-slate-400 transition-colors group text-left">
+                  <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Return to Products
+                </button>
+                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Select Catalog Template</h1>
+                <p className="text-slate-500 dark:text-slate-400 font-medium text-base">
+                  Choose a pre-built publication style or start with a 4-page blank custom template.
+                </p>
+              </div>
+              <button
+                onClick={() => setStep(4)}
+                className="px-8 py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 dark:shadow-none hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95"
+              >
+                Proceed to Assembly <ChevronRight size={16} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+              {FULL_CATALOG_TEMPLATES.map((tpl) => {
+                const isSelected = selectedTemplateId === tpl.id;
+                const isBlank = tpl.id === 'tpl-blank';
+
+                return (
+                  <div
+                    key={tpl.id}
+                    onClick={() => setSelectedTemplateId(tpl.id)}
+                    className={`
+                      relative group cursor-pointer overflow-hidden rounded-3xl border-2 transition-all p-5 flex flex-col justify-between
+                      ${isSelected
+                        ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-2xl shadow-indigo-600/10 scale-[1.02]'
+                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl'
+                      }
+                    `}
+                  >
+                    {/* Selected Badge */}
+                    {isSelected && (
+                      <div className="absolute top-4 right-4 z-20 bg-indigo-600 text-white rounded-full p-1.5 shadow-lg shadow-indigo-600/30">
+                        <Check size={14} strokeWidth={3} />
+                      </div>
+                    )}
+
+                    <div>
+                      {/* Thumbnail Preview Area */}
+                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                        {isBlank ? (
+                          <div className="flex flex-col items-center justify-center text-center p-6 space-y-3">
+                            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
+                              <FilePlus size={28} />
+                            </div>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1 rounded-full">
+                              4 Blank Pages
+                            </span>
+                          </div>
+                        ) : (
+                          <>
+                            <img
+                              src={tpl.thumbnail}
+                              alt={tpl.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                            <div className="absolute bottom-3 left-3 right-3 text-white">
+                              <span className="text-[9px] font-black uppercase tracking-widest bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-md">
+                                {tpl.pages.length} Pages Included
+                              </span>
+                            </div>
+                          </>
+                        )}
+                      </div>
+
+                      {/* Info & Description */}
+                      <div className="space-y-1.5">
+                        <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                          {tpl.name}
+                        </h3>
+                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                          {tpl.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Page Structure Tag Breakdown */}
+                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        Cover
+                      </span>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        Index / TOC
+                      </span>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        Product Grid
+                      </span>
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                        Closing
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Phase 4: Final Assembly & Compilation */}
+        {step === 4 && (
           <div className="grid grid-cols-1 gap-12 items-start animate-in slide-in-from-right-12 duration-500 max-w-4xl mx-auto">
             <div className="space-y-12">
 
               <div className="space-y-6 text-center">
-                <button onClick={() => setStep(2)} className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-400 transition-colors group">
-                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Return to Products
+                <button onClick={() => setStep(3)} className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-400 transition-colors group">
+                  <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Return to Templates
                 </button>
                 <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Final <span className="text-indigo-600 dark:text-indigo-400">Assembly.</span></h1>
                 <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed max-w-lg mx-auto">Configure the architectural components of your publication before compilation.</p>

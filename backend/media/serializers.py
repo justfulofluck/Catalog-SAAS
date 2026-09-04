@@ -6,8 +6,12 @@ class MediaItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = MediaItem
-        fields = ('id', 'uuid', 'name', 'type', 'url', 'width', 'height', 'size_bytes', 'created_at')
+        fields = ('id', 'uuid', 'name', 'type', 'url', 'file', 'width', 'height', 'size_bytes', 'created_at')
         read_only_fields = ('uuid', 'created_at', 'width', 'height', 'size_bytes', 'type')
+        extra_kwargs = {
+            'file': {'write_only': True, 'required': False},
+            'name': {'required': False}
+        }
 
     def get_url(self, obj):
         request = self.context.get('request')
@@ -16,13 +20,14 @@ class MediaItemSerializer(serializers.ModelSerializer):
         return None
         
     def create(self, validated_data):
-        # Auto-populate user from request
-        validated_data['user'] = self.context['request'].user
-        # Basic type inference
+        if 'request' in self.context:
+            validated_data['user'] = self.context['request'].user
+        
         file = validated_data.get('file')
         if file:
-             validated_data['size_bytes'] = file.size
-             # You could add more logic here to detect image dimensions using Pillow
+            if not validated_data.get('name'):
+                validated_data['name'] = file.name
+            validated_data['size_bytes'] = file.size
         return super().create(validated_data)
 
 class AdminAssetSerializer(serializers.ModelSerializer):

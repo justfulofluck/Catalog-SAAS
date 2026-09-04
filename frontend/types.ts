@@ -1,4 +1,4 @@
-export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment';
+export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table';
 export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
 export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line';
 export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
@@ -17,6 +17,25 @@ export interface FormField {
   placeholder?: string;
 }
 
+export interface TableColumn {
+  key: string;
+  label: string;
+  width?: number; // relative width percentage or fixed px
+}
+
+export interface TableData {
+  headers: string[];
+  rows: string[][];
+  headerBg?: string;
+  headerTextColor?: string;
+  alternateRowBg?: string;
+  rowBg?: string;
+  borderColor?: string;
+  fontSize?: number;
+  headerFontSize?: number;
+  cellPadding?: number;
+  colWidths?: number[];
+}
 
 export interface CanvasElement {
    id: string;
@@ -58,6 +77,9 @@ export interface CanvasElement {
    textStrokeWidth?: number;
    effectSpread?: number;
    effectRoundness?: number;
+
+   // Table specific
+   tableData?: TableData;
 
    // Product Block specific
    productData?: Product;
@@ -112,6 +134,22 @@ export interface PageTemplate {
   backgroundColor?: string;
 }
 
+export interface SystemTemplate {
+  id: number;
+  uuid: string;
+  name: string;
+  category: string;
+  type: 'full_catalog' | 'cover' | 'product_grid' | 'header' | 'footer';
+  description?: string;
+  thumbnail?: string;
+  theme_id?: string;
+  pages_data: any[];
+  grid_data?: any;
+  is_active: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface HeaderFooterTemplate {
   id: string;
   name: string;
@@ -129,10 +167,22 @@ export interface Category {
   rank?: number;
   color?: string;
   thumbnail?: string;
+  images?: string[];
   parent?: string | number;
   parentName?: string;
   productCount: number;
   customSchema?: FormField[];
+}
+
+export interface ProductVariant {
+  id: string;
+  sku: string; // e.g. VT-2612
+  name: string; // e.g. 12W V-TAC COB WHITE BODY
+  cutOut?: string; // e.g. 75MM
+  color?: string; // e.g. W, W.W, N.W
+  price?: number | string; // e.g. 580 or $580
+  packing?: string; // e.g. 20 PCS
+  customAttributes?: Record<string, any>;
 }
 
 export interface Product {
@@ -143,7 +193,10 @@ export interface Product {
   currency: string;
   description: string;
   image: string;
+  images?: string[];
   categoryId?: string;
+  // Variants hierarchy
+  variants?: ProductVariant[];
   // Dynamic fields storage
   customFields?: Record<string, any>;
 }

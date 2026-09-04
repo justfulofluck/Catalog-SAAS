@@ -1,4 +1,4 @@
-﻿export interface BoundingBox {
+export interface BoundingBox {
   id: string;
   minX: number;
   minY: number;
@@ -7,9 +7,25 @@
   zIndex: number;
 }
 
+export interface DistanceBadge {
+  type: 'vertical' | 'horizontal';
+  startPos: number;
+  endPos: number;
+  crossPos: number;
+  distance: number;
+  displayValue: string;
+}
+
+export interface SnapResult {
+  snapX: number | null;
+  snapY: number | null;
+  guideLines: { type: 'horizontal' | 'vertical'; pos: number }[];
+  distanceBadges: DistanceBadge[];
+}
+
 /**
  * 2D Spatial Index & Bounding Volume Hierarchy (BVH) for O(log N) hit testing,
- * viewport culling, and proximity detection for smart alignment guides.
+ * viewport culling, and proximity detection for smart alignment guides and spacing calculation.
  */
 export class SpatialIndex {
   private boxes: BoundingBox[] = [];
@@ -46,17 +62,18 @@ export class SpatialIndex {
   }
 
   /**
-   * Finds alignment guide snap targets within a given threshold distance
+   * Finds alignment guide snap targets and dynamic spacing badges between neighbouring elements
    */
   public findSnapTargets(
     currentBox: BoundingBox,
-    threshold: number = 5
-  ): { snapX: number | null; snapY: number | null; guideLines: { type: 'horizontal' | 'vertical'; pos: number }[] } {
+    threshold: number = 6
+  ): SnapResult {
     let snapX: number | null = null;
     let snapY: number | null = null;
     let minDiffX = threshold;
     let minDiffY = threshold;
     const guideLines: { type: 'horizontal' | 'vertical'; pos: number }[] = [];
+    const distanceBadges: DistanceBadge[] = [];
 
     const curCenterX = (currentBox.minX + currentBox.maxX) / 2;
     const curCenterY = (currentBox.minY + currentBox.maxY) / 2;
@@ -98,9 +115,79 @@ export class SpatialIndex {
           guideLines.push({ type: 'horizontal', pos: check.target });
         }
       }
+
+      // Calculate vertical gap / padding (when vertically adjacent with overlap in X)
+      const hasHorizontalOverlap = Math.max(currentBox.minX, b.minX) < Math.min(currentBox.maxX, b.maxX);
+      if (hasHorizontalOverlap) {
+        const crossX = (Math.max(currentBox.minX, b.minX) + Math.min(currentBox.maxX, b.maxX)) / 2;
+        
+        // Target is ABOVE current element
+        if (b.maxY <= currentBox.minY && currentBox.minY - b.maxY < 120) {
+          const gap = currentBox.minY - b.maxY;
+          if (gap > 0) {
+            distanceBadges.push({
+              type: 'vertical',
+              startPos: b.maxY,
+              endPos: currentBox.minY,
+              crossPos: crossX,
+              distance: Math.round(gap),
+              displayValue: (gap / 10).toFixed(1) // e.g. 0.6
+            });
+          }
+        }
+        // Target is BELOW current element
+        else if (currentBox.maxY <= b.minY && b.minY - currentBox.maxY < 120) {
+          const gap = b.minY - currentBox.maxY;
+          if (gap > 0) {
+            distanceBadges.push({
+              type: 'vertical',
+              startPos: currentBox.maxY,
+              endPos: b.minY,
+              crossPos: crossX,
+              distance: Math.round(gap),
+              displayValue: (gap / 10).toFixed(1)
+            });
+          }
+        }
+      }
+
+      // Calculate horizontal gap / padding (when horizontally adjacent with overlap in Y)
+      const hasVerticalOverlap = Math.max(currentBox.minY, b.minY) < Math.min(currentBox.maxY, b.maxY);
+      if (hasVerticalOverlap) {
+        const crossY = (Math.max(currentBox.minY, b.minY) + Math.min(currentBox.maxY, b.maxY)) / 2;
+
+        // Target is to LEFT of current element
+        if (b.maxX <= currentBox.minX && currentBox.minX - b.maxX < 120) {
+          const gap = currentBox.minX - b.maxX;
+          if (gap > 0) {
+            distanceBadges.push({
+              type: 'horizontal',
+              startPos: b.maxX,
+              endPos: currentBox.minX,
+              crossPos: crossY,
+              distance: Math.round(gap),
+              displayValue: (gap / 10).toFixed(1)
+            });
+          }
+        }
+        // Target is to RIGHT of current element
+        else if (currentBox.maxX <= b.minX && b.minX - currentBox.maxX < 120) {
+          const gap = b.minX - currentBox.maxX;
+          if (gap > 0) {
+            distanceBadges.push({
+              type: 'horizontal',
+              startPos: currentBox.maxX,
+              endPos: b.minX,
+              crossPos: crossY,
+              distance: Math.round(gap),
+              displayValue: (gap / 10).toFixed(1)
+            });
+          }
+        }
+      }
     }
 
-    return { snapX, snapY, guideLines };
+    return { snapX, snapY, guideLines, distanceBadges };
   }
 }
 

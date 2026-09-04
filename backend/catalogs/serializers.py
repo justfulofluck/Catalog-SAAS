@@ -1,10 +1,16 @@
 from rest_framework import serializers
-from .models import Catalog, CatalogPage, Theme
+from .models import Catalog, CatalogPage, Theme, SystemTemplate
 
 class ThemeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Theme
         fields = '__all__'
+
+class SystemTemplateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemTemplate
+        fields = '__all__'
+        read_only_fields = ('uuid', 'created_at', 'updated_at')
 
 class CatalogPageSerializer(serializers.ModelSerializer):
     class Meta:

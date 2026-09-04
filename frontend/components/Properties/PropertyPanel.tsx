@@ -238,6 +238,18 @@ const handleOpenEffects = () => {
               <section>
                 {renderSectionHeader("TEXT FORMATTING", <Type size={11} />)}
                 <div className="space-y-4">
+                  {/* Text Content Input */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Text Content</label>
+                    <textarea
+                      rows={3}
+                      value={(selectedElement?.text || '').replace(/<[^>]*>/g, '')}
+                      onChange={(e) => handleBatchUpdate({ text: e.target.value })}
+                      placeholder="Type your text here..."
+                      className="w-full bg-white border border-slate-200 rounded-[14px] p-3 text-xs font-semibold text-slate-800 shadow-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 resize-none transition-all"
+                    />
+                  </div>
+
                   <div className="flex items-center gap-3">
                     {/* Font Dropdown */}
                     <div className="flex-1 relative">
@@ -323,6 +335,174 @@ const handleOpenEffects = () => {
                       >
                         <Underline size={18} strokeWidth={selectedElement?.textDecoration === 'underline' ? 3 : 2} />
                       </button>
+                    </div>
+                  </div>
+            {/* Table Formatting & Live Column/Row Editor Section */}
+            {selectedElement?.type === 'table' && selectedElement.tableData && (
+              <section>
+                {renderSectionHeader("TABLE & SPECIFICATIONS", <Palette size={11} />)}
+                <div className="space-y-5">
+                  {/* Table Styling Controls */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Header Background</label>
+                      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2">
+                        <input
+                          type="color"
+                          value={selectedElement.tableData.headerBg || '#002b36'}
+                          onChange={(e) => {
+                            const newTableData = { ...selectedElement.tableData!, headerBg: e.target.value };
+                            updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
+                          }}
+                          className="w-6 h-6 rounded border-0 cursor-pointer"
+                        />
+                        <span className="text-[10px] font-mono font-bold text-slate-700">{selectedElement.tableData.headerBg || '#002b36'}</span>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Header Text Color</label>
+                      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2">
+                        <input
+                          type="color"
+                          value={selectedElement.tableData.headerTextColor || '#ffffff'}
+                          onChange={(e) => {
+                            const newTableData = { ...selectedElement.tableData!, headerTextColor: e.target.value };
+                            updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
+                          }}
+                          className="w-6 h-6 rounded border-0 cursor-pointer"
+                        />
+                        <span className="text-[10px] font-mono font-bold text-slate-700">{selectedElement.tableData.headerTextColor || '#ffffff'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columns / Headers Editor */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Columns ({selectedElement.tableData.headers.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newHeader = `COL ${selectedElement.tableData!.headers.length + 1}`;
+                          const newHeaders = [...selectedElement.tableData!.headers, newHeader];
+                          const newRows = selectedElement.tableData!.rows.map(r => [...r, '-']);
+                          const newTableData = {
+                            ...selectedElement.tableData!,
+                            headers: newHeaders,
+                            rows: newRows
+                          };
+                          updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
+                        }}
+                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+                      >
+                        <Plus size={10} /> Add Column
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar p-1">
+                      {selectedElement.tableData.headers.map((header, hIdx) => (
+                        <div key={hIdx} className="flex items-center gap-1.5 bg-white border border-slate-100 rounded-lg p-1.5 shadow-sm">
+                          <span className="text-[9px] font-black text-slate-400 w-4">{hIdx + 1}</span>
+                          <input
+                            type="text"
+                            value={header}
+                            onChange={(e) => {
+                              const newHeaders = [...selectedElement.tableData!.headers];
+                              newHeaders[hIdx] = e.target.value;
+                              const newTableData = { ...selectedElement.tableData!, headers: newHeaders };
+                              updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
+                            }}
+                            className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-1 text-[10px] font-bold text-slate-800 outline-none focus:border-indigo-600"
+                          />
+                          <button
+                            type="button"
+                            disabled={selectedElement.tableData!.headers.length <= 1}
+                            onClick={() => {
+                              const newHeaders = selectedElement.tableData!.headers.filter((_, i) => i !== hIdx);
+                              const newRows = selectedElement.tableData!.rows.map(r => r.filter((_, i) => i !== hIdx));
+                              const newTableData = { ...selectedElement.tableData!, headers: newHeaders, rows: newRows };
+                              updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
+                            }}
+                            className="p-1 text-slate-300 hover:text-red-500 rounded disabled:opacity-20"
+                            title="Delete Column"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Add Row Button & Live Rows Editor */}
+                  <div className="space-y-2 pt-2 border-t border-slate-100">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Rows ({selectedElement.tableData.rows.length})
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newRow = selectedElement.tableData!.headers.map(() => '-');
+                          const newTableData = {
+                            ...selectedElement.tableData!,
+                            rows: [...selectedElement.tableData!.rows, newRow]
+                          };
+                          updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData, height: selectedElement.height + 28 });
+                        }}
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                      >
+                        <Plus size={11} /> Add Row
+                      </button>
+                    </div>
+
+                    {/* Rows editor preview */}
+                    <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar p-1">
+                      {selectedElement.tableData.rows.map((row, rIdx) => (
+                        <div key={rIdx} className="p-2.5 bg-white border border-slate-100 rounded-xl space-y-1.5 shadow-sm">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] font-black text-indigo-600 uppercase">Row #{rIdx + 1}</span>
+                            <button
+                              type="button"
+                              disabled={selectedElement.tableData!.rows.length <= 1}
+                              onClick={() => {
+                                const newRows = selectedElement.tableData!.rows.filter((_, i) => i !== rIdx);
+                                const newTableData = { ...selectedElement.tableData!, rows: newRows };
+                                updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData, height: Math.max(80, selectedElement.height - 28) });
+                              }}
+                              className="p-1 text-slate-300 hover:text-red-500 rounded disabled:opacity-20"
+                              title="Delete Row"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                          <div className="space-y-1">
+                            {selectedElement.tableData!.headers.map((header, cIdx) => (
+                              <div key={cIdx} className="flex items-center gap-1 text-[10px]">
+                                <span className="w-20 truncate text-[8px] font-bold text-slate-400 uppercase">{header}:</span>
+                                <input
+                                  type="text"
+                                  value={row[cIdx] !== undefined ? row[cIdx] : ''}
+                                  placeholder={header}
+                                  onChange={(e) => {
+                                    const newRows = selectedElement.tableData!.rows.map((r, i) => {
+                                      if (i !== rIdx) return r;
+                                      const updatedRow = [...r];
+                                      updatedRow[cIdx] = e.target.value;
+                                      return updatedRow;
+                                    });
+                                    const newTableData = { ...selectedElement.tableData!, rows: newRows };
+                                    updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
+                                  }}
+                                  className="flex-1 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-[10px] font-medium text-slate-700 outline-none focus:border-indigo-600"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

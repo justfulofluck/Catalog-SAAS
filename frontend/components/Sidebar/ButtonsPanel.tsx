@@ -96,9 +96,9 @@ const ButtonsPanel: React.FC = () => {
     };
 
     return (
-        <div className={`w-72 h-full flex flex-col bg-white border-r border-slate-200 animate-in slide-in-from-left duration-300 ${uiTheme === 'dark' ? 'dark:bg-slate-900 dark:border-slate-800' : ''}`}>
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2 text-slate-400 mb-1">
+        <div className={`w-full h-full flex flex-col bg-white animate-in slide-in-from-left duration-300 ${uiTheme === 'dark' ? 'dark:bg-slate-900' : ''}`}>
+            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-slate-400">
                     <ChevronDown size={14} />
                     <span className="text-[11px] font-bold uppercase tracking-wider">Buttons</span>
                 </div>

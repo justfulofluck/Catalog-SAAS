@@ -71,9 +71,28 @@ class ProductSerializer(serializers.ModelSerializer):
             ret['image'] = instance.image.name
         return ret
 
+    def _save_base64_image(self, b64_str, prefix="custom"):
+        try:
+            format, imgstr = b64_str.split(';base64,')
+            ext = format.split('/')[-1]
+            import uuid
+            filename = f"{prefix}_{uuid.uuid4()}.{ext}"
+            data = ContentFile(base64.b64decode(imgstr), name=filename)
+            from django.core.files.storage import default_storage
+            request = self.context.get("request")
+            user_id = "admin"
+            if request and request.user and not request.user.is_anonymous:
+                user_id = str(request.user.id)
+            path = f"user_media/{user_id}/products/custom/{filename}"
+            actual_path = default_storage.save(path, data)
+            return default_storage.url(actual_path)
+        except Exception as e:
+            print(f"Error saving base64 image: {e}")
+            return b64_str
+
     def _process_custom_fields(self, custom_fields):
         """
-        Scans custom_fields for base64 encoded images.
+        Scans custom_fields for base64 encoded images (single string or list of strings).
         Saves them to the server and replaces base64 with the media URL.
         """
         if not custom_fields or not isinstance(custom_fields, dict):
@@ -82,34 +101,15 @@ class ProductSerializer(serializers.ModelSerializer):
         processed_fields = custom_fields.copy()
         for field_id, value in processed_fields.items():
             if isinstance(value, str) and value.startswith("data:image"):
-                try:
-                    # Extract format and data
-                    format, imgstr = value.split(';base64,')
-                    ext = format.split('/')[-1]
-                    
-                    # Generate a filename
-                    import uuid
-                    filename = f"{uuid.uuid4()}.{ext}"
-                    
-                    # Create a ContentFile
-                    data = ContentFile(base64.b64decode(imgstr), name=filename)
-                    
-                    # We need a Product instance or some context to use the model's upload_to
-                    # For simplicity here, we can save to a dedicated custom fields media folder
-                    from django.core.files.storage import default_storage
-                    import os
-                    
-                    # Try to get user from context
-                    request = self.context.get("request")
-                    user_id = "admin"
-                    if request and request.user and not request.user.is_anonymous:
-                        user_id = str(request.user.id)
-                        
-                    path = f"user_media/{user_id}/products/custom/{filename}"
-                    actual_path = default_storage.save(path, data)
-                    processed_fields[field_id] = default_storage.url(actual_path)
-                except Exception as e:
-                    print(f"Error processing base64 image in field {field_id}: {e}")
+                processed_fields[field_id] = self._save_base64_image(value, prefix=field_id)
+            elif isinstance(value, list):
+                new_list = []
+                for item in value:
+                    if isinstance(item, str) and item.startswith("data:image"):
+                        new_list.append(self._save_base64_image(item, prefix=field_id))
+                    else:
+                        new_list.append(item)
+                processed_fields[field_id] = new_list
                     
         return processed_fields
 

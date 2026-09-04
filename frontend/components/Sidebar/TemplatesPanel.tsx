@@ -17,6 +17,7 @@ const TemplatesPanel: React.FC = () => {
     catalog, currentPageIndex, 
     applyCoverTemplate, applyIndexTemplate, applyClosingTemplate, 
     applyInventoryLayout, applyHeaderTemplate, applyFooterTemplate, 
+    systemTemplates,
     uiTheme, setEditorTab 
   } = useStore();
 
@@ -99,6 +100,55 @@ const TemplatesPanel: React.FC = () => {
               <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">All Interior Pages</span>
             </div>
 
+            {/* Dynamic Custom Headers from Admin */}
+            {systemTemplates.filter(st => st.is_active && st.type === 'header').map((tmpl) => {
+              const headerElements = tmpl.pages_data?.[0]?.elements || [];
+              const headerObj = {
+                id: `sys-hdr-${tmpl.id}`,
+                name: tmpl.name,
+                description: tmpl.description || tmpl.category,
+                type: 'header' as const,
+                height: 113.4,
+                previewText: tmpl.name,
+                elements: headerElements
+              };
+
+              return (
+                <div
+                  key={`sys-hdr-${tmpl.id}`}
+                  onClick={() => {
+                    applyHeaderTemplate(headerObj);
+                    triggerFeedback(`sys-hdr-${tmpl.id}`);
+                  }}
+                  className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                    isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-lg bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                    {tmpl.name} (Custom Header)
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                        <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      </div>
+                      <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description || tmpl.category}</p>
+                    </div>
+                    {appliedId === `sys-hdr-${tmpl.id}` ? (
+                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
+                        <Check size={11} /> Applied
+                      </span>
+                    ) : (
+                      <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Built-in Constants Headers */}
             {HEADER_TEMPLATES.map((tmpl) => (
               <div
                 key={tmpl.id}
@@ -152,43 +202,104 @@ const TemplatesPanel: React.FC = () => {
                 </p>
               </div>
             ) : (
-              GRID_TEMPLATES.map((tmpl) => (
-                <div
-                  key={tmpl.id}
-                  onClick={() => {
-                    applyInventoryLayout(currentPageIndex, tmpl);
-                    triggerFeedback(tmpl.id);
-                  }}
-                  className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
-                    isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
-                  }`}
-                >
-                  {/* Mini Visual Grid Box */}
-                  <div className="aspect-[16/7] rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
-                    <div className="grid gap-1 w-full h-full" style={{ gridTemplateColumns: `repeat(${tmpl.cols}, minmax(0, 1fr))` }}>
-                      {Array.from({ length: Math.min(tmpl.cols * tmpl.rows, 6) }).map((_, i) => (
-                        <div key={i} className="bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-sm flex items-center justify-center">
-                          <span className="text-[7px] text-indigo-700 dark:text-indigo-300 font-bold">Item {i+1}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+              <>
+                {/* Dynamic Admin Custom Grids */}
+                {systemTemplates.filter(st => st.is_active && st.type === 'product_grid' && st.grid_data).map((tmpl) => {
+                  const g = tmpl.grid_data || {};
+                  const gridObj = {
+                    id: `sys-grid-${tmpl.id}`,
+                    name: tmpl.name,
+                    cols: g.cols || 2,
+                    rows: g.rows || 2,
+                    padding: g.padding || 40,
+                    spacing: g.spacing || 20,
+                    arrangement: g.arrangement || 'stacked',
+                    group: tmpl.category || 'Custom',
+                    cardTheme: g.cardTheme || 'classic-stack',
+                    backgroundColor: g.backgroundColor || '#ffffff'
+                  };
 
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                      <span className="text-[9px] font-bold text-slate-400">{tmpl.cols} Columns × {tmpl.rows} Rows</span>
+                  return (
+                    <div
+                      key={`sys-grid-${tmpl.id}`}
+                      onClick={() => {
+                        applyInventoryLayout(currentPageIndex, gridObj as any);
+                        triggerFeedback(`sys-grid-${tmpl.id}`);
+                      }}
+                      className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                        isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
+                      }`}
+                    >
+                      {/* Mini Visual Grid Box */}
+                      <div className="aspect-[16/7] rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
+                        <div className="grid gap-1 w-full h-full" style={{ gridTemplateColumns: `repeat(${gridObj.cols}, minmax(0, 1fr))` }}>
+                          {Array.from({ length: Math.min(gridObj.cols * gridObj.rows, 6) }).map((_, i) => (
+                            <div key={i} className="bg-indigo-200 dark:bg-indigo-800/60 border border-indigo-300 dark:border-indigo-700 rounded-sm flex items-center justify-center">
+                              <span className="text-[7px] text-indigo-800 dark:text-indigo-200 font-bold">Item {i+1}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                            <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-400">{gridObj.cols} Cols × {gridObj.rows} Rows</span>
+                        </div>
+                        {appliedId === `sys-grid-${tmpl.id}` ? (
+                          <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full">
+                            <Check size={11} /> Applied
+                          </span>
+                        ) : (
+                          <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
+                        )}
+                      </div>
                     </div>
-                    {appliedId === tmpl.id ? (
-                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full">
-                        <Check size={11} /> Applied
-                      </span>
-                    ) : (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
-                    )}
+                  );
+                })}
+
+                {/* Built-in Constants Grids */}
+                {GRID_TEMPLATES.map((tmpl) => (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => {
+                      applyInventoryLayout(currentPageIndex, tmpl);
+                      triggerFeedback(tmpl.id);
+                    }}
+                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                      isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                    }`}
+                  >
+                    {/* Mini Visual Grid Box */}
+                    <div className="aspect-[16/7] rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
+                      <div className="grid gap-1 w-full h-full" style={{ gridTemplateColumns: `repeat(${tmpl.cols}, minmax(0, 1fr))` }}>
+                        {Array.from({ length: Math.min(tmpl.cols * tmpl.rows, 6) }).map((_, i) => (
+                          <div key={i} className="bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-sm flex items-center justify-center">
+                            <span className="text-[7px] text-indigo-700 dark:text-indigo-300 font-bold">Item {i+1}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                        <span className="text-[9px] font-bold text-slate-400">{tmpl.cols} Columns × {tmpl.rows} Rows</span>
+                      </div>
+                      {appliedId === tmpl.id ? (
+                        <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full">
+                          <Check size={11} /> Applied
+                        </span>
+                      ) : (
+                        <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))
+                ))}
+              </>
             )}
           </div>
         )}
@@ -201,6 +312,55 @@ const TemplatesPanel: React.FC = () => {
               <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">All Interior Pages</span>
             </div>
 
+            {/* Dynamic Custom Footers from Admin */}
+            {systemTemplates.filter(st => st.is_active && st.type === 'footer').map((tmpl) => {
+              const footerElements = tmpl.pages_data?.[0]?.elements || [];
+              const footerObj = {
+                id: `sys-ftr-${tmpl.id}`,
+                name: tmpl.name,
+                description: tmpl.description || tmpl.category,
+                type: 'footer' as const,
+                height: 75.6,
+                previewText: tmpl.name,
+                elements: footerElements
+              };
+
+              return (
+                <div
+                  key={`sys-ftr-${tmpl.id}`}
+                  onClick={() => {
+                    applyFooterTemplate(footerObj);
+                    triggerFeedback(`sys-ftr-${tmpl.id}`);
+                  }}
+                  className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                    isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-lg bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                    {tmpl.name} (Custom Footer)
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                        <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      </div>
+                      <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description || tmpl.category}</p>
+                    </div>
+                    {appliedId === `sys-ftr-${tmpl.id}` ? (
+                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
+                        <Check size={11} /> Applied
+                      </span>
+                    ) : (
+                      <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* Built-in Constants Footers */}
             {FOOTER_TEMPLATES.map((tmpl) => (
               <div
                 key={tmpl.id}
@@ -254,30 +414,68 @@ const TemplatesPanel: React.FC = () => {
                 </p>
               </div>
             ) : (
-              COVER_TEMPLATES.map((tmpl) => (
-                <div
-                  key={tmpl.id}
-                  onClick={() => {
-                    applyCoverTemplate(currentPageIndex, tmpl);
-                    triggerFeedback(tmpl.id);
-                  }}
-                  className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
-                    isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1.5">
-                    <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                    {appliedId === tmpl.id ? (
-                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
-                        <Check size={10} /> Applied
-                      </span>
-                    ) : (
-                      <BookOpen size={13} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
-                    )}
+              <>
+                {/* Dynamic Admin Templates */}
+                {systemTemplates.filter(st => st.is_active && (st.type === 'cover' || st.type === 'full_catalog')).map((tmpl) => (
+                  <div
+                    key={`sys-${tmpl.id}`}
+                    onClick={() => {
+                      const pageElements = tmpl.pages_data?.[0]?.elements || [];
+                      applyCoverTemplate(currentPageIndex, {
+                        id: `sys-${tmpl.id}`,
+                        name: tmpl.name,
+                        description: tmpl.description || tmpl.category,
+                        elements: pageElements
+                      });
+                      triggerFeedback(`sys-${tmpl.id}`);
+                    }}
+                    className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                      isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-indigo-600" />
+                        <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      </div>
+                      {appliedId === `sys-${tmpl.id}` ? (
+                        <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                          <Check size={10} /> Applied
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
+                      )}
+                    </div>
+                    <p className="text-[9px] text-slate-400 leading-normal">{tmpl.description || tmpl.category}</p>
                   </div>
-                  <p className="text-[9px] text-slate-400 leading-normal">{tmpl.description}</p>
-                </div>
-              ))
+                ))}
+
+                {/* Built-in Constants Templates */}
+                {COVER_TEMPLATES.map((tmpl) => (
+                  <div
+                    key={tmpl.id}
+                    onClick={() => {
+                      applyCoverTemplate(currentPageIndex, tmpl);
+                      triggerFeedback(tmpl.id);
+                    }}
+                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                      isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1.5">
+                      <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                      {appliedId === tmpl.id ? (
+                        <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                          <Check size={10} /> Applied
+                        </span>
+                      ) : (
+                        <BookOpen size={13} className="text-slate-400 group-hover:text-indigo-600 transition-colors" />
+                      )}
+                    </div>
+                    <p className="text-[9px] text-slate-400 leading-normal">{tmpl.description}</p>
+                  </div>
+                ))}
+              </>
             )}
           </div>
         )}

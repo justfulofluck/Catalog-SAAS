@@ -102,7 +102,7 @@ const MediaLibraryView: React.FC = () => {
             onClick={handleUploadClick}
             className="px-6 py-2.5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
           >
-            <Upload size={16} /> Upload Product
+            <Upload size={16} /> Upload Media
           </button>
         </div>
       </div>
@@ -113,7 +113,7 @@ const MediaLibraryView: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={18} />
           <input
             type="text"
-            placeholder="Search products by name..."
+            placeholder="Search media by name..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
@@ -151,7 +151,13 @@ const MediaLibraryView: React.FC = () => {
               <Images size={40} />
             </div>
             <h3 className="text-lg font-black text-slate-800 dark:text-white">No images found</h3>
-            <p className="text-sm text-slate-400 dark:text-slate-500 font-medium mt-1">Your Media is currently empty.</p>
+            <p className="text-sm text-slate-400 dark:text-slate-500 font-medium mt-1 mb-6">Your Media library is currently empty.</p>
+            <button
+              onClick={handleUploadClick}
+              className="px-6 py-3 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 transition-all active:scale-95 flex items-center gap-2"
+            >
+              <Upload size={16} /> Upload Images Now
+            </button>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">

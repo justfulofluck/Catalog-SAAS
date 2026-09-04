@@ -3,10 +3,12 @@ import {
     Bold, Italic, Underline,
     Minus, Plus,
     AlignLeft, AlignCenter, AlignRight,
-    ChevronDown,
+    ChevronDown, ChevronUp,
     Search, Sliders,
     Wand2,
     GripVertical,
+    Layers, ArrowUpToLine, ArrowDownToLine,
+    Trash2
 } from 'lucide-react';
 import { CanvasElement } from '../../types';
 import { CATEGORIZED_FONTS } from '../../constants';
@@ -26,9 +28,14 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
     const setIsPropertyPanelOpen = useStore(state => state.setIsPropertyPanelOpen);
     const setEditorTab = useStore(state => state.setEditorTab);
     const setSidebarExpanded = useStore(state => state.setSidebarExpanded);
+    const reorderElement = useStore(state => state.reorderElement);
+    const removeElement = useStore(state => state.removeElement);
+    const setSelectedElementIds = useStore(state => state.setSelectedElementIds);
+    const currentPageIndex = useStore(state => state.currentPageIndex);
     const [isFontMenuOpen, setIsFontMenuOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isColorMenuOpen, setIsColorMenuOpen] = useState(false);
+    const [isLayerMenuOpen, setIsLayerMenuOpen] = useState(false);
     const [fontSearch, setFontSearch] = useState('');
     const dragOffsetRef = useRef({ x: 0, y: 0 });
     const toolbarRef = useRef<HTMLDivElement>(null);
@@ -37,6 +44,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
     const fontMenuRef = useRef<HTMLDivElement>(null);
     const settingsRef = useRef<HTMLDivElement>(null);
     const colorMenuRef = useRef<HTMLDivElement>(null);
+    const layerMenuRef = useRef<HTMLDivElement>(null);
     const fontScrollRef = useRef<HTMLDivElement>(null);
 
     const font = element.fontFamily || 'Inter';
@@ -83,10 +91,11 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
             if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) setIsFontMenuOpen(false);
             if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setIsSettingsOpen(false);
             if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as Node)) setIsColorMenuOpen(false);
+            if (layerMenuRef.current && !layerMenuRef.current.contains(e.target as Node)) setIsLayerMenuOpen(false);
         };
-        if (isFontMenuOpen || isSettingsOpen || isColorMenuOpen) document.addEventListener('mousedown', handler);
+        if (isFontMenuOpen || isSettingsOpen || isColorMenuOpen || isLayerMenuOpen) document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
-    }, [isFontMenuOpen, isSettingsOpen, isColorMenuOpen]);
+    }, [isFontMenuOpen, isSettingsOpen, isColorMenuOpen, isLayerMenuOpen]);
 
     // Native wheel listener to stop propagation to EditorCanvas container
     useEffect(() => {
@@ -94,17 +103,20 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
         const fontEl = fontScrollRef.current;
         const settingsEl = settingsRef.current;
         const colorEl = colorMenuRef.current;
+        const layerEl = layerMenuRef.current;
 
         if (isFontMenuOpen && fontEl) fontEl.addEventListener('wheel', stopProp, { passive: false });
         if (isSettingsOpen && settingsEl) settingsEl.addEventListener('wheel', stopProp, { passive: false });
         if (isColorMenuOpen && colorEl) colorEl.addEventListener('wheel', stopProp, { passive: false });
+        if (isLayerMenuOpen && layerEl) layerEl.addEventListener('wheel', stopProp, { passive: false });
 
         return () => {
             if (fontEl) fontEl.removeEventListener('wheel', stopProp);
             if (settingsEl) settingsEl.removeEventListener('wheel', stopProp);
             if (colorEl) colorEl.removeEventListener('wheel', stopProp);
+            if (layerEl) layerEl.removeEventListener('wheel', stopProp);
         };
-    }, [isFontMenuOpen, isSettingsOpen, isColorMenuOpen]);
+    }, [isFontMenuOpen, isSettingsOpen, isColorMenuOpen, isLayerMenuOpen]);
 
     const handleAction = (type: 'bold' | 'italic' | 'underline' | 'color', value?: string) => {
         const sel = window.getSelection();
@@ -432,10 +444,105 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         onChange={e => onUpdate({ opacity: parseFloat(e.target.value) })}
                                         className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
                                     />
-                                </div>                            </div>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
+
+                <Divider />
+
+                {/* Layer Control Menu */}
+                <div className="relative" ref={layerMenuRef}>
+                    <button
+                        onClick={() => setIsLayerMenuOpen(!isLayerMenuOpen)}
+                        onMouseDown={preventFocusSteal}
+                        className={`p-2 rounded-full transition-all active:scale-95 ${isLayerMenuOpen ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                        title="Layer Position (Forward/Back)"
+                    >
+                        <Layers size={16} />
+                    </button>
+                    {isLayerMenuOpen && (
+                        <div
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} right-0 w-[200px] bg-white border border-slate-200/80 rounded-2xl shadow-2xl p-2 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 z-50`}
+                        >
+                            <div className="space-y-1">
+                                <div className="px-3 py-1.5 border-b border-slate-100">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Layer Order</span>
+                                </div>
+                                <button
+                                    onClick={() => {
+                                        reorderElement(currentPageIndex, element.id, 'front');
+                                        setIsLayerMenuOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                >
+                                    <span>Bring to Front</span>
+                                    <ArrowUpToLine size={14} className="text-slate-400" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        reorderElement(currentPageIndex, element.id, 'forward');
+                                        setIsLayerMenuOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                >
+                                    <span>Bring Forward</span>
+                                    <ChevronUp size={14} className="text-slate-400" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        reorderElement(currentPageIndex, element.id, 'backward');
+                                        setIsLayerMenuOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                >
+                                    <span>Send Backward</span>
+                                    <ChevronDown size={14} className="text-slate-400" />
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        reorderElement(currentPageIndex, element.id, 'back');
+                                        setIsLayerMenuOpen(false);
+                                    }}
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                >
+                                    <span>Send to Back</span>
+                                    <ArrowDownToLine size={14} className="text-slate-400" />
+                                </button>
+
+                                <div className="pt-1 border-t border-slate-100">
+                                    <button
+                                        onClick={() => {
+                                            setSidebarExpanded(true);
+                                            setEditorTab('layers');
+                                            setIsLayerMenuOpen(false);
+                                        }}
+                                        className="w-full px-3 py-2 text-left text-[11px] font-black text-indigo-600 hover:bg-indigo-50 rounded-xl flex items-center gap-2 transition-colors uppercase tracking-wider"
+                                    >
+                                        <Layers size={13} />
+                                        <span>Open Scene Tree</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <Divider />
+
+                {/* Delete Button */}
+                <button
+                    onClick={() => {
+                        removeElement(currentPageIndex, element.id);
+                        setSelectedElementIds([]);
+                    }}
+                    onMouseDown={preventFocusSteal}
+                    className="p-2 rounded-full hover:bg-red-50 text-slate-500 hover:text-red-600 transition-all active:scale-95"
+                    title="Delete Element (Del)"
+                >
+                    <Trash2 size={16} />
+                </button>
             </div>
 
         </div>

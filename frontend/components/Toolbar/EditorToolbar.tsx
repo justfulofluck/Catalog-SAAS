@@ -1,29 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   ChevronRight,
-  Share2,
-  Download,
-  MoreHorizontal,
   Plus,
   Type,
   Square,
   Circle,
   Triangle,
   Star,
-  Image as ImageIcon,
-  ZoomIn,
-  ZoomOut,
   LayoutDashboard,
   Save,
-  Loader2,
-  Maximize,
   TextCursor,
   Heading1,
   Minus,
   RotateCcw,
   MessageSquare,
-  Settings2,
-  Zap,
   Undo2,
   Redo2,
   ChevronDown,
@@ -39,24 +29,23 @@ import {
   RectangleHorizontal,
   Cloud,
   Flag,
+  Table as TableIcon,
+  Plus as PlusIcon
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { jsPDF } from 'jspdf';
-import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { ShapeType } from '../../types';
 import SceneTreePanel from './SceneTreePanel';
-
 
 const EditorToolbar: React.FC = () => {
   const {
     zoom, setZoom, addElement, currentPageIndex, catalog, setView, user,
-    isPropertyPanelOpen, setIsPropertyPanelOpen,
-    undo, redo, undoStack, redoStack, uiTheme, toggleUiTheme,
+    undo, redo, undoStack, redoStack, uiTheme,
     saveCatalog, activeTool, setActiveTool, isSceneTreeOpen, setIsSceneTreeOpen,
-    setCatalogOrientation
+    editingSystemTemplate,
+    saveActiveTemplateFromEditor
   } = useStore();
   const [isCommiting, setIsCommiting] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
   const [isTextMenuOpen, setIsTextMenuOpen] = useState(false);
   const shapeMenuRef = useRef<HTMLDivElement>(null);
@@ -142,7 +131,37 @@ const EditorToolbar: React.FC = () => {
       text: 'Add your review notes here...',
       fill: '#fef08a',
       author: user?.avatar || 'JD',
-      zIndex: 100 // Always on top
+      zIndex: 100
+    });
+  };
+
+  const handleAddTable = () => {
+    addElement(currentPageIndex, {
+      id: `table-${Date.now()}`,
+      type: 'table',
+      x: 350,
+      y: 120,
+      width: 380,
+      height: 120,
+      rotation: 0,
+      opacity: 1,
+      zIndex: 20,
+      tableData: {
+        headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'PRICE', 'PACKING'],
+        rows: [
+          ['VT-2612', '12W V-TAC COB WHITE BODY', '75MM', 'W, W.W, N.W', '', '20 PCS'],
+          ['VT-2612', '12W VTAC 3IN1 ON SWITCH', '75MM', 'W, W.W, N.W', ',000', '20 PCS'],
+          ['VT-2612', '12W V-TAC COB DIMMABLE', '75MM', 'W, W.W, N.W', ',500', '20 PCS']
+        ],
+        headerBg: '#002b36',
+        headerTextColor: '#ffffff',
+        alternateRowBg: '#f8fafc',
+        rowBg: '#ffffff',
+        borderColor: '#334155',
+        fontSize: 8.5,
+        headerFontSize: 9.5,
+        cellPadding: 5
+      }
     });
   };
 
@@ -157,148 +176,51 @@ const EditorToolbar: React.FC = () => {
       setTimeout(() => toast.remove(), 2500);
     } catch (error) {
       console.error('Failed to save catalog', error);
-      // Optionally show an error toast
     } finally {
       setIsCommiting(false);
-    }
-  };
-
-  const handleExportPDF = async () => {
-    setIsExporting(true);
-    try {
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'pt',
-        format: [PAGE_WIDTH, PAGE_HEIGHT]
-      });
-
-      const canvas = document.querySelector('canvas');
-      if (canvas) {
-        for (let i = 0; i < catalog.pages.length; i++) {
-          if (i > 0) pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT], 'portrait');
-          const imgData = canvas.toDataURL('image/jpeg', 1.0);
-          pdf.addImage(imgData, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
-        }
-      }
-
-      pdf.save(`${catalog.name || 'Catalog'}.pdf`);
-    } catch (error) {
-      console.error('PDF Export Failed', error);
-    } finally {
-      setIsExporting(false);
     }
   };
 
   const isDark = uiTheme === 'dark';
 
   return (
-    <header className={`h-14 border-b flex items-center justify-between px-6 shrink-0 z-50 font-sans ${isDark
-      ? 'border-slate-700 bg-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.2)]'
-      : 'border-slate-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]'
-      }`}>
-      {/* Breadcrumbs */}
+    <header className={`h-14 border-b flex items-center justify-between px-6 shrink-0 z-50 font-sans ${isDark ? 'border-slate-700 bg-slate-900 shadow-[0_1px_2px_rgba(0,0,0,0.2)]' : 'border-slate-200 bg-white shadow-[0_1px_2px_rgba(0,0,0,0.03)]'}`}>
       <div className="flex items-center gap-3">
         <button
-          onClick={() => setView('dashboard')}
-          className={`flex items-center gap-2 p-2 rounded-xl transition-all group ${isDark
-            ? 'hover:bg-slate-800 text-slate-400 hover:text-white'
-            : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'
-            }`}
+          onClick={() => editingSystemTemplate ? useStore.setState({ editingSystemTemplate: null, currentView: 'admin-dashboard' }) : setView('dashboard')}
+          className={`flex items-center gap-2 p-2 rounded-xl transition-all group ${isDark ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-600'}`}
         >
-          <LayoutDashboard size={18} className="group-hover:scale-110 transition-transform" />
+          <LayoutDashboard size={18} />
         </button>
         <ChevronRight size={14} className={isDark ? 'text-slate-600' : 'text-slate-300'} />
         <div className="flex flex-col">
-          <span className={`text-[9px] font-black uppercase tracking-widest leading-none mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Active Publication</span>
-          <div className="flex items-center gap-2">
-            <span className={`font-black text-xs uppercase tracking-tight truncate max-w-[150px] ${isDark ? 'text-white' : 'text-slate-800'}`}>
-              {catalog.name || 'Untitled Project'}
-            </span>
-            <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded border ${isDark
-              ? 'text-slate-400 bg-slate-800 border-slate-700'
-              : 'text-slate-500 bg-slate-100 border-slate-200'
-              }`}>Page {currentPageIndex + 1}</span>
-          </div>
+          <span className={`text-[9px] font-black uppercase tracking-widest leading-none mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+            {editingSystemTemplate ? 'Global Template Studio' : 'Active Publication'}
+          </span>
+          <span className={`font-black text-xs uppercase tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+            {catalog.name || 'Untitled Project'}
+          </span>
         </div>
       </div>
 
-      {/* Floating Panels */}
       <SceneTreePanel />
 
-      {/* Center Tools */}
       <div className="flex items-center gap-6">
-        <div className={`flex items-center p-1 rounded-2xl border shadow-inner ${isDark
-          ? 'bg-slate-800 border-slate-700'
-          : 'bg-slate-50 border-slate-200'
-          }`}>
-
-          {/* Tool Toggle (Select / Hand) */}
+        <div className={`flex items-center p-1 rounded-2xl border shadow-inner ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
           <div className={`flex gap-1 pr-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
-            <button
-              onClick={() => setActiveTool('select')}
-              className={`p-2 rounded-xl transition-all ${activeTool === 'select'
-                ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm')
-                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-700')}`}
-              title="Select Tool"
-            >
-              <MousePointer2 size={18} />
-            </button>
-            <button
-              onClick={() => setActiveTool('hand')}
-              className={`p-2 rounded-xl transition-all ${activeTool === 'hand'
-                ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm')
-                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-700')}`}
-              title="Hand Tool (Pan)"
-            >
-              <Hand size={18} />
-            </button>
-            <button
-              onClick={() => setIsSceneTreeOpen(!isSceneTreeOpen)}
-              className={`p-2 rounded-xl transition-all group ${isSceneTreeOpen
-                ? (isDark ? 'bg-slate-700 text-white shadow-sm' : 'bg-white text-indigo-600 shadow-sm')
-                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-700')}`}
-              title="Toggle Layers"
-            >
-              <Layers size={18} />
-            </button>
+            <button onClick={() => setActiveTool('select')} className={`p-2 rounded-xl transition-all ${activeTool === 'select' ? (isDark ? 'bg-slate-700 text-white' : 'bg-white text-indigo-600') : (isDark ? 'text-slate-400' : 'text-slate-500')}`}><MousePointer2 size={18} /></button>
+            <button onClick={() => setActiveTool('hand')} className={`p-2 rounded-xl transition-all ${activeTool === 'hand' ? (isDark ? 'bg-slate-700 text-white' : 'bg-white text-indigo-600') : (isDark ? 'text-slate-400' : 'text-slate-500')}`}><Hand size={18} /></button>
+            <button onClick={() => setIsSceneTreeOpen(!isSceneTreeOpen)} className={`p-2 rounded-xl transition-all ${isSceneTreeOpen ? (isDark ? 'bg-slate-700 text-white' : 'bg-white text-indigo-600') : (isDark ? 'text-slate-400' : 'text-slate-500')}`}><Layers size={18} /></button>
           </div>
 
           <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
             <div className="relative" ref={textMenuRef}>
-              <button
-                onClick={() => setIsTextMenuOpen(!isTextMenuOpen)}
-                className={`p-2 hover:shadow-sm rounded-xl transition-all flex items-center gap-0.5 ${isTextMenuOpen
-                  ? (isDark ? 'bg-slate-700 shadow-sm text-white' : 'bg-white shadow-sm text-slate-700')
-                  : (isDark ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-700')
-                  }`}
-                title="Add Text"
-              >
-                <Type size={18} />
-              </button>
-
+              <button onClick={() => setIsTextMenuOpen(!isTextMenuOpen)} className={`p-2 rounded-xl ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Type size={18} /></button>
               {isTextMenuOpen && (
-                <div className={`absolute top-full left-0 mt-2 w-56 border shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                  <div className={`px-4 py-2 border-b mb-1 ${isDark ? 'border-slate-700' : 'border-slate-50'}`}>
-                    <p className={`text-[9px] font-black uppercase tracking-widest ${isDark ? 'text-slate-500' : 'text-slate-300'}`}>Insert Text</p>
-                  </div>
-                  <button onClick={() => handleAddText('heading')} className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 text-slate-400 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
-                      <Heading1 size={16} />
-                    </div>
-                    <span className={`text-sm font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Headings</span>
-                  </button>
-                  <button onClick={() => handleAddText('subheading')} className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 text-slate-400 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
-                      <Heading1 size={14} />
-                    </div>
-                    <span className={`text-sm font-bold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>Sub-headings</span>
-                  </button>
-                  <button onClick={() => handleAddText('body')} className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left group ${isDark ? 'hover:bg-slate-700' : 'hover:bg-slate-50'}`}>
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${isDark ? 'bg-slate-700 text-slate-400 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600'}`}>
-                      <TextCursor size={14} />
-                    </div>
-                    <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Body text</span>
-                  </button>
+                <div className={`absolute top-full left-0 mt-2 w-56 border rounded-2xl z-[100] py-2 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  <button onClick={() => handleAddText('heading')} className="w-full px-4 py-3 flex items-center gap-3"><Heading1 size={16} /> <span className="text-sm">Headings</span></button>
+                  <button onClick={() => handleAddText('subheading')} className="w-full px-4 py-3 flex items-center gap-3"><Heading1 size={14} /> <span className="text-sm">Sub-headings</span></button>
+                  <button onClick={() => handleAddText('body')} className="w-full px-4 py-3 flex items-center gap-3"><TextCursor size={14} /> <span className="text-sm">Body text</span></button>
                 </div>
               )}
             </div>
@@ -306,124 +228,45 @@ const EditorToolbar: React.FC = () => {
 
           <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
             <div className="relative" ref={shapeMenuRef}>
-              <button
-                onClick={() => setIsShapeMenuOpen(!isShapeMenuOpen)}
-                className={`p-2 hover:shadow-sm rounded-xl transition-all flex items-center gap-0.5 ${isShapeMenuOpen
-                  ? (isDark ? 'bg-slate-700 shadow-sm text-white' : 'bg-white shadow-sm text-slate-700')
-                  : (isDark ? 'text-slate-400 hover:bg-slate-700 hover:text-white' : 'text-slate-500 hover:bg-white hover:text-slate-700')
-                  }`}
-                title="Add Shape"
-              >
-                <Square size={18} />
-                <ChevronDown size={12} className={`transition-transform duration-200 ${isShapeMenuOpen ? 'rotate-180' : ''}`} />
-              </button>
-
+              <button onClick={() => setIsShapeMenuOpen(!isShapeMenuOpen)} className={`p-2 rounded-xl ${isDark ? 'text-slate-400' : 'text-slate-500'}`}><Square size={18} /><ChevronDown size={12} /></button>
               {isShapeMenuOpen && (
-                <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 border shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] p-3 overflow-hidden animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`} style={{ width: 220 }}>
+                <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 border rounded-2xl z-[100] p-3 w-[220px] ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
                   <div className="grid grid-cols-5 gap-1.5">
-                    {([
-                      { type: 'line' as ShapeType, icon: <Minus size={18} /> },
-                      { type: 'rect' as ShapeType, icon: <Square size={18} /> },
-                      { type: 'roundedRect' as ShapeType, icon: <RectangleHorizontal size={18} /> },
-                      { type: 'circle' as ShapeType, icon: <Circle size={18} /> },
-                      { type: 'triangle' as ShapeType, icon: <Triangle size={18} /> },
-                      { type: 'rightTriangle' as ShapeType, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="4 20 4 4 20 20" /></svg> },
-                      { type: 'diamond' as ShapeType, icon: <Diamond size={18} /> },
-                      { type: 'pentagon' as ShapeType, icon: <Pentagon size={18} /> },
-                      { type: 'hexagon' as ShapeType, icon: <Hexagon size={18} /> },
-                      { type: 'octagon' as ShapeType, icon: <Octagon size={18} /> },
-                      { type: 'arrow' as ShapeType, icon: <ArrowRight size={18} /> },
-                      { type: 'arrow4' as ShapeType, icon: <MoveHorizontal size={18} /> },
-                      { type: 'star' as ShapeType, icon: <Star size={18} /> },
-                      { type: 'parallelogram' as ShapeType, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="6 18 2 6 18 6 22 18" /></svg> },
-                      { type: 'cross' as ShapeType, icon: <Plus size={18} /> },
-                      { type: 'cloud' as ShapeType, icon: <Cloud size={18} /> },
-                      { type: 'wave' as ShapeType, icon: <Flag size={18} /> },
-                      { type: 'pill' as ShapeType, icon: <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="6" width="20" height="12" rx="6" /></svg> },
-                    ]).map(({ type, icon }) => (
-                      <button
-                        key={type}
-                        onClick={() => handleAddShape(type)}
-                        className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${isDark
-                          ? 'text-slate-400 hover:bg-slate-700 hover:text-white'
-                          : 'text-slate-500 hover:bg-indigo-50 hover:text-indigo-600'
-                          }`}
-                        title={type}
-                      >
-                        {icon}
-                      </button>
+                    {[ { type: 'line', icon: <Minus size={18} /> }, { type: 'rect', icon: <Square size={18} /> }, { type: 'roundedRect', icon: <RectangleHorizontal size={18} /> }, { type: 'circle', icon: <Circle size={18} /> }, { type: 'triangle', icon: <Triangle size={18} /> }, { type: 'diamond', icon: <Diamond size={18} /> }, { type: 'pentagon', icon: <Pentagon size={18} /> }, { type: 'hexagon', icon: <Hexagon size={18} /> }, { type: 'octagon', icon: <Octagon size={18} /> }, { type: 'arrow', icon: <ArrowRight size={18} /> }, { type: 'arrow4', icon: <MoveHorizontal size={18} /> }, { type: 'star', icon: <Star size={18} /> }, { type: 'cloud', icon: <Cloud size={18} /> }, { type: 'wave', icon: <Flag size={18} /> }, { type: 'cross', icon: <PlusIcon size={18} /> } ].map(({ type, icon }) => (
+                      <button key={type} onClick={() => handleAddShape(type as ShapeType)} className="w-9 h-9 rounded-lg flex items-center justify-center text-slate-500 hover:bg-indigo-50 hover:text-indigo-600">{icon}</button>
                     ))}
                   </div>
                 </div>
               )}
             </div>
-            <button onClick={handleAddComment} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark
-              ? 'hover:bg-slate-700 text-amber-500 hover:text-amber-400'
-              : 'hover:bg-white text-amber-500 hover:text-amber-600'
-              }`} title="Add Annotation"><MessageSquare size={18} /></button>
+            <button onClick={handleAddTable} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl" title="Insert Spec / Variants Table"><TableIcon size={18} /></button>
+            <button onClick={handleAddComment} className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl" title="Add Annotation"><MessageSquare size={18} /></button>
           </div>
 
-
-
           <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-slate-700' : 'border-slate-200'}`}>
-            <button
-              onClick={undo}
-              disabled={undoStack.length === 0}
-              className={`p-2 hover:shadow-sm rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent ${isDark
-                ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-                : 'hover:bg-white text-slate-500 hover:text-slate-700'
-                }`}
-              title="Undo (Ctrl+Z)"
-            >
-              <Undo2 size={18} />
-            </button>
-            <button
-              onClick={redo}
-              disabled={redoStack.length === 0}
-              className={`p-2 hover:shadow-sm rounded-xl transition-all disabled:opacity-30 disabled:hover:bg-transparent ${isDark
-                ? 'hover:bg-slate-700 text-slate-400 hover:text-white'
-                : 'hover:bg-white text-slate-500 hover:text-slate-700'
-                }`}
-              title="Redo (Ctrl+Y / Ctrl+Shift+Z)"
-            >
-              <Redo2 size={18} />
-            </button>
+            <button onClick={undo} disabled={undoStack.length === 0} className="p-2 text-slate-400 disabled:opacity-30"><Undo2 size={18} /></button>
+            <button onClick={redo} disabled={redoStack.length === 0} className="p-2 text-slate-400 disabled:opacity-30"><Redo2 size={18} /></button>
           </div>
 
           <div className="flex items-center gap-1 pl-3">
-            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark ? 'text-slate-400' : 'text-slate-500'}`} title="Zoom Out"><Minus size={18} /></button>
-            <button onClick={() => setZoom(0.8)} className={`px-3 py-1.5 hover:shadow-sm rounded-xl transition-all text-[10px] font-black font-mono w-16 text-center ${isDark
-              ? 'hover:bg-slate-700 text-white'
-              : 'hover:bg-white text-slate-700'
-              }`} title="Reset Zoom (80%)">{Math.round(zoom * 100)}%</button>
-            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className={`p-2 hover:shadow-sm rounded-xl transition-all ${isDark ? 'text-slate-400' : 'text-slate-500'}`} title="Zoom In"><Plus size={18} /></button>
-            <button onClick={() => setZoom(1.0)} className={`p-2 hover:shadow-sm rounded-xl transition-all ml-1 ${isDark
-              ? 'text-slate-500 hover:bg-slate-700 hover:text-slate-300'
-              : 'text-slate-400 hover:bg-white hover:text-slate-600'
-              }`} title="Fit to Width (100%)"><RotateCcw size={16} /></button>
+            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className="p-2"><Minus size={18} /></button>
+            <button className="px-3 py-1.5 text-[10px] font-black">{Math.round(zoom * 100)}%</button>
+            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className="p-2"><Plus size={18} /></button>
+            <button onClick={() => setZoom(1.0)} className="p-2"><RotateCcw size={16} /></button>
           </div>
         </div>
-
-        <div className={`w-px h-6 ${isDark ? 'bg-slate-700' : 'bg-slate-200'}`} />
       </div>
 
-      {/* Action Buttons */}
       <div className="flex items-center gap-3">
-        <div className="hidden lg:flex items-center gap-2 mr-2 px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 animate-in fade-in zoom-in">
-          <Zap size={14} className="animate-pulse" />
-          <span className="text-[9px] font-black uppercase tracking-[0.2em]">Live Sync</span>
-        </div>
-
-        <button
-          onClick={handleSave}
-          className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-transparent flex items-center gap-2 ${isDark
-            ? 'text-slate-400 hover:bg-slate-800 hover:border-slate-700'
-            : 'text-slate-500 hover:bg-slate-100 hover:border-slate-200'
-            }`}
-        >
-          <Save size={14} />
-          {isCommiting ? 'Saving...' : 'Commit'}
-        </button>
+        {editingSystemTemplate ? (
+          <button onClick={async () => { setIsSavingTemplate(true); await saveActiveTemplateFromEditor(); setIsSavingTemplate(false); }} className="px-4 py-2 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase">
+            {isSavingTemplate ? 'Saving...' : 'Save Global Template'}
+          </button>
+        ) : (
+          <button onClick={handleSave} className="px-4 py-2 text-[10px] font-black uppercase flex items-center gap-2">
+            <Save size={14} /> {isCommiting ? 'Saving...' : 'Commit'}
+          </button>
+        )}
       </div>
     </header>
   );

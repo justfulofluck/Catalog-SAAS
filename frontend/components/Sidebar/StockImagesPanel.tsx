@@ -111,8 +111,8 @@ const StockImagesPanel: React.FC = () => {
     };
 
     return (
-        <div className={`flex flex-col h-full border-r w-[320px] shrink-0 z-10 shadow-[20px_0_60px_rgba(0,0,0,0.05)] animate-in slide-in-from-left-4 duration-500 font-sans transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-            <div className={`p-6 border-b flex items-center justify-between transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+        <div className={`flex flex-col h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-500 font-sans transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a]' : 'bg-white'}`}>
+            <div className={`p-4 border-b flex items-center justify-between transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
                 <div>
                     <h3 className="text-[10px] font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2 mb-1">
                         <ImageIcon size={14} className={uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'} />

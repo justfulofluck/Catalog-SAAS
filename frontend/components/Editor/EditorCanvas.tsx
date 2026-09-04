@@ -5,6 +5,7 @@ import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import FabricStage from './FabricStage';
 import { FloatingTextToolbar } from '../Toolbar/FloatingTextToolbar';
 import FloatingToolbar from '../Toolbar/FloatingToolbar';
+import TableEditorModal from './TableEditorModal';
 import { saveSelection, restoreSelection } from '../../utils/textStyleSelection';
 import { CatalogPage, PageType } from '../../types';
 
@@ -18,6 +19,7 @@ const EditorCanvas: React.FC = () => {
     undo, redo, groupSelected, ungroupSelected, toggleLock,
     addElement, addMedia, draggingItem, setDraggingItem,
     pushHistory, uiTheme, activeTool, setIsPropertyPanelOpen,
+    isTableEditorOpen, editingTableElementId, setIsTableEditorOpen,
     addPage, setCurrentPageIndex, guides, activeDragPosition,
     isProjectSettingsOpen, setIsProjectSettingsOpen, updateProjectSettings,
     setSelectedPageIndex, setSelectedCategoryId,
@@ -122,6 +124,67 @@ const EditorCanvas: React.FC = () => {
     return () => window.removeEventListener('catalog:scrollToPage', handler);
   }, [scrollToPageIndex]);
 
+  // Listen for double-click text editing
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { id, pageIndex } = (e as CustomEvent).detail;
+      if (pageIndex !== undefined) setCurrentPageIndex(pageIndex);
+      const page = catalog.pages[pageIndex ?? currentPageIndex];
+      const el = page?.elements.find(item => item.id === id) ||
+        catalog.headerElements?.find(item => item.id === id) ||
+        catalog.footerElements?.find(item => item.id === id);
+      if (el) {
+        setEditingId(id);
+        setEditConfig({
+          id: el.id,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height,
+          rotation: el.rotation || 0,
+          color: el.fill || '#000000',
+          fontSize: el.fontSize,
+          fontWeight: el.fontWeight || 'normal',
+          fontStyle: el.fontStyle || 'normal',
+          fontFamily: el.fontFamily,
+          align: el.textAlign || 'left',
+          text: el.text || '',
+          textDecoration: el.textDecoration || 'none',
+          lineHeight: el.lineHeight || 1.2,
+          letterSpacing: el.letterSpacing || 0,
+          opacity: el.opacity ?? 1,
+          effectStyle: el.effectStyle,
+          effectColor: el.effectColor,
+          effectColor2: el.effectColor2,
+          shadowBlur: el.shadowBlur,
+          shadowOpacity: el.shadowOpacity,
+          shadowOffsetX: el.shadowOffsetX,
+          shadowOffsetY: el.shadowOffsetY,
+          textStrokeWidth: el.textStrokeWidth,
+          effectSpread: el.effectSpread,
+          effectRoundness: el.effectRoundness
+        });
+      }
+    };
+    window.addEventListener('catalog:editText', handler);
+    return () => window.removeEventListener('catalog:editText', handler);
+  }, [catalog.pages, catalog.headerElements, catalog.footerElements, currentPageIndex, setCurrentPageIndex]);
+
+  // Listen for catalog:editTable event to open Table Editor Modal
+  useEffect(() => {
+    const handleEditTable = (e: any) => {
+      const { id, pageIndex } = e.detail || {};
+      if (pageIndex !== undefined && pageIndex !== currentPageIndex) {
+        setCurrentPageIndex(pageIndex);
+      }
+      if (id) {
+        setIsTableEditorOpen(true, id);
+      }
+    };
+    window.addEventListener('catalog:editTable', handleEditTable);
+    return () => window.removeEventListener('catalog:editTable', handleEditTable);
+  }, [currentPageIndex, setCurrentPageIndex, setIsTableEditorOpen]);
+
   const handleBatchUpdate = (updates: Partial<any>) => {
     if (editConfig?.id) {
       if (editConfig.id === 'header') updateProjectSettings({ headerText: updates.text });
@@ -173,8 +236,11 @@ const EditorCanvas: React.FC = () => {
     return () => clearTimeout(timerRef.current);
   }, []);
 
-  // Auto-migrate legacy header/footer text to elements once and cleanup pages
+  // Auto-migrate legacy header/footer text only if explicitly requested by tenant catalogs (not in Template Studio)
   useEffect(() => {
+    const { editingSystemTemplate } = useStore.getState();
+    if (editingSystemTemplate) return; // Never auto-inject default header/footer in Template Studio
+
     const headerElements = catalog.headerElements || [];
     const footerElements = catalog.footerElements || [];
     const headerNeeded = catalog.hasHeader && catalog.headerText && headerElements.length === 0 && !catalog.headerMigrated;
@@ -215,7 +281,7 @@ const EditorCanvas: React.FC = () => {
           height: (catalog.footerHeight || 0),
           fontSize: catalog.footerFontSize || 10,
           fontFamily: catalog.footerFontFamily || 'Inter',
-          fontWeight: catalog.footerFontWeight || 'normal',
+          fontWeight: 'normal',
           fontStyle: 'normal' as any,
           textAlign: 'center',
           fill: catalog.footerColor || '#64748b',
@@ -503,6 +569,16 @@ const EditorCanvas: React.FC = () => {
               updateElement(currentPageIndex, id, { textDecoration: el.textDecoration === 'underline' ? 'none' : 'underline' });
             }
           });
+        }
+        break;
+      case 'a':
+      case 'A':
+        if (isMod && currentPage?.elements) {
+          e.preventDefault();
+          const allUnlockedIds = currentPage.elements
+            .filter(el => !el.locked && el.visible !== false)
+            .map(el => el.id);
+          setSelectedElementIds(allUnlockedIds);
         }
         break;
       case 'Escape':
@@ -865,21 +941,22 @@ const EditorCanvas: React.FC = () => {
                     </div>
                   )}
 
-                  <FabricStage
-                    page={page}
-                    pageIdx={pageIdx}
-                    isActive={isActive}
-                    zoom={zoom}
-                    canvasBg={page.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff'}
-                    headerElements={(catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? catalog.headerElements : []}
-                    footerElements={(catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? (catalog.footerElements || []).map((el: any) => ({
-                      ...el,
-                      y: (el.y || 0) + (el.y < 200 ? PAGE_HEIGHT - (catalog.footerHeight || 38) : 0),
-                      text: el.type === 'text' && el.text?.includes('{{page}}')
-                        ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
-                        : el.text
-                    })) : []}
-                  />
+                    <FabricStage
+                      page={page}
+                      pageIdx={pageIdx}
+                      isActive={isActive}
+                      zoom={zoom}
+                      editingId={isActive ? editingId : null}
+                      canvasBg={page.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff'}
+                      headerElements={(catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? catalog.headerElements : []}
+                      footerElements={(catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? (catalog.footerElements || []).map((el: any) => ({
+                        ...el,
+                        y: (el.y || 0) + (el.y < 200 ? PAGE_HEIGHT - (catalog.footerHeight || 38) : 0),
+                        text: el.type === 'text' && el.text?.includes('{{page}}')
+                          ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
+                          : el.text
+                      })) : []}
+                    />
 
                   {/* Text editing overlay (active page only) */}
                   {isActive && editConfig && (
@@ -1172,6 +1249,14 @@ const EditorCanvas: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Table & Specifications Editor Modal */}
+      {isTableEditorOpen && (
+        <TableEditorModal
+          elementId={editingTableElementId}
+          onClose={() => setIsTableEditorOpen(false, null)}
+        />
+      )}
     </div>
   );
 };

@@ -12,6 +12,15 @@ const api = axios.create({
     xsrfHeaderName: 'X-CSRFToken',
 });
 
+// Request interceptor to attach Bearer token if available
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('cs_access_token');
+    if (token && !config.headers['Authorization']) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+});
+
 // Response interceptor to handle data extraction and token refresh
 api.interceptors.response.use(
     (response) => {
@@ -28,15 +37,16 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                await axios.post('/api/auth/token/refresh/', {}, {
+                const refreshRes: any = await axios.post('/api/auth/token/refresh/', {}, {
                     withCredentials: true
                 });
+                const newToken = refreshRes.data?.access || refreshRes.data?.access_token;
+                if (newToken) {
+                    localStorage.setItem('cs_access_token', newToken);
+                    originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                }
                 return api(originalRequest);
             } catch (refreshError) {
-                // Force logout if refresh also fails
-                if (typeof window !== 'undefined') {
-                    // window.location.href = '/';
-                }
                 return Promise.reject(refreshError);
             }
         }
@@ -112,6 +122,15 @@ export const mediaApi = {
 // Admin Assets API
 export const adminAssetsApi = {
     getAll: () => api.get<AdminAsset[]>('/admin-assets/'),
+};
+
+// System Templates API (Super Admin Template Studio)
+export const systemTemplatesApi = {
+    getAll: () => api.get<SystemTemplate[]>('/templates/'),
+    get: (id: string | number) => api.get<SystemTemplate>(`/templates/${id}/`),
+    create: (data: Partial<SystemTemplate>) => api.post<SystemTemplate>('/templates/', data),
+    update: (id: string | number, data: Partial<SystemTemplate>) => api.patch<SystemTemplate>(`/templates/${id}/`, data),
+    delete: (id: string | number) => api.delete(`/templates/${id}/`),
 };
 
 export default api;

@@ -1,8 +1,8 @@
 
 import { create } from 'zustand';
-import { authApi } from '../client';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription } from '../types';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate } from '../types';
 import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES } from '../constants';
+import { authApi, systemTemplatesApi } from '../client';
 
 interface User {
   id: string;
@@ -37,6 +37,8 @@ interface State {
   allSubscriptions: UserSubscription[];
   mediaItems: MediaItem[];
   adminAssets: AdminAsset[];
+  systemTemplates: SystemTemplate[];
+  editingSystemTemplate: SystemTemplate | null;
   activeCategoryId: string | null;
   editingProductId: string | null;
   editingCategoryId: string | null;
@@ -57,6 +59,8 @@ interface State {
   selectedElementIds: string[];
   hoveredElementId: string | null;
   isPropertyPanelOpen: boolean;
+  isTableEditorOpen: boolean;
+  editingTableElementId: string | null;
   catalogSetupName: string;
 
   viewingCatalogId: string | null;
@@ -103,6 +107,14 @@ interface State {
 
   fetchUsers: () => Promise<void>;
 
+  // System Templates Actions (Super Admin Template Studio)
+  fetchSystemTemplates: () => Promise<void>;
+  createSystemTemplate: (template: Partial<SystemTemplate>) => Promise<SystemTemplate | null>;
+  updateSystemTemplate: (id: string | number, template: Partial<SystemTemplate>) => Promise<SystemTemplate | null>;
+  deleteSystemTemplate: (id: string | number) => Promise<boolean>;
+  openTemplateInVisualEditor: (template?: SystemTemplate | null) => void;
+  saveActiveTemplateFromEditor: (options?: { name?: string; category?: string; type?: any }) => Promise<boolean>;
+
   addProduct: (product: Product) => Promise<void>;
   updateProduct: (id: string, updates: Partial<Product>) => Promise<void>;
   removeProduct: (id: string) => Promise<void>;
@@ -125,8 +137,10 @@ interface State {
   setEditingCategoryId: (id: string | null) => void;
 
   setSelectedElementIds: (ids: string[]) => void;
+  setSelectedElements: (ids: string[]) => void;
   setHoveredElementId: (id: string | null) => void;
   setIsPropertyPanelOpen: (isOpen: boolean) => void;
+  setIsTableEditorOpen: (isOpen: boolean, elementId?: string | null) => void;
   setCurrentPageIndex: (index: number) => void;
   setZoom: (zoom: number) => void;
   setCatalogSetupName: (name: string) => void;
@@ -191,7 +205,7 @@ interface State {
     name: string,
     template: GridTemplate,
     categoryIds: string[],
-    options?: { includeCover: boolean; includeIndex: boolean; includeCategoryCovers: boolean }
+    options?: { includeCover: boolean; includeIndex: boolean; includeCategoryCovers: boolean; selectedTemplateId?: string }
   ) => void;
   applyCoverTemplate: (pageIndex: number | null, template: PageTemplate) => void;
   applyIndexTemplate: (pageIndex: number | null, template: PageTemplate) => void;
@@ -272,6 +286,8 @@ export const useStore = create<State>((set, get) => ({
   registeredUsers: [],
   plans: [],
   allSubscriptions: [],
+  systemTemplates: [],
+  editingSystemTemplate: null,
 
 
   activeCategoryId: null,
@@ -388,6 +404,8 @@ export const useStore = create<State>((set, get) => ({
   selectedElementIds: [],
   hoveredElementId: null,
   isPropertyPanelOpen: true,
+  isTableEditorOpen: false,
+  editingTableElementId: null,
   catalogSetupName: '',
   draggingItem: null,
   editorTab: 'products',
@@ -543,11 +561,14 @@ export const useStore = create<State>((set, get) => ({
       }
       if (username) payload.username = username;
       
-      const response = await authApi.login(payload);
+      const response: any = await authApi.login(payload);
+      const token = response?.access || response?.access_token || response?.data?.access;
+      if (token) {
+        localStorage.setItem('cs_access_token', token);
+      }
 
       // 2. Fetch User Details
       const userData: any = await authApi.user();
-      // const userData = userResponse.data; // Removed redundant unwrapping
 
       // 3. Enforce Customer Role (Allow staff to log in as admin or user)
       const userObj: User = {
@@ -575,7 +596,7 @@ export const useStore = create<State>((set, get) => ({
       get().fetchBusinessTemplates();
       get().fetchCatalogs();
       get().fetchMedia();
-      get().fetchAdminAssets();
+      get().fetchSystemTemplates();
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
       const errorMessage = error.response?.data?.non_field_errors?.[0] || 'Login failed';
@@ -598,7 +619,11 @@ export const useStore = create<State>((set, get) => ({
       }
       if (username) payload.username = username;
 
-      await authApi.login(payload);
+      const response: any = await authApi.login(payload);
+      const token = response?.access || response?.access_token || response?.data?.access;
+      if (token) {
+        localStorage.setItem('cs_access_token', token);
+      }
 
       // 2. Fetch User
       const user = await authApi.user();
@@ -607,6 +632,7 @@ export const useStore = create<State>((set, get) => ({
 
       // 3. Enforce Admin Role
       if (!(user as any).is_staff && !(user as any).is_superuser) {
+        localStorage.removeItem('cs_access_token');
         await authApi.logout();
         set({ isLoading: false, error: 'Access Denied. Authorized personnel only.' });
         return;
@@ -623,13 +649,14 @@ export const useStore = create<State>((set, get) => ({
           joinedAt: new Date().toISOString()
         },
         currentView: 'admin-dashboard',
-        isLoading: false
+        isLoading: false,
+        error: null
       });
 
       // Fetch data for admin
-      get().fetchBusinessTemplates();
       get().fetchUsers();
-      get().fetchAdminAssets();
+      get().fetchSystemTemplates();
+      get().fetchAllSubscriptions();
 
     } catch (error: any) {
       set({ error: error.response?.data?.non_field_errors?.[0] || 'Admin login failed', isLoading: false });
@@ -666,6 +693,7 @@ export const useStore = create<State>((set, get) => ({
     } catch (e) { console.error(e); }
 
     sessionStorage.removeItem('cs_session');
+    localStorage.removeItem('cs_access_token');
 
     set({
       isAuthenticated: false,
@@ -898,7 +926,6 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
-  // Business Logic
   fetchUsers: async () => {
     try {
       const response = await authApi.getAllUsers();
@@ -917,17 +944,167 @@ export const useStore = create<State>((set, get) => ({
     }
   },
 
+  // System Templates CRUD (Super Admin Template Studio)
+  fetchSystemTemplates: async () => {
+    try {
+      const response = await systemTemplatesApi.getAll();
+      const data = (response as any).data || response;
+      set({ systemTemplates: Array.isArray(data) ? data : [] });
+    } catch (error) {
+      console.error("Failed to fetch system templates", error);
+    }
+  },
+
+  createSystemTemplate: async (template) => {
+    try {
+      const response = await systemTemplatesApi.create(template);
+      const created = (response as any).data || response;
+      set(state => ({ systemTemplates: [created, ...state.systemTemplates] }));
+      return created;
+    } catch (error) {
+      console.error("Failed to create system template", error);
+      return null;
+    }
+  },
+
+  updateSystemTemplate: async (id, template) => {
+    try {
+      const response = await systemTemplatesApi.update(id, template);
+      const updated = (response as any).data || response;
+      set(state => ({
+        systemTemplates: state.systemTemplates.map(t => String(t.id) === String(id) || t.uuid === String(id) ? updated : t)
+      }));
+      return updated;
+    } catch (error) {
+      console.error("Failed to update system template", error);
+      return null;
+    }
+  },
+
+  deleteSystemTemplate: async (id) => {
+    try {
+      await systemTemplatesApi.delete(id);
+      set(state => ({
+        systemTemplates: state.systemTemplates.filter(t => String(t.id) !== String(id) && t.uuid !== String(id))
+      }));
+      return true;
+    } catch (error) {
+      console.error("Failed to delete system template", error);
+      return false;
+    }
+  },
+
+  openTemplateInVisualEditor: (template) => {
+    if (template) {
+      // Load existing template into live canvas
+      const pages = (template.pages_data && template.pages_data.length > 0)
+        ? template.pages_data.map((p: any, idx: number) => ({
+            id: `p-${idx + 1}`,
+            pageNumber: idx + 1,
+            type: p.type || (template.type === 'cover' ? 'cover' : 'interior'),
+            elements: p.elements || [],
+            backgroundColor: p.backgroundColor || '#ffffff'
+          }))
+        : [{ id: 'p-1', pageNumber: 1, type: template.type === 'cover' ? 'cover' : 'interior', elements: [], backgroundColor: '#ffffff' }];
+
+      set({
+        editingSystemTemplate: template,
+        catalog: {
+          ...get().catalog,
+          name: template.name,
+          pages: pages as any,
+          hasHeader: template.type === 'header',
+          hasFooter: template.type === 'footer',
+          headerElements: template.type === 'header' ? (template.pages_data?.[0]?.elements || []) : [],
+          footerElements: template.type === 'footer' ? (template.pages_data?.[0]?.elements || []) : []
+        },
+        currentPageIndex: 0,
+        currentView: 'editor'
+      });
+    } else {
+      // Create new template in full visual canvas
+      const newTemplateSkeleton: SystemTemplate = {
+        id: 0,
+        uuid: `tmp-${Date.now()}`,
+        name: 'New Custom Template',
+        category: 'General',
+        type: 'cover',
+        pages_data: [{ pageNumber: 1, type: 'cover', elements: [] }],
+        is_active: true
+      };
+
+      set({
+        editingSystemTemplate: newTemplateSkeleton,
+        catalog: {
+          ...get().catalog,
+          name: 'New Custom Template',
+          pages: [{ id: 'p-1', pageNumber: 1, type: 'cover', elements: [], backgroundColor: '#ffffff' }],
+          hasHeader: false,
+          hasFooter: false,
+          headerElements: [],
+          footerElements: []
+        },
+        currentPageIndex: 0,
+        currentView: 'editor'
+      });
+    }
+  },
+
+  saveActiveTemplateFromEditor: async (options) => {
+    const { editingSystemTemplate, catalog, createSystemTemplate, updateSystemTemplate } = get();
+    const targetName = options?.name || editingSystemTemplate?.name || catalog.name || 'Custom Template';
+    const targetCategory = options?.category || editingSystemTemplate?.category || 'General';
+    const targetType = options?.type || editingSystemTemplate?.type || 'cover';
+
+    const pagesData = catalog.pages.map(p => ({
+      pageNumber: p.pageNumber,
+      type: p.type,
+      elements: p.elements,
+      backgroundColor: p.backgroundColor
+    }));
+
+    if (editingSystemTemplate && editingSystemTemplate.id) {
+      // Update existing
+      const res = await updateSystemTemplate(editingSystemTemplate.id, {
+        name: targetName,
+        category: targetCategory,
+        type: targetType,
+        pages_data: pagesData
+      });
+      return !!res;
+    } else {
+      // Create new
+      const res = await createSystemTemplate({
+        name: targetName,
+        category: targetCategory,
+        type: targetType,
+        thumbnail: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800',
+        pages_data: pagesData,
+        is_active: true
+      });
+      if (res) {
+        set({ editingSystemTemplate: res });
+      }
+      return !!res;
+    }
+  },
+
   fetchProducts: async () => {
     const { productsApi } = await import('../client');
     try {
       const response = await productsApi.getAll();
       const data = (response as any).data || response;
-      const mappedProducts = Array.isArray(data) ? data.map((p: any) => ({
-        ...p,
-        price: Number(p.price) || 0,
-        categoryId: p.category ? String(p.category) : undefined,
-        customFields: p.custom_fields || {}
-      })) : [];
+      const mappedProducts = Array.isArray(data) ? data.map((p: any) => {
+        const cf = p.custom_fields || {};
+        const imagesList = Array.isArray(cf.gallery) ? cf.gallery : (p.images || []);
+        return {
+          ...p,
+          images: imagesList,
+          price: Number(p.price) || 0,
+          categoryId: p.category ? String(p.category) : undefined,
+          customFields: cf
+        };
+      }) : [];
       set({ products: mappedProducts });
     } catch (error) {
       console.error("Failed to fetch products", error);
@@ -942,7 +1119,9 @@ export const useStore = create<State>((set, get) => ({
       const mappedCategories = Array.isArray(data) ? data.map((c: any) => ({
         ...c,
         id: String(c.id),
-        parent: c.parent ? String(c.parent) : null
+        parent: c.parent ? String(c.parent) : null,
+        images: Array.isArray(c.images) ? c.images : (c.thumbnail ? [c.thumbnail] : []),
+        customSchema: c.custom_schema || c.customSchema || []
       })) : [];
       set({ categories: mappedCategories });
     } catch (error) {
@@ -980,21 +1159,27 @@ export const useStore = create<State>((set, get) => ({
     const { productsApi } = await import('../client');
     try {
       // Transformation: Omit temporary ID, map categoryId to category, ensure numeric price, map customFields to custom_fields
-      const { id, categoryId, customFields, ...rest } = product;
+      const { id, categoryId, customFields, images, ...rest } = product;
+      const cf = { ...(customFields || {}) };
+      if (images && images.length > 0) {
+        cf.gallery = images;
+      }
       const payload = {
         ...rest,
         category: categoryId ? String(categoryId) : null,
         price: parseFloat(String(product.price)) || 0,
-        custom_fields: customFields || {}
+        custom_fields: cf
       };
 
       const response = await productsApi.create(payload);
       const data = (response as any).data || response;
+      const respCf = data.custom_fields || {};
       const mappedProduct = {
         ...data,
+        images: Array.isArray(respCf.gallery) ? respCf.gallery : (images || []),
         price: Number(data.price) || 0,
         categoryId: data.category ? String(data.category) : undefined,
-        customFields: data.custom_fields || {}
+        customFields: respCf
       };
       set((state) => ({
         products: [mappedProduct, ...state.products]
@@ -1016,18 +1201,25 @@ export const useStore = create<State>((set, get) => ({
       if (updates.price !== undefined) {
         payload.price = parseFloat(String(updates.price)) || 0;
       }
-      if (updates.customFields !== undefined) {
-        payload.custom_fields = updates.customFields;
+      const cf = { ...(updates.customFields || {}) };
+      if (updates.images !== undefined) {
+        cf.gallery = updates.images;
+        delete payload.images;
+      }
+      if (Object.keys(cf).length > 0 || updates.customFields !== undefined) {
+        payload.custom_fields = cf;
         delete payload.customFields;
       }
 
       const response = await productsApi.update(id, payload);
       const data = (response as any).data || response;
+      const respCf = data.custom_fields || {};
       const mappedProduct = {
         ...data,
+        images: Array.isArray(respCf.gallery) ? respCf.gallery : (updates.images || []),
         price: Number(data.price) || 0,
         categoryId: data.category ? String(data.category) : undefined,
-        customFields: data.custom_fields || {}
+        customFields: respCf
       };
 
       set((state) => {
@@ -1142,14 +1334,19 @@ export const useStore = create<State>((set, get) => ({
     const { categoriesApi } = await import('../client');
     try {
       // Transformation: Omit temporary ID and productCount, handle parent
-      const { id, productCount, parentName, ...payload } = category;
+      const { id, productCount, parentName, customSchema, ...payload } = category;
+      const requestPayload = {
+        ...payload,
+        custom_schema: customSchema || []
+      };
 
-      const response = await categoriesApi.create(payload);
+      const response = await categoriesApi.create(requestPayload);
       const data = (response as any).data || response;
       const mappedCategory = {
         ...data,
         id: String(data.id),
-        parent: data.parent ? String(data.parent) : null
+        parent: data.parent ? String(data.parent) : null,
+        customSchema: data.custom_schema || data.customSchema || []
       };
       set((state) => ({
         categories: [...state.categories, mappedCategory]
@@ -1166,14 +1363,19 @@ export const useStore = create<State>((set, get) => ({
     const { categoriesApi } = await import('../client');
     try {
       // Omit read-only fields if they leak in
-      const { parentName, subcategories, productCount, ...payload } = updates;
+      const { parentName, subcategories, productCount, customSchema, ...payload } = updates;
+      const requestPayload: any = { ...payload };
+      if (customSchema !== undefined) {
+        requestPayload.custom_schema = customSchema;
+      }
 
-      const response = await categoriesApi.update(id, payload);
+      const response = await categoriesApi.update(id, requestPayload);
       const data = (response as any).data || response;
       const mappedCategory = {
         ...data,
         id: String(data.id),
-        parent: data.parent ? String(data.parent) : null
+        parent: data.parent ? String(data.parent) : null,
+        customSchema: data.custom_schema || data.customSchema || []
       };
       set((state) => ({
         categories: state.categories.map(c => c.id === id ? mappedCategory : c)
@@ -1280,9 +1482,14 @@ export const useStore = create<State>((set, get) => ({
 
   setSelectedElementIds: (ids) => set((state) => ({
     selectedElementIds: ids,
+    isPropertyPanelOpen: ids.length > 0 ? true : state.isPropertyPanelOpen
   })),
   setHoveredElementId: (id) => set({ hoveredElementId: id }),
   setIsPropertyPanelOpen: (isOpen) => set({ isPropertyPanelOpen: isOpen }),
+  setIsTableEditorOpen: (isOpen, elementId = null) => set({
+    isTableEditorOpen: isOpen,
+    editingTableElementId: isOpen ? (elementId || null) : null
+  }),
   setCurrentPageIndex: (index) => set({ currentPageIndex: index, selectedPageIndex: index }),
   setZoom: (zoom: number) => set({ zoom }),
   updateCatalog: (updates) => set((state) => ({
@@ -1426,19 +1633,36 @@ export const useStore = create<State>((set, get) => ({
       let backendId = String(catalog.id);
       let isNew = backendId.startsWith('cat-');
 
+      const catalogSettings = {
+        backgroundColor: catalog.backgroundColor,
+        headerText: catalog.headerText,
+        footerText: catalog.footerText,
+        hasHeader: catalog.hasHeader,
+        hasFooter: catalog.hasFooter,
+        headerHeight: catalog.headerHeight,
+        footerHeight: catalog.footerHeight,
+        marginTop: catalog.marginTop,
+        marginBottom: catalog.marginBottom,
+        marginLeft: catalog.marginLeft,
+        marginRight: catalog.marginRight,
+        headerElements: catalog.headerElements || [],
+        footerElements: catalog.footerElements || [],
+        gridCols: catalog.gridCols,
+        gridRows: catalog.gridRows,
+        gridSpacing: catalog.gridSpacing,
+        gridPadding: catalog.gridPadding,
+        showTitle: catalog.showTitle,
+        showPrice: catalog.showPrice,
+        showSKU: catalog.showSKU,
+        productIds: catalog.productIds || [],
+        selectedCategoryIds: catalog.selectedCategoryIds || []
+      };
+
       if (isNew) {
         // Create new catalog on backend
         const response = await catalogsApi.create({
-          name: catalog.name,
-          settings: {
-            backgroundColor: catalog.backgroundColor,
-            headerText: catalog.headerText,
-            footerText: catalog.footerText,
-            hasHeader: catalog.hasHeader,
-            hasFooter: catalog.hasFooter,
-            productIds: catalog.productIds,
-            selectedCategoryIds: catalog.selectedCategoryIds
-          }
+          name: catalog.name || 'Untitled Catalog',
+          settings: catalogSettings
         });
         const data = (response as any).data || response;
         backendId = String(data.id);
@@ -1454,16 +1678,8 @@ export const useStore = create<State>((set, get) => ({
       } else {
         // Update existing catalog metadata
         await catalogsApi.update(backendId, {
-          name: catalog.name,
-          settings: {
-            backgroundColor: catalog.backgroundColor,
-            headerText: catalog.headerText,
-            footerText: catalog.footerText,
-            hasHeader: catalog.hasHeader,
-            hasFooter: catalog.hasFooter,
-            productIds: catalog.productIds,
-            selectedCategoryIds: catalog.selectedCategoryIds
-          }
+          name: catalog.name || 'Untitled Catalog',
+          settings: catalogSettings
         });
 
         set((state) => ({
@@ -2364,8 +2580,56 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  generateCatalogFromTemplate: (name, template, categoryIds, options = { includeCover: true, includeIndex: true, includeCategoryCovers: true }) => set((state) => {
+  generateCatalogFromTemplate: (name, template, categoryIds, options = { includeCover: true, includeIndex: true, includeCategoryCovers: true, selectedTemplateId: 'tpl-blank' } as any) => set((state) => {
     const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
+
+    // Special Case: Blank Template (4 blank pages: Cover, Index, Product, Closing)
+    if ((options as any)?.selectedTemplateId === 'tpl-blank') {
+      const blankPages: CatalogPage[] = [
+        {
+          id: `p-cover-blank-${Date.now()}`,
+          pageNumber: 1,
+          elements: [],
+          type: 'cover',
+          backgroundColor: '#ffffff'
+        },
+        {
+          id: `p-index-blank-${Date.now()}`,
+          pageNumber: 2,
+          elements: [],
+          type: 'index',
+          backgroundColor: '#ffffff'
+        },
+        {
+          id: `p-product-blank-${Date.now()}`,
+          pageNumber: 3,
+          elements: [],
+          type: 'product',
+          backgroundColor: '#ffffff'
+        },
+        {
+          id: `p-closing-blank-${Date.now()}`,
+          pageNumber: 4,
+          elements: [],
+          type: 'closing',
+          backgroundColor: '#ffffff'
+        }
+      ];
+
+      return {
+        catalog: {
+          ...state.catalog,
+          id: `cat-${Date.now()}`,
+          name,
+          status: 'draft',
+          pages: blankPages,
+          updatedAt: new Date().toISOString()
+        },
+        currentView: 'editor',
+        currentPageIndex: 0,
+        selectedElementIds: []
+      };
+    }
 
     const allPages: CatalogPage[] = [];
     let currentPageNumber = 1;

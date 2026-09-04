@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, Info, FolderPlus, Package } from 'lucide-react';
+import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, Info, FolderPlus, Package, Plus, X, Star } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CustomFieldsEditor } from '../Settings/CustomFieldsEditor';
 import { FormField } from '../../types';
@@ -13,9 +13,66 @@ const CreateCategoryForm: React.FC = () => {
     rank: 0,
     color: '#4f46e5',
     thumbnail: '',
+    images: [] as string[],
     parent: creatingSubcategoryParentId || '',
     customSchema: [] as FormField[]
   });
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setFormData(prev => {
+          const currentImages = prev.images || [];
+          return {
+            ...prev,
+            thumbnail: result,
+            images: currentImages.includes(result) ? currentImages : [result, ...currentImages]
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleMultipleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setFormData(prev => {
+          const currentImages = prev.images || [];
+          return {
+            ...prev,
+            thumbnail: prev.thumbnail || result,
+            images: [...currentImages, result]
+          };
+        });
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeGalleryImage = (indexToRemove: number) => {
+    setFormData(prev => {
+      const currentImages = (prev.images || []).filter((_, idx) => idx !== indexToRemove);
+      const newThumbnail = prev.thumbnail === prev.images[indexToRemove] ? (currentImages[0] || '') : prev.thumbnail;
+      return {
+        ...prev,
+        thumbnail: newThumbnail,
+        images: currentImages
+      };
+    });
+  };
+
+  const setAsThumbnail = (img: string) => {
+    setFormData(prev => ({ ...prev, thumbnail: img }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,6 +83,7 @@ const CreateCategoryForm: React.FC = () => {
       rank: formData.rank,
       color: formData.color,
       thumbnail: formData.thumbnail,
+      images: formData.images,
       parent: formData.parent ? formData.parent : undefined,
       productCount: 0,
       customSchema: formData.customSchema
@@ -146,17 +204,72 @@ const CreateCategoryForm: React.FC = () => {
                     <span className="text-[10px] font-mono font-black text-slate-500 dark:text-slate-400">{formData.color.toUpperCase()}</span>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            <div className="bg-indigo-600 dark:bg-indigo-500 rounded-2xl p-8 text-white space-y-4 shadow-xl shadow-indigo-600/20 border dark:border-indigo-400/30">
-              <div className="w-10 h-10 bg-white/10 rounded-2xl flex items-center justify-center">
-                <Info size={20} className="text-white" />
+                {/* Category Thumbnail & Gallery */}
+                <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex justify-between items-center ml-1">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                      Category Images {formData.images?.length > 0 ? `(${formData.images.length})` : ''}
+                    </label>
+                    <label htmlFor="cat-multi-img" className="text-[9px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-1 cursor-pointer hover:text-indigo-700">
+                      <Plus size={12} /> Add More
+                    </label>
+                  </div>
+
+                  <div className="aspect-video max-h-32 bg-slate-50 dark:bg-slate-800 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex items-center justify-center overflow-hidden relative group">
+                    {formData.thumbnail ? (
+                      <>
+                        <img src={formData.thumbnail} className="w-full h-full object-cover" />
+                        <div className="absolute top-2 left-2 bg-indigo-600 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-md flex items-center gap-1 shadow">
+                          <Star size={10} fill="currentColor" /> Cover
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center gap-1 text-slate-300 dark:text-slate-600">
+                        <ImageIcon size={24} />
+                        <span className="text-[10px] font-bold text-slate-400">No cover image</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <input type="file" id="cat-thumb-upload" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    <label htmlFor="cat-thumb-upload" className="flex-1 flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider cursor-pointer transition-all shadow-sm shadow-indigo-600/20 active:scale-95">
+                      <Upload size={12} /> Upload Cover
+                    </label>
+
+                    <input type="file" id="cat-multi-img" accept="image/*" multiple className="hidden" onChange={handleMultipleImagesUpload} />
+                    <label htmlFor="cat-multi-img" className="flex-1 flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 rounded-xl px-3 py-2 text-[11px] font-black uppercase tracking-wider cursor-pointer transition-all border border-slate-200 dark:border-slate-700">
+                      <Plus size={12} /> Gallery (+N)
+                    </label>
+                  </div>
+
+                  {formData.images && formData.images.length > 0 && (
+                    <div className="grid grid-cols-4 gap-2 pt-1">
+                      {formData.images.map((img, idx) => {
+                        const isPrimary = formData.thumbnail === img;
+                        return (
+                          <div key={idx} className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all group ${isPrimary ? 'border-indigo-600 ring-2 ring-indigo-500/20' : 'border-slate-200 dark:border-slate-700'}`}>
+                            <img src={img} className="w-full h-full object-cover cursor-pointer" onClick={() => setAsThumbnail(img)} title="Click to set as cover" />
+                            <button
+                              type="button"
+                              onClick={() => removeGalleryImage(idx)}
+                              className="absolute top-1 right-1 p-0.5 bg-black/60 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <X size={10} />
+                            </button>
+                            {isPrimary && (
+                              <div className="absolute bottom-0 inset-x-0 bg-indigo-600/90 text-white text-[8px] font-bold text-center py-0.5">
+                                Cover
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-              <h4 className="text-sm font-black uppercase tracking-widest">Automation Note</h4>
-              <p className="text-[10px] font-medium text-indigo-100 leading-relaxed">
-                Categories are used by the Auto-Gen engine to intelligently group products in large publications. Ensure clear nomenclature for optimal results.
-              </p>
             </div>
           </div>
         </div>

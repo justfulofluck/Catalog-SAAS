@@ -289,6 +289,7 @@ export async function elementToFabricObject(
     selectable: false,
     visible: el.visible !== false,
     evented: false,
+    objectCaching: false, // Ensure live vector rendering at all zoom levels without raster cache blur
   };
   common.id = el.id;
 
@@ -624,13 +625,249 @@ export async function elementToFabricObject(
       left: el.x, top: el.y, 
       width: el.width, height: el.height,
       originX: 'left', originY: 'top',
-      clipPath: clipPath
+      clipPath: clipPath,
+      objectCaching: false,
     });
 
     (group as any).id = el.id;
     (group as any).angle = el.rotation || 0;
     (group as any).opacity = el.opacity ?? 1;
     return group;
+  }
+
+  if (el.type === 'table') {
+    const td = el.tableData || {
+      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING'],
+      rows: [
+        ['VT-2612', '12W V-TAC COB WHITE BODY', '75MM', 'W, W.W, N.W', '580', '20 PCS'],
+        ['VT-2612', '12W VTAC 3IN1 ON SWITCH', '75MM', 'W, W.W, N.W', '1,000', '20 PCS'],
+        ['VT-2612', '12W V-TAC COB DIMMABLE', '75MM', 'W, W.W, N.W', '1,500', '20 PCS']
+      ]
+    };
+
+    const headerBg = td.headerBg || '#002b36'; // Dark Teal / Navy Blue like V-TAC
+    const headerTextColor = td.headerTextColor || '#ffffff';
+    const rowBg = td.rowBg || '#ffffff';
+    const alternateRowBg = td.alternateRowBg || '#f8fafc';
+    const borderColor = td.borderColor || '#334155';
+    const cellPadding = td.cellPadding || 6;
+    const headerFontSize = td.headerFontSize || 9.5;
+    const bodyFontSize = td.fontSize || 8.5;
+
+    const numCols = td.headers.length || 1;
+    const numRows = (td.rows?.length || 0);
+
+    // Auto-adjust font size based on column count and element width with guaranteed legibility
+    const dynamicHeaderFontSize = numCols > 6 ? Math.max(8.5, Math.min(headerFontSize, el.width / (numCols * 7.5))) : headerFontSize;
+    const dynamicBodyFontSize = numCols > 6 ? Math.max(8.0, Math.min(bodyFontSize, el.width / (numCols * 8.0))) : bodyFontSize;
+
+    // Calculate col widths (custom or weighted by header/content type)
+    const colWidths: number[] = [];
+    if (td.colWidths && td.colWidths.length === numCols) {
+      const totalRel = td.colWidths.reduce((a, b) => a + b, 0);
+      td.colWidths.forEach(w => colWidths.push((w / totalRel) * el.width));
+    } else {
+      // Weighted distribution: SKU (18%), Name/Spec (28%), remaining evenly divided
+      const weights = td.headers.map((h) => {
+        const lower = h.toLowerCase();
+        if (lower.includes('product') || lower.includes('spec') || lower.includes('name') || lower.includes('desc')) return 2.2;
+        if (lower.includes('model') || lower.includes('sku') || lower.includes('code')) return 1.5;
+        if (lower.includes('cut') || lower.includes('dim')) return 1.1;
+        if (lower.includes('color') || lower.includes('cct')) return 1.2;
+        if (lower.includes('price') || lower.includes('mrp')) return 1.1;
+        if (lower.includes('pack') || lower.includes('box')) return 1.1;
+        return 1.0;
+      });
+      const totalWeight = weights.reduce((a, b) => a + b, 0);
+      weights.forEach(w => colWidths.push((w / totalWeight) * el.width));
+    }
+
+    // Measure approximate wrapped lines for any cell text given available column width
+    const estimateLines = (text: string, colW: number, fontSize: number): number => {
+      if (!text) return 1;
+      const clean = text.toString().trim();
+      const avgCharWidth = fontSize * 0.58;
+      const usableWidth = Math.max(15, colW - cellPadding * 2);
+      const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
+      
+      const words = clean.split(/\s+/);
+      let lines = 1;
+      let curLineLen = 0;
+      words.forEach(word => {
+        if (curLineLen + word.length > charsPerLine) {
+          lines++;
+          curLineLen = word.length;
+        } else {
+          curLineLen += word.length + 1;
+        }
+      });
+      return lines;
+    };
+
+    // Calculate header height based on longest wrapped header
+    let maxHeaderLines = 1;
+    td.headers.forEach((h, colIdx) => {
+      const l = estimateLines(h, colWidths[colIdx], dynamicHeaderFontSize);
+      if (l > maxHeaderLines) maxHeaderLines = l;
+    });
+    const headerRowHeight = Math.max(28, maxHeaderLines * (dynamicHeaderFontSize * 1.3) + cellPadding * 2);
+
+    // Calculate dynamic height for each body row
+    const rowHeights: number[] = [];
+    (td.rows || []).forEach(row => {
+      let maxLinesInRow = 1;
+      row.forEach((cellText, colIdx) => {
+        const l = estimateLines(cellText, colWidths[colIdx] || (el.width / numCols), dynamicBodyFontSize);
+        if (l > maxLinesInRow) maxLinesInRow = l;
+      });
+      const calcH = Math.max(26, maxLinesInRow * (dynamicBodyFontSize * 1.35) + cellPadding * 2);
+      rowHeights.push(calcH);
+    });
+
+    const totalCalculatedTableHeight = headerRowHeight + rowHeights.reduce((a, b) => a + b, 0);
+
+    const tableObjs: any[] = [];
+
+    // 1. Table Outer Frame & Header Background
+    const headerRect = new Rect({
+      left: 0,
+      top: 0,
+      width: el.width,
+      height: headerRowHeight,
+      fill: headerBg,
+      originX: 'left',
+      originY: 'top',
+    });
+    tableObjs.push(headerRect);
+
+    // 2. Render Headers with full text-wrapping
+    let currentX = 0;
+    td.headers.forEach((headerText, colIdx) => {
+      const colW = colWidths[colIdx];
+      const headerTb = new Textbox(headerText.toUpperCase(), {
+        left: currentX + cellPadding,
+        top: cellPadding + 1,
+        width: colW - cellPadding * 2,
+        originX: 'left',
+        originY: 'top',
+        fontSize: dynamicHeaderFontSize,
+        fontFamily: 'Montserrat',
+        fontWeight: '900',
+        fill: headerTextColor,
+        textAlign: colIdx === 0 || colIdx === 1 ? 'left' : 'center',
+        splitByGrapheme: false,
+        lineHeight: 1.15,
+        objectCaching: false,
+      });
+      tableObjs.push(headerTb);
+
+      // Header vertical border
+      if (colIdx < numCols - 1) {
+        tableObjs.push(new Line([currentX + colW, 0, currentX + colW, headerRowHeight], {
+          stroke: borderColor,
+          strokeWidth: 1,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+      }
+
+      currentX += colW;
+    });
+
+    // 3. Render Body Rows with dynamic row positions and heights
+    let curY = headerRowHeight;
+    (td.rows || []).forEach((row, rowIdx) => {
+      const rHeight = rowHeights[rowIdx] || 26;
+      const bg = rowIdx % 2 === 1 ? alternateRowBg : rowBg;
+
+      // Row Background
+      tableObjs.push(new Rect({
+        left: 0,
+        top: curY,
+        width: el.width,
+        height: rHeight,
+        fill: bg,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      let cellX = 0;
+      row.forEach((cellText, colIdx) => {
+        const colW = colWidths[colIdx];
+        const cellTb = new Textbox(cellText || '-', {
+          left: cellX + cellPadding,
+          top: curY + cellPadding + 1,
+          width: colW - cellPadding * 2,
+          originX: 'left',
+          originY: 'top',
+          fontSize: dynamicBodyFontSize,
+          fontFamily: 'Inter',
+          fontWeight: colIdx === 0 ? '700' : '500',
+          fill: '#0f172a',
+          textAlign: colIdx === 0 || colIdx === 1 ? 'left' : 'center',
+          splitByGrapheme: false,
+          lineHeight: 1.2,
+          objectCaching: false,
+        });
+        tableObjs.push(cellTb);
+
+        // Vertical cell divider
+        if (colIdx < numCols - 1) {
+          tableObjs.push(new Line([cellX + colW, curY, cellX + colW, curY + rHeight], {
+            stroke: borderColor,
+            strokeWidth: 0.8,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+        }
+
+        cellX += colW;
+      });
+
+      // Horizontal Row Border at top of this row
+      tableObjs.push(new Line([0, curY, el.width, curY], {
+        stroke: borderColor,
+        strokeWidth: 1,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      curY += rHeight;
+    });
+
+    // Outer table border
+    tableObjs.push(new Rect({
+      left: 0,
+      top: 0,
+      width: el.width,
+      height: totalCalculatedTableHeight,
+      fill: 'transparent',
+      stroke: borderColor,
+      strokeWidth: 1.5,
+      originX: 'left',
+      originY: 'top',
+      objectCaching: false,
+    }));
+
+    const tableGroup = new Group(tableObjs, {
+      left: el.x,
+      top: el.y,
+      width: el.width,
+      height: totalCalculatedTableHeight,
+      originX: 'left',
+      originY: 'top',
+      objectCaching: false,
+    });
+
+    (tableGroup as any).id = el.id;
+    (tableGroup as any).angle = el.rotation || 0;
+    (tableGroup as any).opacity = el.opacity ?? 1;
+    (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
+    return tableGroup;
   }
 
   return null;
