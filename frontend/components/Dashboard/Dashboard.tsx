@@ -97,8 +97,7 @@ const Dashboard: React.FC = () => {
               </button>
               <button
                 onClick={() => setView('your-work')}
-                disabled={savedCatalogs.length === 0}
-                className={`w-full flex items-center gap-5 p-5 rounded-2xl transition-all group text-left ${savedCatalogs.length === 0 ? 'opacity-50 cursor-not-allowed bg-slate-50 dark:bg-slate-800/50' : 'hover:bg-slate-50 dark:hover:bg-slate-800'}`}
+                className="w-full flex items-center gap-5 p-5 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-2xl transition-all group text-left"
               >
                 <div className="w-12 h-12 bg-emerald-50 dark:bg-emerald-400/10 text-emerald-600 dark:text-emerald-400 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform"><Briefcase size={22} /></div>
                 <div><p className="text-sm font-black text-slate-900 dark:text-white">Your Work</p><p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase mt-1">Project History</p></div>

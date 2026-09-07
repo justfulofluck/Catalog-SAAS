@@ -35,11 +35,12 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
     // Scale to thumbnail coordinates
     ctx.scale(scale, scale);
 
-    const showHeaderFooter = page.type === 'product' || page.type === 'interior' || page.type === 'index';
+    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
+    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
     const allElements = [
-      ...(catalog.hasHeader && showHeaderFooter ? catalog.headerElements || [] : []),
+      ...(pageHasHeader ? catalog.headerElements || [] : []),
       ...page.elements,
-      ...(catalog.hasFooter && showHeaderFooter ? (catalog.footerElements || []).map((el: any) => ({
+      ...(pageHasFooter ? (catalog.footerElements || []).map((el: any) => ({
         ...el,
         y: (el.y || 0) + PAGE_HEIGHT - (catalog.footerHeight || 38),
         text: el.type === 'text' && el.text?.includes('{{page}}')

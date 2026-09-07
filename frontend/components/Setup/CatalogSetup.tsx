@@ -58,7 +58,11 @@ const CatalogSetup: React.FC = () => {
 
       // Save to backend immediately so refresh doesn't lose data
       const { saveCatalog } = useStore.getState();
-      await saveCatalog();
+      try {
+        await saveCatalog();
+      } catch (e) {
+        console.warn("Could not save new catalog initially", e);
+      }
 
       setView('editor');
     }

@@ -29,7 +29,9 @@ class CatalogViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
-        return Catalog.objects.filter(owner=self.request.user)
+        if self.request.user.is_staff or self.request.user.is_superuser:
+            return Catalog.objects.all().order_by('-updated_at')
+        return Catalog.objects.filter(owner=self.request.user).order_by('-updated_at')
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -84,6 +86,16 @@ class CatalogViewSet(viewsets.ModelViewSet):
         catalog = self.get_object()
         page_data = request.data
         page_number = page_data.get('pageNumber')
+        if page_number is None:
+            page_number = page_data.get('page_number')
+        if page_number is None:
+            page_number = catalog.pages.count() + 1
+        else:
+            try:
+                page_number = int(page_number)
+            except (ValueError, TypeError):
+                page_number = catalog.pages.count() + 1
+
         elements = page_data.get('elements', [])
 
         # Convert any base64 src URLs to stored files
@@ -93,12 +105,15 @@ class CatalogViewSet(viewsets.ModelViewSet):
                 el['src'] = self._save_base64_src(src, catalog)
 
         category_id = page_data.get('categoryId')
-        # Validate that category_id is a valid integer or None
+        # Validate that category_id is a valid integer and exists in DB or None
         valid_cat_id = None
         if category_id:
             try:
-                valid_cat_id = int(category_id)
-            except (ValueError, TypeError):
+                from products.models import Category
+                cat_int = int(category_id)
+                if Category.objects.filter(id=cat_int).exists():
+                    valid_cat_id = cat_int
+            except (ValueError, TypeError, Exception):
                 valid_cat_id = None
 
         page, created = CatalogPage.objects.update_or_create(

@@ -393,12 +393,8 @@ const App: React.FC = () => {
             {isCatalogMenuOpen && isSidebarExpanded && (
               <div className="ml-10 space-y-1 animate-in slide-in-from-top-2 duration-200">
                 <button onClick={() => setView('catalog-setup')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'catalog-setup' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>New Catalog</button>
-                {savedCatalogs.length > 0 && (
-                  <>
-                    <button onClick={() => setView('your-work')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'your-work' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Your Work</button>
-                    <button onClick={() => setView('publish')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'publish' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Publish & Manage</button>
-                  </>
-                )}
+                <button onClick={() => setView('your-work')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'your-work' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Your Work</button>
+                <button onClick={() => setView('publish')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'publish' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Publish & Manage</button>
               </div>
             )}
           </div>

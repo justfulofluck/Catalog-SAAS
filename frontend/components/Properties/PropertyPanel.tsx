@@ -67,12 +67,11 @@ const PropertyPanel: React.FC = () => {
   const handleVerticalAlignment = (align: 'top' | 'middle' | 'bottom') => {
     if (!selectedElement) return;
 
-    const { marginTop, marginBottom, hasHeader, hasFooter, headerHeight, footerHeight } = catalog;
+    const { marginTop, marginBottom } = catalog;
     const height = selectedElement.height;
 
-    // Hierarchy: Page -> Margin -> Header/Footer -> Content
-    const safeY1 = (marginTop || 0) + (hasHeader ? (headerHeight || 0) : 0);
-    const safeY2 = PAGE_HEIGHT - (marginBottom || 0) - (hasFooter ? (footerHeight || 0) : 0);
+    const safeY1 = marginTop || 0;
+    const safeY2 = PAGE_HEIGHT - (marginBottom || 0);
 
     let newY = selectedElement.y;
 

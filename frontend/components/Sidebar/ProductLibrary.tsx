@@ -7,6 +7,7 @@ import {
 import Sortable from 'sortablejs';
 import { useStore } from '../../store/useStore';
 import { Product, CanvasElement, TableData } from '../../types';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 
 interface TableParamOption {
   key: string;
@@ -260,7 +261,23 @@ const ProductLibrary: React.FC = () => {
     const categoryHeroImg = (targetCat?.thumbnail) ||
       (targetCat?.images && targetCat.images.length > 0 ? targetCat.images[0] : '');
 
-    const startY = 140;
+    const targetPage = catalog.pages[currentPageIndex];
+    const pageHasHeader = (targetPage as any)?.hasHeader !== false && catalog.hasHeader && (targetPage?.type === 'product' || targetPage?.type === 'interior' || targetPage?.type === 'index');
+    const headerBottom = pageHasHeader ? (catalog.marginTop || 0) + (catalog.headerHeight || 40) + 20 : (catalog.marginTop || 0) + 20;
+
+    const pageElements = targetPage?.elements || [];
+    const contentElements = pageElements.filter(el => {
+      const isBg = (typeof el.id === 'string' && el.id.endsWith('-bg')) || (el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT);
+      return !isBg;
+    });
+
+    let startY = Math.max(headerBottom, 45);
+    if (contentElements.length > 0) {
+      const maxY = Math.max(...contentElements.map(e => (e.y || 0) + (e.height || 0)));
+      if (maxY >= startY) {
+        startY = maxY + 25;
+      }
+    }
 
     // Calculate layout dimensions based on column count
     // If table has many columns (>6), give it more width or place below image

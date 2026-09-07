@@ -875,88 +875,93 @@ const EditorCanvas: React.FC = () => {
                     }`}
                   style={{ width: curW * zoom, height: curH * zoom }}
                 >
-                  {/* Floating Labels and Boundaries (Only on product and index pages) */}
-                  {(page.type === 'product' || page.type === 'interior' || page.type === 'index') && (
-                    <div className="absolute inset-0 pointer-events-none z-[50]">
-                      {catalog.hasHeader && (
-                        <>
-                          <div
-                            className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
-                            style={{
-                              left: 0,
-                              top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
-                              transform: 'translate(-100%, -50%)',
-                              opacity: isActive ? 1 : 0.4
-                            }}
-                          >
-                            Header
-                          </div>
-                          {isActive && (
-                            <div
-                              className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-500/30 pointer-events-none"
-                              style={{ top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom }}
-                            />
-                          )}
-                        </>
-                      )}
-                      {catalog.hasFooter && (
-                        <>
-                          <div
-                            className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
-                            style={{
-                              left: 0,
-                              top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
-                              transform: 'translate(-100%, -50%)',
-                              opacity: isActive ? 1 : 0.4
-                            }}
-                          >
-                            Footer
-                          </div>
-                          {isActive && (
-                            <div
-                              className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-500/30 pointer-events-none"
-                              style={{ top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40)) * zoom }}
-                            />
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
-                  {/* Drop indicator (active page only) */}
-                  {isActive && isDragOver && (
-                    <div className="absolute inset-0 z-[100] border-4 border-dashed border-indigo-500/30 pointer-events-none flex items-center justify-center bg-indigo-600/5 backdrop-blur-[1px]">
-                      {!snapTarget && (
-                        <div className="px-8 py-4 bg-white/90 backdrop-blur-md rounded-full shadow-2xl flex items-center gap-3 border border-indigo-100">
-                          <div className="w-8 h-8 bg-indigo-600 rounded-[10px] flex items-center justify-center text-white shadow-lg"><Plus size={20} /></div>
-                          <span className="text-sm font-black text-indigo-900 uppercase tracking-widest">Drop to Place</span>
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* Floating Labels and Boundaries */}
+                  {(() => {
+                    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
+                    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
 
-                  {/* Snap HUD */}
-                  {isActive && snapTarget && (
-                    <div className="absolute z-[110] px-4 py-2 bg-indigo-600 text-white rounded-[10px] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl" style={{ left: snapTarget.x * zoom, top: (snapTarget.y * zoom) - 45 }}>
-                      <Sparkles size={14} className="animate-pulse" /> Auto-Fitting Asset
-                    </div>
-                  )}
+                    return (
+                      <>
+                        {(pageHasHeader || pageHasFooter) && (
+                          <div className="absolute inset-0 pointer-events-none z-[50]">
+                            {pageHasHeader && (
+                              <>
+                                <div
+                                  className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
+                                  style={{
+                                    left: 0,
+                                    top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
+                                    transform: 'translate(-100%, -50%)',
+                                    opacity: isActive ? 1 : 0.4
+                                  }}
+                                >
+                                  Header
+                                </div>
+                                {isActive && (
+                                  <div
+                                    className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-500/30 pointer-events-none"
+                                    style={{ top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom }}
+                                  />
+                                )}
+                              </>
+                            )}
+                            {pageHasFooter && (
+                              <>
+                                <div
+                                  className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
+                                  style={{
+                                    left: 0,
+                                    top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
+                                    transform: 'translate(-100%, -50%)',
+                                    opacity: isActive ? 1 : 0.4
+                                  }}
+                                >
+                                  Footer
+                                </div>
+                                {isActive && (
+                                  <div
+                                    className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-500/30 pointer-events-none"
+                                    style={{ top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40)) * zoom }}
+                                  />
+                                )}
+                              </>
+                            )}
+                          </div>
+                        )}
 
-                    <FabricStage
-                      page={page}
-                      pageIdx={pageIdx}
-                      isActive={isActive}
-                      zoom={zoom}
-                      editingId={isActive ? editingId : null}
-                      canvasBg={page.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff'}
-                      headerElements={(catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? catalog.headerElements : []}
-                      footerElements={(catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index')) ? (catalog.footerElements || []).map((el: any) => ({
-                        ...el,
-                        y: (el.y || 0) + (el.y < 200 ? PAGE_HEIGHT - (catalog.footerHeight || 38) : 0),
-                        text: el.type === 'text' && el.text?.includes('{{page}}')
-                          ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
-                          : el.text
-                      })) : []}
-                    />
+                        {/* Drop indicator (active page only) */}
+                        {isActive && isDragOver && (
+                          <div className="absolute inset-0 z-[100] border-4 border-dashed border-indigo-500/30 pointer-events-none flex items-center justify-center bg-indigo-600/5 backdrop-blur-[1px]">
+                            {!snapTarget && (
+                              <div className="px-8 py-4 bg-white/90 backdrop-blur-md rounded-full shadow-2xl flex items-center gap-3 border border-indigo-100">
+                                <div className="w-8 h-8 bg-indigo-600 rounded-[10px] flex items-center justify-center text-white shadow-lg"><Plus size={20} /></div>
+                                <span className="text-sm font-black text-indigo-900 uppercase tracking-widest">Drop to Place</span>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Snap HUD */}
+                        {isActive && snapTarget && (
+                          <div className="absolute z-[110] px-4 py-2 bg-indigo-600 text-white rounded-[10px] text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-2xl" style={{ left: snapTarget.x * zoom, top: (snapTarget.y * zoom) - 45 }}>
+                            <Sparkles size={14} className="animate-pulse" /> Auto-Fitting Asset
+                          </div>
+                        )}
+
+                        <FabricStage
+                          page={page}
+                          pageIdx={pageIdx}
+                          isActive={isActive}
+                          zoom={zoom}
+                          editingId={isActive ? editingId : null}
+                          canvasBg={page.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff'}
+                          headerElements={pageHasHeader ? catalog.headerElements : []}
+                          footerElements={pageHasFooter ? (catalog.footerElements || []) : []}
+                          footerHeight={catalog.footerHeight || 38}
+                        />
+                      </>
+                    );
+                  })()}
 
                   {/* Text editing overlay (active page only) */}
                   {isActive && editConfig && (

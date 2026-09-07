@@ -405,10 +405,15 @@ export async function elementToFabricObject(
           }));
         }
 
-        const group = new Group(children, { left: el.x, top: el.y, originX: 'left', originY: 'top' });
+        const group = new Group(children, {
+          left: el.x,
+          top: el.y,
+          angle: el.rotation || 0,
+          originX: 'left',
+          originY: 'top',
+          opacity: el.opacity ?? 1,
+        });
         (group as any).id = el.id;
-        (group as any).angle = el.rotation || 0;
-        (group as any).opacity = el.opacity ?? 1;
         return group;
       }
     }
@@ -494,10 +499,15 @@ export async function elementToFabricObject(
         fill: ic.color || '#ffffff', textAlign: 'center', text: ic.iconName,
         fontWeight: '900' as any, selectable: false, evented: false,
       }));
-      const group = new Group(children, { left: el.x, top: el.y, originX: 'left', originY: 'top' });
+      const group = new Group(children, {
+        left: el.x,
+        top: el.y,
+        angle: el.rotation || 0,
+        originX: 'left',
+        originY: 'top',
+        opacity: el.opacity ?? 1,
+      });
       (group as any).id = el.id;
-      (group as any).angle = el.rotation || 0;
-      (group as any).opacity = el.opacity ?? 1;
       return group;
     }
 
@@ -622,16 +632,19 @@ export async function elementToFabricObject(
     });
     
     const group = new Group(objs, { 
-      left: el.x, top: el.y, 
-      width: el.width, height: el.height,
-      originX: 'left', originY: 'top',
+      left: el.x,
+      top: el.y,
+      angle: el.rotation || 0,
+      width: el.width,
+      height: el.height,
+      originX: 'left',
+      originY: 'top',
       clipPath: clipPath,
+      opacity: el.opacity ?? 1,
       objectCaching: false,
     });
 
     (group as any).id = el.id;
-    (group as any).angle = el.rotation || 0;
-    (group as any).opacity = el.opacity ?? 1;
     return group;
   }
 
@@ -856,16 +869,16 @@ export async function elementToFabricObject(
     const tableGroup = new Group(tableObjs, {
       left: el.x,
       top: el.y,
+      angle: el.rotation || 0,
       width: el.width,
       height: totalCalculatedTableHeight,
       originX: 'left',
       originY: 'top',
+      opacity: el.opacity ?? 1,
       objectCaching: false,
     });
 
     (tableGroup as any).id = el.id;
-    (tableGroup as any).angle = el.rotation || 0;
-    (tableGroup as any).opacity = el.opacity ?? 1;
     (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
     return tableGroup;
   }

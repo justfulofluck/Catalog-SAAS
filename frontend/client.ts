@@ -37,13 +37,20 @@ api.interceptors.response.use(
             originalRequest._retry = true;
 
             try {
-                const refreshRes: any = await axios.post('/api/auth/token/refresh/', {}, {
-                    withCredentials: true
-                });
-                const newToken = refreshRes.data?.access || refreshRes.data?.access_token;
+                const refreshToken = localStorage.getItem('cs_refresh_token');
+                const refreshRes: any = await axios.post(
+                    '/api/auth/token/refresh/', 
+                    refreshToken ? { refresh: refreshToken } : {}, 
+                    { withCredentials: true }
+                );
+                const newToken = refreshRes.data?.access || refreshRes.data?.access_token || refreshRes?.access;
                 if (newToken) {
                     localStorage.setItem('cs_access_token', newToken);
                     originalRequest.headers['Authorization'] = `Bearer ${newToken}`;
+                }
+                const newRefreshToken = refreshRes.data?.refresh || refreshRes.data?.refresh_token || refreshRes?.refresh;
+                if (newRefreshToken) {
+                    localStorage.setItem('cs_refresh_token', newRefreshToken);
                 }
                 return api(originalRequest);
             } catch (refreshError) {

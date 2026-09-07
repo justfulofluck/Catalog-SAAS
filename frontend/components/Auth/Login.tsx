@@ -106,13 +106,14 @@ const Login: React.FC = () => {
       }
     } else {
       // LOGIN FLOW
-      // Timeout is just for visual effect, but we can keep it or remove it. 
-      // Keeping it small to ensure state updates match.
-      setTimeout(() => {
+      try {
         const isEmail = email.includes('@');
-        login(isEmail ? email : undefined, isEmail ? undefined : email, password);
+        await login(isEmail ? email : undefined, isEmail ? undefined : email, password);
+      } catch (err) {
+        console.error("Login failed", err);
+      } finally {
         setIsSubmitting(false);
-      }, 800);
+      }
     }
   };
 

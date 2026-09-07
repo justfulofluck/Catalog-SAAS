@@ -178,6 +178,7 @@ interface State {
 
   addElement: (pageIndex: number, element: CanvasElement) => void;
   updateElement: (pageIndex: number, elementId: string, updates: Partial<CanvasElement>) => void;
+  updateElements: (pageIndex: number, updatesList: { id: string; updates: Partial<CanvasElement> }[]) => void;
   moveElements: (pageIndex: number, elementIds: string[], dx: number, dy: number) => void;
   removeElement: (pageIndex: number, elementId: string) => void;
   duplicateElement: (pageIndex: number, elementId: string) => void;
@@ -440,77 +441,6 @@ export const useStore = create<State>((set, get) => ({
       };
     }
 
-    // Calculate old and new safe boundaries for shifting
-    // Y Axis: Margins + Header
-    const oldHasHeader = oldCatalog.hasHeader !== false;
-    const newHasHeader = newCatalog.hasHeader !== false;
-    const oldSafeY1 = (oldCatalog.marginTop || 0) + (oldHasHeader ? (oldCatalog.headerHeight || 113.4) : 0);
-    const newSafeY1 = (newCatalog.marginTop || 0) + (newHasHeader ? (newCatalog.headerHeight || 113.4) : 0);
-    const deltaY = newSafeY1 - oldSafeY1;
-
-    // X Axis: Left Margin
-    const oldSafeX1 = oldCatalog.marginLeft || 0;
-    const newSafeX1 = newCatalog.marginLeft || 0;
-    const deltaX = newSafeX1 - oldSafeX1;
-
-    // Right Margin (Shifting only if pushed)
-    const oldMarginRight = oldCatalog.marginRight || 0;
-    const newMarginRight = newCatalog.marginRight || 0;
-    // Effectively, the "max X" for content decreases as marginRight increases.
-    // If an element's (x + width) > (PAGE_WIDTH - newMarginRight), we shift it left.
-
-    const pageWidth = PAGE_WIDTH;
-
-    // Bottom Margin (Shifting only if pushed)
-    const oldMarginBottom = oldCatalog.marginBottom || 0;
-    const newMarginBottomCalc = newCatalog.marginBottom || 0;
-
-    const pageHeight = PAGE_HEIGHT;
-
-    // If any safe area boundary shifted, we move all elements to facilitate
-    if (deltaY !== 0 || deltaX !== 0 || newMarginRight !== oldMarginRight || newMarginBottomCalc !== oldMarginBottom) {
-      const updatedPages = oldCatalog.pages.map(page => ({
-        ...page,
-        elements: page.elements.map(el => {
-          const isBackground = (typeof el.id === 'string' && el.id.endsWith('-bg')) || (el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT);
-          if (isBackground) return el;
-
-          let newX = el.x + deltaX;
-          let newY = el.y + deltaY;
-
-          // Check Right Margin Constraint
-          const rightBoundary = pageWidth - newMarginRight;
-          if (newX + el.width > rightBoundary) {
-            // Shift left to fit, but respect left margin
-            newX = Math.max(newSafeX1, rightBoundary - el.width);
-          }
-
-          // Check Bottom Margin Constraint
-          // Safe bottom = PAGE_HEIGHT - marginBottom - footerHeight (if footer exists)
-          // But here we might just care about margin for now, or the total safe area?
-          // The user specifically mentioned "bottom margin".
-          // Let's calculate the effective bottom safe line.
-          const newHasFooter = newCatalog.hasFooter !== false;
-          const effectiveFooterHeight = newHasFooter ? (newCatalog.footerHeight || 75.6) : 0;
-          const bottomBoundary = pageHeight - newMarginBottomCalc - effectiveFooterHeight;
-
-          if (newY + el.height > bottomBoundary) {
-            // Shift up to fit, but respect top margin/header (newSafeY1)
-            newY = Math.max(newSafeY1, bottomBoundary - el.height);
-          }
-
-          return {
-            ...el,
-            x: newX,
-            y: newY
-          };
-        })
-      }));
-      return {
-        catalog: { ...newCatalog, pages: updatedPages, updatedAt: new Date().toISOString() }
-      };
-    }
-
     return {
       catalog: { ...newCatalog, updatedAt: new Date().toISOString() }
     };
@@ -563,29 +493,43 @@ export const useStore = create<State>((set, get) => ({
       
       const response: any = await authApi.login(payload);
       const token = response?.access || response?.access_token || response?.data?.access;
+      const refreshToken = response?.refresh || response?.refresh_token || response?.data?.refresh;
       if (token) {
         localStorage.setItem('cs_access_token', token);
       }
+      if (refreshToken) {
+        localStorage.setItem('cs_refresh_token', refreshToken);
+      }
 
-      // 2. Fetch User Details
-      const userData: any = await authApi.user();
+      // 2. Fetch User Details - use returned user if present, or fetch
+      let userData: any = response?.user;
+      if (!userData) {
+        try {
+          userData = await authApi.user();
+        } catch (e) {
+          console.warn("Could not fetch extra user details, proceeding with token profile", e);
+        }
+      }
 
-      // 3. Enforce Customer Role (Allow staff to log in as admin or user)
+      // 3. Check role
+      const isStaff = !!(userData?.is_staff || userData?.is_superuser);
       const userObj: User = {
-        id: userData.id || `u-${Date.now()}`,
-        name: userData.name || 'User',
-        email: userData.email,
-        role: userData.is_staff ? 'admin' : 'user',
+        id: userData?.id || `u-${Date.now()}`,
+        name: userData?.name || 'User',
+        email: userData?.email || email || '',
+        role: isStaff ? 'admin' : 'user',
         status: 'active',
         joinedAt: new Date().toISOString(),
-        businessName: userData.business_name
+        businessName: userData?.business_name
       };
 
       set({
         isAuthenticated: true,
+        isAdminAuthenticated: isStaff,
         user: userObj,
         currentView: 'dashboard',
-        isLoading: false
+        isLoading: false,
+        error: null
       });
 
       sessionStorage.setItem('cs_session', '1');
@@ -599,12 +543,13 @@ export const useStore = create<State>((set, get) => ({
       get().fetchSystemTemplates();
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.non_field_errors?.[0] || 'Login failed';
+      const errorMessage = error.response?.data?.non_field_errors?.[0] || error.response?.data?.detail || 'Login failed';
       if (errorMessage.includes('Unable to log in with provided credentials')) {
         set({ error: 'Invalid email or password. New here? Create an account.', isLoading: false });
       } else {
         set({ error: errorMessage, isLoading: false });
       }
+      throw error;
     }
   },
 
@@ -621,8 +566,12 @@ export const useStore = create<State>((set, get) => ({
 
       const response: any = await authApi.login(payload);
       const token = response?.access || response?.access_token || response?.data?.access;
+      const refreshToken = response?.refresh || response?.refresh_token || response?.data?.refresh;
       if (token) {
         localStorage.setItem('cs_access_token', token);
+      }
+      if (refreshToken) {
+        localStorage.setItem('cs_refresh_token', refreshToken);
       }
 
       // 2. Fetch User
@@ -633,6 +582,7 @@ export const useStore = create<State>((set, get) => ({
       // 3. Enforce Admin Role
       if (!(user as any).is_staff && !(user as any).is_superuser) {
         localStorage.removeItem('cs_access_token');
+        localStorage.removeItem('cs_refresh_token');
         await authApi.logout();
         set({ isLoading: false, error: 'Access Denied. Authorized personnel only.' });
         return;
@@ -694,6 +644,7 @@ export const useStore = create<State>((set, get) => ({
 
     sessionStorage.removeItem('cs_session');
     localStorage.removeItem('cs_access_token');
+    localStorage.removeItem('cs_refresh_token');
 
     set({
       isAuthenticated: false,
@@ -1690,20 +1641,24 @@ export const useStore = create<State>((set, get) => ({
       }
 
       // Save all pages (This could be optimized to only sav changed pages, but for now we save all)
-      for (const page of catalog.pages) {
+      for (let i = 0; i < catalog.pages.length; i++) {
+        const page = catalog.pages[i];
+        const pageNum = page.pageNumber || (page as any).page_number || (i + 1);
         await catalogsApi.savePage(backendId, {
-          pageNumber: page.pageNumber,
-          type: page.type,
-          elements: page.elements,
+          pageNumber: pageNum,
+          type: page.type || 'interior',
+          elements: page.elements || [],
           categoryId: page.categoryId
         });
       }
 
       set({ isLoading: false });
       return backendId;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to save catalog", error);
-      set({ error: "Failed to save catalog to server", isLoading: false });
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || "Failed to save catalog to server";
+      set({ error: errMsg, isLoading: false });
+      throw error;
     }
   },
 
@@ -1722,9 +1677,19 @@ export const useStore = create<State>((set, get) => ({
     return {};
   }),
 
-  deleteCatalog: (id) => set((state) => ({
-    savedCatalogs: state.savedCatalogs.filter(c => c.id !== id)
-  })),
+  deleteCatalog: async (id) => {
+    const { catalogsApi } = await import('../client');
+    set((state) => ({
+      savedCatalogs: state.savedCatalogs.filter(c => c.id !== id)
+    }));
+    try {
+      if (!String(id).startsWith('cat-')) {
+        await catalogsApi.delete(String(id));
+      }
+    } catch (e) {
+      console.error("Failed to delete catalog from database", e);
+    }
+  },
 
   updateSavedCatalog: (id, updates) => set((state) => ({
     savedCatalogs: state.savedCatalogs.map(c => c.id === id ? { ...c, ...updates, updatedAt: new Date().toISOString() } : c)
@@ -1733,10 +1698,16 @@ export const useStore = create<State>((set, get) => ({
   fetchCatalogs: async () => {
     const { catalogsApi } = await import('../client');
     try {
-      const response = await catalogsApi.getAll();
-      const rawCatalogs = (response as any).data || response;
+      const response: any = await catalogsApi.getAll();
+      const rawList = Array.isArray(response)
+        ? response
+        : (Array.isArray(response?.data)
+          ? response.data
+          : (Array.isArray(response?.results)
+            ? response.results
+            : []));
 
-      const catalogs = rawCatalogs.map((data: any) => {
+      const catalogs = rawList.map((data: any) => {
         let settings = data.settings || {};
         if (typeof settings === 'string') {
           try {
@@ -1751,11 +1722,13 @@ export const useStore = create<State>((set, get) => ({
           id: String(data.id),
           headerElements: data.headerElements || settings.headerElements || [],
           footerElements: data.footerElements || settings.footerElements || [],
-          pages: (data.pages || []).map((p: any) => ({
+          pages: (data.pages || []).map((p: any, idx: number) => ({
             ...p,
-            id: String(p.id),
-            elements: p.layout_data || [],
-            categoryId: p.category
+            id: String(p.id || `p-${idx + 1}`),
+            pageNumber: p.pageNumber || p.page_number || (idx + 1),
+            type: p.type || 'interior',
+            elements: p.layout_data || p.elements || [],
+            categoryId: p.category || p.categoryId
           }))
         };
       });
@@ -1960,6 +1933,22 @@ export const useStore = create<State>((set, get) => ({
     
     newPages[pageIndex] = page; // Set the cloned page back
 
+    return {
+      catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
+    };
+  }),
+
+  updateElements: (pageIndex, updatesList) => set((state) => {
+    const newPages = [...state.catalog.pages];
+    const page = { ...newPages[pageIndex] };
+    const updateMap = new Map(updatesList.map(u => [u.id, u.updates]));
+
+    page.elements = page.elements.map(el => {
+      const updates = updateMap.get(el.id);
+      return updates ? { ...el, ...updates } : el;
+    });
+
+    newPages[pageIndex] = page;
     return {
       catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
     };

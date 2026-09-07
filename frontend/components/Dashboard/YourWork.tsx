@@ -4,7 +4,11 @@ import { ArrowLeft, BookOpen, Clock, Trash2, Edit2, Plus, LayoutGrid } from 'luc
 import { useStore } from '../../store/useStore';
 
 const YourWork: React.FC = () => {
-  const { savedCatalogs, loadCatalog, deleteCatalog, setView } = useStore();
+  const { savedCatalogs, loadCatalog, deleteCatalog, setView, fetchCatalogs } = useStore();
+
+  React.useEffect(() => {
+    fetchCatalogs();
+  }, [fetchCatalogs]);
 
   const handleLoad = (id: string) => {
     loadCatalog(id);
@@ -88,7 +92,7 @@ const YourWork: React.FC = () => {
                   <div className="flex items-start justify-between mb-4">
                     <div>
                       <h3 className="text-xl font-black text-slate-900 dark:text-white leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors mb-1">{catalog.name}</h3>
-                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">ID: {catalog.id.split('-')[1] || '---'}</p>
+                      <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">ID: #{catalog.id.startsWith?.('cat-') ? catalog.id.slice(4) : catalog.id}</p>
                     </div>
                     <div className="w-10 h-10 rounded-2xl bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-300 dark:text-slate-600 group-hover:bg-indigo-600 dark:group-hover:bg-indigo-500 group-hover:text-white transition-all">
                       <Edit2 size={18} />

@@ -22,16 +22,15 @@ from django.conf.urls.static import static
 
 from users.views import PublicRegisterView
 from dj_rest_auth.views import UserDetailsView
-from rest_framework.permissions import AllowAny
-
-class AllowAnyUserDetailsView(UserDetailsView):
-    permission_classes = [AllowAny]
+from dj_rest_auth.jwt_auth import get_refresh_view
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/auth/", include("dj_rest_auth.urls")),
-    path("api/auth/user/", AllowAnyUserDetailsView.as_view(), name="rest_user_details"),
     path("api/auth/registration/", PublicRegisterView.as_view(), name="rest_register"),
+    # Add JWT token refresh view so interceptor doesn't get 404
+    path("api/auth/token/refresh/", get_refresh_view().as_view(), name="token_refresh"),
+    path("api/token/refresh/", get_refresh_view().as_view(), name="token_refresh_alt"),
     path("api/", include("users.urls")),
     path("api/", include("products.urls")),
     path("api/", include("media.urls")),

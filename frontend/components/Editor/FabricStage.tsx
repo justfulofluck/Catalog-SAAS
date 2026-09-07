@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Canvas, Circle, ActiveSelection, config } from 'fabric';
+import { Canvas, Circle, ActiveSelection, config, util, Point } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
@@ -14,17 +14,18 @@ interface Props {
   canvasBg: string;
   headerElements?: CanvasElement[];
   footerElements?: CanvasElement[];
+  footerHeight?: number;
   editingId?: string | null;
 }
 
-const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = [], footerElements = [], editingId = null }) => {
+const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = [], footerElements = [], footerHeight = 38, editingId = null }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
   const renderThrottleRef = useRef<number | null>(null);
   const [activeGuides, setActiveGuides] = useState<{ type: 'horizontal' | 'vertical'; pos: number }[]>([]);
   const [activeDistanceBadges, setActiveDistanceBadges] = useState<DistanceBadge[]>([]);
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const { setSelectedElementIds, updateElement, pushHistory, catalog } = useStore();
+  const { setSelectedElementIds, updateElement, updateElements, pushHistory, catalog } = useStore();
   const products = useStore((state) => state.products);
 
   const curW = PAGE_WIDTH;
@@ -61,7 +62,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     canvas.on('selection:cleared', () => setSelectedElementIds([]));
 
     canvas.on('mouse:down', () => {
-      useStore.getState().setCurrentPageIndex(pageIdx);
+      canvas.calcOffset();
+      if (useStore.getState().currentPageIndex !== pageIdx) {
+        useStore.getState().setCurrentPageIndex(pageIdx);
+      }
     });
 
     canvas.on('mouse:dblclick', (e: any) => {
@@ -82,6 +86,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     let dragTimer: number | null = null;
     canvas.on('object:moving', (e: any) => {
       const obj = e.target as any;
+      const isMulti = obj && (
+        obj instanceof ActiveSelection ||
+        obj.type === 'ActiveSelection' ||
+        obj.type === 'activeSelection' ||
+        'multiSelectionStacking' in obj
+      );
+
       if (obj && obj.id) {
         const objW = (obj.width || 0) * (obj.scaleX || 1);
         const objH = (obj.height || 0) * (obj.scaleY || 1);
@@ -106,6 +117,33 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         setActiveDimensions({
           x: obj.left || 0,
           y: obj.top || 0,
+          w: Math.round(objW),
+          h: Math.round(objH)
+        });
+      } else if (isMulti) {
+        const objW = (obj.width || 0) * (obj.scaleX || 1);
+        const objH = (obj.height || 0) * (obj.scaleY || 1);
+        const currentBox = {
+          id: 'activeSelection',
+          minX: (obj.left || 0) - objW / 2,
+          minY: (obj.top || 0) - objH / 2,
+          maxX: (obj.left || 0) + objW / 2,
+          maxY: (obj.top || 0) + objH / 2,
+          zIndex: 9999,
+        };
+
+        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6);
+        if (snapX !== null) {
+          obj.set('left', snapX + objW / 2);
+        }
+        if (snapY !== null) {
+          obj.set('top', snapY + objH / 2);
+        }
+        setActiveGuides(guideLines);
+        setActiveDistanceBadges(distanceBadges);
+        setActiveDimensions({
+          x: Math.round((obj.left || 0) - objW / 2),
+          y: Math.round((obj.top || 0) - objH / 2),
           w: Math.round(objW),
           h: Math.round(objH)
         });
@@ -134,9 +172,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       if (obj) {
         const objW = (obj.width || 0) * (obj.scaleX || 1);
         const objH = (obj.height || 0) * (obj.scaleY || 1);
+        const isMulti = obj instanceof ActiveSelection || obj.type === 'ActiveSelection' || obj.type === 'activeSelection' || 'multiSelectionStacking' in obj;
         setActiveDimensions({
-          x: obj.left || 0,
-          y: obj.top || 0,
+          x: Math.round(isMulti ? (obj.left || 0) - objW / 2 : (obj.left || 0)),
+          y: Math.round(isMulti ? (obj.top || 0) - objH / 2 : (obj.top || 0)),
           w: Math.round(objW),
           h: Math.round(objH)
         });
@@ -149,7 +188,73 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       setActiveDimensions(null);
       dragTimer = null;
       const obj = e.target as any;
-      if (obj && obj.id) {
+
+      const isMulti = obj && (
+        obj instanceof ActiveSelection ||
+        obj.type === 'ActiveSelection' ||
+        obj.type === 'activeSelection' ||
+        'multiSelectionStacking' in obj
+      );
+
+      if (isMulti) {
+        pushHistory();
+        const objects = obj.getObjects();
+        const isScaled = Math.abs((obj.scaleX || 1) - 1) > 0.001 || Math.abs((obj.scaleY || 1) - 1) > 0.001;
+        const pageUpdates: { id: string; updates: any }[] = [];
+
+        objects.forEach((child: any) => {
+          if (!child.id) return;
+          
+          const isHeader = headerElements?.some(el => el.id === child.id);
+          const isFooter = footerElements?.some(el => el.id === child.id);
+          const el = page.elements.find((e: CanvasElement) => e.id === child.id) ||
+                     headerElements?.find(e => e.id === child.id) ||
+                     footerElements?.find(e => e.id === child.id);
+          
+          const matrix = child.calcTransformMatrix();
+          const decomposed = util.qrDecompose(matrix);
+          const normAngle = Math.round(((decomposed.angle % 360) + 360) % 360);
+
+          // Absolute origin position on canvas for originX: 'left', originY: 'top'
+          const canvasOrigin = new Point(0, 0).transform(matrix);
+
+          const updates: any = {
+            x: Math.round(canvasOrigin.x),
+            y: Math.round(canvasOrigin.y),
+            rotation: normAngle,
+          };
+          
+          if (isScaled) {
+            const childSx = Math.abs(decomposed.scaleX);
+            const childSy = Math.abs(decomposed.scaleY);
+
+            if (el && el.type === 'text') {
+              const newWidth = Math.max(20, (child.width || el.width) * childSx);
+              updates.width = Math.round(newWidth);
+              updates.height = child.height || el.height;
+            } else if (child instanceof Circle) {
+              const newRadius = (child.radius || (el?.width ? el.width / 2 : 0)) * childSx;
+              updates.width = Math.round(newRadius * 2);
+              updates.height = Math.round(newRadius * 2);
+            } else {
+              updates.width = Math.round((child.width || (el?.width || 0)) * childSx);
+              updates.height = Math.round((child.height || (el?.height || 0)) * childSy);
+            }
+          }
+          
+          if (isHeader) {
+            useStore.getState().updateHeaderElement(child.id, updates);
+          } else if (isFooter) {
+            useStore.getState().updateFooterElement(child.id, updates);
+          } else {
+            pageUpdates.push({ id: child.id, updates });
+          }
+        });
+
+        if (pageUpdates.length > 0) {
+          updateElements(pageIdx, pageUpdates);
+        }
+      } else if (obj && obj.id) {
         const isHeader = headerElements?.some(el => el.id === obj.id);
         const isFooter = footerElements?.some(el => el.id === obj.id);
         const el = page.elements.find((e: CanvasElement) => e.id === obj.id) ||
@@ -157,10 +262,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                    footerElements?.find(e => e.id === obj.id);
         
         const updates: any = { x: obj.left || 0, y: obj.top || 0, rotation: obj.angle || 0 };
+        const sx = Math.abs(obj.scaleX || 1);
+        const sy = Math.abs(obj.scaleY || 1);
         
         if (el && el.type === 'text') {
-          const sx = Math.abs(obj.scaleX || 1);
-          const sy = Math.abs(obj.scaleY || 1);
           if (sx !== 1 || sy !== 1) {
             const newWidth = Math.max(20, (obj.width || el.width) * sx);
             updates.width = newWidth;
@@ -174,17 +279,46 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             updates.width = obj.width || el.width;
           }
           updates.height = obj.height || el.height;
-        } else if (el && el.type === 'product-block') {
-          if (obj.scaleX !== 1 || obj.scaleY !== 1) {
-            updates.width = (obj.width || 0) * Math.abs(obj.scaleX || 1);
-            updates.height = (obj.height || 0) * Math.abs(obj.scaleY || 1);
-          }
         } else if (obj instanceof Circle) {
-          updates.width = (obj.radius || 0) * 2 * Math.abs(obj.scaleX || 1);
-          updates.height = (obj.radius || 0) * 2 * Math.abs(obj.scaleY || 1);
+          const newRadius = (obj.radius || (el?.width ? el.width / 2 : 0)) * sx;
+          updates.width = newRadius * 2;
+          updates.height = newRadius * 2;
+          obj.set({
+            radius: newRadius,
+            scaleX: 1,
+            scaleY: 1
+          });
+          obj.setCoords();
+        } else if (el && (el.type === 'shape' || el.type === 'comment')) {
+          const newW = (obj.width || el.width || 0) * sx;
+          const newH = (obj.height || el.height || 0) * sy;
+          updates.width = newW;
+          updates.height = newH;
+          obj.set({
+            width: newW,
+            height: newH,
+            scaleX: 1,
+            scaleY: 1
+          });
+          obj.setCoords();
+        } else if (el && el.type === 'image') {
+          const newW = (obj.width || el.width || 0) * sx;
+          const newH = (obj.height || el.height || 0) * sy;
+          updates.width = newW;
+          updates.height = newH;
+        } else if (el && el.type === 'product-block') {
+          const newW = (obj.width || el.width || 0) * sx;
+          const newH = (obj.height || el.height || 0) * sy;
+          updates.width = newW;
+          updates.height = newH;
+        } else if (el && el.type === 'table') {
+          const newW = (obj.width || el.width || 0) * sx;
+          const newH = (obj.height || el.height || 0) * sy;
+          updates.width = newW;
+          updates.height = newH;
         } else {
-          updates.width = (obj.width || 0) * Math.abs(obj.scaleX || 1);
-          updates.height = (obj.height || 0) * Math.abs(obj.scaleY || 1);
+          updates.width = (obj.width || 0) * sx;
+          updates.height = (obj.height || 0) * sy;
         }
         pushHistory();
         
@@ -218,12 +352,20 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     let isCurrent = true;
 
     const loadObjects = async () => {
+      if ((canvas as any)._currentTransform) return;
       try {
         const existingObjects = canvas.getObjects();
+        const formattedFooterElements = (footerElements || []).map((el: any) => ({
+          ...el,
+          y: (el.y || 0) + (el.y < 200 ? PAGE_HEIGHT - footerHeight : 0),
+          text: el.type === 'text' && el.text?.includes('{{page}}')
+            ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
+            : el.text
+        }));
         const allElements = [
           ...page.elements,
           ...(headerElements || []),
-          ...(footerElements || [])
+          ...formattedFooterElements
         ];
         const elIds = new Set(allElements.map(e => e.id));
 
@@ -241,7 +383,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const oldTableJSON = existingObj._tableDataJSON;
             const newTableJSON = JSON.stringify(el.tableData || {});
             const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
-            return oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2;
+            return oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
           }
           if (el.type !== 'product-block') return false;
           const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
@@ -266,7 +408,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
           if (existingObj) {
             const isActiveObj = canvas.getActiveObjects().includes(existingObj);
-            const isTableRebuild = el.type === 'table' && needsRebuild(el, existingObj);
+            const isTableRebuild = el.type === 'table' && !isActiveObj && needsRebuild(el, existingObj);
             const isProductRebuild = el.type === 'product-block' && !isActiveObj && needsRebuild(el, existingObj);
 
             if (isTableRebuild || isProductRebuild) {
@@ -297,20 +439,25 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   fontSize: el.fontSize || 16, fontFamily: el.fontFamily || 'Inter',
                   fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal',
                   fill: el.fill || '#000000', textAlign: el.textAlign || 'left',
-                  width: el.width, lineHeight: el.lineHeight || 1.2,
+                  lineHeight: el.lineHeight || 1.2,
                   underline: el.textDecoration?.includes('underline') || false,
                   charSpacing: el.letterSpacing || 0,
-                  scaleX: 1,
-                  scaleY: 1,
                   objectCaching: false,
                 });
+                if (!isActiveObj) {
+                  existingObj.set({
+                    width: el.width,
+                    scaleX: 1,
+                    scaleY: 1,
+                  });
+                }
               } else if (el.type === 'shape' || el.type === 'comment') {
                 existingObj.set({
                   fill: el.fill || '#ffffff', stroke: el.stroke || undefined,
                   strokeWidth: el.strokeWidth || 0,
                 });
                 if (!isActiveObj) {
-                  existingObj.set({ width: el.width, height: el.height });
+                  existingObj.set({ width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
                   if (el.shapeType === 'circle' && existingObj instanceof Circle) {
                     existingObj.set({ radius: Math.min(el.width, el.height) / 2 });
                   }
@@ -382,6 +529,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           if (selectedObjs.length > 0 && (!currentActive.length || !selectedObjs.every(o => currentActive.includes(o)))) {
             if (selectedObjs.length === 1) {
               canvas.setActiveObject(selectedObjs[0]);
+            } else if (selectedObjs.length > 1) {
+              const sel = new ActiveSelection(selectedObjs, { canvas });
+              canvas.setActiveObject(sel);
             }
           }
         }
@@ -417,7 +567,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     return () => {
       isCurrent = false;
     };
-  }, [page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber, catalog]);
+  }, [page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU]);
 
   useEffect(() => {
     const unsub = useStore.subscribe((newState, prevState) => {
@@ -427,6 +577,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       if (newIds !== oldIds) {
         if (fabricCanvasRef.current) {
           const canvas = fabricCanvasRef.current;
+          if ((canvas as any)._currentTransform) return;
           const currentActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
           
           if (JSON.stringify(currentActiveIds.sort()) !== JSON.stringify([...newIds].sort())) {

@@ -123,6 +123,8 @@ export interface CatalogPage {
   categoryId?: string;
   orientation?: 'portrait' | 'landscape';
   backgroundColor?: string;
+  hasHeader?: boolean;
+  hasFooter?: boolean;
 }
 
 // Added PageTemplate interface for predefined layouts used in constants.ts

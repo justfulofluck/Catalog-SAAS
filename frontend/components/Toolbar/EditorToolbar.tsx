@@ -29,7 +29,6 @@ import {
   RectangleHorizontal,
   Cloud,
   Flag,
-  Table as TableIcon,
   Plus as PlusIcon
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -135,47 +134,29 @@ const EditorToolbar: React.FC = () => {
     });
   };
 
-  const handleAddTable = () => {
-    addElement(currentPageIndex, {
-      id: `table-${Date.now()}`,
-      type: 'table',
-      x: 350,
-      y: 120,
-      width: 380,
-      height: 120,
-      rotation: 0,
-      opacity: 1,
-      zIndex: 20,
-      tableData: {
-        headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'PRICE', 'PACKING'],
-        rows: [
-          ['VT-2612', '12W V-TAC COB WHITE BODY', '75MM', 'W, W.W, N.W', '', '20 PCS'],
-          ['VT-2612', '12W VTAC 3IN1 ON SWITCH', '75MM', 'W, W.W, N.W', ',000', '20 PCS'],
-          ['VT-2612', '12W V-TAC COB DIMMABLE', '75MM', 'W, W.W, N.W', ',500', '20 PCS']
-        ],
-        headerBg: '#002b36',
-        headerTextColor: '#ffffff',
-        alternateRowBg: '#f8fafc',
-        rowBg: '#ffffff',
-        borderColor: '#334155',
-        fontSize: 8.5,
-        headerFontSize: 9.5,
-        cellPadding: 5
-      }
-    });
-  };
-
   const handleSave = async () => {
     setIsCommiting(true);
     try {
-      await saveCatalog();
-      const toast = document.createElement('div');
-      toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
-      toast.innerText = 'Product Workspace Synchronized';
-      document.body.appendChild(toast);
-      setTimeout(() => toast.remove(), 2500);
-    } catch (error) {
+      const savedId = await saveCatalog();
+      if (savedId) {
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
+        toast.innerText = 'Product Workspace Synchronized';
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+      }
+    } catch (error: any) {
       console.error('Failed to save catalog', error);
+      const toast = document.createElement('div');
+      toast.className = 'fixed bottom-12 left-1/2 -translate-x-1/2 bg-red-600 text-white px-8 py-4 rounded-[20px] text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl z-50 animate-in slide-in-from-bottom-4 backdrop-blur-xl border border-white/10';
+      const status = error.response?.status;
+      if (status === 401) {
+        toast.innerText = 'Save Failed: Session expired. Please log in.';
+      } else {
+        toast.innerText = 'Save Failed: ' + (error.response?.data?.detail || error.message || 'Server error');
+      }
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3500);
     } finally {
       setIsCommiting(false);
     }
@@ -239,7 +220,6 @@ const EditorToolbar: React.FC = () => {
                 </div>
               )}
             </div>
-            <button onClick={handleAddTable} className="p-2 text-indigo-500 hover:bg-indigo-50 rounded-xl" title="Insert Spec / Variants Table"><TableIcon size={18} /></button>
             <button onClick={handleAddComment} className="p-2 text-amber-500 hover:bg-amber-50 rounded-xl" title="Add Annotation"><MessageSquare size={18} /></button>
           </div>
 
