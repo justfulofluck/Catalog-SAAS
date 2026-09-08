@@ -176,7 +176,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     <ChevronDown size={12} className="text-slate-400 shrink-0" />
                 </button>
                 {isFontMenuOpen && (
-                    <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-0 w-64 bg-white border border-slate-200/60 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300 flex flex-col`}>
+                    <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-0 w-64 bg-white border border-slate-200/60 rounded-[4px] shadow-2xl overflow-hidden z-50 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300 flex flex-col`}>
                         {/* Search Bar - Fixed at top */}
                         <div className="p-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2 sticky top-0 z-10">
                             <Search size={14} className="text-slate-400" />
@@ -196,7 +196,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                         >
                             {filteredFonts.map(group => (
                                 <div key={group.label} className="flex flex-col p-1 mb-1 last:mb-0">
-                                    <div className="px-2 py-1 text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/80 rounded-md mb-0.5">
+                                    <div className="px-2 py-1 text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/80 rounded-[4px] mb-0.5">
                                         {group.label}
                                     </div>
                                     <div className="flex flex-col">
@@ -205,7 +205,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                                 key={f}
                                                 onMouseDown={preventFocusSteal}
                                                 onClick={() => { onUpdate({ fontFamily: f }); setIsFontMenuOpen(false); }}
-                                                className={`block w-full text-left px-3 py-1.5 text-[13px] hover:bg-indigo-50 hover:text-indigo-600 rounded-md transition-all ${f === font ? 'text-indigo-600 font-bold bg-indigo-50' : 'text-slate-700'}`}
+                                                className={`block w-full text-left px-3 py-1.5 text-[13px] hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] transition-all ${f === font ? 'text-indigo-600 font-bold bg-indigo-50' : 'text-slate-700'}`}
                                                 style={{ fontFamily: f }}
                                             >
                                                 {f}
@@ -296,7 +296,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                         </div>
                     </button>
                     {isColorMenuOpen && (
-                        <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-[220px] bg-white border border-slate-200/60 rounded-2xl shadow-2xl p-3 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300 z-50`}>
+                        <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-[220px] bg-white border border-slate-200/60 rounded-[4px] shadow-2xl p-3 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300 z-50`}>
                             <AdvancedColorPicker
                                 color={color}
                                 onChange={(newVal) => handleAction('color', newVal)}
@@ -368,7 +368,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     </button>
                     {isSettingsOpen && (
                         <div
-                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-[240px] bg-white border border-slate-200/60 rounded-2xl shadow-2xl p-4 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300`}
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-[240px] bg-white border border-slate-200/60 rounded-[4px] shadow-2xl p-4 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300`}
                         >
                             <div className="space-y-4">
                                 {/* Letter Spacing */}
@@ -464,7 +464,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     </button>
                     {isLayerMenuOpen && (
                         <div
-                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} right-0 w-[200px] bg-white border border-slate-200/80 rounded-2xl shadow-2xl p-2 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 z-50`}
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} right-0 w-[200px] bg-white border border-slate-200/80 rounded-[4px] shadow-2xl p-2 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 z-50`}
                         >
                             <div className="space-y-1">
                                 <div className="px-3 py-1.5 border-b border-slate-100">
@@ -475,7 +475,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         reorderElement(currentPageIndex, element.id, 'front');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Bring to Front</span>
                                     <ArrowUpToLine size={14} className="text-slate-400" />
@@ -485,7 +485,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         reorderElement(currentPageIndex, element.id, 'forward');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Bring Forward</span>
                                     <ChevronUp size={14} className="text-slate-400" />
@@ -495,7 +495,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         reorderElement(currentPageIndex, element.id, 'backward');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Send Backward</span>
                                     <ChevronDown size={14} className="text-slate-400" />
@@ -505,7 +505,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         reorderElement(currentPageIndex, element.id, 'back');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-xl flex items-center justify-between transition-colors"
+                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Send to Back</span>
                                     <ArrowDownToLine size={14} className="text-slate-400" />
@@ -518,7 +518,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                             setEditorTab('layers');
                                             setIsLayerMenuOpen(false);
                                         }}
-                                        className="w-full px-3 py-2 text-left text-[11px] font-black text-indigo-600 hover:bg-indigo-50 rounded-xl flex items-center gap-2 transition-colors uppercase tracking-wider"
+                                        className="w-full px-3 py-2 text-left text-[11px] font-black text-indigo-600 hover:bg-indigo-50 rounded-[4px] flex items-center gap-2 transition-colors uppercase tracking-wider"
                                     >
                                         <Layers size={13} />
                                         <span>Open Scene Tree</span>

@@ -12,10 +12,7 @@ import {
   LayoutTemplate,
   List,
   SeparatorHorizontal,
-  Sparkles,
   FilePlus,
-  Palette,
-  Eye,
   Check
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -41,7 +38,6 @@ const CatalogSetup: React.FC = () => {
 
   const handleGenerate = async () => {
     if (name && selectedCategoryIds.length > 0) {
-      // Find matching grid template or default
       const defaultTemplate = GRID_TEMPLATES[1]; // 2x2
       
       generateCatalogFromTemplate(
@@ -76,24 +72,24 @@ const CatalogSetup: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950 flex items-center justify-center p-8 lg:p-12 animate-in fade-in duration-500 transition-colors duration-300">
+    <div className="flex-1 overflow-y-auto bg-[#100F0F] text-white flex items-center justify-center p-8 lg:p-12 animate-in fade-in duration-500">
       <div className="w-full max-w-5xl space-y-10">
 
         {/* 4-Phase Progress Navigation */}
         <div className="flex items-center gap-3 md:gap-6 mb-16 max-w-3xl mx-auto">
           {phases.map((p) => (
             <div key={p.num} className="flex-1 flex flex-col gap-2.5 group cursor-default">
-              <div className={`h-2 rounded-full transition-all duration-700 ${step >= p.num ? 'bg-indigo-600' : 'bg-slate-200 dark:bg-slate-800'}`} />
+              <div className={`h-2 rounded-full transition-all duration-500 ${step >= p.num ? 'bg-[#0F3D3E]' : 'bg-[#262626]'}`} />
               <div className="flex justify-between items-center px-1">
                 <div>
-                  <p className={`text-[9px] font-black uppercase tracking-widest transition-colors ${step >= p.num ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700'}`}>
+                  <p className={`text-[9px] font-bold uppercase tracking-widest transition-colors ${step >= p.num ? 'text-[#E2DCC8]' : 'text-[#666666]'}`}>
                     Phase 0{p.num}
                   </p>
-                  <p className={`text-[11px] font-bold transition-colors ${step >= p.num ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400 dark:text-slate-600'}`}>
+                  <p className={`font-space text-[11px] font-bold transition-colors ${step >= p.num ? 'text-white' : 'text-[#888888]'}`}>
                     {p.label}
                   </p>
                 </div>
-                {step > p.num && <CheckCircle2 size={13} className="text-indigo-600 dark:text-indigo-400 animate-in zoom-in" />}
+                {step > p.num && <CheckCircle2 size={13} className="text-[#E2DCC8] animate-in zoom-in" />}
               </div>
             </div>
           ))}
@@ -104,22 +100,28 @@ const CatalogSetup: React.FC = () => {
           <div className="grid grid-cols-1 gap-12 items-start animate-in slide-in-from-bottom-8 duration-500 max-w-xl mx-auto">
             <div className="space-y-8">
               <div className="space-y-6 text-center">
-                <span className="px-4 py-1.5 bg-indigo-600/10 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-black uppercase tracking-widest rounded-full border border-indigo-600/20 dark:border-indigo-400/20">Initiate Build</span>
-                <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Structure & <br /><span className="text-indigo-600 dark:text-indigo-400">Identity.</span></h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed">Define the foundational name of your new publication.</p>
+                <span className="px-4 py-1.5 bg-[#0F3D3E]/10 text-[#E2DCC8] text-[10px] font-bold uppercase tracking-widest rounded-full border border-[#0F3D3E]/20">
+                  Initiate Build
+                </span>
+                <h1 className="font-space text-5xl font-bold text-white tracking-tight leading-none">
+                  Structure & <br /><span className="text-[#E2DCC8]">Identity.</span>
+                </h1>
+                <p className="text-[#888888] font-medium text-lg leading-relaxed">
+                  Define the foundational name of your new publication.
+                </p>
               </div>
 
-              <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800 p-8 space-y-6">
+              <div className="bg-[#161616] rounded-[4px] border border-[#262626] p-8 space-y-6">
                 <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Document Title</label>
+                  <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Document Title</label>
                   <div className="relative group">
-                    <BookOpen className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600 group-focus-within:text-indigo-600 dark:group-focus-within:text-indigo-400 transition-colors" size={20} />
+                    <BookOpen className="absolute left-5 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" size={20} />
                     <input
                       type="text"
-                      placeholder="e.g. Q4 Lighting Collection 2025"
+                      placeholder="e.g. Q4 Lighting Collection 2026"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-12 pr-6 py-4 text-base font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 focus:border-indigo-600 dark:focus:border-indigo-400 outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-700 shadow-sm"
+                      className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] pl-12 pr-6 py-4 text-base font-bold text-white placeholder-[#666666] focus:border-[#0F3D3E] outline-none transition-all shadow-inner"
                     />
                   </div>
                 </div>
@@ -127,7 +129,7 @@ const CatalogSetup: React.FC = () => {
                 <button
                   disabled={!name}
                   onClick={() => setStep(2)}
-                  className="w-full py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 flex items-center justify-center gap-3 active:scale-95"
+                  className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-bold text-xs uppercase tracking-widest shadow-xl shadow-[#0F3D3E]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 active:scale-95"
                 >
                   Proceed to Products <ChevronRight size={16} />
                 </button>
@@ -141,21 +143,21 @@ const CatalogSetup: React.FC = () => {
           <div className="space-y-8 animate-in slide-in-from-right-12 duration-500">
             <div className="flex justify-between items-end">
               <div>
-                <button onClick={() => setStep(1)} className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-4 hover:text-slate-600 dark:hover:text-slate-400 transition-colors group text-left">
+                <button onClick={() => setStep(1)} className="flex items-center gap-2 text-[10px] font-bold text-[#888888] uppercase tracking-widest mb-4 hover:text-[#E2DCC8] transition-colors group text-left">
                   <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Return to Title
                 </button>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Assign Product Sources</h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-base">Select one or more taxonomies to populate your catalog.</p>
+                <h1 className="font-space text-4xl font-bold text-white tracking-tight">Assign Product Sources</h1>
+                <p className="text-[#888888] font-medium text-base">Select one or more taxonomies to populate your catalog.</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="text-right hidden md:block">
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Selected Sources</p>
-                  <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{selectedCategoryIds.length}</p>
+                  <p className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">Selected Sources</p>
+                  <p className="font-space text-xl font-bold text-[#E2DCC8]">{selectedCategoryIds.length}</p>
                 </div>
                 <button
                   onClick={() => setStep(3)}
                   disabled={selectedCategoryIds.length === 0}
-                  className="px-8 py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 dark:shadow-none hover:bg-indigo-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 active:scale-95"
+                  className="px-8 py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-bold text-xs uppercase tracking-widest shadow-xl shadow-[#0F3D3E]/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3 active:scale-95"
                 >
                   Proceed to Template <ChevronRight size={16} />
                 </button>
@@ -172,29 +174,29 @@ const CatalogSetup: React.FC = () => {
                     <button
                       onClick={() => toggleCategory(cat.id)}
                       className={`
-                        w-full relative overflow-hidden rounded-2xl p-6 flex items-center gap-6 transition-all group text-left border-2
+                        w-full relative overflow-hidden rounded-[4px] p-6 flex items-center gap-6 transition-all group text-left border-2
                         ${isSelected
-                          ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-xl dark:shadow-indigo-900/10'
-                          : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg'
+                          ? 'bg-[#161616] border-[#0F3D3E] shadow-xl shadow-[#0F3D3E]/10'
+                          : 'bg-[#161616] border-[#262626] hover:border-[#3a3a3a] hover:shadow-lg'
                         }
                       `}
                     >
-                      <div className={`absolute top-1/2 -translate-y-1/2 right-6 transition-colors ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-200 dark:text-slate-700 group-hover:text-indigo-300'}`}>
+                      <div className={`absolute top-1/2 -translate-y-1/2 right-6 transition-colors ${isSelected ? 'text-[#E2DCC8]' : 'text-[#666666] group-hover:text-[#888888]'}`}>
                         {isSelected ? <CheckSquare size={24} /> : <Square size={24} />}
                       </div>
 
                       <div
                         className={`
-                          w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300
+                          w-14 h-14 rounded-[4px] flex items-center justify-center shrink-0 shadow-sm transition-transform duration-300
                           ${isSelected ? 'scale-105' : 'group-hover:scale-105'}
                         `}
-                        style={{ backgroundColor: cat.color + '15', color: cat.color }}
+                        style={{ backgroundColor: cat.color + '22', color: cat.color }}
                       >
                         <FolderOpen size={28} />
                       </div>
                       <div className="flex-1 min-w-0 pr-12">
-                        <h3 className="font-black text-slate-900 dark:text-white text-lg mb-1 truncate">{cat.name}</h3>
-                        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                        <h3 className="font-space font-bold text-white text-lg mb-1 truncate">{cat.name}</h3>
+                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-widest">
                           {products.filter(p => p.categoryId === cat.id).length} ACTIVE PRODUCTS
                           {subcategories.length > 0 && ` • ${subcategories.length} SUBCATEGORIES`}
                         </p>
@@ -203,7 +205,7 @@ const CatalogSetup: React.FC = () => {
 
                     {/* Render Subcategories */}
                     {subcategories.length > 0 && (
-                      <div className="pl-8 sm:pl-16 space-y-2 relative before:absolute before:inset-y-0 before:left-6 sm:before:left-10 before:w-px before:bg-slate-200 dark:before:bg-slate-800">
+                      <div className="pl-8 sm:pl-16 space-y-2 relative before:absolute before:inset-y-0 before:left-6 sm:before:left-10 before:w-px before:bg-[#262626]">
                         {subcategories.map(sub => {
                           const isSubSelected = selectedCategoryIds.includes(sub.id);
                           return (
@@ -211,22 +213,22 @@ const CatalogSetup: React.FC = () => {
                               key={sub.id}
                               onClick={() => toggleCategory(sub.id)}
                               className={`
-                                w-full relative overflow-hidden rounded-xl p-4 flex items-center gap-4 transition-all group text-left border-2
+                                w-full relative overflow-hidden rounded-[4px] p-4 flex items-center gap-4 transition-all group text-left border-2
                                 ${isSubSelected
-                                  ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-300 dark:border-indigo-700 shadow-md'
-                                  : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-200 dark:hover:border-indigo-800'
+                                  ? 'bg-[#1c1c1c] border-[#0F3D3E] shadow-md'
+                                  : 'bg-[#161616] border-[#262626] hover:border-[#3a3a3a]'
                                 }
                               `}
                             >
-                              <div className="absolute left-0 top-1/2 -translate-x-[17px] sm:-translate-x-[25px] w-4 border-t border-slate-200 dark:border-slate-800"></div>
+                              <div className="absolute left-0 top-1/2 -translate-x-[17px] sm:-translate-x-[25px] w-4 border-t border-[#262626]"></div>
 
-                              <div className={`transition-colors ${isSubSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700 group-hover:text-indigo-300'}`}>
+                              <div className={`transition-colors ${isSubSelected ? 'text-[#E2DCC8]' : 'text-[#666666] group-hover:text-[#888888]'}`}>
                                 {isSubSelected ? <CheckSquare size={20} /> : <Square size={20} />}
                               </div>
 
                               <div className="flex-1 min-w-0 pr-4">
-                                <h4 className="font-bold text-slate-800 dark:text-slate-200 text-sm truncate">{sub.name}</h4>
-                                <p className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                <h4 className="font-bold text-white text-sm truncate">{sub.name}</h4>
+                                <p className="text-[9px] font-bold text-[#888888] uppercase tracking-widest">
                                   {products.filter(p => p.categoryId === sub.id).length} ACTIVE PRODUCTS
                                 </p>
                               </div>
@@ -240,15 +242,15 @@ const CatalogSetup: React.FC = () => {
               })}
 
               {categories.length === 0 && (
-                <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 p-12 rounded-2xl text-center space-y-6">
-                  <Box className="mx-auto text-amber-200 dark:text-amber-800" size={60} />
+                <div className="bg-[#161616] border border-[#262626] p-12 rounded-[4px] text-center space-y-6">
+                  <Box className="mx-auto text-[#666666]" size={60} />
                   <div className="space-y-2">
-                    <p className="text-xl font-black text-amber-700 dark:text-amber-400 tracking-tight">No taxonomies found!</p>
-                    <p className="text-sm text-amber-600 dark:text-amber-500 font-medium">Establish at least one category before generating a publication.</p>
+                    <p className="font-space text-xl font-bold text-white tracking-tight">No taxonomies found!</p>
+                    <p className="text-sm text-[#888888] font-medium">Establish at least one category before generating a publication.</p>
                   </div>
                   <button
                     onClick={() => setView('create-category')}
-                    className="px-10 py-4 bg-amber-600 dark:bg-amber-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-amber-600/20 hover:bg-amber-700 transition-all"
+                    className="px-10 py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-[10px] font-bold uppercase tracking-widest shadow-xl shadow-[#0F3D3E]/20 transition-all"
                   >
                     Initialize Category
                   </button>
@@ -258,22 +260,22 @@ const CatalogSetup: React.FC = () => {
           </div>
         )}
 
-        {/* Phase 3: Template Selection (All Templates & Blank Template Option) */}
+        {/* Phase 3: Template Selection */}
         {step === 3 && (
           <div className="space-y-8 animate-in slide-in-from-right-12 duration-500">
             <div className="flex justify-between items-end">
               <div>
-                <button onClick={() => setStep(2)} className="flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest mb-4 hover:text-slate-600 dark:hover:text-slate-400 transition-colors group text-left">
+                <button onClick={() => setStep(2)} className="flex items-center gap-2 text-[10px] font-bold text-[#888888] uppercase tracking-widest mb-4 hover:text-[#E2DCC8] transition-colors group text-left">
                   <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" /> Return to Products
                 </button>
-                <h1 className="text-4xl font-black text-slate-900 dark:text-white tracking-tight">Select Catalog Template</h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-base">
+                <h1 className="font-space text-4xl font-bold text-white tracking-tight">Select Catalog Template</h1>
+                <p className="text-[#888888] font-medium text-base">
                   Choose a pre-built publication style or start with a 4-page blank custom template.
                 </p>
               </div>
               <button
                 onClick={() => setStep(4)}
-                className="px-8 py-4 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-600/20 dark:shadow-none hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95"
+                className="px-8 py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-bold text-xs uppercase tracking-widest shadow-xl shadow-[#0F3D3E]/20 transition-all flex items-center gap-3 active:scale-95"
               >
                 Proceed to Assembly <ChevronRight size={16} />
               </button>
@@ -289,29 +291,29 @@ const CatalogSetup: React.FC = () => {
                     key={tpl.id}
                     onClick={() => setSelectedTemplateId(tpl.id)}
                     className={`
-                      relative group cursor-pointer overflow-hidden rounded-3xl border-2 transition-all p-5 flex flex-col justify-between
+                      relative group cursor-pointer overflow-hidden rounded-[4px] border-2 transition-all p-5 flex flex-col justify-between
                       ${isSelected
-                        ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-2xl shadow-indigo-600/10 scale-[1.02]'
-                        : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-xl'
+                        ? 'bg-[#161616] border-[#0F3D3E] shadow-2xl shadow-[#0F3D3E]/10 scale-[1.02]'
+                        : 'bg-[#161616] border-[#262626] hover:border-[#3a3a3a] hover:shadow-xl'
                       }
                     `}
                   >
                     {/* Selected Badge */}
                     {isSelected && (
-                      <div className="absolute top-4 right-4 z-20 bg-indigo-600 text-white rounded-full p-1.5 shadow-lg shadow-indigo-600/30">
+                      <div className="absolute top-4 right-4 z-20 bg-[#0F3D3E] text-white rounded-full p-1.5 shadow-lg shadow-[#0F3D3E]/30">
                         <Check size={14} strokeWidth={3} />
                       </div>
                     )}
 
                     <div>
                       {/* Thumbnail Preview Area */}
-                      <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-4 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center">
+                      <div className="relative aspect-[4/3] rounded-[4px] overflow-hidden mb-4 bg-[#121212] border border-[#262626] flex items-center justify-center">
                         {isBlank ? (
                           <div className="flex flex-col items-center justify-center text-center p-6 space-y-3">
-                            <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-inner">
+                            <div className="w-14 h-14 rounded-[4px] bg-[#0F3D3E]/10 text-[#E2DCC8] flex items-center justify-center border border-[#0F3D3E]/20">
                               <FilePlus size={28} />
                             </div>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-3 py-1 rounded-full">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-[#E2DCC8] bg-[#0F3D3E]/10 px-3 py-1 rounded-full border border-[#0F3D3E]/20">
                               4 Blank Pages
                             </span>
                           </div>
@@ -322,9 +324,9 @@ const CatalogSetup: React.FC = () => {
                               alt={tpl.name}
                               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-80" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                             <div className="absolute bottom-3 left-3 right-3 text-white">
-                              <span className="text-[9px] font-black uppercase tracking-widest bg-black/40 backdrop-blur-md px-2.5 py-1 rounded-md">
+                              <span className="text-[9px] font-bold uppercase tracking-widest bg-black/60 backdrop-blur-md px-2.5 py-1 rounded-[4px] border border-white/10">
                                 {tpl.pages.length} Pages Included
                               </span>
                             </div>
@@ -334,27 +336,27 @@ const CatalogSetup: React.FC = () => {
 
                       {/* Info & Description */}
                       <div className="space-y-1.5">
-                        <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
+                        <h3 className="font-space text-base font-bold text-white flex items-center gap-2">
                           {tpl.name}
                         </h3>
-                        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                        <p className="text-xs font-medium text-[#888888] line-clamp-2 leading-relaxed">
                           {tpl.description}
                         </p>
                       </div>
                     </div>
 
                     {/* Page Structure Tag Breakdown */}
-                    <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center gap-1.5 flex-wrap">
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                    <div className="mt-4 pt-3 border-t border-[#262626] flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-[4px] bg-[#1c1c1c] text-[#888888] border border-[#262626]">
                         Cover
                       </span>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-[4px] bg-[#1c1c1c] text-[#888888] border border-[#262626]">
                         Index / TOC
                       </span>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-[4px] bg-[#1c1c1c] text-[#888888] border border-[#262626]">
                         Product Grid
                       </span>
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-[4px] bg-[#1c1c1c] text-[#888888] border border-[#262626]">
                         Closing
                       </span>
                     </div>
@@ -371,11 +373,15 @@ const CatalogSetup: React.FC = () => {
             <div className="space-y-12">
 
               <div className="space-y-6 text-center">
-                <button onClick={() => setStep(3)} className="inline-flex items-center gap-2 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest hover:text-slate-600 dark:hover:text-slate-400 transition-colors group">
+                <button onClick={() => setStep(3)} className="inline-flex items-center gap-2 text-[10px] font-bold text-[#888888] uppercase tracking-widest hover:text-[#E2DCC8] transition-colors group">
                   <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Return to Templates
                 </button>
-                <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none">Final <span className="text-indigo-600 dark:text-indigo-400">Assembly.</span></h1>
-                <p className="text-slate-500 dark:text-slate-400 font-medium text-lg leading-relaxed max-w-lg mx-auto">Configure the architectural components of your publication before compilation.</p>
+                <h1 className="font-space text-5xl font-bold text-white tracking-tight leading-none">
+                  Final <span className="text-[#E2DCC8]">Assembly.</span>
+                </h1>
+                <p className="text-[#888888] font-medium text-lg leading-relaxed max-w-lg mx-auto">
+                  Configure the architectural components of your publication before compilation.
+                </p>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -384,21 +390,21 @@ const CatalogSetup: React.FC = () => {
                 <button
                   onClick={() => setIncludeCover(!includeCover)}
                   className={`
-                    relative overflow-hidden rounded-3xl p-8 text-left border-2 transition-all group
+                    relative overflow-hidden rounded-[4px] p-8 text-left border-2 transition-all group
                     ${includeCover
-                      ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-xl dark:shadow-indigo-900/10'
-                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-60 hover:opacity-100'
+                      ? 'bg-[#161616] border-[#0F3D3E] shadow-xl shadow-[#0F3D3E]/10'
+                      : 'bg-[#161616] border-[#262626] opacity-60 hover:opacity-100 hover:border-[#3a3a3a]'
                     }
                   `}
                 >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${includeCover ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                  <div className={`w-12 h-12 rounded-[4px] flex items-center justify-center mb-6 transition-colors ${includeCover ? 'bg-[#0F3D3E] text-white shadow-lg' : 'bg-[#1c1c1c] text-[#666666]'}`}>
                     <LayoutTemplate size={24} />
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">Cover Page</h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <h3 className="font-space text-lg font-bold text-white mb-2">Cover Page</h3>
+                  <p className="text-xs font-medium text-[#888888] leading-relaxed">
                     A high-impact introductory page with your catalog title and hero imagery.
                   </p>
-                  <div className={`absolute top-6 right-6 transition-all ${includeCover ? 'text-indigo-600 dark:text-indigo-400 scale-100' : 'text-slate-200 dark:text-slate-700 scale-90'}`}>
+                  <div className={`absolute top-6 right-6 transition-all ${includeCover ? 'text-[#E2DCC8] scale-100' : 'text-[#666666] scale-90'}`}>
                     {includeCover ? <CheckCircle2 size={24} /> : <Square size={24} />}
                   </div>
                 </button>
@@ -407,21 +413,21 @@ const CatalogSetup: React.FC = () => {
                 <button
                   onClick={() => setIncludeIndex(!includeIndex)}
                   className={`
-                    relative overflow-hidden rounded-3xl p-8 text-left border-2 transition-all group
+                    relative overflow-hidden rounded-[4px] p-8 text-left border-2 transition-all group
                     ${includeIndex
-                      ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-xl dark:shadow-indigo-900/10'
-                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-60 hover:opacity-100'
+                      ? 'bg-[#161616] border-[#0F3D3E] shadow-xl shadow-[#0F3D3E]/10'
+                      : 'bg-[#161616] border-[#262626] opacity-60 hover:opacity-100 hover:border-[#3a3a3a]'
                     }
                   `}
                 >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${includeIndex ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                  <div className={`w-12 h-12 rounded-[4px] flex items-center justify-center mb-6 transition-colors ${includeIndex ? 'bg-[#0F3D3E] text-white shadow-lg' : 'bg-[#1c1c1c] text-[#666666]'}`}>
                     <List size={24} />
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">Index / TOC</h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <h3 className="font-space text-lg font-bold text-white mb-2">Index / TOC</h3>
+                  <p className="text-xs font-medium text-[#888888] leading-relaxed">
                     Automated table of contents listing all sections and page numbers.
                   </p>
-                  <div className={`absolute top-6 right-6 transition-all ${includeIndex ? 'text-indigo-600 dark:text-indigo-400 scale-100' : 'text-slate-200 dark:text-slate-700 scale-90'}`}>
+                  <div className={`absolute top-6 right-6 transition-all ${includeIndex ? 'text-[#E2DCC8] scale-100' : 'text-[#666666] scale-90'}`}>
                     {includeIndex ? <CheckCircle2 size={24} /> : <Square size={24} />}
                   </div>
                 </button>
@@ -430,21 +436,21 @@ const CatalogSetup: React.FC = () => {
                 <button
                   onClick={() => setIncludeCategoryCovers(!includeCategoryCovers)}
                   className={`
-                    relative overflow-hidden rounded-3xl p-8 text-left border-2 transition-all group
+                    relative overflow-hidden rounded-[4px] p-8 text-left border-2 transition-all group
                     ${includeCategoryCovers
-                      ? 'bg-white dark:bg-slate-900 border-indigo-600 dark:border-indigo-500 shadow-xl dark:shadow-indigo-900/10'
-                      : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 opacity-60 hover:opacity-100'
+                      ? 'bg-[#161616] border-[#0F3D3E] shadow-xl shadow-[#0F3D3E]/10'
+                      : 'bg-[#161616] border-[#262626] opacity-60 hover:opacity-100 hover:border-[#3a3a3a]'
                     }
                   `}
                 >
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 transition-colors ${includeCategoryCovers ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                  <div className={`w-12 h-12 rounded-[4px] flex items-center justify-center mb-6 transition-colors ${includeCategoryCovers ? 'bg-[#0F3D3E] text-white shadow-lg' : 'bg-[#1c1c1c] text-[#666666]'}`}>
                     <SeparatorHorizontal size={24} />
                   </div>
-                  <h3 className="text-lg font-black text-slate-900 dark:text-white mb-2">Section Covers</h3>
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
-                    Distinct divider pages for each category block (e.g. "Furniture").
+                  <h3 className="font-space text-lg font-bold text-white mb-2">Section Covers</h3>
+                  <p className="text-xs font-medium text-[#888888] leading-relaxed">
+                    Distinct divider pages for each category block (e.g. "Lighting").
                   </p>
-                  <div className={`absolute top-6 right-6 transition-all ${includeCategoryCovers ? 'text-indigo-600 dark:text-indigo-400 scale-100' : 'text-slate-200 dark:text-slate-700 scale-90'}`}>
+                  <div className={`absolute top-6 right-6 transition-all ${includeCategoryCovers ? 'text-[#E2DCC8] scale-100' : 'text-[#666666] scale-90'}`}>
                     {includeCategoryCovers ? <CheckCircle2 size={24} /> : <Square size={24} />}
                   </div>
                 </button>
@@ -454,7 +460,7 @@ const CatalogSetup: React.FC = () => {
               <div className="flex justify-center pt-8">
                 <button
                   onClick={handleGenerate}
-                  className="w-full md:w-auto px-16 py-5 bg-indigo-600 dark:bg-indigo-500 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 dark:shadow-none hover:bg-indigo-700 transition-all flex items-center justify-center gap-4 hover:scale-105 active:scale-95"
+                  className="w-full md:w-auto px-16 py-5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-bold text-sm uppercase tracking-widest shadow-2xl shadow-[#0F3D3E]/30 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-4"
                 >
                   <Layers size={18} /> Generate Catalog
                 </button>

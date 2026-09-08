@@ -79,7 +79,7 @@ const LayersPanel: React.FC = () => {
           </h3>
           <button
             onClick={() => setEditorTab(null)}
-            className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+            className={`p-1.5 rounded-[4px] transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
           >
             <X size={14} />
           </button>
@@ -103,13 +103,13 @@ const LayersPanel: React.FC = () => {
               onClick={() => setSelectedElementIds([el.id])}
               onMouseEnter={() => setHoveredElementId(el.id)}
               onMouseLeave={() => setHoveredElementId(null)}
-              className={`group flex items-center gap-3 p-3 rounded-2xl border transition-all cursor-pointer ${selectedElementIds.includes(el.id) ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-600/20' : (uiTheme === 'dark' ? 'bg-slate-800/40 border-slate-700 hover:bg-slate-800' : 'bg-white border-slate-100 hover:border-indigo-200 shadow-sm')}`}
+              className={`group flex items-center gap-3 p-3 rounded-[4px] border transition-all cursor-pointer ${selectedElementIds.includes(el.id) ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-600/20' : (uiTheme === 'dark' ? 'bg-slate-800/40 border-slate-700 hover:bg-slate-800' : 'bg-white border-slate-100 hover:border-indigo-200 shadow-sm')}`}
             >
               <div className={`layer-drag-handle p-1 -ml-1 cursor-grab active:cursor-grabbing shrink-0 transition-colors ${uiTheme === 'dark' ? 'text-slate-600 hover:text-slate-400' : 'text-slate-200 hover:text-slate-400'}`}>
                 <GripVertical size={14} />
               </div>
 
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${selectedElementIds.includes(el.id) ? 'bg-white/20 text-white' : (uiTheme === 'dark' ? 'bg-slate-900 text-slate-500 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600')}`}>
+              <div className={`w-10 h-10 rounded-[4px] flex items-center justify-center shrink-0 transition-colors ${selectedElementIds.includes(el.id) ? 'bg-white/20 text-white' : (uiTheme === 'dark' ? 'bg-slate-900 text-slate-500 group-hover:text-indigo-400' : 'bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600')}`}>
                 {getIcon(el.type)}
               </div>
 
@@ -126,13 +126,13 @@ const LayersPanel: React.FC = () => {
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={(e) => { e.stopPropagation(); updateElement(currentPageIndex, el.id, { visible: el.visible === false }); }}
-                  className={`p-2 rounded-lg transition-colors ${selectedElementIds.includes(el.id) ? 'hover:bg-white/20 text-white' : (uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-500 hover:text-indigo-400' : 'hover:bg-slate-100 text-slate-300 hover:text-indigo-600')}`}
+                  className={`p-2 rounded-[4px] transition-colors ${selectedElementIds.includes(el.id) ? 'hover:bg-white/20 text-white' : (uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-500 hover:text-indigo-400' : 'hover:bg-slate-100 text-slate-300 hover:text-indigo-600')}`}
                 >
                   {el.visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
                 </button>
                 <button
                   onClick={(e) => { e.stopPropagation(); updateElement(currentPageIndex, el.id, { locked: !el.locked }); }}
-                  className={`p-2 rounded-lg transition-colors ${selectedElementIds.includes(el.id) ? 'hover:bg-white/20 text-white' : (uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-500 hover:text-indigo-400' : 'hover:bg-slate-100 text-slate-300 hover:text-indigo-600')}`}
+                  className={`p-2 rounded-[4px] transition-colors ${selectedElementIds.includes(el.id) ? 'hover:bg-white/20 text-white' : (uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-500 hover:text-indigo-400' : 'hover:bg-slate-100 text-slate-300 hover:text-indigo-600')}`}
                 >
                   {el.locked ? <Lock size={14} /> : <Unlock size={14} />}
                 </button>

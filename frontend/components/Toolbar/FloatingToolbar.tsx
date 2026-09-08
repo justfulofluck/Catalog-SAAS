@@ -209,13 +209,13 @@ const FloatingToolbar: React.FC<Props> = ({
 
 
 
-  const btnClass = 'p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-slate-50 transition-all';
+  const btnClass = 'p-1.5 rounded-[4px] text-slate-500 hover:text-indigo-600 hover:bg-slate-50 transition-all';
 
   const isTableElement = element.type === 'table' || !!element.tableData;
 
   return (
     <div
-      className="flex flex-row items-center gap-1 bg-white rounded-full shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-100 p-1.5 animate-in zoom-in-95 duration-200 backdrop-blur-sm"
+      className="flex flex-row items-center gap-1 bg-white rounded-[6px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-200 p-1.5 animate-in zoom-in-95 duration-200 backdrop-blur-sm"
       style={toolbarStyle as React.CSSProperties}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
@@ -223,7 +223,7 @@ const FloatingToolbar: React.FC<Props> = ({
       {/* If Table is selected: Add Edit Table Columns & Rows shortcut */}
       {isTableElement && (
         <button
-          className="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider transition-all shadow-sm"
+          className="px-2.5 py-1.5 rounded-[4px] bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
           title="Edit Table Columns & Rows"
           onClick={() => {
             if (typeof setIsTableEditorOpen === 'function') {
@@ -245,7 +245,7 @@ const FloatingToolbar: React.FC<Props> = ({
         title="Fill Color"
         onClick={() => fillInputRef.current?.click()}
       >
-        <div className="w-5 h-5 rounded-md border border-slate-200 shadow-sm" style={{ backgroundColor: currentFill }} />
+        <div className="w-5 h-5 rounded-[3px] border border-slate-200 shadow-sm" style={{ backgroundColor: currentFill }} />
         <input
           ref={fillInputRef}
           type="color"
@@ -265,7 +265,7 @@ const FloatingToolbar: React.FC<Props> = ({
         title="Stroke / Border Color"
         onClick={() => strokeInputRef.current?.click()}
       >
-        <div className="w-5 h-5 rounded-md border-2" style={{ borderColor: currentStroke === 'transparent' ? '#cbd5e1' : currentStroke, backgroundColor: 'transparent' }}>
+        <div className="w-5 h-5 rounded-[3px] border-2" style={{ borderColor: currentStroke === 'transparent' ? '#cbd5e1' : currentStroke, backgroundColor: 'transparent' }}>
           {currentStroke === 'transparent' && <div className="w-full h-full flex items-center justify-center text-red-400 text-[10px] font-bold leading-none">\</div>}
         </div>
         <input
@@ -288,9 +288,9 @@ const FloatingToolbar: React.FC<Props> = ({
           title="Icon Color"
           onClick={() => iconInputRef.current?.click()}
         >
-          <div className="w-5 h-5 rounded-md border border-slate-200 shadow-sm flex items-center justify-center bg-white relative">
+          <div className="w-5 h-5 rounded-[3px] border border-slate-200 shadow-sm flex items-center justify-center bg-white relative">
             <Palette size={12} className="text-slate-400 absolute inset-0 m-auto" />
-            <div className="w-4 h-4 rounded-full border border-slate-100" style={{ backgroundColor: element.iconConfig.color || '#ffffff' }} />
+            <div className="w-4 h-4 rounded-[2px] border border-slate-100" style={{ backgroundColor: element.iconConfig.color || '#ffffff' }} />
           </div>
           <input
             ref={iconInputRef}
@@ -324,7 +324,7 @@ const FloatingToolbar: React.FC<Props> = ({
       {/* Lock */}
       <button
         onClick={handleLockClick}
-        className={`p-1.5 rounded-lg transition-all ${isAnyLocked ? 'text-indigo-600 bg-indigo-50' : btnClass}`}
+        className={`p-1.5 rounded-[4px] transition-all ${isAnyLocked ? 'text-indigo-600 bg-indigo-50' : btnClass}`}
         title={isAnyLocked ? "Unlock" : "Lock"}
       >
         {isAnyLocked ? <Lock size={16} strokeWidth={2} /> : <Unlock size={16} strokeWidth={2} />}
@@ -337,7 +337,7 @@ const FloatingToolbar: React.FC<Props> = ({
 
       {/* Delete */}
       <button
-        className="p-1.5 rounded-lg text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+        className="p-1.5 rounded-[4px] text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
         title="Delete"
         onClick={handleDelete}
       >

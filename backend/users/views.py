@@ -11,7 +11,12 @@ from utils.email_service import send_email
 from dj_rest_auth.app_settings import api_settings
 
 from dj_rest_auth.registration.views import RegisterView
-from dj_rest_auth.views import UserDetailsView
+from dj_rest_auth.views import UserDetailsView, LoginView
+
+
+class CustomLoginView(LoginView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
 
 class DebugJWTSettingsView(APIView):
@@ -38,6 +43,7 @@ class DebugJWTSettingsView(APIView):
 
 class PublicRegisterView(RegisterView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
 
 class PublicUserDetailsView(UserDetailsView):
@@ -58,6 +64,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
 class RequestPasswordResetOTP(APIView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         email = request.data.get("email")
@@ -105,6 +112,7 @@ class RequestPasswordResetOTP(APIView):
 
 class ResetPasswordWithOTP(APIView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
 
     def post(self, request):
         email = request.data.get("email")

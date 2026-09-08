@@ -1,22 +1,18 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   User, 
   ShieldCheck, 
-  Bell,
-  Mail,
-  Check,
-  Loader2,
-  Lock,
-  Eye,
-  EyeOff,
-  UserCircle,
-  ShieldAlert,
-  Smartphone,
-  CreditCard,
-  Settings as SettingsIcon,
-  DollarSign,
-  ChevronDown
+  Mail, 
+  Check, 
+  Loader2, 
+  Lock, 
+  Eye, 
+  EyeOff, 
+  UserCircle, 
+  ShieldAlert, 
+  Settings as SettingsIcon, 
+  DollarSign, 
+  ChevronDown 
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CURRENCIES } from '../../constants';
@@ -54,74 +50,74 @@ const Settings: React.FC = () => {
 
   const renderPersonalSection = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/30">
+      <div className="bg-[#161616] rounded-[4px] border border-[#262626] overflow-hidden">
+        <div className="p-8 border-b border-[#262626] flex items-center justify-between bg-[#121212]/50">
           <div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-              <UserCircle size={24} className="text-indigo-600 dark:text-indigo-400" />
+            <h3 className="font-space text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+              <UserCircle size={24} className="text-[#E2DCC8]" />
               Corporate Profile
             </h3>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-2">Manage your public identity across the workspace.</p>
+            <p className="text-[10px] text-[#888888] font-bold uppercase tracking-widest mt-1">Manage your public identity across the workspace.</p>
           </div>
         </div>
         
-        <form onSubmit={handleSavePersonal} className="p-10 space-y-12">
-          <div className="flex flex-col md:flex-row items-center gap-10 pb-10 border-b border-slate-50 dark:border-slate-800">
-            <div className="w-32 h-32 bg-indigo-600 dark:bg-indigo-500 rounded-2xl flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-indigo-600/20 ring-8 ring-indigo-50 dark:ring-indigo-900/30 shrink-0">
+        <form onSubmit={handleSavePersonal} className="p-8 space-y-10">
+          <div className="flex flex-col md:flex-row items-center gap-8 pb-8 border-b border-[#262626]">
+            <div className="w-28 h-28 bg-[#0F3D3E] rounded-[4px] flex items-center justify-center text-white text-3xl font-bold shadow-2xl shadow-[#0F3D3E]/25 ring-4 ring-[#0F3D3E]/20 shrink-0">
               {user?.avatar || name.substring(0, 2).toUpperCase()}
             </div>
-            <div className="space-y-4 text-center md:text-left">
+            <div className="space-y-3 text-center md:text-left">
               <div className="flex gap-3 justify-center md:justify-start">
-                <button type="button" className="px-8 py-3.5 bg-indigo-600 dark:bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-600/10 hover:bg-indigo-700 transition-all">
+                <button type="button" className="px-6 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white text-[10px] font-bold uppercase tracking-widest rounded-[4px] shadow-lg shadow-[#0F3D3E]/20 transition-all">
                   Upload Avatar
                 </button>
-                <button type="button" className="px-8 py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">
+                <button type="button" className="px-6 py-2.5 bg-[#1c1c1c] hover:bg-[#262626] text-[#888888] hover:text-white text-[10px] font-bold uppercase tracking-widest rounded-[4px] border border-[#262626] transition-all">
                   Remove
                 </button>
               </div>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-tighter">Recommended: Square 512x512 Products. Max size 5MB.</p>
+              <p className="text-[10px] text-[#666666] font-bold uppercase tracking-wider">Recommended: Square 512x512 PNG/JPG. Max size 5MB.</p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Legal Full Name</label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Legal Full Name</label>
               <input 
                 type="text" 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-6 py-4 text-base font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 focus:border-indigo-600 dark:focus:border-indigo-400 outline-none transition-all shadow-sm"
+                className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] px-5 py-3.5 text-base font-bold text-white focus:border-[#0F3D3E] outline-none transition-all"
                 required
               />
             </div>
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Corporate Email Address</label>
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Corporate Email Address</label>
               <div className="relative">
-                <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={20} />
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
                 <input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-14 pr-6 py-4 text-base font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-indigo-600/5 dark:focus:ring-indigo-500/10 focus:border-indigo-600 dark:focus:border-indigo-400 outline-none transition-all shadow-sm"
+                  className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] pl-12 pr-5 py-3.5 text-base font-bold text-white focus:border-[#0F3D3E] outline-none transition-all"
                   required
                 />
               </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-6 pt-4">
+          <div className="flex items-center gap-6 pt-2">
             <button 
               type="submit"
               disabled={isSaving}
-              className="flex items-center justify-center gap-3 px-10 py-5 bg-slate-900 dark:bg-indigo-600 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-2xl hover:bg-black dark:hover:bg-indigo-700 transition-all disabled:opacity-50 active:scale-95"
+              className="flex items-center justify-center gap-3 px-8 py-3.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white text-xs font-bold uppercase tracking-widest rounded-[4px] shadow-xl shadow-[#0F3D3E]/20 transition-all disabled:opacity-50 active:scale-95"
             >
-              {isSaving ? <Loader2 size={18} className="animate-spin" /> : 'Commit Workspace Updates'}
+              {isSaving ? <Loader2 size={16} className="animate-spin" /> : 'Commit Workspace Updates'}
             </button>
             
             {showSuccess && (
-              <div className="flex items-center gap-3 text-emerald-500 animate-in fade-in zoom-in duration-300">
-                <Check size={20} className="bg-emerald-500/10 rounded-full p-1" />
-                <span className="text-sm font-black uppercase tracking-widest">Profiles Synced</span>
+              <div className="flex items-center gap-2 text-emerald-400 animate-in fade-in zoom-in duration-300">
+                <Check size={18} className="bg-emerald-500/10 rounded-full p-0.5" />
+                <span className="text-xs font-bold uppercase tracking-widest">Profiles Synced</span>
               </div>
             )}
           </div>
@@ -132,57 +128,59 @@ const Settings: React.FC = () => {
 
   const renderSecuritySection = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/30">
+      <div className="bg-[#161616] rounded-[4px] border border-[#262626] overflow-hidden">
+        <div className="p-8 border-b border-[#262626] flex items-center justify-between bg-[#121212]/50">
           <div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-              <ShieldAlert size={24} className="text-rose-500 dark:text-rose-400" />
+            <h3 className="font-space text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+              <ShieldAlert size={24} className="text-rose-400" />
               Access Control
             </h3>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-2">Manage cryptographic credentials and platform security.</p>
+            <p className="text-[10px] text-[#888888] font-bold uppercase tracking-widest mt-1">Manage cryptographic credentials and platform security.</p>
           </div>
         </div>
         
-        <div className="p-10 space-y-12">
-           <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-900/30 p-6 rounded-2xl flex items-start gap-4">
-              <Lock size={20} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-black text-rose-900 dark:text-rose-100 leading-tight mb-1">Enhanced Security: Multi-Factor Authentication</p>
-                <p className="text-xs text-rose-700 dark:text-rose-400 font-medium">Enabling MFA increases your account resistance against unauthorized access by 99%.</p>
-                <button className="mt-4 px-6 py-2.5 bg-rose-600 dark:bg-rose-500 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-rose-700 transition-all">Configure MFA</button>
-              </div>
-           </div>
+        <div className="p-8 space-y-8">
+          <div className="bg-rose-950/20 border border-rose-900/40 p-6 rounded-[4px] flex items-start gap-4">
+            <Lock size={20} className="text-rose-400 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-rose-200 leading-tight mb-1">Enhanced Security: Multi-Factor Authentication</p>
+              <p className="text-xs text-rose-300/80 font-medium">Enabling MFA increases your account resistance against unauthorized access by 99%.</p>
+              <button className="mt-4 px-6 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-[4px] text-[10px] font-bold uppercase tracking-widest transition-all">Configure MFA</button>
+            </div>
+          </div>
 
-           <form className="space-y-10">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Current Access Key</label>
-                  <div className="relative group">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={20} />
-                    <input 
-                      type={showPassword ? "text" : "password"}
-                      placeholder="••••••••"
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-14 pr-6 py-4 text-base font-bold text-slate-800 dark:text-white focus:border-indigo-600 outline-none"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">New Access Key</label>
-                  <div className="relative group">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 dark:text-slate-600" size={20} />
-                    <input 
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter new complex key"
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-14 pr-12 py-4 text-base font-bold text-slate-800 dark:text-white focus:border-indigo-600 outline-none"
-                    />
-                    <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
-                      {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                    </button>
-                  </div>
+          <form className="space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Current Access Key</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] pl-12 pr-5 py-3.5 text-base font-bold text-white focus:border-[#0F3D3E] outline-none"
+                  />
                 </div>
               </div>
-              <button type="submit" className="px-10 py-5 bg-slate-900 dark:bg-indigo-600 text-white text-xs font-black uppercase tracking-widest rounded-2xl shadow-2xl hover:bg-black dark:hover:bg-indigo-700 transition-all">Update Secure Credentials</button>
-           </form>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">New Access Key</label>
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666]" size={18} />
+                  <input 
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter new complex key"
+                    className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] pl-12 pr-12 py-3.5 text-base font-bold text-white focus:border-[#0F3D3E] outline-none"
+                  />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-[#666666] hover:text-white transition-colors">
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <button type="submit" className="px-8 py-3.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white text-xs font-bold uppercase tracking-widest rounded-[4px] shadow-xl shadow-[#0F3D3E]/20 transition-all">
+              Update Secure Credentials
+            </button>
+          </form>
         </div>
       </div>
     </div>
@@ -190,65 +188,69 @@ const Settings: React.FC = () => {
 
   const renderPreferencesSection = () => (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl shadow-slate-200/40 dark:shadow-none border border-slate-100 dark:border-slate-800 overflow-hidden">
-        <div className="p-10 border-b border-slate-50 dark:border-slate-800 flex items-center justify-between bg-slate-50/30 dark:bg-slate-800/30">
+      <div className="bg-[#161616] rounded-[4px] border border-[#262626] overflow-hidden">
+        <div className="p-8 border-b border-[#262626] flex items-center justify-between bg-[#121212]/50">
           <div>
-            <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
-              <SettingsIcon size={24} className="text-indigo-600 dark:text-indigo-400" />
+            <h3 className="font-space text-2xl font-bold text-white tracking-tight flex items-center gap-3">
+              <SettingsIcon size={24} className="text-[#E2DCC8]" />
               Global Preferences
             </h3>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest mt-2">Set defaults for automation and commercial metadata.</p>
+            <p className="text-[10px] text-[#888888] font-bold uppercase tracking-widest mt-1">Set defaults for automation and commercial metadata.</p>
           </div>
         </div>
         
-        <div className="p-10 space-y-12">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-3">
-                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Default Workspace Currency</label>
-                    <div className="relative group">
-                        <DollarSign className="absolute left-5 top-1/2 -translate-y-1/2 text-indigo-500 dark:text-indigo-400" size={20} />
-                        <select 
-                            value={defaultCurrency}
-                            onChange={(e) => setDefaultCurrency(e.target.value)}
-                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-14 pr-10 py-4 text-base font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 appearance-none"
-                        >
-                            {CURRENCIES.map(c => <option key={c.code} value={c.symbol}>{c.name} ({c.symbol})</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    </div>
-                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter mt-1">This currency is applied to all new inventory entries automatically.</p>
-                </div>
+        <div className="p-8 space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Default Workspace Currency</label>
+              <div className="relative group">
+                <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]" size={18} />
+                <select 
+                  value={defaultCurrency}
+                  onChange={(e) => setDefaultCurrency(e.target.value)}
+                  className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] pl-12 pr-10 py-3.5 text-base font-bold text-white outline-none focus:border-[#0F3D3E] appearance-none"
+                >
+                  {CURRENCIES.map(c => <option key={c.code} value={c.symbol}>{c.name} ({c.symbol})</option>)}
+                </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-[#666666] pointer-events-none" size={18} />
+              </div>
+              <p className="text-[9px] font-bold text-[#666666] uppercase tracking-wider mt-1">This currency is applied to all new inventory entries automatically.</p>
             </div>
+          </div>
         </div>
       </div>
     </div>
   );
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#f8fafc] dark:bg-slate-950 p-8 lg:p-12 animate-in fade-in duration-700 transition-colors duration-300">
-      <div className="max-w-7xl mx-auto space-y-12">
+    <div className="flex-1 overflow-y-auto bg-[#100F0F] text-white p-8 lg:p-12 animate-in fade-in duration-500">
+      <div className="max-w-7xl mx-auto space-y-10">
         
-        <div className="mb-10">
-          <h1 className="text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Workspace Preferences</h1>
+        <div>
+          <h1 className="font-space text-5xl font-bold text-white tracking-tight leading-none">Workspace Preferences</h1>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-12">
-          {/* Enhanced Navigation Rail */}
-          <div className="xl:col-span-1 space-y-3">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+          {/* Navigation Rail */}
+          <div className="xl:col-span-1 space-y-2">
             {[
-              { id: 'personal', label: 'Identity Profile', icon: User, color: 'text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20' },
-              { id: 'security', label: 'Access Control', icon: ShieldCheck, color: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-900/20' },
-              { id: 'preferences', label: 'Global Presets', icon: SettingsIcon, color: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20' }
+              { id: 'personal', label: 'Identity Profile', icon: User, color: 'text-[#E2DCC8] bg-[#0F3D3E]/10' },
+              { id: 'security', label: 'Access Control', icon: ShieldCheck, color: 'text-rose-400 bg-rose-950/40' },
+              { id: 'preferences', label: 'Global Presets', icon: SettingsIcon, color: 'text-emerald-400 bg-emerald-950/40' }
             ].map((tab) => (
               <button 
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as SettingsTab)}
-                className={`w-full flex items-center gap-4 px-6 py-4.5 rounded-2xl transition-all group ${activeTab === tab.id ? 'bg-white dark:bg-slate-900 shadow-xl shadow-slate-200/50 dark:shadow-none border border-slate-100 dark:border-slate-800' : 'text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-900/50 hover:text-slate-700 dark:hover:text-slate-300'}`}
+                className={`w-full flex items-center gap-4 px-5 py-3.5 rounded-[4px] transition-all group ${
+                  activeTab === tab.id 
+                    ? 'bg-[#161616] border border-[#262626] text-white shadow-lg' 
+                    : 'text-[#888888] hover:bg-[#161616]/50 hover:text-white border border-transparent'
+                }`}
               >
-                <div className={`p-2.5 rounded-2xl transition-colors ${activeTab === tab.id ? tab.color : 'bg-slate-50 dark:bg-slate-800'}`}>
-                  <tab.icon size={20} />
+                <div className={`p-2 rounded-[4px] transition-colors ${activeTab === tab.id ? tab.color : 'bg-[#1c1c1c] text-[#888888]'}`}>
+                  <tab.icon size={18} />
                 </div>
-                <span className={`text-xs font-black uppercase tracking-widest ${activeTab === tab.id ? 'text-slate-900 dark:text-white' : ''}`}>{tab.label}</span>
+                <span className={`text-xs font-bold uppercase tracking-widest ${activeTab === tab.id ? 'text-white' : ''}`}>{tab.label}</span>
               </button>
             ))}
           </div>

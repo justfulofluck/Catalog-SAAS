@@ -21,6 +21,7 @@ import StockImagesPanel from './components/Sidebar/StockImagesPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
 import ProjectSettingsPanel from './components/Sidebar/ProjectSettingsPanel';
 import ButtonsPanel from './components/Sidebar/ButtonsPanel';
+import HeaderFooterPanel from './components/Sidebar/HeaderFooterPanel';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
@@ -76,24 +77,28 @@ const App: React.FC = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
   const [isCatalogMenuOpen, setCatalogMenuOpen] = useState(true);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
 
-  // Global click listener for "click-outside-to-close" behavior (for right panel only)
+  // Global click listener for "click-outside-to-close" behavior
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       // 1. Project Settings closing (Right)
       if (isProjectSettingsOpen && rightPanelRef.current && !rightPanelRef.current.contains(e.target as Node)) {
         setIsProjectSettingsOpen(false);
       }
+      // 2. User dropdown menu closing
+      if (isUserMenuOpen && userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
     };
 
-    if (isProjectSettingsOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
-    }
+    document.addEventListener('mousedown', handleOutsideClick);
     return () => document.removeEventListener('mousedown', handleOutsideClick);
-  }, [isProjectSettingsOpen, setIsProjectSettingsOpen]);
+  }, [isProjectSettingsOpen, setIsProjectSettingsOpen, isUserMenuOpen]);
 
   useEffect(() => {
     const getViewFromPath = (pathname: string): View => {
@@ -175,7 +180,7 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (uiTheme === 'dark' && currentView !== 'editor' && currentView !== 'admin-dashboard') {
+    if (uiTheme === 'dark' || currentView === 'editor' || currentView === 'admin-dashboard') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
@@ -184,11 +189,11 @@ const App: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="h-screen w-screen bg-[#f8fafc] flex flex-col items-center justify-center space-y-6">
-        <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+      <div className="h-screen w-screen bg-[#100F0F] flex flex-col items-center justify-center space-y-6">
+        <div className="w-12 h-12 border-4 border-[#0F3D3E] border-t-transparent rounded-full animate-spin"></div>
         <div className="text-center">
-          <h2 className="text-xl font-bold text-slate-800 tracking-tight">catalogmakerr.</h2>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.3em] mt-1">Enterprise Asset Engine</p>
+          <h2 className="text-2xl font-medium text-[#F1F1F1] tracking-tight font-heading">catalogmakerr.</h2>
+          <p className="text-[11px] text-[#E2DCC8]/70 font-medium uppercase tracking-[0.25em] mt-1.5">Enterprise Asset Engine</p>
         </div>
       </div>
     );
@@ -221,14 +226,14 @@ const App: React.FC = () => {
   // Editor View (Fullscreen)
   if (currentView === 'editor') {
     return (
-      <div className="flex flex-col h-screen w-screen bg-slate-100 overflow-hidden font-sans text-slate-700">
+      <div className="flex flex-col h-screen w-screen bg-[#100F0F] overflow-hidden font-sans text-[#F1F1F1]">
         <EditorToolbar />
         <div className="flex flex-1 overflow-hidden relative">
           {/* Icon rail + Sidebar Content container for click-outside detection */}
           <div ref={leftPanelRef} className="flex h-full z-40 relative">
             {/* Icon rail - always visible, fixed width */}
-            <div className="flex flex-col border-r bg-slate-900 shrink-0 h-full">
-              <div className="flex flex-col w-16 items-center py-8 gap-8">
+            <div className="flex flex-col border-r border-[#E2DCC8]/15 bg-[#100F0F] shrink-0 h-full">
+              <div className="flex flex-col w-14 items-center py-6 gap-6">
                 <button
                   onClick={() => {
                     if (editorTab === 'pages' && isSidebarExpanded) {
@@ -238,10 +243,10 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'pages' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'pages' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
                   title="Pages"
                 >
-                  <FileText size={22} />
+                  <FileText size={20} />
                 </button>
                 <button
                   onClick={() => {
@@ -252,10 +257,10 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'products' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'products' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
                   title="Product Assets"
                 >
-                  <Package size={22} />
+                  <Package size={20} />
                 </button>
                 <button
                   onClick={() => {
@@ -266,10 +271,10 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
                   title="Media & Stock Images"
                 >
-                  <Images size={22} />
+                  <Images size={20} />
                 </button>
 
                 <button
@@ -281,22 +286,38 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-3 rounded-[10px] transition-all ${editorTab === 'buttons' && isSidebarExpanded ? 'bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70_229,0.4)]' : 'text-slate-500 hover:text-slate-300'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'buttons' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
                   title="Buttons"
                 >
-                  <MousePointer2 size={22} />
+                  <MousePointer2 size={20} />
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (editorTab === 'header-footer' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('header-footer');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'header-footer' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
+                  title="Header & Footer Settings"
+                >
+                  <LayoutTemplate size={20} />
                 </button>
               </div>
             </div>
 
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
-              <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${editorTab === 'products' ? 'w-[360px]' : 'w-[300px]'} shrink-0 ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className={`h-full z-30 shadow-xl border-r border-[#E2DCC8]/15 transition-all duration-200 ${editorTab === 'products' ? 'w-[430px]' : 'w-[330px]'} shrink-0 bg-[#141414]`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'products' && <ProductLibrary />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
                 {editorTab === 'templates' && <TemplatesPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
+                {editorTab === 'header-footer' && <HeaderFooterPanel />}
               </div>
             )}
           </div>
@@ -338,130 +359,186 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#f8fafc] dark:bg-slate-950 font-sans text-slate-700 dark:text-slate-200 transition-colors duration-300">
-      <aside className={`${sidebarWidth} bg-slate-900 flex flex-col py-6 z-30 shrink-0 transition-all duration-300 ease-in-out`}>
-        <div className={`flex ${isSidebarExpanded ? 'items-center justify-between px-6' : 'flex-col items-center gap-6 px-2'} mb-10`}>
+    <div className="flex h-screen w-screen overflow-hidden bg-[#100F0F] font-sans text-[#F1F1F1]">
+      <aside className={`${sidebarWidth} bg-[#161616] border-r border-[#262626] flex flex-col pt-6 pb-3 z-30 shrink-0 transition-all duration-300 ease-in-out`}>
+        <div className={`flex ${isSidebarExpanded ? 'items-center justify-between px-6' : 'flex-col items-center gap-6 px-2'} mb-8`}>
           <div onClick={() => setView('dashboard')} className="flex items-center gap-3 cursor-pointer group shrink-0 overflow-hidden max-w-full">
             {isSidebarExpanded ? (
-              <span className="text-white font-black text-xl tracking-tight animate-in fade-in slide-in-from-left-2 duration-300 truncate">catalogmakerr.</span>
+              <span className="text-[#F1F1F1] font-medium text-xl tracking-tight font-heading animate-in fade-in slide-in-from-left-2 duration-300 truncate">catalogmakerr.</span>
             ) : (
-              <span className="text-white font-black text-xl tracking-tight truncate">c.</span>
+              <span className="text-[#E2DCC8] font-medium text-xl tracking-tight font-heading truncate">c.</span>
             )}
           </div>
           <button
             onClick={() => setSidebarExpanded(!isSidebarExpanded)}
-            className={`text-slate-500 hover:text-white transition-colors p-1 rounded-[10px] hover:bg-slate-800 ${!isSidebarExpanded ? 'w-10 h-10 flex items-center justify-center' : ''}`}
+            className={`text-[#E2DCC8]/70 hover:text-[#F1F1F1] transition-colors p-1.5 rounded-[4px] hover:bg-[#222222] ${!isSidebarExpanded ? 'w-10 h-10 flex items-center justify-center' : ''}`}
             title={isSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             <Menu size={20} />
           </button>
         </div>
 
-        <nav className="flex-1 px-4 space-y-1 overflow-y-auto">
-          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all ${currentView === 'dashboard' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800/50 hover:text-white'}`}>
-            <LayoutDashboard size={20} className="shrink-0" />
-            {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Dashboard</span>}
+        <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
+          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView === 'dashboard' ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/25 shadow-lg shadow-[#0F3D3E]/30' : 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]'}`}>
+            <LayoutDashboard size={20} className="shrink-0 text-[#E2DCC8]" />
+            {isSidebarExpanded && <span className="tracking-tight">Dashboard</span>}
           </button>
 
-          <div className="h-px bg-slate-800/50 mx-4 my-4"></div>
+          <div className="h-px bg-[#262626] mx-2 my-3"></div>
 
           <div className="space-y-1">
-            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCategoriesMenuOpen(!isCategoriesMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] transition-all ${currentView.includes('category') || currentView === 'products-list' || currentView === 'media-library' ? 'text-white' : 'text-slate-400 hover:text-white'}`}>
+            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCategoriesMenuOpen(!isCategoriesMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView.includes('category') || currentView === 'products-list' || currentView === 'media-library' ? 'text-[#F1F1F1] bg-[#1e1e1e]' : 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]'}`}>
               <div className="flex items-center gap-4">
-                <FolderOpen size={20} className="shrink-0" />
-                {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Inventory</span>}
+                <FolderOpen size={20} className="shrink-0 text-[#E2DCC8]" />
+                {isSidebarExpanded && <span className="tracking-tight">Inventory</span>}
               </div>
-              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCategoriesMenuOpen ? 'rotate-180' : ''}`} />}
+              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCategoriesMenuOpen ? 'rotate-180 text-[#E2DCC8]' : ''}`} />}
             </button>
             {isCategoriesMenuOpen && isSidebarExpanded && (
-              <div className="ml-10 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                <button onClick={() => setView('category-list')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'category-list' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Categories</button>
-                <button onClick={() => { setActiveCategoryId(null); setView('products-list'); }} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'products-list' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>All Products</button>
-                <button onClick={() => setView('media-library')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'media-library' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Media</button>
+              <div className="ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l border-[#262626] pl-2 mt-1">
+                <button onClick={() => setView('category-list')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'category-list' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Categories</button>
+                <button onClick={() => { setActiveCategoryId(null); setView('products-list'); }} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'products-list' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>All Products</button>
+                <button onClick={() => setView('media-library')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'media-library' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Media</button>
               </div>
             )}
           </div>
 
           <div className="space-y-1">
-            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCatalogMenuOpen(!isCatalogMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] transition-all ${currentView.includes('catalog') || currentView === 'your-work' || currentView === 'publish' ? 'text-white' : 'text-slate-400 hover:text-white'}`}>
+            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCatalogMenuOpen(!isCatalogMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView.includes('catalog') || currentView === 'your-work' || currentView === 'publish' ? 'text-[#F1F1F1] bg-[#1e1e1e]' : 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]'}`}>
               <div className="flex items-center gap-4">
-                <BookOpen size={20} className="shrink-0" />
-                {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Publication</span>}
+                <BookOpen size={20} className="shrink-0 text-[#E2DCC8]" />
+                {isSidebarExpanded && <span className="tracking-tight">Publication</span>}
               </div>
-              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCatalogMenuOpen ? 'rotate-180' : ''}`} />}
+              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCatalogMenuOpen ? 'rotate-180 text-[#E2DCC8]' : ''}`} />}
             </button>
             {isCatalogMenuOpen && isSidebarExpanded && (
-              <div className="ml-10 space-y-1 animate-in slide-in-from-top-2 duration-200">
-                <button onClick={() => setView('catalog-setup')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'catalog-setup' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>New Catalog</button>
-                <button onClick={() => setView('your-work')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'your-work' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Your Work</button>
-                <button onClick={() => setView('publish')} className={`w-full text-left py-2 px-3 rounded-[10px] text-xs font-medium ${currentView === 'publish' ? 'text-indigo-400' : 'text-slate-500 hover:text-slate-300'}`}>Publish & Manage</button>
+              <div className="ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l border-[#262626] pl-2 mt-1">
+                <button onClick={() => setView('catalog-setup')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'catalog-setup' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>New Catalog</button>
+                <button onClick={() => setView('your-work')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'your-work' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Your Work</button>
+                <button onClick={() => setView('publish')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'publish' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Publish & Manage</button>
               </div>
             )}
           </div>
-
-          <div className="h-px bg-slate-800/50 mx-4 my-2"></div>
-
-          <button onClick={() => setView('pricing')} className={`w-full flex items-center justify-between px-4 py-3.5 rounded-[10px] transition-all group ${(currentView as string) === 'pricing' ? 'bg-indigo-600/10 text-indigo-400' : 'text-slate-400 hover:text-white'}`}>
-            <div className="flex items-center gap-4">
-              <Rocket size={20} className={`shrink-0 ${(currentView as string) === 'pricing' ? 'text-indigo-400' : 'text-slate-500 group-hover:text-indigo-400 transition-colors'}`} />
-              {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Upgrade Plan</span>}
-            </div>
-            {isSidebarExpanded && <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></div>}
-          </button>
         </nav>
 
-        <div className="px-4 mt-auto space-y-4">
-          {user?.businessName && isSidebarExpanded && (
-            <div className="px-4 py-3 bg-slate-800/40 rounded-xl border border-slate-700/30">
-              <p className="text-[10px] font-black text-slate-400/60 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                <Briefcase size={10} className="text-indigo-400" /> Current Organization
-              </p>
-              <p className="text-xs font-bold text-white truncate">{user.businessName}</p>
-            </div>
-          )}
-
+        <div className="px-3 mt-auto space-y-2">
           {user?.businessId && isSidebarExpanded && (
-            <div className="px-4 py-3 bg-slate-800/40 rounded-xl border border-slate-700/30">
-              <p className="text-[10px] font-black text-slate-400/60 uppercase tracking-widest mb-1.5 flex items-center gap-2">
-                <Sparkles size={10} className="text-indigo-400" /> Industry Vertical
+            <div className="px-3.5 py-2 bg-[#161616] rounded-[4px] border border-[#262626]">
+              <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
+                <Sparkles size={11} className="text-[#E2DCC8]" /> Industry
               </p>
-              <p className="text-xs font-bold text-white truncate">
+              <p className="text-xs font-medium text-[#F1F1F1] truncate">
                 {businessTemplates.find(t => t.id === user.businessId)?.name || user.businessId}
               </p>
             </div>
           )}
 
-          <button
-            onClick={toggleUiTheme}
-            className="w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all text-slate-400 hover:text-white bg-slate-800/20 hover:bg-slate-800/50"
-            title={`Switch to ${uiTheme === 'light' ? 'Dark' : 'Light'} Mode`}
-          >
-            {uiTheme === 'light' ? <Moon size={20} className="shrink-0" /> : <Sun size={20} className="shrink-0" />}
-            {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">{uiTheme === 'light' ? 'Dark Mode' : 'Light Mode'}</span>}
-          </button>
+          {/* User & Settings Dropdown Trigger */}
+          <div className="relative" ref={userMenuRef}>
+            {isUserMenuOpen && (
+              <div 
+                className={`absolute bottom-full mb-2 bg-[#161616] border border-[#262626] rounded-[4px] shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 ${
+                  isSidebarExpanded ? 'left-0 right-0 w-full' : 'left-0 w-56'
+                }`}
+              >
+                {/* User Header in Dropdown */}
+                <div className="px-3 py-2 border-b border-[#262626] mb-1">
+                  <p className="text-xs font-semibold text-white truncate">{user?.name || 'User'}</p>
+                  <p className="text-[10px] text-[#888888] truncate">{user?.email}</p>
+                  {user?.businessName && (
+                    <p className="text-[10px] text-[#E2DCC8] truncate mt-0.5 flex items-center gap-1 font-medium">
+                      <Briefcase size={10} className="text-[#0F3D3E]" /> {user.businessName}
+                    </p>
+                  )}
+                </div>
 
-          <button onClick={() => setView('settings')} className={`w-full flex items-center gap-4 px-4 py-3.5 rounded-[10px] transition-all ${currentView === 'settings' ? 'bg-slate-800 text-white' : 'text-slate-400 hover:text-white'}`}>
-            <Settings size={20} className="shrink-0" />
-            {isSidebarExpanded && <span className="text-sm font-bold tracking-tight">Settings</span>}
-          </button>
+                {/* Upgrade Plan */}
+                <button
+                  onClick={() => {
+                    setView('pricing');
+                    setIsUserMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors hover:bg-[#0F3D3E]/20 ${
+                    (currentView as string) === 'pricing' ? 'text-[#E2DCC8] bg-[#0F3D3E]/30' : 'text-[#cccccc] hover:text-white'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <Rocket size={15} className="text-[#E2DCC8] shrink-0" />
+                    <span>Upgrade Plan</span>
+                  </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 uppercase tracking-wider">
+                    PRO
+                  </span>
+                </button>
 
-          <div className="flex items-center gap-3 p-3 bg-slate-800/40 rounded-[10px] border border-slate-700/50">
-            <div className="w-9 h-9 bg-indigo-500 rounded-[10px] flex items-center justify-center text-white font-bold shrink-0">{user?.avatar || 'JD'}</div>
-            {isSidebarExpanded && (
-              <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-white truncate leading-none mb-1">{user?.name}</p>
-                <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
+                {/* Settings */}
+                <button
+                  onClick={() => {
+                    setView('settings');
+                    setIsUserMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors hover:bg-[#0F3D3E]/20 ${
+                    currentView === 'settings' ? 'text-[#E2DCC8] bg-[#0F3D3E]/30' : 'text-[#cccccc] hover:text-white'
+                  }`}
+                >
+                  <Settings size={15} className="text-[#888888] shrink-0" />
+                  <span>Settings</span>
+                </button>
+
+                <div className="h-px bg-[#262626] my-1" />
+
+                {/* Logout */}
+                <button
+                  onClick={() => {
+                    setIsUserMenuOpen(false);
+                    logout();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                >
+                  <LogOut size={15} className="shrink-0" />
+                  <span>Sign Out</span>
+                </button>
               </div>
             )}
-            {isSidebarExpanded && (
-              <button onClick={logout} className="text-slate-500 hover:text-red-400 transition-colors">
-                <LogOut size={16} />
-              </button>
-            )}
+
+            {/* Profile & Trigger Pill */}
+            <button
+              type="button"
+              onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+              className={`w-full flex items-center gap-3 p-2 rounded-[4px] border transition-all text-left group ${
+                isUserMenuOpen
+                  ? 'bg-[#171616] border-[#0F3D3E] ring-1 ring-[#0F3D3E]/40'
+                  : 'bg-[#161616] border-[#262626] hover:bg-[#1a1919] hover:border-[#E2DCC8]/20'
+              }`}
+              title="Account & Settings"
+            >
+              <div className="w-8 h-8 bg-[#0F3D3E] border border-[#E2DCC8]/30 rounded-[3px] flex items-center justify-center text-[#F1F1F1] font-heading font-semibold text-sm shrink-0 shadow-sm">
+                {user?.avatar || (user?.name ? user.name[0].toUpperCase() : 'U')}
+              </div>
+
+              {isSidebarExpanded && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate leading-snug">{user?.name}</p>
+                  <p className="text-[10px] text-[#999999] truncate leading-tight flex items-center gap-1.5 mt-0.5">
+                    <Briefcase size={10} className="text-[#E2DCC8] shrink-0" />
+                    <span className="truncate">{user?.businessName || user?.email}</span>
+                  </p>
+                </div>
+              )}
+
+              {isSidebarExpanded && (
+                <div className="text-[#777777] group-hover:text-white transition-colors pl-1">
+                  <ChevronDown
+                    size={14}
+                    className={`transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[#E2DCC8]' : ''}`}
+                  />
+                </div>
+              )}
+            </button>
           </div>
         </div>
       </aside>
-      <div className="flex flex-1 flex-col overflow-hidden">{renderContent()}</div>
+      <div className="flex flex-1 flex-col overflow-hidden bg-[#100F0F]">{renderContent()}</div>
     </div>
   );
 };

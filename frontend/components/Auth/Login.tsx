@@ -153,11 +153,11 @@ const Login: React.FC = () => {
     // 1. RECOVERY: OTP & NEW PASSWORD
     if (recoveryStep === 'otp') {
       return (
-        <form onSubmit={handleRecoverySubmit} className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">6-Digit Security Code</label>
+        <form onSubmit={handleRecoverySubmit} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">6-Digit Security Code</label>
             <div className="relative group">
-              <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+              <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
               <input
                 type="text"
                 required
@@ -165,23 +165,23 @@ const Login: React.FC = () => {
                 value={otp}
                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="000000"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-xl font-mono font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.5em] text-center"
+                className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-xl font-mono font-bold text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555] tracking-[0.5em] text-center"
               />
             </div>
-            <p className="text-[10px] text-slate-400 font-bold text-center">Enter the code sent to {email}</p>
+            <p className="text-[10px] text-[#E2DCC8]/60 text-center">Enter the code sent to {email}</p>
           </div>
 
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Access Key</label>
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">New Access Key</label>
             <div className="relative group">
-              <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+              <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
               <input
                 type="password"
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 placeholder="New secure password"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
               />
             </div>
           </div>
@@ -189,15 +189,15 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting || otp.length !== 6}
-            className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/20 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" /> : 'Reset Credentials'}
+            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Reset Credentials'}
           </button>
 
           <button
             type="button"
             onClick={() => setRecoveryStep('email')}
-            className="w-full text-center text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+            className="w-full text-center text-xs font-medium text-[#E2DCC8]/70 hover:text-[#E2DCC8] transition-colors"
           >
             Resend Code
           </button>
@@ -208,18 +208,18 @@ const Login: React.FC = () => {
     // 2. RECOVERY: EMAIL REQUEST
     if (recoveryStep === 'email') {
       return (
-        <form onSubmit={handleRecoveryRequest} className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Recovery Email</label>
+        <form onSubmit={handleRecoveryRequest} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Recovery Email</label>
             <div className="relative group">
-              <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+              <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
               <input
                 type="email"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@company.com"
-                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
               />
             </div>
           </div>
@@ -227,17 +227,17 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
+            className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/20 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
           >
-            {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" /> : 'Send Recovery Code'}
+            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Send Recovery Code'}
           </button>
 
           <button
             type="button"
             onClick={() => setRecoveryStep('none')}
-            className="w-full flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 hover:text-slate-600 transition-colors"
+            className="w-full flex items-center justify-center gap-2 text-xs font-medium text-[#E2DCC8]/70 hover:text-[#F1F1F1] transition-colors"
           >
-            <ArrowLeft size={12} /> Back to Sign In
+            <ArrowLeft size={14} /> Back to Sign In
           </button>
         </form>
       );
@@ -245,92 +245,88 @@ const Login: React.FC = () => {
 
     // 3. STANDARD LOGIN / SIGNUP
     return (
-      <form onSubmit={handleLoginSubmit} className="space-y-6 animate-in fade-in duration-300">
+      <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in fade-in duration-300">
         {!isLoginMode && (
           <>
-            <div className="space-y-2 animate-in slide-in-from-top-2 duration-300">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Legal Name</label>
+            <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Full Legal Name</label>
               <div className="relative group">
-                <UserIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                <UserIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
                 <input
                   type="text"
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Johnathon Doe"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                  className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
                 />
               </div>
             </div>
 
-            <div className="space-y-2 animate-in slide-in-from-top-3 duration-300">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Business Name</label>
+            <div className="space-y-1.5 animate-in slide-in-from-top-3 duration-300">
+              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Business Name</label>
               <div className="relative group">
-                <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
                 <input
                   type="text"
                   required
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="Acme Corp"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                  className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
                 />
               </div>
             </div>
           </>
         )}
 
-        <div className="space-y-2">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email or Username</label>
+        <div className="space-y-1.5">
+          <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Email or Username</label>
           <div className="relative group">
-            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
             <input
               type="text"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="name@company.com or username"
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+              className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
             />
           </div>
         </div>
 
-        <div className="space-y-2">
-          {!isLoginMode && (
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Create Access Key</label>
-            </div>
-          )}
-
-          {isLoginMode && (
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Access Key</label>
+        <div className="space-y-1.5">
+          <div className="flex justify-between items-center ml-1">
+            <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading">
+              {isLoginMode ? 'Access Key' : 'Create Access Key'}
+            </label>
+            {isLoginMode && (
               <button
                 type="button"
                 onClick={() => setRecoveryStep('email')}
-                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                className="text-[10px] font-bold text-[#E2DCC8] hover:underline transition-colors font-heading"
               >
                 Forgot Password?
               </button>
-            </div>
-          )}
+            )}
+          </div>
 
           <div className="relative group">
-            <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+            <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
             <input
-              key={isLoginMode ? "login-password" : "register-password"} // Force remount on mode switch to prevent autofill conflicts and frozen state
+              key={isLoginMode ? "login-password" : "register-password"}
               type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder={isLoginMode ? "Your secure password" : "Create a strong password"}
               autoComplete={isLoginMode ? "current-password" : "new-password"}
-              className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-12 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300 disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting} // Explicitly handle disabled state
+              className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-12 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555] disabled:opacity-50"
+              disabled={isSubmitting}
             />
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors"
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 hover:text-[#F1F1F1] transition-colors"
             >
               {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
@@ -340,14 +336,14 @@ const Login: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 hover:-translate-y-0.5 transition-all flex items-center justify-center gap-3 disabled:opacity-70 mt-4"
+          className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 mt-4 active:scale-98"
         >
           {isSubmitting ? (
-            <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
+            <div className="w-5 h-5 border-2 border-[#F1F1F1]/30 border-t-[#F1F1F1] rounded-full animate-spin"></div>
           ) : (
             <>
               {isLoginMode ? 'Sign In To Studio' : (regStep === 'info' ? 'Next: Select Plan' : 'Confirm & Register')}
-              <ArrowRight size={20} />
+              <ArrowRight size={18} />
             </>
           )}
         </button>
@@ -357,52 +353,52 @@ const Login: React.FC = () => {
 
   const renderPlanSelection = () => {
     return (
-      <div className="space-y-6 animate-in slide-in-from-right-8 duration-500">
-        <div className="grid grid-cols-1 gap-4">
+      <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
+        <div className="grid grid-cols-1 gap-3.5 max-h-[340px] overflow-y-auto pr-1">
           {plans.map((plan: any) => (
             <div
               key={plan.id}
               onClick={() => setSelectedPlanSlug(plan.slug)}
-              className={`p-6 rounded-2xl border-2 cursor-pointer transition-all ${selectedPlanSlug === plan.slug
-                ? 'border-indigo-600 bg-indigo-50/50 ring-4 ring-indigo-600/5'
-                : 'border-slate-100 hover:border-slate-200 bg-white'
+              className={`p-5 rounded-[4px] border cursor-pointer transition-all ${selectedPlanSlug === plan.slug
+                ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 ring-1 ring-[#E2DCC8]/50'
+                : 'border-[#262626] bg-[#171616] hover:border-[#383838]'
                 }`}
             >
               <div className="flex justify-between items-start mb-2">
-                <h4 className="font-black text-lg text-slate-900">{plan.name}</h4>
-                <span className="text-xl font-black text-indigo-600">₹{plan.price}<span className="text-[10px] text-slate-400">/mo</span></span>
+                <h4 className="font-medium text-base text-[#F1F1F1] font-heading">{plan.name}</h4>
+                <span className="text-lg font-medium text-[#E2DCC8] font-heading">₹{plan.price}<span className="text-[10px] text-[#E2DCC8]/60">/mo</span></span>
               </div>
               <div className="flex flex-wrap gap-2">
                 {plan.features?.max_catalogs && (
-                  <span className="px-2 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-500">
+                  <span className="px-2.5 py-1 bg-[#100F0F] border border-[#262626] rounded-[4px] text-[10px] font-medium text-[#E2DCC8]">
                     {plan.features.max_catalogs} Catalogs
                   </span>
                 )}
                 {plan.features?.max_products && (
-                  <span className="px-2 py-1 bg-white border border-slate-100 rounded-lg text-[10px] font-bold text-slate-500">
+                  <span className="px-2.5 py-1 bg-[#100F0F] border border-[#262626] rounded-[4px] text-[10px] font-medium text-[#E2DCC8]">
                     {plan.features.max_products} Products
                   </span>
                 )}
                 {plan.slug === 'starter' && (
-                  <span className="px-2 py-1 bg-indigo-600 text-white rounded-lg text-[10px] font-black uppercase tracking-widest">
-                    7 Days free
+                  <span className="px-2.5 py-1 bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider font-heading">
+                    7 Days Free
                   </span>
                 )}
               </div>
             </div>
           ))}
           {plans.length === 0 && (
-            <div className="p-8 text-center text-slate-400 font-bold border-2 border-dashed border-slate-100 rounded-2xl">
+            <div className="p-8 text-center text-[#E2DCC8]/60 font-medium border border-dashed border-[#262626] rounded-[4px]">
               Loading pricing plans...
             </div>
           )}
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex gap-3 pt-2">
           <button
             type="button"
             onClick={() => setRegStep('info')}
-            className="flex-1 py-5 bg-slate-100 text-slate-600 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-200 transition-all"
+            className="flex-1 py-4 bg-[#171616] text-[#E2DCC8] border border-[#262626] hover:border-[#E2DCC8]/40 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider transition-all"
           >
             Back
           </button>
@@ -410,9 +406,9 @@ const Login: React.FC = () => {
             type="button"
             onClick={handleLoginSubmit}
             disabled={isSubmitting || plans.length === 0}
-            className="flex-[2] py-5 bg-indigo-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-2xl shadow-indigo-600/30 hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
+            className="flex-[2] py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
           >
-            {isSubmitting ? <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" /> : 'Start Free Trial'}
+            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Start Free Trial'}
           </button>
         </div>
       </div>
@@ -420,94 +416,30 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#f8fafc] flex items-center justify-center p-6 font-sans">
-      <div className="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 bg-white rounded-2xl shadow-[0_40px_100px_rgba(0,0,0,0.08)] border border-slate-100 overflow-hidden min-h-[640px]">
-
-        {/* Visual Brand Side */}
-        <div className="hidden md:flex flex-col bg-slate-900 p-16 text-white relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/20 to-transparent"></div>
-          <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-indigo-600/10 rounded-full blur-[100px]"></div>
-
-          <div className="relative z-10 flex flex-col h-full">
-            <div className="flex items-center gap-4 mb-auto">
-              <span className="font-black text-2xl tracking-tighter">catalogmakerr.</span>
-            </div>
-
-            <div className="space-y-6">
-              <span className="px-4 py-1.5 bg-indigo-600/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-indigo-600/30 inline-block">Enterprise v3.1</span>
-              <h2 className="text-5xl font-black leading-[1.1] tracking-tight">Design At Scale. <br /><span className="text-indigo-500">Effortlessly.</span></h2>
-              <p className="text-slate-400 text-lg font-medium leading-relaxed max-w-sm">
-                Accelerate your go-to-market strategy with automated high-fidelity catalog generation and cloud product management.
-              </p>
-            </div>
-
-            <div className="mt-20 flex items-center gap-8 text-slate-500">
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white leading-none mb-1">2k+</span>
-                <span className="text-[10px] font-black uppercase tracking-widest">Global Brands</span>
-              </div>
-              <div className="w-px h-8 bg-slate-800"></div>
-              <div className="flex flex-col">
-                <span className="text-2xl font-black text-white leading-none mb-1">99.9%</span>
-                <span className="text-[10px] font-black uppercase tracking-widest">Uptime SLA</span>
-              </div>
-            </div>
-          </div>
+    <div className="min-h-screen w-full bg-[#100F0F] text-[#F1F1F1] flex items-center justify-start p-6 md:pl-16 lg:pl-24 font-sans">
+      <div className="w-full max-w-md bg-[#161616] rounded-[4px] border border-[#262626] shadow-2xl overflow-hidden p-8 md:p-10 relative">
+        <div className="flex items-center gap-2 mb-8">
+          <span className="font-bold text-xl tracking-tight font-heading text-[#F1F1F1]">catalogmakerr.</span>
         </div>
-
-        {/* Auth Interaction Side */}
-        <div className="flex flex-col p-12 md:p-20 justify-center relative">
-          <div className="mb-12">
-            <h3 className="text-3xl font-black text-slate-900 mb-2 tracking-tight">
-              {recoveryStep !== 'none' ? 'Recovery' : (isLoginMode ? 'Welcome Back' : 'Get Started')}
-            </h3>
-            <p className="text-slate-500 font-medium">
-              {recoveryStep === 'otp' ? 'Enter the secure code sent to your email.' :
-                recoveryStep === 'email' ? 'Confirm your corporate email address.' :
-                  (isLoginMode ? 'Please enter your workspace credentials.' :
-                    (regStep === 'info' ? 'Tell us about your organization.' : 'Select a plan to start your 7-day trial.'))}
-            </p>
-          </div>
-
           {regStep === 'plan' && !isLoginMode && recoveryStep === 'none' ? renderPlanSelection() : renderFormContent()}
 
           {error && (
-            <div className="mt-6 mb-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-600 animate-in slide-in-from-bottom-2">
-              <Shield size={18} className="shrink-0 mt-0.5" />
-              <p className="text-xs font-bold">{error}</p>
+            <div className="mt-5 p-3.5 bg-red-950/40 border border-red-800/60 rounded-[4px] flex items-start gap-2.5 text-red-400 animate-in slide-in-from-bottom-2">
+              <Shield size={16} className="shrink-0 mt-0.5" />
+              <p className="text-xs font-medium">{error}</p>
             </div>
           )}
 
           {recoveryStep === 'none' && (
-            <div className="mt-10 text-center space-y-4">
-              <p className="text-xs font-bold text-slate-400">
+            <div className="mt-8 text-center">
+              <p className="text-xs text-[#E2DCC8]/70">
                 {isLoginMode ? "New here?" : "Already a user?"}
-                <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-indigo-600 font-black ml-2 hover:underline">
-                  {isLoginMode ? "Establish Account" : "Sign In"}
+                <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-[#E2DCC8] hover:text-[#F1F1F1] font-semibold ml-2 hover:underline font-heading transition-colors">
+                  {isLoginMode ? "Sign Up" : "Sign In"}
                 </button>
               </p>
-
-              <div className="w-full h-px bg-slate-100 my-4" />
-
-              <button
-                onClick={() => setView('admin-login')}
-                className="flex items-center justify-center gap-2 mx-auto text-[10px] font-black uppercase tracking-widest text-slate-300 hover:text-indigo-600 transition-colors"
-              >
-                <Shield size={12} /> Catalog Team Login
-              </button>
-
-              {/* <div className="pt-2">
-                <button
-                  onClick={(e) => { e.preventDefault(); (useStore.getState() as any).guestLogin(); }}
-                  className="w-full py-4 bg-slate-50 border border-slate-200 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-100 hover:text-indigo-600 transition-all flex items-center justify-center gap-2 group"
-                >
-                  <Sparkles size={16} className="text-indigo-400 group-hover:scale-110 transition-transform" />
-                  Try Guest Access (Instant)
-                </button>
-              </div> */}
             </div>
           )}
-        </div>
       </div>
     </div>
   );

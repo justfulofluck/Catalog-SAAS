@@ -1,0 +1,138 @@
+/* Akio Design System Styles */
+:root {
+  --color-bg: #100F0F;
+  --color-surface: #161616;
+  --color-surface-elevated: #171616;
+  --color-surface-hover: #1d1c1c;
+  --color-primary: #0F3D3E;
+  --color-primary-hover: #155455;
+  --color-secondary: #E2DCC8;
+  --color-border: #262626;
+  --color-border-subtle: rgba(226, 220, 200, 0.15);
+  --color-text: #F1F1F1;
+  --color-text-secondary: #E2DCC8;
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Geist', sans-serif;
+
+  /* Spacing */
+  --space-unit: 20px;
+}
+
+/* Base Headings */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  letter-spacing: -0.02em;
+}
+
+/* Global rule: Zero border radius on all images and photos */
+img,
+picture,
+svg.image-layer,
+.product-image,
+.category-image,
+[data-element-type="image"] {
+  border-radius: 0px !important;
+}
+
+/* Akio Components */
+.akio-canvas {
+  background-color: #100F0F;
+  color: #F1F1F1;
+}
+
+.akio-card {
+  background-color: #161616;
+  border: 1px solid #262626;
+  border-radius: 4px;
+  box-shadow: 0 0 0 1px inset rgba(255, 255, 255, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.akio-card:hover {
+  border-color: #333333;
+  background-color: #1a1a1a;
+}
+
+.akio-card-interactive {
+  cursor: pointer;
+}
+
+.akio-card-interactive:hover {
+  border-color: rgba(226, 220, 200, 0.4);
+  transform: translateY(-1px);
+}
+
+.akio-btn-primary {
+  background-color: #0F3D3E;
+  color: #F1F1F1;
+  border: 1px solid rgba(226, 220, 200, 0.25);
+  border-radius: 4px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 12px 24px;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 20px rgba(15, 61, 62, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.akio-btn-primary:hover {
+  background-color: #155455;
+  box-shadow: 0 6px 24px rgba(15, 61, 62, 0.5);
+  transform: translateY(-1px);
+}
+
+.akio-btn-secondary {
+  background-color: #171616;
+  color: #E2DCC8;
+  border: 1px solid #262626;
+  border-radius: 4px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  padding: 12px 24px;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.akio-btn-secondary:hover {
+  background-color: #262626;
+  border-color: #383838;
+}
+
+.akio-input {
+  background-color: #161616;
+  border: 1px solid #262626;
+  border-radius: 3px;
+  color: #ffffff;
+  padding: 14px 18px;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.akio-input:focus {
+  border-color: #f54900;
+  box-shadow: 0 0 0 3px rgba(245, 73, 0, 0.15);
+}
+
+.akio-badge {
+  background-color: rgba(245, 73, 0, 0.12);
+  color: #f54900;
+  border: 1px solid rgba(245, 73, 0, 0.25);
+  border-radius: 3px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}

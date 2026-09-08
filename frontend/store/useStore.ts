@@ -152,8 +152,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | null) => void;
+  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | null) => void;
 
   renameCatalog: (newName: string) => void;
   updateCatalogCategories: (categoryIds: string[]) => void;
@@ -274,7 +274,7 @@ export const useStore = create<State>((set, get) => ({
   isAdminAuthenticated: false,
   currentView: 'dashboard',
   isSidebarExpanded: true,
-  uiTheme: 'light',
+  uiTheme: 'dark',
   shouldRenderOutlines: true,
   defaultCurrency: '₹',
   isLoading: false,
@@ -483,6 +483,11 @@ export const useStore = create<State>((set, get) => ({
 
   login: async (email, username, password) => {
     set({ isLoading: true, error: null });
+    // Clear any stale tokens before attempting a new login
+    localStorage.removeItem('cs_access_token');
+    localStorage.removeItem('cs_refresh_token');
+    sessionStorage.removeItem('cs_session');
+
     try {
       const payload: any = { password };
       if (email) {
@@ -537,17 +542,20 @@ export const useStore = create<State>((set, get) => ({
       // Fetch data on login
       get().fetchProducts();
       get().fetchCategories();
-      get().fetchBusinessTemplates();
       get().fetchCatalogs();
       get().fetchMedia();
       get().fetchSystemTemplates();
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
-      const errorMessage = error.response?.data?.non_field_errors?.[0] || error.response?.data?.detail || 'Login failed';
-      if (errorMessage.includes('Unable to log in with provided credentials')) {
+      let errorMessage = error.response?.data?.non_field_errors?.[0] || 
+                         error.response?.data?.detail || 
+                         (typeof error.response?.data === 'string' ? error.response.data : null) ||
+                         error.message || 
+                         'Login failed';
+      if (typeof errorMessage === 'string' && errorMessage.includes('Unable to log in with provided credentials')) {
         set({ error: 'Invalid email or password. New here? Create an account.', isLoading: false });
       } else {
-        set({ error: errorMessage, isLoading: false });
+        set({ error: String(errorMessage), isLoading: false });
       }
       throw error;
     }
@@ -555,6 +563,11 @@ export const useStore = create<State>((set, get) => ({
 
   adminLogin: async (email, username, password) => {
     set({ isLoading: true, error: null });
+    // Clear any stale tokens before attempting admin login
+    localStorage.removeItem('cs_access_token');
+    localStorage.removeItem('cs_refresh_token');
+    sessionStorage.removeItem('cs_session');
+
     try {
       // 1. Authenticate
       const payload: any = { password: password || 'admin123' };
@@ -1501,11 +1514,24 @@ export const useStore = create<State>((set, get) => ({
   applyGlobalProductCardStyle: (updates) => {
     get().pushHistory();
     set((state) => {
+      const targetFont = updates.fontFamily || state.catalog.fontFamily;
       const updatedCatalog = {
         ...state.catalog,
         ...(updates.showTitle !== undefined ? { showTitle: updates.showTitle } : {}),
         ...(updates.showPrice !== undefined ? { showPrice: updates.showPrice } : {}),
         ...(updates.showSKU !== undefined ? { showSKU: updates.showSKU } : {}),
+        ...(updates.cardTheme ? { gridCardTheme: updates.cardTheme } : {}),
+        ...(updates.fontFamily ? {
+          fontFamily: updates.fontFamily,
+          headerFontFamily: updates.fontFamily,
+          footerFontFamily: updates.fontFamily
+        } : {}),
+        headerElements: (state.catalog.headerElements || []).map(el =>
+          el.type === 'text' && updates.fontFamily ? { ...el, fontFamily: updates.fontFamily } : el
+        ),
+        footerElements: (state.catalog.footerElements || []).map(el =>
+          el.type === 'text' && updates.fontFamily ? { ...el, fontFamily: updates.fontFamily } : el
+        ),
         updatedAt: new Date().toISOString()
       };
 
@@ -1530,6 +1556,10 @@ export const useStore = create<State>((set, get) => ({
           return el;
         })
       }));
+
+      if (typeof document !== 'undefined' && document.fonts && updates.fontFamily) {
+        document.fonts.load(`16px "${updates.fontFamily}"`).catch(() => {});
+      }
 
       return {
         catalog: {
@@ -3176,15 +3206,15 @@ export const useStore = create<State>((set, get) => ({
         const padding = template.padding || 35;
         const spacing = template.spacing || 20;
 
-        const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
-        const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
-        const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
-        const bottomMargin = curCatalog.marginBottom !== undefined ? curCatalog.marginBottom : padding;
+        const leftMargin = template.padding !== undefined ? template.padding : (curCatalog.marginLeft ?? 35);
+        const rightMargin = template.padding !== undefined ? template.padding : (curCatalog.marginRight ?? 35);
+        const topMargin = template.padding !== undefined ? template.padding : (curCatalog.marginTop ?? 35);
+        const bottomMargin = template.padding !== undefined ? template.padding : (curCatalog.marginBottom ?? 35);
 
-        const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
-        const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
-        const slotWidth = (availableWidth - (template.cols - 1) * spacing) / template.cols;
-        const slotHeight = (availableHeight - (template.rows - 1) * spacing) / template.rows;
+        const availableWidth = Math.max(100, PAGE_WIDTH - leftMargin - rightMargin);
+        const availableHeight = Math.max(100, PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH);
+        const slotWidth = Math.max(50, (availableWidth - (template.cols - 1) * spacing) / template.cols);
+        const slotHeight = Math.max(50, (availableHeight - (template.rows - 1) * spacing) / template.rows);
 
         const newGridElements: CanvasElement[] = [];
 
@@ -3273,15 +3303,15 @@ export const useStore = create<State>((set, get) => ({
           const padding = template.padding || 35;
           const spacing = template.spacing || 20;
 
-          const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
-          const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
-          const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
-          const bottomMargin = curCatalog.marginBottom !== undefined ? curCatalog.marginBottom : padding;
+          const leftMargin = template.padding !== undefined ? template.padding : (curCatalog.marginLeft ?? 35);
+          const rightMargin = template.padding !== undefined ? template.padding : (curCatalog.marginRight ?? 35);
+          const topMargin = template.padding !== undefined ? template.padding : (curCatalog.marginTop ?? 35);
+          const bottomMargin = template.padding !== undefined ? template.padding : (curCatalog.marginBottom ?? 35);
 
-          const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
-          const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
-          const slotWidth = (availableWidth - (template.cols - 1) * spacing) / template.cols;
-          const slotHeight = (availableHeight - (template.rows - 1) * spacing) / template.rows;
+          const availableWidth = Math.max(100, PAGE_WIDTH - leftMargin - rightMargin);
+          const availableHeight = Math.max(100, PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH);
+          const slotWidth = Math.max(50, (availableWidth - (template.cols - 1) * spacing) / template.cols);
+          const slotHeight = Math.max(50, (availableHeight - (template.rows - 1) * spacing) / template.rows);
 
           chunk.forEach((product, index) => {
             const col = index % template.cols;
@@ -3593,7 +3623,6 @@ export const useStore = create<State>((set, get) => ({
         });
         get().fetchProducts();
         get().fetchCategories();
-        get().fetchBusinessTemplates();
         get().fetchUsers();
         get().fetchCatalogs();
         get().fetchMedia();
@@ -3606,13 +3635,14 @@ export const useStore = create<State>((set, get) => ({
         });
         get().fetchProducts();
         get().fetchCategories();
-        get().fetchBusinessTemplates();
         get().fetchCatalogs();
         get().fetchMedia();
       }
 
     } catch (error) {
       sessionStorage.removeItem('cs_session');
+      localStorage.removeItem('cs_access_token');
+      localStorage.removeItem('cs_refresh_token');
       set({ isAuthenticated: false, isAdminAuthenticated: false, user: null });
     }
   }

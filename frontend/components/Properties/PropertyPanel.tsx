@@ -151,7 +151,7 @@ const handleOpenEffects = () => {
           </div>
           <button
             onClick={() => setIsPropertyPanelOpen(false)}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            className="p-2 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
             <X size={18} />
           </button>
@@ -182,7 +182,7 @@ const handleOpenEffects = () => {
                     className="flex-1 p-3 rounded-[18px] border bg-white border-slate-100 shadow-sm flex items-center gap-3 cursor-pointer hover:border-indigo-200 transition-all"
                   >
                     <div
-                      className="w-10 h-10 rounded-xl shadow-sm border-2 border-slate-50"
+                      className="w-10 h-10 rounded-[4px] shadow-sm border-2 border-slate-50"
                       style={{ background: (activeFill && !activeFill.includes('gradient')) ? activeFill : '#ffffff' }}
                     />
                     <div className="flex flex-col">
@@ -205,7 +205,7 @@ const handleOpenEffects = () => {
 
                 {/* Picker Overlay */}
                 {pickerOpen && (
-                  <div className="p-3 border rounded-2xl bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200">
+                  <div className="p-3 border rounded-[4px] bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200">
                     <AdvancedColorPicker
                       color={(activeFill && !activeFill.includes('gradient')) ? activeFill : '#ffffff'}
                       onChange={(c) => handleBatchUpdate({ fill: c })}
@@ -287,12 +287,12 @@ const handleOpenEffects = () => {
                   </div>
 
                   <div className="flex items-center justify-between">
-                    <div className="flex bg-[#1e293b] rounded-xl p-1 shadow-inner">
+                    <div className="flex bg-[#1e293b] rounded-[4px] p-1 shadow-inner">
                       {(['left', 'center', 'right'] as const).map(align => (
                         <button
                           key={align}
                           onClick={() => handleAlignment(align)}
-                          className={`p-2 rounded-lg transition-all ${selectedElement?.textAlign === align ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
+                          className={`p-2 rounded-[4px] transition-all ${selectedElement?.textAlign === align ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-500 hover:text-slate-300'}`}
                         >
                           {align === 'left' && <AlignLeft size={16} />}
                           {align === 'center' && <AlignCenter size={16} />}
@@ -301,12 +301,12 @@ const handleOpenEffects = () => {
                       ))}
                     </div>
 
-                    <div className="flex bg-[#1e293b] rounded-xl p-1 shadow-inner gap-1">
+                    <div className="flex bg-[#1e293b] rounded-[4px] p-1 shadow-inner gap-1">
                       {(['top', 'middle', 'bottom'] as const).map(align => (
                         <button
                           key={align}
                           onClick={() => handleVerticalAlignment(align)}
-                          className="p-2 rounded-lg transition-all text-slate-500 hover:text-slate-300"
+                          className="p-2 rounded-[4px] transition-all text-slate-500 hover:text-slate-300"
                         >
                           {align === 'top' && <AlignVerticalJustifyStart size={16} />}
                           {align === 'middle' && <AlignVerticalJustifyCenter size={16} />}
@@ -345,7 +345,7 @@ const handleOpenEffects = () => {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Header Background</label>
-                      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2">
+                      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-[4px] p-2">
                         <input
                           type="color"
                           value={selectedElement.tableData.headerBg || '#002b36'}
@@ -361,7 +361,7 @@ const handleOpenEffects = () => {
 
                     <div className="space-y-1">
                       <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Header Text Color</label>
-                      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-xl p-2">
+                      <div className="flex items-center gap-2 bg-white border border-slate-100 rounded-[4px] p-2">
                         <input
                           type="color"
                           value={selectedElement.tableData.headerTextColor || '#ffffff'}
@@ -395,7 +395,7 @@ const handleOpenEffects = () => {
                           };
                           updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData });
                         }}
-                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
+                        className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 rounded-[4px] text-[9px] font-black uppercase tracking-wider flex items-center gap-1 transition-all"
                       >
                         <Plus size={10} /> Add Column
                       </button>
@@ -403,7 +403,7 @@ const handleOpenEffects = () => {
 
                     <div className="space-y-1.5 max-h-40 overflow-y-auto custom-scrollbar p-1">
                       {selectedElement.tableData.headers.map((header, hIdx) => (
-                        <div key={hIdx} className="flex items-center gap-1.5 bg-white border border-slate-100 rounded-lg p-1.5 shadow-sm">
+                        <div key={hIdx} className="flex items-center gap-1.5 bg-white border border-slate-100 rounded-[4px] p-1.5 shadow-sm">
                           <span className="text-[9px] font-black text-slate-400 w-4">{hIdx + 1}</span>
                           <input
                             type="text"
@@ -451,7 +451,7 @@ const handleOpenEffects = () => {
                           };
                           updateElement(currentPageIndex, selectedElement.id, { tableData: newTableData, height: selectedElement.height + 28 });
                         }}
-                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                        className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-[4px] text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
                       >
                         <Plus size={11} /> Add Row
                       </button>
@@ -460,7 +460,7 @@ const handleOpenEffects = () => {
                     {/* Rows editor preview */}
                     <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar p-1">
                       {selectedElement.tableData.rows.map((row, rIdx) => (
-                        <div key={rIdx} className="p-2.5 bg-white border border-slate-100 rounded-xl space-y-1.5 shadow-sm">
+                        <div key={rIdx} className="p-2.5 bg-white border border-slate-100 rounded-[4px] space-y-1.5 shadow-sm">
                           <div className="flex justify-between items-center">
                             <span className="text-[9px] font-black text-indigo-600 uppercase">Row #{rIdx + 1}</span>
                             <button

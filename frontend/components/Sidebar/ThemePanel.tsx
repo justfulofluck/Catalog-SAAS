@@ -31,7 +31,7 @@ const ThemePanel: React.FC = () => {
               <div className="rounded-[22px] overflow-hidden min-h-[90px] relative">
                 <div className="flex items-center gap-4 p-5">
                   <div 
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl font-black shadow-lg" 
+                    className="w-14 h-14 rounded-[4px] flex items-center justify-center text-3xl font-black shadow-lg" 
                     style={{ backgroundColor: theme.id === 'default' ? '#0f172a' : theme.backgroundColor === '#111827' ? '#ffffff' : '#000000', color: theme.backgroundColor }}
                   >
                     {theme.headingFont.charAt(0)}
@@ -60,11 +60,11 @@ const ThemePanel: React.FC = () => {
               </div>
               
               {activeThemeId === theme.id ? (
-                <div className="w-9 h-9 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 ring-4 ring-indigo-50">
+                <div className="w-9 h-9 rounded-[4px] bg-indigo-600 text-white flex items-center justify-center shadow-xl shadow-indigo-600/30 ring-4 ring-indigo-50">
                   <Check size={18} strokeWidth={4} />
                 </div>
               ) : (
-                <div className="w-9 h-9 rounded-2xl bg-slate-50 text-slate-200 flex items-center justify-center transition-all group-hover:bg-indigo-50 group-hover:text-indigo-400 group-hover:rotate-12">
+                <div className="w-9 h-9 rounded-[4px] bg-slate-50 text-slate-200 flex items-center justify-center transition-all group-hover:bg-indigo-50 group-hover:text-indigo-400 group-hover:rotate-12">
                   <Sparkles size={16} />
                 </div>
               )}
@@ -82,8 +82,8 @@ const ThemePanel: React.FC = () => {
       </div>
 
       <div className="p-6 border-t bg-white">
-        <div className="flex items-start gap-3 p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 shadow-sm">
-          <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
+        <div className="flex items-start gap-3 p-4 bg-indigo-50/50 rounded-[4px] border border-indigo-100 shadow-sm">
+          <div className="w-10 h-10 bg-white rounded-[4px] flex items-center justify-center text-indigo-600 shrink-0 shadow-sm">
             <Info size={18} />
           </div>
           <p className="text-[9px] font-bold text-indigo-900 leading-relaxed uppercase tracking-tighter">

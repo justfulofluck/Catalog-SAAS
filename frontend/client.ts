@@ -14,8 +14,14 @@ const api = axios.create({
 
 // Request interceptor to attach Bearer token if available
 api.interceptors.request.use((config) => {
+    const isPublicAuthEndpoint = 
+        config.url?.includes('/auth/login/') ||
+        config.url?.includes('/auth/registration/') ||
+        config.url?.includes('/auth/token/refresh/') ||
+        config.url?.includes('/auth/password-reset/');
+
     const token = localStorage.getItem('cs_access_token');
-    if (token && !config.headers['Authorization']) {
+    if (token && !isPublicAuthEndpoint && !config.headers['Authorization']) {
         config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
@@ -30,7 +36,11 @@ api.interceptors.response.use(
         const originalRequest = error.config;
 
         if (error.response?.status === 401 && !originalRequest._retry) {
-            if (originalRequest.url?.includes('/auth/login/') || originalRequest.url === '/auth/token/refresh/') {
+            if (
+                originalRequest.url?.includes('/auth/login/') ||
+                originalRequest.url?.includes('/auth/token/refresh/') ||
+                originalRequest.url?.includes('/auth/registration/')
+            ) {
                 return Promise.reject(error);
             }
 
@@ -38,9 +48,13 @@ api.interceptors.response.use(
 
             try {
                 const refreshToken = localStorage.getItem('cs_refresh_token');
+                if (!refreshToken) {
+                    throw new Error('No refresh token available');
+                }
+
                 const refreshRes: any = await axios.post(
                     '/api/auth/token/refresh/', 
-                    refreshToken ? { refresh: refreshToken } : {}, 
+                    { refresh: refreshToken }, 
                     { withCredentials: true }
                 );
                 const newToken = refreshRes.data?.access || refreshRes.data?.access_token || refreshRes?.access;
@@ -54,6 +68,10 @@ api.interceptors.response.use(
                 }
                 return api(originalRequest);
             } catch (refreshError) {
+                // Remove stale/expired tokens so user is not stuck with invalid credentials
+                localStorage.removeItem('cs_access_token');
+                localStorage.removeItem('cs_refresh_token');
+                sessionStorage.removeItem('cs_session');
                 return Promise.reject(refreshError);
             }
         }

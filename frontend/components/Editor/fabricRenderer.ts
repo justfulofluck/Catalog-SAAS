@@ -1,6 +1,11 @@
 import { Rect, Textbox, Image as FabricImage, Circle, Polygon, Line, Group, Shadow, Gradient, filters, config } from 'fabric';
 import { CanvasElement, ElementType, Product, Catalog } from '../../types';
 import { workerPool } from '../../utils/workerPool';
+import { useStore } from '../../store/useStore';
+import { resolveFieldLabel } from '../../utils/fieldUtils';
+
+// Ensure all fabric images are loaded with crossOrigin = 'anonymous' to prevent tainted canvases
+config.imageProperties = { ...config.imageProperties, crossOrigin: 'anonymous' };
 
 // ── Custom shape classes ──────────────────────────────────────────────
 class CloudShape extends Rect {
@@ -268,6 +273,7 @@ function generateRichTextSvg(el: CanvasElement): string {
 async function loadSvgAsImage(svgString: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new window.Image();
+    img.crossOrigin = 'anonymous';
     const encoded = btoa(unescape(encodeURIComponent(svgString)));
     img.src = `data:image/svg+xml;base64,${encoded}`;
     img.onload = () => resolve(img);
@@ -307,7 +313,7 @@ export async function elementToFabricObject(
       try {
         const svg = generateRichTextSvg(el);
         const htmlImg = await loadSvgAsImage(svg);
-        const img = await FabricImage.fromURL(htmlImg.src);
+        const img = await FabricImage.fromURL(htmlImg.src, { crossOrigin: 'anonymous' });
         img.set({ ...common, width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
         return img;
       } catch (err) {
@@ -446,7 +452,7 @@ export async function elementToFabricObject(
         }
       }
 
-      const img = await FabricImage.fromURL(finalSrc);
+      const img = await FabricImage.fromURL(finalSrc, { crossOrigin: 'anonymous' });
       img.set({
         ...common,
         scaleX: el.width / (img.width || 1),
@@ -515,7 +521,7 @@ export async function elementToFabricObject(
       try {
         const svg = generateRichTextSvg(el);
         const htmlImg = await loadSvgAsImage(svg);
-        const img = await FabricImage.fromURL(htmlImg.src);
+        const img = await FabricImage.fromURL(htmlImg.src, { crossOrigin: 'anonymous' });
         img.set({ ...common, width: w, height: h, scaleX: 1, scaleY: 1 });
         return img;
       } catch (err) {
@@ -538,79 +544,156 @@ export async function elementToFabricObject(
     objs.push(new Rect({
       left: 0, top: 0, width: el.width, height: el.height,
       originX: 'left', originY: 'top',
-      fill: '#ffffff', stroke: '#e2e8f0', strokeWidth: 2, rx: 8, ry: 8,
+      fill: '#ffffff', stroke: '#e2e8f0', strokeWidth: 1.5, rx: 4, ry: 4,
     }));
     const product = products.find(p => p.id === el.productId);
     if (product) {
+      const cardPadding = Math.max(6, Math.min(14, el.width * 0.04));
+      const contentWidth = el.width - cardPadding * 2;
+      
+      // Prepare Details, SKU & Custom Fields first so we can gauge content volume
+      let detailLines: string[] = [];
+      if (catalog?.showSKU !== false && product.sku) {
+        detailLines.push(`SKU: ${product.sku}`);
+      }
+      if (product.description) {
+        detailLines.push(product.description);
+      }
+      
+      if (product.customFields && Object.keys(product.customFields).length > 0) {
+        const categories = useStore.getState().categories || [];
+        const catId = product.categoryId ? String(product.categoryId) : '';
+        // Look up by string catId or matching category
+        const visibleParamKeys: string[] | null = 
+          (catalog?.categoryVisibleParams && (
+            catalog.categoryVisibleParams[catId] ||
+            catalog.categoryVisibleParams[String(product.categoryId)] ||
+            Object.entries(catalog.categoryVisibleParams).find(([k]) => String(k) === catId)?.[1]
+          )) || null;
+
+        const fields = Object.entries(product.customFields)
+          .filter(([k, v]) => {
+            if (v === undefined || v === null || v === '' || typeof v === 'object') return false;
+            if (visibleParamKeys !== null) {
+              const label = resolveFieldLabel(k, categories, product);
+              const normLabel = label ? label.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+              const normKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+              // Check if any enabled key matches the field key, id, or normalized label
+              const isMatch = visibleParamKeys.some(vk => {
+                const normVk = vk.toLowerCase().replace(/[^a-z0-9]/g, '');
+                return vk === k || normVk === normKey || (normLabel && normVk === normLabel);
+              });
+              return isMatch;
+            }
+            return true;
+          }) 
+          .map(([k, v]) => {
+             const label = resolveFieldLabel(k, categories, product);
+             if (!label) return null;
+             return `• ${label}: ${v}`;
+          })
+          .filter(Boolean) as string[];
+
+        if (fields.length > 0) {
+          detailLines = detailLines.concat(fields);
+        }
+      }
+
+      // Proportional Balancing:
+      // If content is short (fewer lines), give more vertical space to the product image (up to 52%)
+      // and allow a healthier font size and line-height so the card is elegantly filled.
+      const lineCount = detailLines.length;
+      let imgRatio = 0.44;
+      if (lineCount <= 4) {
+        imgRatio = 0.52;
+      } else if (lineCount <= 7) {
+        imgRatio = 0.48;
+      } else if (lineCount > 11) {
+        imgRatio = 0.38;
+      }
+
+      const maxImgH = Math.max(40, el.height * imgRatio);
+      const imgTop = cardPadding;
+
       if (product.image || el.src) {
         try {
           const imgUrl = (el.src || product.image).startsWith('/') ? `http://127.0.0.1:8000${el.src || product.image}` : (el.src || product.image);
-          const img = await FabricImage.fromURL(imgUrl);
-          const targetH = el.height * 0.5; // Changed to 50% to leave more room for details
+          const img = await FabricImage.fromURL(imgUrl, { crossOrigin: 'anonymous' });
+          
+          const naturalW = img.width || 1;
+          const naturalH = img.height || 1;
+          // Contain calculation with inner padding
+          const availableImgW = contentWidth;
+          const availableImgH = maxImgH - cardPadding;
+          const imgScale = Math.min(availableImgW / naturalW, availableImgH / naturalH, 1.8);
+          
+          const renderedW = naturalW * imgScale;
+          const renderedH = naturalH * imgScale;
+          
+          // Center image horizontally and vertically within its allocated area
+          const imgLeft = cardPadding + (contentWidth - renderedW) / 2;
+          const imgY = imgTop + (availableImgH - renderedH) / 2;
+          
           img.set({
-            left: 0, top: 0,
-            originX: 'left', originY: 'top',
-            scaleX: el.width / (img.width || 1),
-            scaleY: targetH / (img.height || 1),
+            left: imgLeft,
+            top: imgY,
+            originX: 'left',
+            originY: 'top',
+            scaleX: imgScale,
+            scaleY: imgScale,
           });
           objs.push(img);
         } catch {}
       }
-      let currentTop = el.height * 0.5 + 10;
 
+      let currentTop = imgTop + maxImgH + 6;
+      const cardFontFamily = (el as any).fontFamily || (catalog as any).fontFamily || 'Inter';
+
+      // Product Title / Name - Bada aur Prominent
       if (catalog?.showTitle !== false) {
+        const titleFontSize = Math.max(11, Math.min(16, Math.round(el.width * 0.065)));
         const nameText = new Textbox(product.name || 'Unnamed Product', {
-          left: 10, top: currentTop, width: el.width - 20,
+          left: cardPadding, top: currentTop, width: contentWidth,
           originX: 'left', originY: 'top',
-          fontSize: Math.max(12, el.width * 0.05),
-          fontFamily: 'Inter', fontWeight: 'bold', fill: '#0f172a', splitByGrapheme: false,
+          fontSize: titleFontSize,
+          fontFamily: cardFontFamily, fontWeight: 'bold', fill: '#0f172a', splitByGrapheme: false,
+          lineHeight: 1.2,
         });
         objs.push(nameText);
-        currentTop += (nameText.height || (Math.max(12, el.width * 0.05) * 1.2)) + 5;
+        currentTop += (nameText.height || (titleFontSize * 1.25)) + 4;
       }
       
+      // Price - Bada, Clear aur Vibrant
       if (catalog?.showPrice !== false) {
-        const priceText = new Textbox(`₹${product.price || '0'}`, {
-          left: 10, top: currentTop, width: el.width - 20,
+        const priceFontSize = Math.max(11, Math.min(15, Math.round(el.width * 0.058)));
+        const priceText = new Textbox(`${product.currency || '₹'}${product.price || '0'}`, {
+          left: cardPadding, top: currentTop, width: contentWidth,
           originX: 'left', originY: 'top',
-          fontSize: Math.max(10, el.width * 0.04),
-          fontFamily: 'Inter', fill: '#4f46e5', fontWeight: 'bold', splitByGrapheme: false,
+          fontSize: priceFontSize,
+          fontFamily: cardFontFamily, fill: '#4f46e5', fontWeight: 'bold', splitByGrapheme: false,
+          lineHeight: 1.15,
         });
         objs.push(priceText);
-        currentTop += (priceText.height || (Math.max(10, el.width * 0.04) * 1.2)) + 5;
+        currentTop += (priceText.height || (priceFontSize * 1.2)) + 6;
       }
       
-      let fullDescription = '';
-      if (catalog?.showSKU !== false && product.sku) {
-        fullDescription += `SKU: ${product.sku}`;
-      }
-      if (product.description) {
-        fullDescription += (fullDescription ? '\n\n' : '') + product.description;
-      }
-      
-      let customFieldsText = '';
-      if (product.customFields && Object.keys(product.customFields).length > 0) {
-        customFieldsText = Object.entries(product.customFields)
-          .filter(([k, v]) => v !== undefined && v !== null && v !== '') 
-          .map(([k, v]) => {
-             let label = k.replace(/_/g, ' ').toUpperCase();
-             if (label.startsWith('FIELD-')) label = 'SPEC';
-             return `• ${label}: ${v}`;
-          })
-          .join('\n');
-      }
-      
-      if (customFieldsText) {
-         fullDescription += (fullDescription ? '\n\n' : '') + customFieldsText;
-      }
-      
-      if (fullDescription.trim()) {
-        const descText = new Textbox(fullDescription.substring(0, 150) + (fullDescription.length > 150 ? '...' : ''), {
-          left: 10, top: currentTop, width: el.width - 20,
+      const fullText = detailLines.join('\n');
+      if (fullText.trim() && (el.height - currentTop) > 10) {
+        // Dynamically compute font size & line-height using the bottom space
+        const availableTextH = el.height - currentTop - cardPadding;
+        const targetLineHeight = lineCount <= 5 ? 1.35 : (lineCount <= 8 ? 1.25 : 1.18);
+        const autoFontSize = Math.min(
+          11,
+          Math.max(7.5, Math.floor(availableTextH / Math.max(1, lineCount * targetLineHeight)))
+        );
+
+        const descText = new Textbox(fullText, {
+          left: cardPadding, top: currentTop, width: contentWidth,
           originX: 'left', originY: 'top',
-          fontSize: Math.max(8, el.width * 0.035),
-          fontFamily: 'Inter', fill: '#64748b', splitByGrapheme: false,
-          lineHeight: 1.1,
+          fontSize: autoFontSize,
+          fontFamily: cardFontFamily, fill: '#475569', splitByGrapheme: false,
+          lineHeight: targetLineHeight,
         });
         objs.push(descText);
       }
@@ -618,17 +701,17 @@ export async function elementToFabricObject(
       objs.push(new Textbox('EMPTY SLOT', {
         left: 0, top: el.height / 2 - 10, width: el.width,
         originX: 'left', originY: 'top',
-        fontSize: 14, fontFamily: 'Inter', fontWeight: 'bold', fill: '#94a3b8',
+        fontSize: 12, fontFamily: 'Inter', fontWeight: 'bold', fill: '#94a3b8',
         textAlign: 'center', splitByGrapheme: false,
       }));
     }
     
-    // Add clipPath to the group to ensure nothing bleeds out of the rounded card
+    // Add clipPath to the group to ensure nothing bleeds out of the card
     const clipPath = new Rect({
       left: -el.width / 2, top: -el.height / 2, // Group clipPath is relative to group center
       width: el.width, height: el.height,
       originX: 'left', originY: 'top',
-      rx: 8, ry: 8
+      rx: 0, ry: 0
     });
     
     const group = new Group(objs, { 

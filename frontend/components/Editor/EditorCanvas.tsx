@@ -367,6 +367,12 @@ const EditorCanvas: React.FC = () => {
     };
 
     const handleContainerWheel = (e: WheelEvent) => {
+      // If user is scrolling inside an open modal, popup, or overlay (e.g. TableEditorModal, menus), do NOT scroll the background canvas!
+      const target = e.target as HTMLElement | null;
+      if (target && (target.closest('.fixed') || target.closest('[role="dialog"]') || target.closest('.modal-content') || target.closest('[data-modal]'))) {
+        return;
+      }
+
       e.preventDefault();
       if (e.ctrlKey || e.metaKey) {
         stopInertia();
@@ -804,7 +810,7 @@ const EditorCanvas: React.FC = () => {
 
   return (
     <div
-      className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-500 ${uiTheme === 'dark' ? 'bg-slate-950' : 'bg-slate-100'}`}
+      className="flex-1 flex flex-col overflow-hidden relative bg-[#0e0e0e]"
       ref={containerRef}
       onMouseDown={handlePanMouseDown}
       onMouseMove={handlePanMouseMove}
@@ -812,11 +818,16 @@ const EditorCanvas: React.FC = () => {
       onMouseLeave={handlePanMouseUp}
       style={{ cursor: activeTool === 'hand' ? (isPanActive ? 'grabbing' : 'grab') : 'default' }}
     >
-      {/* Pannable canvas area */}
+      {/* Pannable canvas area with subtle designer dot-grid */}
       <div
         ref={scrollContainerRef}
-        className={`flex-1 overflow-hidden transition-colors duration-500 ${isDragOver ? (uiTheme === 'dark' ? 'bg-indigo-950/20' : 'bg-indigo-50/50') : (uiTheme === 'dark' ? 'bg-slate-900' : 'bg-[#e2e8f0]')
-          }`}
+        className={`flex-1 overflow-hidden transition-colors duration-300 ${
+          isDragOver ? 'bg-[#0F3D3E]/10' : 'bg-[#121212]'
+        }`}
+        style={{
+          backgroundImage: 'radial-gradient(#252525 1px, transparent 1px)',
+          backgroundSize: '24px 24px'
+        }}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -833,7 +844,7 @@ const EditorCanvas: React.FC = () => {
       >
         <div
           ref={panContentRef}
-          className="flex flex-col items-center py-10 gap-8"
+          className="flex flex-col items-center py-12 gap-10"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px)`,
             width: 'fit-content',
@@ -848,7 +859,6 @@ const EditorCanvas: React.FC = () => {
               setEditConfig(null);
               setSelectedPageIndex(null);
               setSelectedCategoryId(null);
-              // Removed setCurrentPageIndex(-1) to prevent blank canvas
             }
           }}
         >
@@ -867,18 +877,19 @@ const EditorCanvas: React.FC = () => {
                 }}
               >
 
-                {/* Page wrapper */}
+                {/* Page wrapper - White catalog sheet stands out prominently like Figma/Canva */}
                 <div
-                  className={`shadow-[0_20px_60px_rgba(0,0,0,0.12)] bg-white border shrink-0 relative transition-all ${isActive
-                    ? (isDragOver ? 'border-indigo-400 ring-8 ring-indigo-600/5' : 'border-slate-300')
-                    : (uiTheme === 'dark' ? 'border-slate-700 opacity-80 hover:opacity-100 cursor-pointer' : 'border-slate-200 opacity-80 hover:opacity-100 cursor-pointer')
-                    }`}
+                  className={`bg-white shrink-0 relative transition-all rounded-[2px] ${
+                    isActive
+                      ? (isDragOver ? 'ring-4 ring-[#0F3D3E] shadow-[0_25px_70px_rgba(0,0,0,0.6)]' : 'ring-2 ring-[#0F3D3E] shadow-[0_25px_60px_rgba(0,0,0,0.55)]')
+                      : 'opacity-90 hover:opacity-100 cursor-pointer shadow-[0_15px_40px_rgba(0,0,0,0.4)] border border-[#2a2a2a]'
+                  }`}
                   style={{ width: curW * zoom, height: curH * zoom }}
                 >
                   {/* Floating Labels and Boundaries */}
                   {(() => {
-                    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
-                    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
+                    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
+                    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
 
                     return (
                       <>
@@ -887,7 +898,7 @@ const EditorCanvas: React.FC = () => {
                             {pageHasHeader && (
                               <>
                                 <div
-                                  className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
+                                  className="absolute bg-[#1e1e1e] text-[#aaa] border border-[#333] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-l-md shadow-sm transition-all"
                                   style={{
                                     left: 0,
                                     top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
@@ -899,7 +910,7 @@ const EditorCanvas: React.FC = () => {
                                 </div>
                                 {isActive && (
                                   <div
-                                    className="absolute left-0 right-0 border-b-2 border-dashed border-indigo-500/30 pointer-events-none"
+                                    className="absolute left-0 right-0 border-b border-dashed border-[#0F3D3E]/40 pointer-events-none"
                                     style={{ top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom }}
                                   />
                                 )}
@@ -908,7 +919,7 @@ const EditorCanvas: React.FC = () => {
                             {pageHasFooter && (
                               <>
                                 <div
-                                  className="absolute bg-indigo-600/90 text-white text-[9px] font-black uppercase tracking-widest px-2 py-1 rounded-l-none rounded-r-md shadow-sm transition-all"
+                                  className="absolute bg-[#1e1e1e] text-[#aaa] border border-[#333] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-l-md shadow-sm transition-all"
                                   style={{
                                     left: 0,
                                     top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
@@ -920,7 +931,7 @@ const EditorCanvas: React.FC = () => {
                                 </div>
                                 {isActive && (
                                   <div
-                                    className="absolute left-0 right-0 border-t-2 border-dashed border-indigo-500/30 pointer-events-none"
+                                    className="absolute left-0 right-0 border-t border-dashed border-[#0F3D3E]/40 pointer-events-none"
                                     style={{ top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40)) * zoom }}
                                   />
                                 )}
@@ -1168,7 +1179,7 @@ const EditorCanvas: React.FC = () => {
             <div className="relative" style={{ width: (catalog.pages[catalog.pages.length - 1]?.orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH) * zoom }}>
               <button
                 onClick={() => setShowAddPageMenu(prev => !prev)}
-                className={`w-full border-2 border-dashed rounded-lg flex items-center justify-center gap-3 py-4 transition-all ${uiTheme === 'dark'
+                className={`w-full border-2 border-dashed rounded-[4px] flex items-center justify-center gap-3 py-4 transition-all ${uiTheme === 'dark'
                   ? 'border-slate-700 hover:border-indigo-500 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10'
                   : 'border-slate-300 hover:border-indigo-400 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50'
                   }`}
@@ -1179,7 +1190,7 @@ const EditorCanvas: React.FC = () => {
 
               {/* Page type popover */}
               {showAddPageMenu && (
-                <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 border shadow-2xl rounded-2xl overflow-hidden z-50 py-1 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 border shadow-2xl rounded-[4px] overflow-hidden z-50 py-1 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
                   }`}>
                   <p className={`px-4 py-2.5 text-[9px] font-black uppercase tracking-widest border-b ${uiTheme === 'dark' ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'
                     }`}>
@@ -1195,10 +1206,10 @@ const EditorCanvas: React.FC = () => {
                       <button
                         key={type}
                         onClick={() => { addPage(type); setShowAddPageMenu(false); }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
                           }`}
                       >
-                        <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'
+                        <div className={`w-8 h-8 rounded-[4px] flex items-center justify-center shrink-0 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'
                           }`}>
                           <Icon size={15} className={uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'} />
                         </div>
@@ -1212,10 +1223,10 @@ const EditorCanvas: React.FC = () => {
                     <div className={`h-px mx-2 my-1 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`} />
                     <button
                       onClick={() => { addInteriorPageWithInheritedLayout(); setShowAddPageMenu(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
                         }`}
                     >
-                      <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center shrink-0">
+                      <div className="w-8 h-8 rounded-[4px] bg-indigo-600 flex items-center justify-center shrink-0">
                         <Sparkles size={15} className="text-white" />
                       </div>
                       <div>
@@ -1233,13 +1244,13 @@ const EditorCanvas: React.FC = () => {
       </div>
 
       {/* Editor Footer Bar */}
-      <div className={`h-12 border-t flex items-center justify-between px-6 shrink-0 z-40 ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+      <div className="h-11 border-t flex items-center justify-between px-5 shrink-0 z-40 bg-[#141414] border-[#262626]">
         <div className="flex items-center gap-6">
           <button
             onClick={() => setIsProjectSettingsOpen(!isProjectSettingsOpen)}
-            className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-colors ${isProjectSettingsOpen ? 'text-indigo-600' : 'text-slate-400 hover:text-slate-600'}`}
+            className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${isProjectSettingsOpen ? 'text-[#E2DCC8]' : 'text-[#888888] hover:text-white'}`}
           >
-            <div className={`w-6 h-6 rounded-md flex items-center justify-center ${isProjectSettingsOpen ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+            <div className={`w-5 h-5 rounded-[4px] flex items-center justify-center ${isProjectSettingsOpen ? 'bg-[#0F3D3E] text-white' : 'bg-[#222] text-[#888]'}`}>
               <Settings size={12} />
             </div>
             Page Settings
@@ -1247,10 +1258,10 @@ const EditorCanvas: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center bg-slate-100 rounded-lg px-2 py-1 gap-3">
-            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className="text-slate-400 hover:text-slate-600"><Plus size={14} className="rotate-45" /></button>
-            <span className="text-[10px] font-black text-slate-600 w-8 text-center">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className="text-slate-400 hover:text-slate-600"><Plus size={14} /></button>
+          <div className="flex items-center bg-[#1a1a1a] border border-[#2a2a2a] rounded-[4px] px-2 py-0.5 gap-2.5">
+            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className="text-[#888] hover:text-white transition-colors" title="Zoom Out"><Plus size={13} className="rotate-45" /></button>
+            <span className="text-[10px] font-bold text-white w-9 text-center select-none">{Math.round(zoom * 100)}%</span>
+            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className="text-[#888] hover:text-white transition-colors" title="Zoom In"><Plus size={13} /></button>
           </div>
         </div>
       </div>

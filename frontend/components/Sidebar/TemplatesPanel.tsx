@@ -12,7 +12,11 @@ import {
 
 type TemplateCategory = 'headers' | 'grids' | 'footers' | 'covers' | 'toc_outro';
 
-const TemplatesPanel: React.FC = () => {
+interface TemplatesPanelProps {
+  hideHeader?: boolean;
+}
+
+const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) => {
   const { 
     catalog, currentPageIndex, 
     applyCoverTemplate, applyIndexTemplate, applyClosingTemplate, 
@@ -41,32 +45,34 @@ const TemplatesPanel: React.FC = () => {
   ];
 
   return (
-    <div className={`flex flex-col h-full w-full shrink-0 relative transition-colors ${isDark ? 'bg-[#0f172a]' : 'bg-white'}`}>
+    <div className="flex flex-col h-full w-full shrink-0 relative font-sans transition-colors bg-[#161616] text-white">
       
-      {/* Top Header */}
-      <div className={`p-4 border-b shrink-0 ${isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-100'}`}>
-        <div className="flex items-center justify-between mb-3">
+      {/* Top Header - hidden when embedded in PagesPanel tabs */}
+      {!hideHeader && (
+        <div className="h-14 px-3 py-2 border-b shrink-0 flex items-center justify-between transition-colors bg-[#161616] border-[#262626]">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-md">
+            <div className="w-6 h-6 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-white shadow-sm">
               <LayoutTemplate size={13} />
             </div>
             <div>
-              <h3 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              <h3 className="text-[10px] font-bold uppercase tracking-wider text-white">
                 Template Studio
               </h3>
-              <p className="text-[9px] text-slate-400 font-medium">Modular Page Outfits</p>
+              <p className="text-[8px] text-[#888] font-medium">Modular Page Outfits</p>
             </div>
           </div>
           <button
             onClick={() => setEditorTab(null)}
-            className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+            className="p-1 rounded-[4px] transition-colors hover:bg-[#262626] text-[#888] hover:text-white"
           >
-            <X size={14} />
+            <X size={12} />
           </button>
         </div>
+      )}
 
-        {/* Category Pill Navigation */}
-        <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 dark:bg-slate-900/60 rounded-xl border border-slate-200/60 dark:border-slate-800">
+      {/* Category Pill Navigation */}
+      <div className="p-2 border-b shrink-0 bg-[#141414] border-[#262626]">
+        <div className="grid grid-cols-5 gap-1 p-0.5 rounded-[4px] border bg-[#101010] border-[#262626]">
           {categories.map((cat) => {
             const Icon = cat.icon;
             const isActive = activeCategory === cat.id;
@@ -74,15 +80,15 @@ const TemplatesPanel: React.FC = () => {
               <button
                 key={cat.id}
                 onClick={() => setActiveCategory(cat.id as TemplateCategory)}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-lg text-[10px] font-black transition-all ${
+                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-[3px] text-[9px] font-bold transition-all ${
                   isActive
-                    ? 'bg-white dark:bg-indigo-600 text-indigo-600 dark:text-white shadow-sm'
-                    : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                    ? 'bg-[#0F3D3E] text-white shadow-sm'
+                    : 'text-[#888] hover:text-white'
                 }`}
                 title={cat.desc}
               >
-                <Icon size={13} className="mb-0.5" />
-                <span className="truncate max-w-full text-[9px] tracking-tight">{cat.label}</span>
+                <Icon size={12} className="mb-0.5" />
+                <span className="truncate max-w-full tracking-tight">{cat.label}</span>
               </button>
             );
           })}
@@ -120,11 +126,11 @@ const TemplatesPanel: React.FC = () => {
                     applyHeaderTemplate(headerObj);
                     triggerFeedback(`sys-hdr-${tmpl.id}`);
                   }}
-                  className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                  className={`group cursor-pointer rounded-[4px] border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
                     isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
                   }`}
                 >
-                  <div className="p-2.5 rounded-lg bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                  <div className="p-2.5 rounded-[4px] bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
                     {tmpl.name} (Custom Header)
                   </div>
 
@@ -156,26 +162,26 @@ const TemplatesPanel: React.FC = () => {
                   applyHeaderTemplate(tmpl);
                   triggerFeedback(tmpl.id);
                 }}
-                className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
-                  isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
+                className={`group cursor-pointer rounded-[4px] border transition-all p-2.5 relative overflow-hidden ${
+                  isDark ? 'bg-[#141414] border-[#262626] hover:border-[#0F3D3E] hover:bg-[#1a1a1a]' : 'bg-white border-slate-200 hover:border-[#0F3D3E]'
                 }`}
               >
                 {/* Visual Header Mockup */}
-                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                <div className={`p-2 rounded-[3px] border mb-2 font-mono text-[9px] truncate ${isDark ? 'bg-[#101010] border-[#262626] text-[#aaa]' : 'bg-slate-50 border-slate-200 text-slate-700'}`}>
                   {tmpl.previewText}
                 </div>
 
                 <div className="flex items-center justify-between">
                   <div>
-                    <h4 className={`text-xs font-black ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{tmpl.name}</h4>
-                    <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description}</p>
+                    <h4 className={`text-[11px] font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{tmpl.name}</h4>
+                    <p className="text-[8px] text-[#888] mt-0.5 leading-tight">{tmpl.description}</p>
                   </div>
                   {appliedId === tmpl.id ? (
-                    <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
+                    <span className="flex items-center gap-1 text-[9px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-2 py-0.5 rounded-[3px]">
                       <Check size={11} /> Applied
                     </span>
                   ) : (
-                    <span className="text-[9px] font-black uppercase tracking-wider text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-[#E2DCC8] opacity-0 group-hover:opacity-100 transition-opacity">Apply</span>
                   )}
                 </div>
               </div>
@@ -192,7 +198,7 @@ const TemplatesPanel: React.FC = () => {
             </div>
 
             {currentPage && (currentPage.type === 'cover' || currentPage.type === 'intro' || currentPage.type === 'index' || currentPage.type === 'closing') ? (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
+              <div className="p-4 rounded-[4px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
                 <Info size={20} className="text-amber-600 mx-auto" />
                 <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
                   Body Grids cannot be applied to a <strong>{currentPage.type.toUpperCase()}</strong> page.
@@ -226,12 +232,12 @@ const TemplatesPanel: React.FC = () => {
                         applyInventoryLayout(currentPageIndex, gridObj as any);
                         triggerFeedback(`sys-grid-${tmpl.id}`);
                       }}
-                      className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                      className={`group cursor-pointer rounded-[4px] border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
                         isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
                       }`}
                     >
                       {/* Mini Visual Grid Box */}
-                      <div className="aspect-[16/7] rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
+                      <div className="aspect-[16/7] rounded-[4px] bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
                         <div className="grid gap-1 w-full h-full" style={{ gridTemplateColumns: `repeat(${gridObj.cols}, minmax(0, 1fr))` }}>
                           {Array.from({ length: Math.min(gridObj.cols * gridObj.rows, 6) }).map((_, i) => (
                             <div key={i} className="bg-indigo-200 dark:bg-indigo-800/60 border border-indigo-300 dark:border-indigo-700 rounded-sm flex items-center justify-center">
@@ -269,12 +275,12 @@ const TemplatesPanel: React.FC = () => {
                       applyInventoryLayout(currentPageIndex, tmpl);
                       triggerFeedback(tmpl.id);
                     }}
-                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                    className={`group cursor-pointer rounded-[4px] border transition-all p-3 shadow-sm hover:shadow-md ${
                       isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
                     }`}
                   >
                     {/* Mini Visual Grid Box */}
-                    <div className="aspect-[16/7] rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
+                    <div className="aspect-[16/7] rounded-[4px] bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 p-2 flex items-center justify-center">
                       <div className="grid gap-1 w-full h-full" style={{ gridTemplateColumns: `repeat(${tmpl.cols}, minmax(0, 1fr))` }}>
                         {Array.from({ length: Math.min(tmpl.cols * tmpl.rows, 6) }).map((_, i) => (
                           <div key={i} className="bg-indigo-100 dark:bg-indigo-900/50 border border-indigo-200 dark:border-indigo-800 rounded-sm flex items-center justify-center">
@@ -332,11 +338,11 @@ const TemplatesPanel: React.FC = () => {
                     applyFooterTemplate(footerObj);
                     triggerFeedback(`sys-ftr-${tmpl.id}`);
                   }}
-                  className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                  className={`group cursor-pointer rounded-[4px] border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
                     isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
                   }`}
                 >
-                  <div className="p-2.5 rounded-lg bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                  <div className="p-2.5 rounded-[4px] bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
                     {tmpl.name} (Custom Footer)
                   </div>
 
@@ -368,12 +374,12 @@ const TemplatesPanel: React.FC = () => {
                   applyFooterTemplate(tmpl);
                   triggerFeedback(tmpl.id);
                 }}
-                className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                className={`group cursor-pointer rounded-[4px] border transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
                   isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
                 }`}
               >
                 {/* Visual Footer Mockup */}
-                <div className="p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
+                <div className="p-2.5 rounded-[4px] bg-slate-50 dark:bg-slate-950 border border-slate-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
                   {tmpl.previewText}
                 </div>
 
@@ -404,7 +410,7 @@ const TemplatesPanel: React.FC = () => {
             </div>
 
             {currentPage && currentPage.type !== 'cover' && currentPage.type !== 'blank' ? (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
+              <div className="p-4 rounded-[4px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
                 <Info size={20} className="text-amber-600 mx-auto" />
                 <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
                   Cover Templates cannot be applied to a <strong>{currentPage.type.toUpperCase()}</strong> page.
@@ -429,7 +435,7 @@ const TemplatesPanel: React.FC = () => {
                       });
                       triggerFeedback(`sys-${tmpl.id}`);
                     }}
-                    className={`group cursor-pointer rounded-xl border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
+                    className={`group cursor-pointer rounded-[4px] border-2 border-indigo-500/50 transition-all p-3 shadow-sm hover:shadow-md relative overflow-hidden ${
                       isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
                     }`}
                   >
@@ -458,7 +464,7 @@ const TemplatesPanel: React.FC = () => {
                       applyCoverTemplate(currentPageIndex, tmpl);
                       triggerFeedback(tmpl.id);
                     }}
-                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                    className={`group cursor-pointer rounded-[4px] border transition-all p-3 shadow-sm hover:shadow-md ${
                       isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
                     }`}
                   >
@@ -489,7 +495,7 @@ const TemplatesPanel: React.FC = () => {
             </div>
 
             {currentPage && currentPage.type !== 'index' && currentPage.type !== 'closing' && currentPage.type !== 'blank' ? (
-              <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
+              <div className="p-4 rounded-[4px] bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-center space-y-2 my-2">
                 <Info size={20} className="text-amber-600 mx-auto" />
                 <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
                   Index & Outro templates cannot be applied to a <strong>{currentPage.type.toUpperCase()}</strong> page.
@@ -508,7 +514,7 @@ const TemplatesPanel: React.FC = () => {
                       applyIndexTemplate(currentPageIndex, tmpl);
                       triggerFeedback(tmpl.id);
                     }}
-                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                    className={`group cursor-pointer rounded-[4px] border transition-all p-3 shadow-sm hover:shadow-md ${
                       isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
                     }`}
                   >
@@ -528,7 +534,7 @@ const TemplatesPanel: React.FC = () => {
                       applyClosingTemplate(currentPageIndex, tmpl);
                       triggerFeedback(tmpl.id);
                     }}
-                    className={`group cursor-pointer rounded-xl border transition-all p-3 shadow-sm hover:shadow-md ${
+                    className={`group cursor-pointer rounded-[4px] border transition-all p-3 shadow-sm hover:shadow-md ${
                       isDark ? 'bg-slate-900 border-slate-800 hover:border-indigo-500' : 'bg-white border-slate-200 hover:border-indigo-600'
                     }`}
                   >

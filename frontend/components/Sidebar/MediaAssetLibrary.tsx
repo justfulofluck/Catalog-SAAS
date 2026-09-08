@@ -163,32 +163,33 @@ const MediaAssetLibrary: React.FC = () => {
   const isDark = uiTheme === 'dark';
 
   return (
-    <div className={`flex flex-col h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-500 font-sans transition-colors ${isDark ? 'bg-[#0f172a]' : 'bg-white'}`}>
+    <div className="flex flex-col h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-300 font-sans transition-colors bg-[#161616] text-white">
       {/* Top Header */}
-      <div className={`p-4 border-b flex items-center justify-between transition-colors ${isDark ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
+      <div className="h-14 px-3 py-2 border-b flex items-center justify-between transition-colors bg-[#161616] border-[#262626]">
         <div>
-          <h3 className="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2 mb-0.5">
-            <Images size={14} className={isDark ? 'text-indigo-400' : 'text-indigo-600'} />
-            <span className={isDark ? 'text-white' : 'text-slate-800'}>Media & Images</span>
+          <h3 className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 mb-0.5">
+            <Images size={13} className="text-[#E2DCC8]" />
+            <span className="text-white">Media & Images</span>
           </h3>
-          <p className={`text-[9px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Uploads & Free Stock Photos</p>
+          <p className="text-[8px] font-medium text-[#888]">Uploads & Free Stock Photos</p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {activeTab === 'uploads' && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="w-7 h-7 flex items-center justify-center bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-md shadow-indigo-600/20 transition-all active:scale-95"
+              className="px-2 py-1 flex items-center gap-1 bg-[#0F3D3E] text-white rounded-[4px] hover:bg-[#ff5722] text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
               title="Upload Image"
             >
-              <Upload size={13} />
+              <Upload size={11} />
+              <span>Upload</span>
             </button>
           )}
           <button
             onClick={() => setEditorTab(null)}
-            className={`p-1.5 rounded-lg transition-colors ${isDark ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+            className="p-1 rounded-[4px] transition-colors hover:bg-[#262626] text-[#888] hover:text-white"
           >
-            <X size={14} />
+            <X size={12} />
           </button>
         </div>
         <input
@@ -202,34 +203,34 @@ const MediaAssetLibrary: React.FC = () => {
       </div>
 
       {/* 3-Way Segmented Tabs */}
-      <div className={`p-2 border-b shrink-0 ${isDark ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50/70'}`}>
-        <div className={`flex rounded-xl p-1 ${isDark ? 'bg-slate-800' : 'bg-slate-200/60'}`}>
+      <div className="p-2 border-b shrink-0 border-[#262626] bg-[#141414]">
+        <div className="flex rounded-[4px] p-0.5 bg-[#101010] border border-[#262626]">
           <button
             onClick={() => setActiveTab('uploads')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+            className={`flex-1 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider transition-all ${
               activeTab === 'uploads'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : 'text-[#888] hover:text-white'
             }`}
           >
             Uploads
           </button>
           <button
             onClick={() => setActiveTab('stock')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+            className={`flex-1 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider transition-all ${
               activeTab === 'stock'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : 'text-[#888] hover:text-white'
             }`}
           >
             Stock
           </button>
           <button
             onClick={() => setActiveTab('system')}
-            className={`flex-1 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+            className={`flex-1 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider transition-all ${
               activeTab === 'system'
-                ? 'bg-indigo-600 text-white shadow-sm'
-                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : 'text-[#888] hover:text-white'
             }`}
           >
             Assets
@@ -248,7 +249,7 @@ const MediaAssetLibrary: React.FC = () => {
                   <input
                     type="password"
                     placeholder="Access Key..."
-                    className={`flex-1 border rounded-xl px-2.5 py-1.5 text-xs outline-none focus:ring-2 ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
+                    className={`flex-1 border rounded-[4px] px-2.5 py-1.5 text-xs outline-none focus:ring-2 ${isDark ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSetKey(e.currentTarget.value);
                     }}
@@ -258,7 +259,7 @@ const MediaAssetLibrary: React.FC = () => {
                       const input = e.currentTarget.previousElementSibling as HTMLInputElement;
                       handleSetKey(input.value);
                     }}
-                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors"
+                    className="px-3 py-1.5 bg-indigo-600 text-white rounded-[4px] text-xs font-bold hover:bg-indigo-700 transition-colors"
                   >
                     Set
                   </button>
@@ -281,7 +282,7 @@ const MediaAssetLibrary: React.FC = () => {
                   value={stockSearch}
                   onChange={(e) => setStockSearch(e.target.value)}
                   placeholder="Search free stock photos..."
-                  className={`w-full border rounded-xl pl-9 pr-3 py-2 text-xs font-bold outline-none transition-all ${isDark ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-indigo-600'}`}
+                  className={`w-full border rounded-[4px] pl-9 pr-3 py-2 text-xs font-bold outline-none transition-all ${isDark ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-indigo-600'}`}
                 />
                 {stockLoading && <Loader2 size={13} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-500" />}
               </form>
@@ -302,7 +303,7 @@ const MediaAssetLibrary: React.FC = () => {
                 onDragStart={(e) => handleStockDragStart(e, img)}
                 onDragEnd={handleDragEnd}
                 onClick={() => handleAddStockImage(img)}
-                className={`group relative rounded-xl overflow-hidden border cursor-pointer aspect-square transition-all hover:shadow-md ${isDark ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-200 hover:border-indigo-500'}`}
+                className={`group relative rounded-[4px] overflow-hidden border cursor-pointer aspect-square transition-all hover:shadow-md ${isDark ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-200 hover:border-indigo-500'}`}
               >
                 <img
                   src={img.urls.small}
@@ -319,37 +320,37 @@ const MediaAssetLibrary: React.FC = () => {
       ) : (
         /* Uploads & System Assets View */
         <div className="flex-1 flex flex-col overflow-hidden">
-          <div className={`p-3 border-b transition-colors ${isDark ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'}`}>
+          <div className={`p-2.5 border-b transition-colors ${isDark ? 'bg-[#141414] border-[#262626]' : 'bg-slate-50/50 border-slate-100'}`}>
             <div className="relative group">
-              <Search size={13} className={`absolute left-3 top-1/2 -translate-y-1/2 transition-colors ${isDark ? 'text-slate-500 group-focus-within:text-indigo-400' : 'text-slate-300 group-focus-within:text-indigo-600'}`} />
+              <Search size={12} className={`absolute left-2.5 top-1/2 -translate-y-1/2 transition-colors ${isDark ? 'text-[#666] group-focus-within:text-[#E2DCC8]' : 'text-slate-400 group-focus-within:text-[#E2DCC8]'}`} />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={activeTab === 'uploads' ? 'Search Uploads...' : 'Search System Assets...'}
-                className={`w-full border rounded-xl pl-9 pr-7 py-2 text-xs font-bold outline-none transition-all ${isDark ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:border-indigo-600'}`}
+                className={`w-full border rounded-[4px] pl-7 pr-7 py-1.5 text-[11px] font-medium outline-none transition-all ${isDark ? 'bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder:text-[#666] focus:border-[#0F3D3E]' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-400 focus:border-[#0F3D3E]'}`}
               />
               {search && (
-                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
-                  <X size={12} />
+                <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#666] hover:text-white">
+                  <X size={10} />
                 </button>
               )}
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2.5 custom-scrollbar content-start">
+          <div className="flex-1 overflow-y-auto p-2.5 grid grid-cols-2 gap-2 custom-scrollbar content-start">
             {filteredMedia.length === 0 ? (
-              <div className="col-span-2 flex flex-col items-center justify-center py-16 text-center px-4">
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-3 border shadow-inner transition-colors ${isDark ? 'bg-slate-800/50 border-slate-700 text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-200'}`}>
-                  <FileImage size={24} />
+              <div className="col-span-2 flex flex-col items-center justify-center py-14 text-center px-4">
+                <div className={`w-10 h-10 rounded-[4px] flex items-center justify-center mb-2.5 border transition-colors ${isDark ? 'bg-[#1a1a1a] border-[#262626] text-[#666]' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
+                  <FileImage size={18} />
                 </div>
-                <p className={`text-[10px] font-black uppercase tracking-widest mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                <p className={`text-[9px] font-bold uppercase tracking-wider mb-1 ${isDark ? 'text-[#777]' : 'text-slate-400'}`}>
                   {activeTab === 'uploads' ? 'No uploads yet' : 'No assets found'}
                 </p>
                 {activeTab === 'uploads' && (
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="mt-2 text-xs font-bold text-indigo-600 hover:underline"
+                    className="mt-1 text-[11px] font-bold text-[#E2DCC8] hover:underline"
                   >
                     Upload files now
                   </button>
@@ -363,7 +364,7 @@ const MediaAssetLibrary: React.FC = () => {
                   onDragStart={(e) => handleDragStart(e, item)}
                   onDragEnd={handleDragEnd}
                   onClick={() => handleAddMedia(item)}
-                  className={`group relative rounded-xl overflow-hidden border cursor-pointer aspect-square transition-all hover:shadow-md ${isDark ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-200 hover:border-indigo-500'}`}
+                  className={`group relative rounded-[4px] overflow-hidden border cursor-pointer aspect-square transition-all hover:shadow-md ${isDark ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-200 hover:border-indigo-500'}`}
                 >
                   <img
                     src={item.url}

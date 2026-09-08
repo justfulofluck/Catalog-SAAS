@@ -7,13 +7,9 @@ import {
     Layers,
     Plus,
     Trash2,
-    Palette,
-    FileText,
-    Image as ImageIcon,
     Type,
     Square,
-    Eye,
-    CheckCircle2
+    Eye
 } from 'lucide-react';
 import { SystemTemplate, CanvasElement, CardTheme } from '../../types';
 import { THEMES, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
@@ -89,9 +85,9 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
             setThemeId('modern-slate');
             setIsActive(true);
             setElements([
-                { id: 't-bg', type: 'shape', x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, fill: '#023842', zIndex: 0 },
-                { id: 't-title', type: 'text', x: 60, y: 600, width: 674, height: 60, text: 'TEMPLATE TITLE', fontSize: 48, fontFamily: 'Montserrat', fontWeight: '900', fill: '#ffffff', zIndex: 2 },
-                { id: 't-subtitle', type: 'text', x: 60, y: 670, width: 674, height: 30, text: 'Curated Catalog Collection 2026', fontSize: 20, fontFamily: 'Inter', fontWeight: '700', fill: '#00a651', zIndex: 2 }
+                { id: 't-bg', type: 'shape', x: 0, y: 0, width: PAGE_WIDTH, height: PAGE_HEIGHT, fill: '#100F0F', zIndex: 0 },
+                { id: 't-title', type: 'text', x: 60, y: 600, width: 674, height: 60, text: 'TEMPLATE TITLE', fontSize: 48, fontFamily: 'Space Grotesk', fontWeight: '900', fill: '#F1F1F1', zIndex: 2 },
+                { id: 't-subtitle', type: 'text', x: 60, y: 670, width: 674, height: 30, text: 'Curated Catalog Collection 2026', fontSize: 20, fontFamily: 'Geist', fontWeight: '700', fill: '#E2DCC8', zIndex: 2 }
             ]);
         }
     }, [initialData, isOpen]);
@@ -108,9 +104,9 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
             height: 40,
             text: 'Editable Text Line',
             fontSize: 24,
-            fontFamily: 'Montserrat',
-            fontWeight: '900',
-            fill: '#ffffff',
+            fontFamily: 'Space Grotesk',
+            fontWeight: '700',
+            fill: '#F1F1F1',
             zIndex: elements.length + 1
         };
         setElements([...elements, newEl]);
@@ -125,7 +121,7 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
             y: 300,
             width: 200,
             height: 200,
-            fill: '#00a651',
+            fill: '#0F3D3E',
             zIndex: elements.length + 1
         };
         setElements([...elements, newEl]);
@@ -188,38 +184,38 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
-            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 md:p-8 animate-in fade-in duration-200">
+            <div className="bg-[#161616] rounded-[4px] shadow-2xl border border-[#262626] w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden text-white">
                 {/* Header */}
-                <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-900 text-white shrink-0">
+                <div className="px-8 py-5 border-b border-[#262626] flex items-center justify-between bg-[#121212] shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg">
+                        <div className="w-10 h-10 bg-[#0F3D3E] rounded-[4px] flex items-center justify-center text-white shadow-lg shadow-[#0F3D3E]/20">
                             <Sparkles size={20} />
                         </div>
                         <div>
-                            <h2 className="text-base font-black uppercase tracking-tight">
+                            <h2 className="font-space text-base font-bold uppercase tracking-tight text-white">
                                 {initialData ? 'Edit System Template' : 'Create New System Template'}
                             </h2>
-                            <p className="text-xs text-slate-400 font-medium">
+                            <p className="text-xs text-[#888888] font-medium">
                                 Template Maker & Global Catalog Blueprint Publisher
                             </p>
                         </div>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                        className="p-2 rounded-[4px] text-[#888888] hover:text-white hover:bg-[#262626] transition-colors"
                     >
                         <X size={20} />
                     </button>
                 </div>
 
                 {/* Body Form & Interactive Designer */}
-                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto flex flex-col lg:flex-row divide-y lg:divide-y-0 lg:divide-x divide-[#262626]">
                     {/* Left Column: Metadata & Settings */}
-                    <div className="w-full lg:w-[380px] p-6 space-y-6 shrink-0 bg-slate-50/50">
+                    <div className="w-full lg:w-[380px] p-6 space-y-6 shrink-0 bg-[#121212]/50">
                         {/* Template Type Selector */}
                         <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Template Type</label>
+                            <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Template Type</label>
                             <div className="grid grid-cols-3 sm:grid-cols-5 gap-1.5">
                                 {[
                                     { id: 'full_catalog', label: 'Catalog' },
@@ -232,7 +228,7 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                         type="button"
                                         key={t.id}
                                         onClick={() => setType(t.id as any)}
-                                        className={`py-2 px-1.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all border text-center ${type === t.id ? 'bg-indigo-600 text-white border-indigo-600 shadow-md' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-300'}`}
+                                        className={`py-2 px-1.5 rounded-[4px] text-[11px] font-bold uppercase tracking-wider transition-all border text-center ${type === t.id ? 'bg-[#0F3D3E] text-white border-[#0F3D3E] shadow-md shadow-[#0F3D3E]/20' : 'bg-[#1c1c1c] text-[#888888] border-[#262626] hover:text-white'}`}
                                     >
                                         {t.label}
                                     </button>
@@ -243,23 +239,23 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                         {/* Basic Info */}
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Template Name *</label>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Template Name *</label>
                                 <input
                                     type="text"
                                     required
                                     value={name}
                                     onChange={e => setName(e.target.value)}
-                                    placeholder="e.g. V-TAC Industrial 2025"
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600 shadow-sm"
+                                    placeholder="e.g. V-TAC Industrial 2026"
+                                    className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E] shadow-sm"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Industry / Category</label>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Industry / Category</label>
                                 <select
                                     value={category}
                                     onChange={e => setCategory(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600 shadow-sm"
+                                    className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E] shadow-sm"
                                 >
                                     <option value="Industrial / Lighting">Industrial / Lighting</option>
                                     <option value="Fashion / Boutique">Fashion / Boutique</option>
@@ -271,11 +267,11 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Theme Base</label>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Theme Base</label>
                                 <select
                                     value={themeId}
                                     onChange={e => setThemeId(e.target.value)}
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600 shadow-sm"
+                                    className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E] shadow-sm"
                                 >
                                     {THEMES.map(th => (
                                         <option key={th.id} value={th.id}>{th.name}</option>
@@ -284,38 +280,38 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Thumbnail URL</label>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Thumbnail URL</label>
                                 <input
                                     type="text"
                                     value={thumbnail}
                                     onChange={e => setThumbnail(e.target.value)}
                                     placeholder="https://images.unsplash.com/..."
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-indigo-600 shadow-sm"
+                                    className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-medium text-white outline-none focus:border-[#0F3D3E] shadow-sm"
                                 />
                             </div>
 
                             <div className="space-y-1.5">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Description</label>
+                                <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Description</label>
                                 <textarea
                                     rows={3}
                                     value={description}
                                     onChange={e => setDescription(e.target.value)}
                                     placeholder="Detailed description of layout structure and ideal industry..."
-                                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-medium text-slate-800 outline-none focus:border-indigo-600 shadow-sm resize-none"
+                                    className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-medium text-white outline-none focus:border-[#0F3D3E] shadow-sm resize-none"
                                 />
                             </div>
 
                             {/* Active Status */}
-                            <label className="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                            <label className="flex items-center gap-3 p-3 bg-[#1c1c1c] border border-[#262626] rounded-[4px] cursor-pointer hover:bg-[#222222] transition-colors">
                                 <input
                                     type="checkbox"
                                     checked={isActive}
                                     onChange={e => setIsActive(e.target.checked)}
-                                    className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500"
+                                    className="w-4 h-4 rounded border-[#262626] accent-[#0F3D3E]"
                                 />
                                 <div>
-                                    <span className="text-xs font-bold text-slate-800 block">Active Template</span>
-                                    <span className="text-[10px] text-slate-400 block font-medium">Visible to all tenant users immediately</span>
+                                    <span className="text-xs font-bold text-white block">Active Template</span>
+                                    <span className="text-[10px] text-[#888888] block font-medium">Visible to all tenant users immediately</span>
                                 </div>
                             </label>
                         </div>
@@ -327,62 +323,62 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                             /* Product Grid Configurator */
                             <div className="space-y-6 max-w-xl">
                                 <div>
-                                    <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                                        <Layout size={16} className="text-indigo-600" />
+                                    <h3 className="font-space text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                                        <Layout size={16} className="text-[#E2DCC8]" />
                                         Grid Architecture Settings
                                     </h3>
-                                    <p className="text-xs text-slate-400 font-medium">Configure rows, columns, card styles and background for automatic pagination.</p>
+                                    <p className="text-xs text-[#888888] font-medium">Configure rows, columns, card styles and background for automatic pagination.</p>
                                 </div>
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Columns (1 - 4)</label>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Columns (1 - 4)</label>
                                         <input
                                             type="number"
                                             min={1}
                                             max={4}
                                             value={gridCols}
                                             onChange={e => setGridCols(parseInt(e.target.value) || 1)}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                                            className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E]"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Rows (1 - 4)</label>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Rows (1 - 4)</label>
                                         <input
                                             type="number"
                                             min={1}
                                             max={4}
                                             value={gridRows}
                                             onChange={e => setGridRows(parseInt(e.target.value) || 1)}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                                            className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E]"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Padding (px)</label>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Padding (px)</label>
                                         <input
                                             type="number"
                                             value={gridPadding}
                                             onChange={e => setGridPadding(parseInt(e.target.value) || 20)}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                                            className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E]"
                                         />
                                     </div>
                                     <div className="space-y-1.5">
-                                        <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Item Spacing (px)</label>
+                                        <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Item Spacing (px)</label>
                                         <input
                                             type="number"
                                             value={gridSpacing}
                                             onChange={e => setGridSpacing(parseInt(e.target.value) || 20)}
-                                            className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                                            className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E]"
                                         />
                                     </div>
                                 </div>
 
                                 <div className="space-y-1.5">
-                                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Card Design Theme</label>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-[#888888]">Card Design Theme</label>
                                     <select
                                         value={gridCardTheme}
                                         onChange={e => setGridCardTheme(e.target.value as any)}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                                        className="w-full px-4 py-2.5 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-bold text-white outline-none focus:border-[#0F3D3E]"
                                     >
                                         <option value="classic-stack">Classic Stack (Standard E-Commerce)</option>
                                         <option value="split-row">Split Row (Editorial Horizontal)</option>
@@ -397,25 +393,25 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                             <div className="space-y-6 flex-1 flex flex-col">
                                 <div className="flex items-center justify-between">
                                     <div>
-                                        <h3 className="text-sm font-black uppercase tracking-wider text-slate-800 flex items-center gap-2">
-                                            <Layers size={16} className="text-indigo-600" />
+                                        <h3 className="font-space text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+                                            <Layers size={16} className="text-[#E2DCC8]" />
                                             Canvas Layout Elements ({elements.length})
                                         </h3>
-                                        <p className="text-xs text-slate-400 font-medium">Add and arrange visual layers, typography, and backdrop geometry.</p>
+                                        <p className="text-xs text-[#888888] font-medium">Add and arrange visual layers, typography, and backdrop geometry.</p>
                                     </div>
 
                                     <div className="flex gap-2">
                                         <button
                                             type="button"
                                             onClick={handleAddTextElement}
-                                            className="px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                                            className="px-3 py-2 bg-[#0F3D3E]/10 text-[#E2DCC8] hover:bg-[#0F3D3E]/20 rounded-[4px] text-xs font-bold flex items-center gap-1.5 transition-colors border border-[#0F3D3E]/20"
                                         >
                                             <Type size={14} /> Add Text
                                         </button>
                                         <button
                                             type="button"
                                             onClick={handleAddShapeElement}
-                                            className="px-3 py-2 bg-indigo-50 text-indigo-600 hover:bg-indigo-100 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                                            className="px-3 py-2 bg-[#0F3D3E]/10 text-[#E2DCC8] hover:bg-[#0F3D3E]/20 rounded-[4px] text-xs font-bold flex items-center gap-1.5 transition-colors border border-[#0F3D3E]/20"
                                         >
                                             <Square size={14} /> Add Shape
                                         </button>
@@ -425,9 +421,9 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                 {/* Elements List & Inline Property Tweaker */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 flex-1">
                                     {/* Layers List */}
-                                    <div className="border border-slate-200 rounded-2xl p-4 bg-slate-50/50 space-y-2 max-h-[380px] overflow-y-auto">
+                                    <div className="border border-[#262626] rounded-[4px] p-4 bg-[#121212] space-y-2 max-h-[380px] overflow-y-auto">
                                         {elements.length === 0 ? (
-                                            <div className="py-12 text-center text-slate-400">
+                                            <div className="py-12 text-center text-[#666666]">
                                                 <Layers size={28} className="mx-auto mb-2 opacity-50" />
                                                 <p className="text-xs font-bold">No canvas elements added yet.</p>
                                             </div>
@@ -436,17 +432,17 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                                 <div
                                                     key={el.id || index}
                                                     onClick={() => setSelectedElementIndex(index)}
-                                                    className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${selectedElementIndex === index ? 'bg-indigo-50 border-indigo-400 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'}`}
+                                                    className={`p-3 rounded-[4px] border flex items-center justify-between cursor-pointer transition-all ${selectedElementIndex === index ? 'bg-[#0F3D3E]/10 border-[#0F3D3E] shadow-sm' : 'bg-[#1c1c1c] border-[#262626] hover:border-[#3a3a3a]'}`}
                                                 >
                                                     <div className="flex items-center gap-3 truncate">
-                                                        <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                                                        <div className="w-7 h-7 rounded-[4px] bg-[#262626] flex items-center justify-center text-[#888888] shrink-0">
                                                             {el.type === 'text' ? <Type size={14} /> : <Square size={14} />}
                                                         </div>
                                                         <div className="truncate">
-                                                            <p className="text-xs font-bold text-slate-800 truncate">
+                                                            <p className="text-xs font-bold text-white truncate">
                                                                 {el.type === 'text' ? (el.text || 'Text') : `Shape (${el.fill})`}
                                                             </p>
-                                                            <p className="text-[10px] text-slate-400">x: {el.x}, y: {el.y}, w: {el.width}</p>
+                                                            <p className="text-[10px] text-[#888888]">x: {el.x}, y: {el.y}, w: {el.width}</p>
                                                         </div>
                                                     </div>
 
@@ -456,7 +452,7 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                                             e.stopPropagation();
                                                             handleRemoveElement(index);
                                                         }}
-                                                        className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                                                        className="p-1.5 text-[#666666] hover:text-red-400 rounded-[4px] hover:bg-red-950/20 transition-colors"
                                                     >
                                                         <Trash2 size={14} />
                                                     </button>
@@ -466,12 +462,12 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                     </div>
 
                                     {/* Selected Element Quick Inspector */}
-                                    <div className="border border-slate-200 rounded-2xl p-5 bg-white space-y-4">
+                                    <div className="border border-[#262626] rounded-[4px] p-5 bg-[#1c1c1c] space-y-4">
                                         {selectedElementIndex !== null && elements[selectedElementIndex] ? (
                                             <>
-                                                <div className="flex items-center justify-between border-b pb-3">
-                                                    <span className="text-xs font-black uppercase tracking-wider text-slate-700">Layer Inspector</span>
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md uppercase">
+                                                <div className="flex items-center justify-between border-b border-[#262626] pb-3">
+                                                    <span className="text-xs font-bold uppercase tracking-wider text-white">Layer Inspector</span>
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 bg-[#0F3D3E]/10 text-[#E2DCC8] rounded-[4px] uppercase border border-[#0F3D3E]/20">
                                                         {elements[selectedElementIndex].type}
                                                     </span>
                                                 </div>
@@ -479,31 +475,31 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                                 {elements[selectedElementIndex].type === 'text' ? (
                                                     <div className="space-y-3">
                                                         <div className="space-y-1">
-                                                            <label className="text-[9px] font-black uppercase text-slate-400">Content</label>
+                                                            <label className="text-[9px] font-bold uppercase text-[#888888]">Content</label>
                                                             <input
                                                                 type="text"
                                                                 value={elements[selectedElementIndex].text || ''}
                                                                 onChange={e => handleUpdateElement(selectedElementIndex, { text: e.target.value })}
-                                                                className="w-full px-3 py-1.5 border rounded-lg text-xs font-bold"
+                                                                className="w-full px-3 py-1.5 bg-[#121212] border border-[#262626] rounded-[4px] text-xs font-bold text-white focus:border-[#0F3D3E] outline-none"
                                                             />
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-2">
                                                             <div className="space-y-1">
-                                                                <label className="text-[9px] font-black uppercase text-slate-400">Font Size</label>
+                                                                <label className="text-[9px] font-bold uppercase text-[#888888]">Font Size</label>
                                                                 <input
                                                                     type="number"
                                                                     value={elements[selectedElementIndex].fontSize || 16}
                                                                     onChange={e => handleUpdateElement(selectedElementIndex, { fontSize: parseInt(e.target.value) || 16 })}
-                                                                    className="w-full px-3 py-1.5 border rounded-lg text-xs font-bold"
+                                                                    className="w-full px-3 py-1.5 bg-[#121212] border border-[#262626] rounded-[4px] text-xs font-bold text-white focus:border-[#0F3D3E] outline-none"
                                                                 />
                                                             </div>
                                                             <div className="space-y-1">
-                                                                <label className="text-[9px] font-black uppercase text-slate-400">Color</label>
+                                                                <label className="text-[9px] font-bold uppercase text-[#888888]">Color</label>
                                                                 <input
                                                                     type="color"
                                                                     value={elements[selectedElementIndex].fill || '#ffffff'}
                                                                     onChange={e => handleUpdateElement(selectedElementIndex, { fill: e.target.value })}
-                                                                    className="w-full h-8 p-0.5 border rounded-lg cursor-pointer"
+                                                                    className="w-full h-8 p-0.5 bg-[#121212] border border-[#262626] rounded-[4px] cursor-pointer"
                                                                 />
                                                             </div>
                                                         </div>
@@ -511,40 +507,40 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                                                 ) : (
                                                     <div className="space-y-3">
                                                         <div className="space-y-1">
-                                                            <label className="text-[9px] font-black uppercase text-slate-400">Fill Color</label>
+                                                            <label className="text-[9px] font-bold uppercase text-[#888888]">Fill Color</label>
                                                             <input
                                                                 type="color"
-                                                                value={elements[selectedElementIndex].fill || '#00a651'}
+                                                                value={elements[selectedElementIndex].fill || '#0F3D3E'}
                                                                 onChange={e => handleUpdateElement(selectedElementIndex, { fill: e.target.value })}
-                                                                className="w-full h-8 p-0.5 border rounded-lg cursor-pointer"
+                                                                className="w-full h-8 p-0.5 bg-[#121212] border border-[#262626] rounded-[4px] cursor-pointer"
                                                             />
                                                         </div>
                                                     </div>
                                                 )}
 
-                                                <div className="grid grid-cols-2 gap-2 pt-2 border-t">
+                                                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#262626]">
                                                     <div>
-                                                        <label className="text-[9px] font-black uppercase text-slate-400">X Position</label>
+                                                        <label className="text-[9px] font-bold uppercase text-[#888888]">X Position</label>
                                                         <input
                                                             type="number"
                                                             value={elements[selectedElementIndex].x || 0}
                                                             onChange={e => handleUpdateElement(selectedElementIndex, { x: parseInt(e.target.value) || 0 })}
-                                                            className="w-full px-3 py-1.5 border rounded-lg text-xs"
+                                                            className="w-full px-3 py-1.5 bg-[#121212] border border-[#262626] rounded-[4px] text-xs text-white focus:border-[#0F3D3E] outline-none"
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[9px] font-black uppercase text-slate-400">Y Position</label>
+                                                        <label className="text-[9px] font-bold uppercase text-[#888888]">Y Position</label>
                                                         <input
                                                             type="number"
                                                             value={elements[selectedElementIndex].y || 0}
                                                             onChange={e => handleUpdateElement(selectedElementIndex, { y: parseInt(e.target.value) || 0 })}
-                                                            className="w-full px-3 py-1.5 border rounded-lg text-xs"
+                                                            className="w-full px-3 py-1.5 bg-[#121212] border border-[#262626] rounded-[4px] text-xs text-white focus:border-[#0F3D3E] outline-none"
                                                         />
                                                     </div>
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className="py-12 text-center text-slate-400">
+                                            <div className="py-12 text-center text-[#666666]">
                                                 <Eye size={24} className="mx-auto mb-2 opacity-40" />
                                                 <p className="text-xs font-semibold">Select a layer from the list to edit properties.</p>
                                             </div>
@@ -557,11 +553,11 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                 </form>
 
                 {/* Footer Controls */}
-                <div className="px-8 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50 shrink-0">
+                <div className="px-8 py-4 border-t border-[#262626] flex items-center justify-between bg-[#121212] shrink-0">
                     <button
                         type="button"
                         onClick={onClose}
-                        className="px-5 py-2.5 text-xs font-black uppercase tracking-wider text-slate-600 hover:text-slate-900 rounded-xl transition-colors"
+                        className="px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#888888] hover:text-white rounded-[4px] transition-colors"
                     >
                         Cancel
                     </button>
@@ -569,7 +565,7 @@ export const AdminTemplateEditorModal: React.FC<Props> = ({
                         type="button"
                         disabled={isSaving}
                         onClick={handleSubmit}
-                        className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:scale-95 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-lg flex items-center gap-2 transition-all"
+                        className="px-6 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 active:scale-95 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/20 flex items-center gap-2 transition-all"
                     >
                         <Save size={16} />
                         {isSaving ? 'Saving Template...' : (initialData ? 'Update Template' : 'Save & Publish Template')}

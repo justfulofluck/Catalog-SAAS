@@ -11,42 +11,85 @@
       darkMode: 'class',
       theme: {
         extend: {
+          colors: {
+            canvas: '#100F0F',
+            surface: {
+              DEFAULT: '#161616',
+              elevated: '#171616',
+              hover: '#1d1c1c',
+              card: '#161616',
+            },
+            accent: {
+              DEFAULT: '#0F3D3E',
+              hover: '#155455',
+              glow: 'rgba(15, 61, 62, 0.35)',
+              muted: 'rgba(15, 61, 62, 0.15)',
+              secondary: '#E2DCC8',
+              'secondary-hover': '#ede8d9',
+            },
+            sand: {
+              DEFAULT: '#E2DCC8',
+              hover: '#ede8d9',
+              muted: 'rgba(226, 220, 200, 0.65)',
+            },
+            border: {
+              dark: '#262626',
+              subtle: '#2e2d2d',
+              muted: 'rgba(226, 220, 200, 0.15)',
+            },
+            text: {
+              primary: '#F1F1F1',
+              secondary: '#E2DCC8',
+              muted: '#888888',
+            }
+          },
+          fontFamily: {
+            heading: ['"Space Grotesk"', 'sans-serif'],
+            sans: ['"Geist"', 'Inter', 'sans-serif'],
+          },
           borderRadius: {
-            'xl': '10px',
-            '2xl': '10px',
-            '3xl': '10px',
+            'subtle': '4px',
+            'btn': '4px',
+            'btn-lg': '4px',
+            'card': '4px',
+            'card-lg': '4px',
+            'pill': '100px',
           }
         }
       }
     }
   </script>
+  <!-- Google Fonts: Space Grotesk & Geist -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --color-bg: #100F0F;
+      --color-surface: #161616;
+      --color-surface-elevated: #171616;
+      --color-primary: #0F3D3E;
+      --color-primary-hover: #155455;
+      --color-secondary: #E2DCC8;
+      --color-border: #262626;
+      --color-text: #F1F1F1;
+      --color-text-secondary: #E2DCC8;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-body: 'Geist', sans-serif;
+    }
+
     body {
       margin: 0;
       padding: 0;
-      background-color: #f3f4f6;
+      background-color: #0f0f0f;
+      color: #ffffff;
+      font-family: 'Geist', sans-serif;
       overflow: hidden;
     }
 
-    /* Standardizing every button and major container to 10px radius */
-    button,
-    input,
-    select,
-    textarea,
-    .rounded-xl,
-    .rounded-2xl,
-    .rounded-3xl,
-    [class*="rounded-["],
-    [class*="rounded-full"] {
-      border-radius: 10px !important;
-    }
-
-    /* Exception for actually round status indicators/dots if needed */
-    .w-1.h-1.rounded-full,
-    .w-2.h-2.rounded-full,
-    .w-3.h-3.rounded-full,
-    .w-2\.5.h-2\.5.rounded-full {
-      border-radius: 9999px !important;
+    /* Headings font assignment */
+    h1, h2, h3, .font-heading {
+      font-family: 'Space Grotesk', sans-serif;
     }
 
     /* Custom scrollbar for a pro look */

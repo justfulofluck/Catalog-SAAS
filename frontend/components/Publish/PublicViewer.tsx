@@ -16,7 +16,7 @@ const PublicViewer: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricRef = useRef<Canvas | null>(null);
 
-  if (!catalog) return <div className="p-10 text-center">Catalog not found.</div>;
+  if (!catalog) return <div className="p-10 text-center text-white bg-[#100F0F] min-h-screen">Catalog not found.</div>;
 
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const currentPage = catalog.pages[currentPageIndex];
@@ -97,36 +97,36 @@ const PublicViewer: React.FC = () => {
   };
 
   return (
-    <div className="h-screen w-screen bg-slate-900 flex flex-col overflow-hidden">
+    <div className="h-screen w-screen bg-[#100F0F] text-white flex flex-col overflow-hidden">
       {/* Viewer Header */}
-      <div className="h-16 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center justify-between px-6 shrink-0 z-50">
+      <div className="h-16 bg-[#161616] border-b border-[#262626] flex items-center justify-between px-6 shrink-0 z-50">
         <div className="flex items-center gap-4">
-          <button onClick={() => setView('publish')} className="text-white/60 hover:text-white transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
+          <button onClick={() => setView('publish')} className="text-[#888888] hover:text-[#E2DCC8] transition-colors flex items-center gap-2 text-xs font-bold uppercase tracking-widest">
             <ArrowLeft size={16} /> Exit
           </button>
-          <div className="h-6 w-px bg-white/10" />
-          <h1 className="text-white font-black text-lg tracking-tight">{catalog!.name}</h1>
+          <div className="h-6 w-px bg-[#262626]" />
+          <h1 className="font-space text-white font-bold text-lg tracking-tight">{catalog!.name}</h1>
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="flex items-center bg-black/40 rounded-lg p-1 border border-white/10">
-            <button onClick={() => setZoom(Math.max(0.4, zoom - 0.1))} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-all"><ZoomOut size={16} /></button>
+          <div className="flex items-center bg-[#1c1c1c] rounded-[4px] p-1 border border-[#262626]">
+            <button onClick={() => setZoom(Math.max(0.4, zoom - 0.1))} className="p-2 text-[#888888] hover:text-white hover:bg-[#262626] rounded-[4px] transition-all"><ZoomOut size={16} /></button>
             <span className="w-12 text-center text-xs font-mono font-bold text-white">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-md transition-all"><ZoomIn size={16} /></button>
+            <button onClick={() => setZoom(Math.min(2, zoom + 0.1))} className="p-2 text-[#888888] hover:text-white hover:bg-[#262626] rounded-[4px] transition-all"><ZoomIn size={16} /></button>
           </div>
 
           <div className="group relative">
-            <button className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-indigo-600/20">
+            <button className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2 shadow-lg shadow-[#0F3D3E]/20">
               {isDownloading ? 'Saving...' : 'Download'} <ChevronLeft size={12} className="-rotate-90" />
             </button>
-            <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-2xl overflow-hidden hidden group-hover:block animate-in fade-in zoom-in-95 duration-200 min-w-[160px]">
-              <button onClick={() => handleDownload('pdf')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+            <div className="absolute top-full right-0 mt-2 w-48 bg-[#161616] border border-[#262626] rounded-[4px] shadow-2xl overflow-hidden hidden group-hover:block animate-in fade-in zoom-in-95 duration-200 min-w-[160px]">
+              <button onClick={() => handleDownload('pdf')} className="w-full text-left px-4 py-3 hover:bg-[#1c1c1c] flex items-center gap-3 text-white hover:text-[#E2DCC8] transition-colors">
                 <FileDown size={16} /> <span className="text-xs font-bold">Export as PDF</span>
               </button>
-              <button onClick={() => handleDownload('png')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+              <button onClick={() => handleDownload('png')} className="w-full text-left px-4 py-3 hover:bg-[#1c1c1c] flex items-center gap-3 text-white hover:text-[#E2DCC8] transition-colors">
                 <ImageIcon size={16} /> <span className="text-xs font-bold">Export as PNG</span>
               </button>
-              <button onClick={() => handleDownload('jpeg')} className="w-full text-left px-4 py-3 hover:bg-indigo-50 flex items-center gap-3 text-slate-700 hover:text-indigo-600 transition-colors">
+              <button onClick={() => handleDownload('jpeg')} className="w-full text-left px-4 py-3 hover:bg-[#1c1c1c] flex items-center gap-3 text-white hover:text-[#E2DCC8] transition-colors">
                 <ImageIcon size={16} /> <span className="text-xs font-bold">Export as JPEG</span>
               </button>
             </div>
@@ -135,28 +135,28 @@ const PublicViewer: React.FC = () => {
       </div>
 
       {/* Main Canvas Area */}
-      <div className="flex-1 overflow-auto flex justify-center p-8 relative bg-slate-900/50">
-        <div className="relative shadow-2xl shadow-black/50 transition-transform duration-200 ease-out origin-top" style={{ width: pageW * zoom, height: pageH * zoom }}>
+      <div className="flex-1 overflow-auto flex justify-center p-8 relative bg-[#100F0F]">
+        <div className="relative shadow-2xl shadow-black/80 transition-transform duration-200 ease-out origin-top border border-[#262626]" style={{ width: pageW * zoom, height: pageH * zoom }}>
           <canvas ref={canvasRef} width={pageW} height={pageH} style={{ width: pageW * zoom, height: pageH * zoom, transform: `scale(${zoom})`, transformOrigin: 'top left' }} />
         </div>
       </div>
 
       {/* Footer Navigation */}
-      <div className="h-16 bg-slate-900 border-t border-white/10 flex items-center justify-center gap-8 shrink-0 relative z-50">
+      <div className="h-16 bg-[#161616] border-t border-[#262626] flex items-center justify-center gap-8 shrink-0 relative z-50">
         <button
           onClick={() => setCurrentPageIndex(Math.max(0, currentPageIndex - 1))}
           disabled={currentPageIndex === 0}
-          className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+          className="p-3 bg-[#1c1c1c] hover:bg-[#262626] border border-[#262626] rounded-full text-white disabled:opacity-30 disabled:hover:bg-[#1c1c1c] transition-all"
         >
           <ChevronLeft size={20} />
         </button>
-        <span className="text-white/80 font-mono font-bold text-sm">
-          Page {currentPageIndex + 1} <span className="text-white/30 mx-2">/</span> {catalog!.pages.length}
+        <span className="text-white font-mono font-bold text-sm">
+          Page {currentPageIndex + 1} <span className="text-[#666666] mx-2">/</span> {catalog!.pages.length}
         </span>
         <button
           onClick={() => setCurrentPageIndex(Math.min(catalog!.pages.length - 1, currentPageIndex + 1))}
           disabled={currentPageIndex === catalog!.pages.length - 1}
-          className="p-3 bg-white/5 hover:bg-white/10 rounded-full text-white disabled:opacity-30 disabled:hover:bg-transparent transition-all"
+          className="p-3 bg-[#1c1c1c] hover:bg-[#262626] border border-[#262626] rounded-full text-white disabled:opacity-30 disabled:hover:bg-[#1c1c1c] transition-all"
         >
           <ChevronRight size={20} />
         </button>

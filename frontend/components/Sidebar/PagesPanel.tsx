@@ -11,6 +11,8 @@ const THUMB_BASE = 140;
 
 const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any; products: any[]; pageNum: number }> = ({ page, canvasBg, catalog, products, pageNum }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const uiTheme = useStore(state => state.uiTheme);
+  const isDark = uiTheme === 'dark';
 
   const thumbW = THUMB_BASE;
   const thumbH = Math.round(thumbW * (PAGE_HEIGHT / PAGE_WIDTH));
@@ -35,14 +37,15 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
     // Scale to thumbnail coordinates
     ctx.scale(scale, scale);
 
-    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
-    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && (page.type === 'product' || page.type === 'interior' || page.type === 'index'));
+    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
+    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+    const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || 38) - (catalog.marginBottom || 0);
     const allElements = [
       ...(pageHasHeader ? catalog.headerElements || [] : []),
       ...page.elements,
       ...(pageHasFooter ? (catalog.footerElements || []).map((el: any) => ({
         ...el,
-        y: (el.y || 0) + PAGE_HEIGHT - (catalog.footerHeight || 38),
+        y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
         text: el.type === 'text' && el.text?.includes('{{page}}')
           ? el.text.replace(/\{\{page\}\}/gi, String(pageNum + 1))
           : el.text,
@@ -145,12 +148,12 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
   }, [page, canvasBg, catalog, products, pageNum, thumbW, thumbH]);
 
   return (
-    <div className="flex justify-center items-center py-1 w-full bg-slate-50/50 rounded overflow-hidden">
+    <div className={`flex justify-center items-center py-2 w-full rounded-[4px] overflow-hidden ${isDark ? 'bg-[#121212]' : 'bg-slate-50/50'}`}>
       <canvas
         ref={canvasRef}
         width={thumbW}
         height={thumbH}
-        className="rounded shadow-sm border border-slate-200 bg-white"
+        className={`rounded-[3px] shadow-sm border ${isDark ? 'border-[#262626] bg-[#1a1a1a]' : 'border-slate-200 bg-white'}`}
         style={{ width: `${thumbW}px`, height: `${thumbH}px` }}
       />
     </div>
@@ -212,16 +215,16 @@ const PagesPanel: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'pages' | 'templates'>('pages');
 
   return (
-    <div className={`flex flex-col h-full w-full border-r overflow-hidden ${isDark ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+    <div className={`flex flex-col h-full w-full border-r overflow-hidden ${isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'}`}>
       {/* Header with Segmented Tabs for Pages & Templates */}
-      <div className={`p-2.5 border-b shrink-0 ${isDark ? 'border-slate-800' : 'border-slate-100'}`}>
-        <div className={`flex rounded-xl p-1 ${isDark ? 'bg-slate-800/80' : 'bg-slate-100'}`}>
+      <div className={`p-2.5 border-b shrink-0 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+        <div className={`flex rounded-[4px] p-0.5 ${isDark ? 'bg-[#121212] border border-[#262626]' : 'bg-slate-100'}`}>
           <button
             onClick={() => setActiveTab('pages')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-[3px] text-[11px] font-bold transition-all ${
               activeTab === 'pages'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <FileText size={13} />
@@ -229,10 +232,10 @@ const PagesPanel: React.FC = () => {
           </button>
           <button
             onClick={() => setActiveTab('templates')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] font-black transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-[3px] text-[11px] font-bold transition-all ${
               activeTab === 'templates'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : isDark ? 'text-slate-400 hover:text-slate-200' : 'text-slate-600 hover:text-slate-900'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
             }`}
           >
             <LayoutTemplate size={13} />
@@ -243,7 +246,7 @@ const PagesPanel: React.FC = () => {
 
       {activeTab === 'templates' ? (
         <div className="flex-1 overflow-hidden">
-          <TemplatesPanel />
+          <TemplatesPanel hideHeader={true} />
         </div>
       ) : (
         <>
@@ -259,9 +262,9 @@ const PagesPanel: React.FC = () => {
                   onDragStart={(e) => handleDragStart(e, index)}
                   onDragEnd={handleDragEnd}
                   onDragOver={(e) => handleDragOver(e, index)}
-                  className={`group relative rounded-lg cursor-grab active:cursor-grabbing transition-all p-1.5
-                    ${isDropTarget ? 'border-t-2 border-indigo-500' : 'border-t-2 border-transparent'}
-                    ${isActive ? (isDark ? 'bg-indigo-600/20' : 'bg-indigo-50') : (isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-50')}
+                  className={`group relative rounded-[4px] cursor-grab active:cursor-grabbing transition-all p-2 border
+                    ${isDropTarget ? 'border-t-2 border-[#0F3D3E]' : ''}
+                    ${isActive ? (isDark ? 'bg-[#1f1f1f] border-[#0F3D3E] shadow-sm' : 'bg-orange-50/50 border-[#0F3D3E]') : (isDark ? 'bg-[#141414] border-[#262626] hover:border-[#3a3a3a] hover:bg-[#1a1a1a]' : 'bg-white border-slate-200 hover:bg-slate-50')}
                     ${dragPageIndex === index ? 'opacity-40' : ''}`}
                   onClick={() => {
                     setCurrentPageIndex(index);
@@ -272,23 +275,23 @@ const PagesPanel: React.FC = () => {
                 >
                   <FabricThumb page={page} canvasBg={canvasBg} catalog={catalog} products={products} pageNum={index} />
 
-                  <div className="flex items-center justify-between mt-1.5 px-0.5">
-                    <span className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-indigo-600' : (isDark ? 'text-slate-400' : 'text-slate-500')}`}>Page {index + 1}</span>
-                    <span className={`text-[9px] capitalize ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>{page.type}</span>
+                  <div className="flex items-center justify-between mt-2 px-1">
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${isActive ? 'text-[#E2DCC8]' : (isDark ? 'text-white' : 'text-slate-700')}`}>Page {index + 1}</span>
+                    <span className={`text-[9px] font-medium capitalize px-1.5 py-0.5 rounded-[3px] ${isDark ? 'bg-[#222] text-[#888]' : 'bg-slate-100 text-slate-500'}`}>{page.type}</span>
                   </div>
 
                   {/* Action Icons on Thumbnail Hover */}
                   {hoveredIndex === index && (
-                    <div className="absolute top-2 right-2 flex flex-col gap-1 z-10">
+                    <div className="absolute top-3 right-3 flex flex-col gap-1 z-10">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
                           setConfigPageIndex(configPageIndex === index ? null : index);
                         }}
-                        className={`p-1.5 rounded-lg shadow-md border transition-all ${
+                        className={`p-1.5 rounded-[4px] shadow-md border transition-all ${
                           configPageIndex === index
-                            ? 'bg-indigo-600 text-white border-indigo-700'
-                            : isDark ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
+                            ? 'bg-[#0F3D3E] text-white border-[#0F3D3E]'
+                            : isDark ? 'bg-[#1e1e1e] text-[#aaa] border-[#333] hover:text-white hover:bg-[#252525]' : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200'
                         }`}
                         title="Page Settings (Background Color & Role)"
                       >
@@ -296,7 +299,7 @@ const PagesPanel: React.FC = () => {
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); duplicatePage(index); }}
-                        className={`p-1.5 rounded-lg shadow-md border transition-all ${isDark ? 'bg-slate-800 text-slate-300 border-slate-700 hover:bg-slate-700' : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200'}`}
+                        className={`p-1.5 rounded-[4px] shadow-md border transition-all ${isDark ? 'bg-[#1e1e1e] text-[#aaa] border-[#333] hover:text-white hover:bg-[#252525]' : 'bg-white text-slate-600 hover:bg-slate-50 border-slate-200'}`}
                         title="Duplicate page"
                       >
                         <Copy size={12} />
@@ -304,7 +307,7 @@ const PagesPanel: React.FC = () => {
                       {catalog.pages.length > 1 && (
                         <button
                           onClick={(e) => { e.stopPropagation(); removePage(index); }}
-                          className={`p-1.5 rounded-lg shadow-md border transition-all ${isDark ? 'bg-slate-800 text-red-400 border-slate-700 hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50 border-slate-200'}`}
+                          className={`p-1.5 rounded-[4px] shadow-md border transition-all ${isDark ? 'bg-[#1e1e1e] text-red-400 border-[#333] hover:bg-red-500/20' : 'bg-white text-red-500 hover:bg-red-50 border-slate-200'}`}
                           title="Delete page"
                         >
                           <Trash2 size={12} />
@@ -317,11 +320,11 @@ const PagesPanel: React.FC = () => {
                   {configPageIndex === index && (
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className={`mt-2 p-3 rounded-xl border shadow-xl animate-in fade-in zoom-in-95 duration-150 z-20 ${
-                        isDark ? 'bg-slate-800 border-slate-700 text-slate-200' : 'bg-white border-indigo-100 text-slate-800 shadow-indigo-500/10'
+                      className={`mt-2 p-3 rounded-[6px] border shadow-xl animate-in fade-in zoom-in-95 duration-150 z-20 ${
+                        isDark ? 'bg-[#1c1c1c] border-[#333] text-white' : 'bg-white border-slate-200 text-slate-800'
                       }`}
                     >
-                      <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-slate-200/50 dark:border-slate-700/50">
+                      <div className="flex items-center justify-between pb-2 mb-2.5 border-b border-[#262626]">
                         <div className="flex items-center gap-1.5">
                           <Palette size={13} className="text-indigo-600 dark:text-indigo-400" />
                           <span className="text-[11px] font-black uppercase tracking-wider">Page {index + 1} Settings</span>
@@ -344,13 +347,13 @@ const PagesPanel: React.FC = () => {
                             type="color"
                             value={page.backgroundColor || canvasBg}
                             onChange={(e) => setPageBackground(index, e.target.value)}
-                            className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-700 p-0.5 bg-transparent"
+                            className="w-8 h-8 rounded-[4px] cursor-pointer border border-slate-200 dark:border-slate-700 p-0.5 bg-transparent"
                           />
                           <input
                             type="text"
                             value={page.backgroundColor || canvasBg}
                             onChange={(e) => setPageBackground(index, e.target.value)}
-                            className={`flex-1 px-2 py-1 rounded-lg text-xs font-mono font-bold border uppercase ${
+                            className={`flex-1 px-2 py-1 rounded-[4px] text-xs font-mono font-bold border uppercase ${
                               isDark ? 'bg-slate-900 border-slate-700 text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-800'
                             }`}
                             placeholder="#ffffff"
@@ -393,7 +396,7 @@ const PagesPanel: React.FC = () => {
                                 newPages[index] = { ...newPages[index], type };
                                 useStore.setState({ catalog: { ...catalog, pages: newPages } });
                               }}
-                              className={`py-1 px-2 rounded-lg text-[10px] font-bold capitalize transition-all border text-left ${
+                              className={`py-1 px-2 rounded-[4px] text-[10px] font-bold capitalize transition-all border text-left ${
                                 page.type === type
                                   ? 'bg-indigo-600 text-white border-indigo-700 shadow-sm'
                                   : isDark ? 'bg-slate-900 border-slate-700 text-slate-400 hover:text-slate-200' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
@@ -416,13 +419,13 @@ const PagesPanel: React.FC = () => {
             <div className="relative">
               <button
                 onClick={() => setAddMenuOpen(!isAddMenuOpen)}
-                className={`w-full flex items-center justify-center gap-2 py-2 rounded-lg border-2 border-dashed text-[11px] font-bold uppercase tracking-wide transition-all ${isDark ? 'border-slate-700 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10' : 'border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
+                className={`w-full flex items-center justify-center gap-2 py-2 rounded-[4px] border-2 border-dashed text-[11px] font-bold uppercase tracking-wide transition-all ${isDark ? 'border-slate-700 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10' : 'border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
               >
                 <Plus size={13} /> Add Page
               </button>
 
               {isAddMenuOpen && (
-                <div className={`absolute bottom-full mb-2 left-0 right-0 border shadow-2xl rounded-xl overflow-hidden z-50 py-1 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className={`absolute bottom-full mb-2 left-0 right-0 border shadow-2xl rounded-[4px] overflow-hidden z-50 py-1 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
                   <p className={`px-3 py-2 text-[9px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Select Page Type</p>
                   <div className="p-1 space-y-0.5">
                     {[
@@ -436,9 +439,9 @@ const PagesPanel: React.FC = () => {
                       <button
                         key={type}
                         onClick={() => handleAddPage(type)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-left transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
                       >
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                        <div className={`w-7 h-7 rounded-[4px] flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
                           <Icon size={13} className={isDark ? 'text-slate-400' : 'text-slate-500'} />
                         </div>
                         <div>
@@ -450,9 +453,9 @@ const PagesPanel: React.FC = () => {
                     <div className={`h-px mx-2 my-1 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`} />
                     <button
                       onClick={() => { addPage('product'); setAddMenuOpen(false); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors ${isDark ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
+                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-left transition-colors ${isDark ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
                     >
-                      <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-[4px] bg-indigo-600 flex items-center justify-center">
                         <Sparkles size={13} className="text-white" />
                       </div>
                       <div>

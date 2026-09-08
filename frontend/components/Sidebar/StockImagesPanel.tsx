@@ -121,7 +121,7 @@ const StockImagesPanel: React.FC = () => {
                 </div>
                 <button
                     onClick={() => setEditorTab(null)}
-                    className={`p-1.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+                    className={`p-1.5 rounded-[4px] transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
                 >
                     <X size={14} />
                 </button>
@@ -135,7 +135,7 @@ const StockImagesPanel: React.FC = () => {
                             <input
                                 type="password"
                                 placeholder="Access Key..."
-                                className={`flex-1 border rounded-xl px-3 py-2 text-xs outline-none focus:ring-2 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
+                                className={`flex-1 border rounded-[4px] px-3 py-2 text-xs outline-none focus:ring-2 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white' : 'bg-white border-slate-200 text-slate-800'}`}
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         handleSetKey(e.currentTarget.value);
@@ -147,7 +147,7 @@ const StockImagesPanel: React.FC = () => {
                                     const input = e.currentTarget.previousElementSibling as HTMLInputElement;
                                     handleSetKey(input.value);
                                 }}
-                                className="px-3 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors"
+                                className="px-3 py-2 bg-indigo-600 text-white rounded-[4px] text-xs font-bold hover:bg-indigo-700 transition-colors"
                             >
                                 Set
                             </button>
@@ -164,7 +164,7 @@ const StockImagesPanel: React.FC = () => {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                             placeholder="Search Unsplash..."
-                            className={`w-full border rounded-2xl pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all focus:ring-4 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-indigo-500/20 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:ring-indigo-600/5 focus:border-indigo-600'}`}
+                            className={`w-full border rounded-[4px] pl-10 pr-4 py-3 text-xs font-bold outline-none transition-all focus:ring-4 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-indigo-500/20 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:ring-indigo-600/5 focus:border-indigo-600'}`}
                         />
                         {loading && <Loader2 size={14} className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-500" />}
                     </form>
@@ -201,7 +201,7 @@ const StockImagesPanel: React.FC = () => {
                             draggable="true"
                             onDragStart={(e) => handleDragStart(e, img)}
                             onDragEnd={() => setDraggingItem(null)}
-                            className={`group rounded-2xl overflow-hidden relative border transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-xl ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-100 hover:border-indigo-600'}`}
+                            className={`group rounded-[4px] overflow-hidden relative border transition-all cursor-grab active:cursor-grabbing shadow-sm hover:shadow-xl ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 hover:border-indigo-500' : 'bg-slate-50 border-slate-100 hover:border-indigo-600'}`}
                             onClick={() => handleAddImage(img)}
                         >
                             <img
@@ -217,7 +217,7 @@ const StockImagesPanel: React.FC = () => {
                             </div>
 
                             <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className={`w-5 h-5 backdrop-blur-md rounded-lg flex items-center justify-center shadow-lg ${uiTheme === 'dark' ? 'bg-slate-900/90 text-indigo-400' : 'bg-white/90 text-indigo-600'}`}>
+                                <div className={`w-5 h-5 backdrop-blur-md rounded-[4px] flex items-center justify-center shadow-lg ${uiTheme === 'dark' ? 'bg-slate-900/90 text-indigo-400' : 'bg-white/90 text-indigo-600'}`}>
                                     <Plus size={10} strokeWidth={4} />
                                 </div>
                             </div>

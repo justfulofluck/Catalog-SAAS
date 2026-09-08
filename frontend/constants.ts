@@ -294,10 +294,10 @@ export const FULL_CATALOG_TEMPLATES: FullCatalogTemplate[] = [
 ];
 
 export const GRID_TEMPLATES: GridTemplate[] = [
-  { id: '1x1-s', name: 'Hero Spotlight', cols: 1, rows: 1, padding: 60, spacing: 0, arrangement: 'stacked', group: '1x1' },
-  { id: '2x2-s', name: 'Grid 2x2: Stacked', cols: 2, rows: 2, padding: 50, spacing: 30, arrangement: 'stacked', group: '2x2' },
-  { id: '3x3-s', name: 'Grid 3x3: Stacked', cols: 3, rows: 3, padding: 30, spacing: 20, arrangement: 'stacked', group: '3x3' },
-  { id: '4x4-s', name: 'Grid 4x4: Stacked', cols: 4, rows: 4, padding: 20, spacing: 15, arrangement: 'stacked', group: '4x4' },
+  { id: '1x1-s', name: 'Hero Spotlight', cols: 1, rows: 1, padding: 50, spacing: 0, arrangement: 'stacked', group: '1x1' },
+  { id: '2x2-s', name: 'Grid 2x2: Stacked', cols: 2, rows: 2, padding: 35, spacing: 20, arrangement: 'stacked', group: '2x2' },
+  { id: '3x3-s', name: 'Grid 3x3: Stacked', cols: 3, rows: 3, padding: 25, spacing: 14, arrangement: 'stacked', group: '3x3' },
+  { id: '4x4-s', name: 'Grid 4x4: Stacked', cols: 4, rows: 4, padding: 18, spacing: 10, arrangement: 'stacked', group: '4x4' },
 
   // High-End Themed Layouts (Inspired by Screenshots)
   {

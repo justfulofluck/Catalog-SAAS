@@ -8,6 +8,7 @@ import Sortable from 'sortablejs';
 import { useStore } from '../../store/useStore';
 import { Product, CanvasElement, TableData } from '../../types';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
+import { resolveFieldLabel } from '../../utils/fieldUtils';
 
 interface TableParamOption {
   key: string;
@@ -19,7 +20,8 @@ const ProductLibrary: React.FC = () => {
   const {
     products, categories, addElement, currentPageIndex, catalog,
     reorderProducts, removeProductFromCanvas, setDraggingItem,
-    uiTheme, setEditorTab, selectedCategoryId, setSelectedCategoryId
+    uiTheme, setEditorTab, selectedCategoryId, setSelectedCategoryId,
+    updateProjectSettings
   } = useStore();
 
   const [search, setSearch] = useState('');
@@ -30,6 +32,11 @@ const ProductLibrary: React.FC = () => {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+
+  // Category Visible Parameters Modal State
+  const [isCategoryParamsModalOpen, setIsCategoryParamsModalOpen] = useState(false);
+  const [targetCategoryForParams, setTargetCategoryForParams] = useState<any>(null);
+  const [categoryParamOptions, setCategoryParamOptions] = useState<TableParamOption[]>([]);
 
   // Table Generator Modal State
   const [tableTitle, setTableTitle] = useState('');
@@ -152,11 +159,13 @@ const ProductLibrary: React.FC = () => {
     selectedProds.forEach(prod => {
       if (prod.customFields) {
         Object.keys(prod.customFields).forEach(k => {
-          let label = k.replace(/_/g, ' ').toUpperCase();
-          if (label.startsWith('FIELD-')) label = 'SPEC ' + label.replace('FIELD-', '');
+          if (typeof prod.customFields![k] === 'object') return;
+          const resolved = resolveFieldLabel(k, categories, prod);
+          if (!resolved) return;
+          const label = resolved.toUpperCase();
           const normLabel = label.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-          if (!seenKeys.has(k.toLowerCase()) && !seenLabels.has(normLabel) && typeof prod.customFields![k] !== 'object') {
+          if (!seenKeys.has(k.toLowerCase()) && !seenLabels.has(normLabel)) {
             seenKeys.add(k.toLowerCase());
             seenLabels.add(normLabel);
             additionalParams.push({
@@ -171,6 +180,92 @@ const ProductLibrary: React.FC = () => {
 
     setTableParameters([...baseParams, ...additionalParams]);
     setIsTableModalOpen(true);
+  };
+
+  const handleOpenCategoryParamsModal = (category: any, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setTargetCategoryForParams(category);
+
+    const catProducts = products.filter(p => p.categoryId === category.id);
+    const seenKeys = new Set<string>();
+    const seenLabels = new Set<string>();
+    const options: TableParamOption[] = [];
+
+    // Current saved visible params for this category (if any)
+    const catIdStr = String(category.id);
+    const savedKeys: string[] | undefined = 
+      catalog?.categoryVisibleParams?.[catIdStr] ?? 
+      catalog?.categoryVisibleParams?.[category.id] ??
+      Object.entries(catalog?.categoryVisibleParams || {}).find(([k]) => String(k) === catIdStr)?.[1];
+
+    const isFieldEnabled = (key: string, label: string) => {
+      if (!savedKeys) return true;
+      const normKey = key.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const normLabel = label.toLowerCase().replace(/[^a-z0-9]/g, '');
+      return savedKeys.some(sk => {
+        const normSk = sk.toLowerCase().replace(/[^a-z0-9]/g, '');
+        return sk === key || normSk === normKey || normSk === normLabel;
+      });
+    };
+
+    // 1. Check customSchema from category
+    if (category.customSchema && category.customSchema.length > 0) {
+      category.customSchema.forEach((f: any) => {
+        if (f.type === 'image') return;
+        const key = f.id;
+        const norm = f.label.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!seenKeys.has(key.toLowerCase()) && !seenLabels.has(norm)) {
+          seenKeys.add(key.toLowerCase());
+          seenLabels.add(norm);
+          options.push({
+            key,
+            label: f.label.toUpperCase(),
+            enabled: isFieldEnabled(key, f.label)
+          });
+        }
+      });
+    }
+
+    // 2. Scan fields on existing products of this category
+    catProducts.forEach(prod => {
+      if (prod.customFields) {
+        Object.keys(prod.customFields).forEach(k => {
+          if (typeof prod.customFields![k] === 'object') return;
+          const resolved = resolveFieldLabel(k, categories, prod);
+          if (!resolved) return;
+          const norm = resolved.toLowerCase().replace(/[^a-z0-9]/g, '');
+          if (!seenKeys.has(k.toLowerCase()) && !seenLabels.has(norm)) {
+            seenKeys.add(k.toLowerCase());
+            seenLabels.add(norm);
+            options.push({
+              key: k,
+              label: resolved.toUpperCase(),
+              enabled: isFieldEnabled(k, resolved)
+            });
+          }
+        });
+      }
+    });
+
+    setCategoryParamOptions(options);
+    setIsCategoryParamsModalOpen(true);
+  };
+
+  const handleSaveCategoryParams = () => {
+    if (!targetCategoryForParams) return;
+    const catId = String(targetCategoryForParams.id);
+    const rawCatId = targetCategoryForParams.id;
+    const enabledKeys = categoryParamOptions.filter(o => o.enabled).map(o => o.key);
+
+    const currentMap = { ...(catalog?.categoryVisibleParams || {}) };
+    currentMap[catId] = enabledKeys;
+    currentMap[rawCatId] = enabledKeys;
+
+    updateProjectSettings({
+      categoryVisibleParams: currentMap,
+      updatedAt: new Date().toISOString()
+    });
+    setIsCategoryParamsModalOpen(false);
   };
 
   const handleGenerateCustomTable = () => {
@@ -504,16 +599,16 @@ const ProductLibrary: React.FC = () => {
   };
 
   return (
-    <div className={`flex h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-500 font-sans transition-colors relative ${uiTheme === 'dark' ? 'bg-[#0f172a]' : 'bg-white'}`}>
+    <div className="flex h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-300 font-sans transition-colors relative bg-[#161616] text-white">
 
       {/* Left Column: Categories */}
-      <div className={`w-[130px] flex flex-col border-r shrink-0 ${uiTheme === 'dark' ? 'border-slate-800' : 'border-slate-100'}`}>
-        <div className={`h-[58px] px-3 py-2.5 border-b flex flex-col justify-center transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-          <h2 className={`text-[10px] font-black uppercase tracking-widest mb-0.5 leading-none ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Categories</h2>
-          <p className="text-[8px] font-semibold text-slate-400 leading-tight">{categories.length} total</p>
+      <div className="w-[145px] flex flex-col border-r shrink-0 border-[#262626] bg-[#141414]">
+        <div className="h-14 px-3 py-2 border-b flex flex-col justify-center transition-colors bg-[#161616] border-[#262626]">
+          <h2 className="text-[10px] font-bold uppercase tracking-wider mb-0.5 leading-none text-white">Categories</h2>
+          <p className="text-[8px] font-medium text-[#888] leading-tight">{categories.length} total</p>
         </div>
         <div
-          className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar cursor-default"
+          className="flex-1 overflow-y-auto p-1.5 space-y-1 custom-scrollbar cursor-default"
           onClick={(e) => {
             if (e.target === e.currentTarget) {
               setSelectedCategoryId(null);
@@ -521,47 +616,60 @@ const ProductLibrary: React.FC = () => {
           }}
         >
           {categories.map((category, idx) => (
-            <button
+            <div
               key={category.id}
+              role="button"
+              tabIndex={0}
               onClick={(e) => {
                 e.stopPropagation();
                 setSelectedCategoryId(category.id);
               }}
-              className={`w-full flex items-center gap-2 p-2 rounded-lg transition-all relative group ${selectedCategoryId === category.id ? (uiTheme === 'dark' ? 'bg-slate-800 text-white shadow-sm' : 'bg-white border border-slate-100 shadow-sm text-indigo-600') : (uiTheme === 'dark' ? 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-200' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700')}`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelectedCategoryId(category.id);
+                }
+              }}
+              className={`w-full flex items-center gap-2 p-1.5 rounded-[4px] cursor-pointer transition-all relative group text-left ${selectedCategoryId === category.id ? 'bg-[#262626] text-white border-l-2 border-[#0F3D3E]' : 'text-[#aaa] hover:bg-[#1f1f1f] hover:text-white'}`}
             >
-              <span className={`absolute left-0.5 top-0.5 text-[7px] font-black ${selectedCategoryId === category.id ? 'text-indigo-500' : 'text-slate-400'}`}>
-                {String(idx + 1).padStart(2, '0')}
-              </span>
-              <div className={`w-6 h-6 rounded-md flex items-center justify-center overflow-hidden ml-1 ${selectedCategoryId === category.id ? 'ring-2 ring-indigo-600 ring-offset-1' : ''}`}>
+              <div className={`w-6 h-6 rounded-[2px] flex items-center justify-center overflow-hidden shrink-0 ${selectedCategoryId === category.id ? 'ring-1 ring-[#0F3D3E]' : ''}`}>
                 {category.thumbnail ? (
                   <img src={category.thumbnail} alt="" className="w-full h-full object-cover" />
                 ) : (
-                  <div className={`w-full h-full flex items-center justify-center ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}>
-                    <Package size={10} />
+                  <div className="w-full h-full flex items-center justify-center bg-[#222] text-[#666]">
+                    <Package size={11} />
                   </div>
                 )}
               </div>
-              <div className="text-left">
-                <span className="block text-[10px] font-bold truncate max-w-[70px]">{category.name}</span>
-                <span className="block text-[8px] opacity-60 font-medium uppercase tracking-wider">{products.filter(p => p.categoryId === category.id).length}</span>
+              <div className="min-w-0 flex-1">
+                <span className="block text-[10px] font-bold truncate leading-tight" title={category.name}>{category.name}</span>
+                <span className="block text-[8px] text-[#777] font-medium leading-tight">{products.filter(p => p.categoryId === category.id).length} items</span>
               </div>
-            </button>
+              <button
+                type="button"
+                onClick={(e) => handleOpenCategoryParamsModal(category, e)}
+                title="Configure Visible Parameters on Card"
+                className="p-1 rounded opacity-0 group-hover:opacity-100 transition-opacity hover:bg-[#333] text-[#888] hover:text-[#E2DCC8]"
+              >
+                <SlidersHorizontal size={11} />
+              </button>
+            </div>
           ))}
         </div>
       </div>
 
       {/* Right Column: Products */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className={`h-[58px] px-3 py-2.5 border-b flex flex-col justify-center transition-colors ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-white border-slate-200'}`}>
-          <div className="flex items-center justify-between mb-0.5">
-            <h2 className={`text-[10px] font-black uppercase tracking-widest leading-none ${uiTheme === 'dark' ? 'text-white' : 'text-slate-800'}`}>Products</h2>
+      <div className="flex-1 flex flex-col min-w-0 bg-[#161616]">
+        <div className="h-14 px-3 py-2 border-b flex flex-col justify-center transition-colors bg-[#161616] border-[#262626]">
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-[10px] font-bold uppercase tracking-wider leading-none text-white">Products</h2>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={() => {
                   setIsMultiSelectMode(!isMultiSelectMode);
                   setSelectedProductIds([]);
                 }}
-                className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider transition-all flex items-center gap-1 ${isMultiSelectMode ? 'bg-indigo-600 text-white shadow-sm' : (uiTheme === 'dark' ? 'bg-slate-800 text-slate-300 hover:bg-slate-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}`}
+                className={`px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${isMultiSelectMode ? 'bg-[#0F3D3E] text-white shadow-sm' : 'bg-[#262626] text-slate-300 hover:bg-[#333]'}`}
                 title="Select multiple products to create table"
               >
                 <CheckSquare size={10} />
@@ -569,40 +677,54 @@ const ProductLibrary: React.FC = () => {
               </button>
               <button
                 onClick={() => setEditorTab(null)}
-                className={`p-0.5 rounded-lg transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-800 text-slate-400' : 'hover:bg-slate-100 text-slate-400'}`}
+                className="p-1 rounded-[4px] transition-colors hover:bg-[#262626] text-[#888] hover:text-white"
               >
                 <X size={12} />
               </button>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <h3 className="text-[8px] font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-1.5 leading-tight">
+            <h3 className="text-[8px] font-bold text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1 leading-tight">
               <Package size={9} />
               {filteredProducts.length} total
             </h3>
-            {isMultiSelectMode && (
-              <button
-                onClick={handleSelectAll}
-                className="text-[8px] font-bold text-slate-400 hover:text-indigo-600 uppercase tracking-wider"
-              >
-                {selectedProductIds.length === filteredProducts.length ? 'Deselect All' : 'Select All'}
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              {activeCategory && (
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenCategoryParamsModal(activeCategory, e)}
+                  title="Choose which parameters show on product cards for this category"
+                  className="text-[8px] font-bold text-[#888] hover:text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1 transition-colors"
+                >
+                  <SlidersHorizontal size={9} />
+                  Parameters
+                </button>
+              )}
+              {isMultiSelectMode && (
+                <button
+                  onClick={handleSelectAll}
+                  className="text-[8px] font-bold text-[#888] hover:text-[#E2DCC8] uppercase tracking-wider"
+                >
+                  {selectedProductIds.length === filteredProducts.length ? 'Deselect All' : 'Select All'}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className={`p-2.5 border-b transition-colors ${uiTheme === 'dark' ? 'bg-slate-900/50 border-slate-800' : 'bg-slate-50/50 border-slate-100'}`}>
+        {/* Search Bar */}
+        <div className="p-2 border-b transition-colors bg-[#141414] border-[#262626]">
           <div className="relative group">
-            <Search size={12} className={`absolute left-2.5 top-1/2 -translate-y-1/2 transition-colors ${uiTheme === 'dark' ? 'text-slate-500 group-focus-within:text-indigo-400' : 'text-slate-300 group-focus-within:text-indigo-600'}`} />
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 transition-colors text-[#666] group-focus-within:text-[#E2DCC8]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search..."
-              className={`w-full border rounded-lg pl-8 pr-3 py-1.5 text-[11px] font-bold outline-none transition-all focus:ring-2 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 text-white placeholder:text-slate-500 focus:ring-indigo-500/20 focus:border-indigo-500' : 'bg-white border-slate-200 text-slate-800 placeholder:text-slate-300 focus:ring-indigo-600/5 focus:border-indigo-600'}`}
+              placeholder="Search products..."
+              className="w-full border rounded-[4px] pl-7 pr-3 py-1.5 text-[11px] font-medium outline-none transition-all bg-[#1a1a1a] border-[#2a2a2a] text-white placeholder:text-[#666] focus:border-[#0F3D3E]"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500">
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[#666] hover:text-white">
                 <X size={10} />
               </button>
             )}
@@ -616,10 +738,10 @@ const ProductLibrary: React.FC = () => {
         >
           {filteredProducts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 border shadow-inner transition-colors ${uiTheme === 'dark' ? 'bg-slate-800/50 border-slate-700 text-slate-600' : 'bg-slate-50 border-slate-100 text-slate-200'}`}>
-                <Package size={20} />
+              <div className="w-9 h-9 rounded-[4px] flex items-center justify-center mb-2.5 border transition-colors bg-[#1e1e1e] border-[#262626] text-[#555]">
+                <Package size={18} />
               </div>
-              <p className={`text-[9px] font-black uppercase tracking-widest leading-relaxed ${uiTheme === 'dark' ? 'text-slate-600' : 'text-slate-400'}`}>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#666]">
                 No products found
               </p>
             </div>
@@ -635,7 +757,7 @@ const ProductLibrary: React.FC = () => {
                   draggable={!isMultiSelectMode}
                   onDragStart={(e) => !isMultiSelectMode && handleDragStart(e, product)}
                   onDragEnd={handleDragEnd}
-                  className={`group flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all border relative hover:shadow-md ${isSelected ? (uiTheme === 'dark' ? 'bg-indigo-950/40 border-indigo-600 ring-1 ring-indigo-600' : 'bg-indigo-50/80 border-indigo-600 ring-1 ring-indigo-600 shadow-sm') : (uiTheme === 'dark' ? 'bg-slate-800/40 border-slate-800 hover:bg-slate-800 hover:border-indigo-500/30 hover:shadow-black/20' : 'bg-white border-slate-100 hover:bg-slate-50 hover:border-indigo-100 hover:shadow-slate-200/40')}`}
+                  className={`group flex items-center gap-2 p-2 rounded-[4px] cursor-pointer transition-all border relative ${isSelected ? 'bg-[#0F3D3E]/10 border-[#0F3D3E]' : 'bg-[#1a1a1a] border-[#262626] hover:border-[#383838] hover:bg-[#202020]'}`}
                   onClick={() => {
                     if (isMultiSelectMode) {
                       toggleSelectProduct(product.id);
@@ -649,51 +771,42 @@ const ProductLibrary: React.FC = () => {
                     <button
                       type="button"
                       onClick={(e) => toggleSelectProduct(product.id, e)}
-                      className={`p-1 rounded-md transition-colors ${isSelected ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-600'}`}
+                      className={`p-0.5 rounded transition-colors ${isSelected ? 'text-[#E2DCC8]' : 'text-[#666]'}`}
                     >
-                      {isSelected ? <CheckSquare size={16} /> : <Square size={16} />}
+                      {isSelected ? <CheckSquare size={14} /> : <Square size={14} />}
                     </button>
                   ) : (
-                    <>
-                      <span className={`absolute left-1.5 top-1.5 text-[8px] font-black ${uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-400'}`}>
-                        {String(idx + 1).padStart(2, '0')}
-                      </span>
-                      <div className={`drag-handle p-0.5 -ml-0.5 cursor-grab active:cursor-grabbing shrink-0 transition-colors ${uiTheme === 'dark' ? 'text-slate-600 hover:text-slate-400' : 'text-slate-200 hover:text-slate-400'}`}>
-                        <GripVertical size={12} />
-                      </div>
-                    </>
+                    <div className="drag-handle p-0.5 cursor-grab active:cursor-grabbing shrink-0 transition-colors text-[#555] hover:text-[#888]">
+                      <GripVertical size={12} />
+                    </div>
                   )}
 
-                  <div className={`w-10 h-10 rounded-xl overflow-hidden shrink-0 border shadow-sm group-hover:scale-105 transition-transform duration-500 ${uiTheme === 'dark' ? 'bg-slate-700 border-slate-700' : 'bg-white border-slate-100'}`}>
+                  {/* Thumbnail */}
+                  <div className="w-9 h-9 rounded-[2px] overflow-hidden shrink-0 border transition-transform duration-300 bg-[#121212] border-[#2a2a2a]">
                     {(() => {
                       const imgSrc = product.image || (product.customFields && Object.values(product.customFields).find(
                         val => typeof val === 'string' && (val.startsWith('/media') || val.startsWith('http'))
                       )) || null;
-                      return imgSrc ? <img src={imgSrc as string} alt={product.name} className="w-full h-full object-cover" /> : null;
+                      return imgSrc ? <img src={imgSrc as string} alt={product.name} className="w-full h-full object-contain" /> : (
+                        <div className="w-full h-full flex items-center justify-center text-[#555]">
+                          <Package size={12} />
+                        </div>
+                      );
                     })()}
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <div className={`text-[10px] font-black truncate mb-0.5 transition-colors ${uiTheme === 'dark' ? 'text-slate-200 group-hover:text-indigo-400' : 'text-slate-800 group-hover:text-indigo-600'}`}>
+                    <div className="text-[11px] font-bold truncate leading-snug transition-colors text-white group-hover:text-[#E2DCC8]">
                       {product.name}
                     </div>
-                    <div className="flex items-center gap-1 mb-0.5">
-                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: category?.color || '#cbd5e1' }} />
-                      <span className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter truncate">
+                    <div className="flex items-center gap-1.5 my-0.5">
+                      <div className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: category?.color || '#0F3D3E' }} />
+                      <span className="text-[8px] font-semibold text-[#888] uppercase tracking-wider truncate">
                         {category?.name || 'General'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between gap-1">
-                      <span className={`text-[9px] font-black ${uiTheme === 'dark' ? 'text-indigo-400' : 'text-indigo-600'}`}>{product.currency}{product.price}</span>
-                      {!isMultiSelectMode && (
-                        <button
-                          onClick={(e) => handleClearFromCanvas(product.id, e)}
-                          className={`w-5 h-5 flex items-center justify-center rounded-md transition-all opacity-0 group-hover:opacity-100 ${uiTheme === 'dark' ? 'hover:bg-red-500/20 text-slate-600 hover:text-red-400' : 'hover:bg-red-50 text-slate-200 hover:text-red-500'}`}
-                          title="Clear from All Pages"
-                        >
-                          <Trash2 size={10} />
-                        </button>
-                      )}
+                      <span className="text-[10px] font-black text-[#E2DCC8]">{product.currency}{product.price}</span>
                     </div>
                   </div>
                 </div>
@@ -704,17 +817,17 @@ const ProductLibrary: React.FC = () => {
 
         {/* Multi-Select Floating Footer Bar */}
         {isMultiSelectMode && selectedProductIds.length > 0 && (
-          <div className={`p-3 border-t flex items-center justify-between gap-2 animate-in slide-in-from-bottom-2 ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-lg'}`}>
+          <div className={`p-2.5 border-t border-[#262626] flex items-center justify-between gap-2 animate-in slide-in-from-bottom-2 ${uiTheme === 'dark' ? 'bg-[#141414]' : 'bg-white shadow-lg'}`}>
             <div>
-              <span className="text-[10px] font-black text-indigo-600 dark:text-indigo-400">
+              <span className="text-[10px] font-bold text-[#E2DCC8]">
                 {selectedProductIds.length} Selected
               </span>
             </div>
             <button
               onClick={handleOpenTableModal}
-              className="px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider shadow-md flex items-center gap-1.5 active:scale-95 transition-all"
+              className="px-3 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-[10px] font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
             >
-              <Table size={13} />
+              <Table size={12} />
               Create Table
             </button>
           </div>
@@ -723,36 +836,36 @@ const ProductLibrary: React.FC = () => {
 
       {/* ===================== TABLE CREATION POPUP MODAL ===================== */}
       {isTableModalOpen && (
-        <div className="fixed inset-0 z-[999] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className={`w-full max-w-lg rounded-3xl shadow-2xl border overflow-hidden animate-in zoom-in-95 duration-200 ${uiTheme === 'dark' ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
+        <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className={`w-full max-w-lg rounded-[6px] shadow-2xl border overflow-hidden animate-in zoom-in-95 duration-200 ${uiTheme === 'dark' ? 'bg-[#161616] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-900'}`}>
             
             {/* Modal Header */}
-            <div className={`p-6 border-b flex items-center justify-between ${uiTheme === 'dark' ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'}`}>
+            <div className={`p-5 border-b flex items-center justify-between ${uiTheme === 'dark' ? 'border-[#262626] bg-[#121212]' : 'border-slate-100 bg-slate-50'}`}>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-600/30">
-                  <Table size={20} />
+                <div className="w-9 h-9 rounded-[4px] bg-[#0F3D3E] text-white flex items-center justify-center shadow-md shadow-[#0F3D3E]/20">
+                  <Table size={18} />
                 </div>
                 <div>
-                  <h2 className="text-base font-black tracking-tight">Generate Specification Table</h2>
-                  <p className="text-xs text-slate-400 font-medium">
+                  <h2 className="text-sm font-bold tracking-tight">Generate Specification Table</h2>
+                  <p className="text-[11px] text-[#888] font-medium">
                     Configure columns & parameters for {selectedProductIds.length} selected items
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsTableModalOpen(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/50 dark:hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-[4px] text-[#888] hover:text-white hover:bg-[#262626] transition-colors"
               >
-                <X size={18} />
+                <X size={16} />
               </button>
             </div>
 
             {/* Modal Body */}
-            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
+            <div className="p-5 space-y-5 max-h-[70vh] overflow-y-auto custom-scrollbar">
               
               {/* Table / Section Title */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#888]">
                   Section Header Title
                 </label>
                 <input
@@ -760,40 +873,40 @@ const ProductLibrary: React.FC = () => {
                   value={tableTitle}
                   onChange={(e) => setTableTitle(e.target.value)}
                   placeholder="e.g. BLING SERIES COB RANGE"
-                  className={`w-full px-4 py-2.5 rounded-xl border text-xs font-bold outline-none transition-all ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700 focus:border-indigo-500' : 'bg-slate-50 border-slate-200 focus:border-indigo-600'}`}
+                  className={`w-full px-3 py-2 rounded-[4px] border text-xs font-medium outline-none transition-all ${uiTheme === 'dark' ? 'bg-[#1a1a1a] border-[#2a2a2a] text-white focus:border-[#0F3D3E]' : 'bg-slate-50 border-slate-200 focus:border-[#0F3D3E]'}`}
                 />
               </div>
 
               {/* Include Category Picture Toggle */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#888]">
                   Category / Hero Image
                 </label>
                 <button
                   type="button"
                   onClick={() => setIncludeCategoryImage(!includeCategoryImage)}
-                  className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between text-left transition-all ${includeCategoryImage ? 'border-indigo-600 bg-indigo-50/20 dark:bg-indigo-950/20' : 'border-slate-200 dark:border-slate-800'}`}
+                  className={`w-full p-3.5 rounded-[4px] border flex items-center justify-between text-left transition-all ${includeCategoryImage ? 'border-[#0F3D3E] bg-[#0F3D3E]/10' : 'border-[#262626] bg-[#1a1a1a]'}`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${includeCategoryImage ? 'bg-indigo-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
-                      <ImageIcon size={20} />
+                    <div className={`w-8 h-8 rounded-[4px] flex items-center justify-center ${includeCategoryImage ? 'bg-[#0F3D3E] text-white' : 'bg-[#222] text-[#888]'}`}>
+                      <ImageIcon size={18} />
                     </div>
                     <div>
-                      <h4 className="text-xs font-black">Place Category Picture on Left</h4>
-                      <p className="text-[10px] text-slate-400 font-medium">
+                      <h4 className="text-xs font-bold">Place Category Picture on Left</h4>
+                      <p className="text-[10px] text-[#888] font-medium">
                         Places the hero product/category picture alongside the table
                       </p>
                     </div>
                   </div>
-                  <div className={`p-1 rounded-md ${includeCategoryImage ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700'}`}>
-                    {includeCategoryImage ? <CheckSquare size={20} /> : <Square size={20} />}
+                  <div className={`p-1 rounded ${includeCategoryImage ? 'text-[#E2DCC8]' : 'text-[#666]'}`}>
+                    {includeCategoryImage ? <CheckSquare size={18} /> : <Square size={18} />}
                   </div>
                 </button>
               </div>
 
               {/* Choose Columns / Parameters to Include */}
-              <div className="space-y-3">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#888]">
                   Table Columns & Parameters
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -806,11 +919,11 @@ const ProductLibrary: React.FC = () => {
                         updated[pIdx].enabled = !updated[pIdx].enabled;
                         setTableParameters(updated);
                       }}
-                      className={`p-3 rounded-xl border flex items-center justify-between text-left transition-all ${param.enabled ? 'border-indigo-600 bg-indigo-50/10 dark:bg-indigo-950/30 font-black' : 'border-slate-200 dark:border-slate-800 opacity-60'}`}
+                      className={`p-2.5 rounded-[4px] border flex items-center justify-between text-left transition-all ${param.enabled ? 'border-[#0F3D3E] bg-[#0F3D3E]/10 font-bold text-white' : 'border-[#262626] bg-[#1a1a1a] text-[#888]'}`}
                     >
                       <span className="text-[11px] truncate">{param.label}</span>
-                      <span className={param.enabled ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-300 dark:text-slate-700'}>
-                        {param.enabled ? <CheckSquare size={16} /> : <Square size={16} />}
+                      <span className={param.enabled ? 'text-[#E2DCC8]' : 'text-[#666]'}>
+                        {param.enabled ? <CheckSquare size={14} /> : <Square size={14} />}
                       </span>
                     </button>
                   ))}
@@ -818,27 +931,27 @@ const ProductLibrary: React.FC = () => {
               </div>
 
               {/* Table Theme Colors */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase tracking-wider text-[#888]">
                   Table Header Styling
                 </label>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400">Header Bg:</span>
+                    <span className="text-[10px] font-bold text-[#888]">Header Bg:</span>
                     <input
                       type="color"
                       value={tableHeaderBg}
                       onChange={(e) => setTableHeaderBg(e.target.value)}
-                      className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-700"
+                      className="w-7 h-7 rounded-[4px] cursor-pointer border border-[#262626]"
                     />
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-bold text-slate-400">Text Color:</span>
+                    <span className="text-[10px] font-bold text-[#888]">Text Color:</span>
                     <input
                       type="color"
                       value={tableHeaderTextColor}
                       onChange={(e) => setTableHeaderTextColor(e.target.value)}
-                      className="w-8 h-8 rounded-lg cursor-pointer border border-slate-200 dark:border-slate-700"
+                      className="w-7 h-7 rounded-[4px] cursor-pointer border border-[#262626]"
                     />
                   </div>
                 </div>
@@ -847,20 +960,130 @@ const ProductLibrary: React.FC = () => {
             </div>
 
             {/* Modal Footer */}
-            <div className={`p-6 border-t flex items-center justify-end gap-3 ${uiTheme === 'dark' ? 'border-slate-800 bg-slate-900/50' : 'border-slate-100 bg-slate-50'}`}>
+            <div className={`p-4 border-t flex items-center justify-end gap-2.5 ${uiTheme === 'dark' ? 'border-[#262626] bg-[#121212]' : 'border-slate-100 bg-slate-50'}`}>
               <button
                 type="button"
                 onClick={() => setIsTableModalOpen(false)}
-                className="px-5 py-2.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-600 transition-colors"
+                className="px-4 py-2 rounded-[4px] text-xs font-bold text-[#888] hover:text-white transition-colors"
               >
                 Cancel
               </button>
               <button
                 type="button"
                 onClick={handleGenerateCustomTable}
-                className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-xl shadow-indigo-600/30 flex items-center gap-2 active:scale-95 transition-all"
+                className="px-5 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-2 active:scale-95 transition-all"
               >
-                <Check size={16} /> Confirm & Insert on Canvas
+                <Check size={14} /> Confirm & Insert on Canvas
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* ===================== CATEGORY VISIBLE PARAMETERS MODAL ===================== */}
+      {isCategoryParamsModalOpen && targetCategoryForParams && (
+        <div className="fixed inset-0 z-[999] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="w-full max-w-md rounded-[8px] shadow-2xl border overflow-hidden animate-in zoom-in-95 duration-200 bg-[#161616] border-[#2c2c2c] text-white">
+            
+            {/* Header */}
+            <div className="p-4 border-b flex items-center justify-between border-[#262626] bg-[#121212]">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-[4px] bg-[#0F3D3E] text-white flex items-center justify-center shadow-md shadow-[#0F3D3E]/25">
+                  <SlidersHorizontal size={16} />
+                </div>
+                <div>
+                  <h2 className="text-[13px] font-bold text-white tracking-tight">Card Parameters: {targetCategoryForParams.name}</h2>
+                  <p className="text-[11px] text-[#999999] font-medium">
+                    Select which specifications to display on product cards
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsCategoryParamsModalOpen(false)}
+                className="p-1.5 rounded-[4px] text-[#888888] hover:text-white hover:bg-[#262626] transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar bg-[#161616]">
+              <div className="flex items-center justify-between pb-2 border-b border-[#262626]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#999999]">
+                  Available Specifications ({categoryParamOptions.length})
+                </span>
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoryParamOptions(prev => prev.map(o => ({ ...o, enabled: true })));
+                    }}
+                    className="text-[11px] font-bold text-[#E2DCC8] hover:underline"
+                  >
+                    Select All
+                  </button>
+                  <span className="text-[#444444]">|</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCategoryParamOptions(prev => prev.map(o => ({ ...o, enabled: false })));
+                    }}
+                    className="text-[11px] font-bold text-[#888888] hover:text-white"
+                  >
+                    Deselect All
+                  </button>
+                </div>
+              </div>
+
+              {categoryParamOptions.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[#888888]">
+                  No custom parameters found for this category yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-2">
+                  {categoryParamOptions.map((opt, idx) => (
+                    <button
+                      key={opt.key}
+                      type="button"
+                      onClick={() => {
+                        const updated = [...categoryParamOptions];
+                        updated[idx].enabled = !updated[idx].enabled;
+                        setCategoryParamOptions(updated);
+                      }}
+                      className={`p-3 rounded-[6px] border flex items-center justify-between text-left transition-all ${
+                        opt.enabled 
+                          ? 'border-[#0F3D3E] bg-[#0F3D3E]/15 text-white shadow-sm' 
+                          : 'border-[#262626] bg-[#1a1a1a] text-[#aaaaaa] hover:border-[#383838] hover:bg-[#202020]'
+                      }`}
+                    >
+                      <span className={`text-[12px] font-medium tracking-wide truncate ${opt.enabled ? 'font-bold text-white' : 'text-[#cccccc]'}`}>
+                        {opt.label}
+                      </span>
+                      <span className={opt.enabled ? 'text-[#E2DCC8]' : 'text-[#555555]'}>
+                        {opt.enabled ? <CheckSquare size={17} /> : <Square size={17} />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-3.5 border-t flex items-center justify-end gap-2.5 border-[#262626] bg-[#121212]">
+              <button
+                type="button"
+                onClick={() => setIsCategoryParamsModalOpen(false)}
+                className="px-4 py-2 rounded-[4px] text-xs font-bold text-[#999999] hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveCategoryParams}
+                className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider shadow-sm flex items-center gap-1.5 active:scale-95 transition-all"
+              >
+                <Check size={14} /> Save & Update Cards
               </button>
             </div>
 

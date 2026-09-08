@@ -102,7 +102,7 @@ const PageNavigator: React.FC = () => {
       className={`w-full flex items-center gap-3 p-3 transition-colors group text-left ${isDark ? 'hover:bg-slate-700' : 'hover:bg-indigo-50'
         }`}
     >
-      <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors shadow-sm ${isDark
+      <div className={`w-8 h-8 rounded-[4px] flex items-center justify-center transition-colors shadow-sm ${isDark
         ? 'bg-slate-700 text-slate-400 group-hover:bg-slate-600 group-hover:text-indigo-400'
         : 'bg-slate-50 text-slate-400 group-hover:bg-white group-hover:text-indigo-600'
         }`}>
@@ -216,7 +216,7 @@ const PageNavigator: React.FC = () => {
         <div className="shrink-0 h-[106px] flex items-center justify-center relative" ref={popoverRef}>
           <button
             onClick={() => setPopoverOpen(!isPopoverOpen)}
-            className={`w-[80px] h-[106px] border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 transition-all group
+            className={`w-[80px] h-[106px] border-2 border-dashed rounded-[4px] flex flex-col items-center justify-center gap-2 transition-all group
                ${isDark
                 ? 'border-slate-800 hover:border-indigo-500/50 bg-slate-900/50 hover:bg-slate-800'
                 : 'border-slate-200 hover:border-indigo-300 bg-slate-50 hover:bg-indigo-50/30'}
@@ -230,7 +230,7 @@ const PageNavigator: React.FC = () => {
 
           {/* Add Page Popover */}
           {isPopoverOpen && (
-            <div className={`absolute bottom-full mb-4 left-0 w-64 border shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 py-1 z-50 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+            <div className={`absolute bottom-full mb-4 left-0 w-64 border shadow-2xl rounded-[4px] overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-200 py-1 z-50 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
               <p className={`px-3 py-2 text-[9px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Select Page Type</p>
               <div className="p-1 space-y-0.5">
                 <PageTypeButton icon={BookOpen} label="Hero Cover" type="cover" onClick={() => handleAddTypedPage('cover')} />
@@ -239,9 +239,9 @@ const PageNavigator: React.FC = () => {
                 <PageTypeButton icon={FileText} label="Blank Interior" type="interior" onClick={() => handleAddTypedPage('interior')} />
                 <button
                   onClick={handleInheritLayout}
-                  className={`w-full flex items-center gap-3 p-3 transition-colors group text-left rounded-lg ${isDark ? 'hover:bg-indigo-600 hover:text-white bg-slate-900/50' : 'hover:bg-indigo-600 hover:text-white bg-indigo-50/50'}`}
+                  className={`w-full flex items-center gap-3 p-3 transition-colors group text-left rounded-[4px] ${isDark ? 'hover:bg-indigo-600 hover:text-white bg-slate-900/50' : 'hover:bg-indigo-600 hover:text-white bg-indigo-50/50'}`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-md"><Sparkles size={12} /></div>
+                  <div className="w-8 h-8 rounded-[4px] bg-indigo-600 text-white flex items-center justify-center shadow-md"><Sparkles size={12} /></div>
                   <div>
                     <p className="text-[10px] font-black uppercase tracking-tighter leading-none mb-0.5">Inherit Structure</p>
                     <p className="text-[8px] font-bold opacity-60 uppercase tracking-widest">Clone Layout</p>

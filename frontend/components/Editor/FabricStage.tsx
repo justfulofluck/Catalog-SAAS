@@ -25,7 +25,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const [activeGuides, setActiveGuides] = useState<{ type: 'horizontal' | 'vertical'; pos: number }[]>([]);
   const [activeDistanceBadges, setActiveDistanceBadges] = useState<DistanceBadge[]>([]);
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const { setSelectedElementIds, updateElement, updateElements, pushHistory, catalog } = useStore();
+  const { selectedElementIds, setSelectedElementIds, updateElement, updateElements, pushHistory, catalog } = useStore();
   const products = useStore((state) => state.products);
 
   const curW = PAGE_WIDTH;
@@ -355,9 +355,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       if ((canvas as any)._currentTransform) return;
       try {
         const existingObjects = canvas.getObjects();
+        const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || footerHeight || 38) - (catalog.marginBottom || 0);
         const formattedFooterElements = (footerElements || []).map((el: any) => ({
           ...el,
-          y: (el.y || 0) + (el.y < 200 ? PAGE_HEIGHT - footerHeight : 0),
+          y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
           text: el.type === 'text' && el.text?.includes('{{page}}')
             ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
             : el.text
@@ -367,6 +368,20 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           ...(headerElements || []),
           ...formattedFooterElements
         ];
+
+        // Ensure all fonts used across elements are loaded in the browser
+        if (typeof document !== 'undefined' && document.fonts) {
+          const fontsToWait = new Set<string>();
+          allElements.forEach((el: any) => {
+            const f = el.fontFamily || (catalog as any)?.fontFamily;
+            if (f) fontsToWait.add(f);
+          });
+          if (fontsToWait.size > 0) {
+            try {
+              await Promise.all(Array.from(fontsToWait).map(f => document.fonts.load(`16px "${f}"`)));
+            } catch {}
+          }
+        }
         const elIds = new Set(allElements.map(e => e.id));
 
         existingObjects.forEach((obj: any) => {
@@ -392,13 +407,30 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const oldShowTitle = existingObj._showTitle ?? true;
           const oldShowPrice = existingObj._showPrice ?? true;
           const oldShowSKU = existingObj._showSKU ?? true;
+          const oldVisibleParamsJSON = existingObj._visibleParamsJSON || '';
           const newShowTitle = catalog.showTitle !== false;
           const newShowPrice = catalog.showPrice !== false;
           const newShowSKU = catalog.showSKU !== false;
+          const prodObj = products.find(p => p.id === el.productId);
+          const catId = prodObj?.categoryId ? String(prodObj.categoryId) : '';
+          const newVisibleParamsJSON = JSON.stringify(
+            (catId && (
+              catalog.categoryVisibleParams?.[catId] ||
+              catalog.categoryVisibleParams?.[prodObj?.categoryId as string] ||
+              Object.entries(catalog.categoryVisibleParams || {}).find(([k]) => String(k) === catId)?.[1]
+            )) || []
+          );
+
+          const oldFontFamily = existingObj._fontFamily || '';
+          const oldCardTheme = existingObj._cardTheme || '';
+          const newFontFamily = (el as any).fontFamily || (catalog as any).fontFamily || '';
+          const newCardTheme = (el as any).cardTheme || '';
 
           return el.productId !== existingObj._productId || el.src !== existingObj._src ||
             Math.abs(el.width - oldW) > 5 || Math.abs(el.height - oldH) > 5 ||
-            oldShowTitle !== newShowTitle || oldShowPrice !== newShowPrice || oldShowSKU !== newShowSKU;
+            oldShowTitle !== newShowTitle || oldShowPrice !== newShowPrice || oldShowSKU !== newShowSKU ||
+            oldVisibleParamsJSON !== newVisibleParamsJSON ||
+            oldFontFamily !== newFontFamily || oldCardTheme !== newCardTheme;
         };
 
         const objectPromises = allElements.map(async (el: CanvasElement) => {
@@ -409,7 +441,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           if (existingObj) {
             const isActiveObj = canvas.getActiveObjects().includes(existingObj);
             const isTableRebuild = el.type === 'table' && !isActiveObj && needsRebuild(el, existingObj);
-            const isProductRebuild = el.type === 'product-block' && !isActiveObj && needsRebuild(el, existingObj);
+            const isProductRebuild = el.type === 'product-block' && needsRebuild(el, existingObj);
 
             if (isTableRebuild || isProductRebuild) {
               if (isActiveObj) {
@@ -436,9 +468,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 }
                 existingObj.set({
                   text: parsedText,
-                  fontSize: el.fontSize || 16, fontFamily: el.fontFamily || 'Inter',
-                  fontWeight: el.fontWeight || 'normal', fontStyle: el.fontStyle || 'normal',
-                  fill: el.fill || '#000000', textAlign: el.textAlign || 'left',
+                  fontSize: el.fontSize || 16,
+                  fontFamily: el.fontFamily || catalog?.fontFamily || 'Inter',
+                  fontWeight: el.fontWeight || 'normal',
+                  fontStyle: el.fontStyle || 'normal',
+                  fill: el.fill || '#000000',
+                  textAlign: el.textAlign || 'left',
                   lineHeight: el.lineHeight || 1.2,
                   underline: el.textDecoration?.includes('underline') || false,
                   charSpacing: el.letterSpacing || 0,
@@ -451,6 +486,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                     scaleY: 1,
                   });
                 }
+                if (existingObj.initDimensions) {
+                  existingObj.initDimensions();
+                }
+                existingObj.dirty = true;
               } else if (el.type === 'shape' || el.type === 'comment') {
                 existingObj.set({
                   fill: el.fill || '#ffffff', stroke: el.stroke || undefined,
@@ -503,6 +542,15 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               obj._showTitle = catalog.showTitle !== false;
               obj._showPrice = catalog.showPrice !== false;
               obj._showSKU = catalog.showSKU !== false;
+              const prod = products.find(p => p.id === el.productId);
+              const catId = prod?.categoryId ? String(prod.categoryId) : '';
+              obj._visibleParamsJSON = JSON.stringify(
+                (catId && (
+                  Object.entries(catalog.categoryVisibleParams || {}).find(([k]) => String(k) === catId)?.[1]
+                )) || []
+              );
+              obj._fontFamily = (el as any).fontFamily || (catalog as any).fontFamily || '';
+              obj._cardTheme = (el as any).cardTheme || '';
             } else if (el.type === 'table') {
               obj._tableDataJSON = JSON.stringify(el.tableData || {});
             }
@@ -558,6 +606,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         const targetBg = page.backgroundColor || canvasBg || '#ffffff';
         canvas.backgroundColor = targetBg;
         canvas.renderAll();
+
+        if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(() => {
+            if (isCurrent && fabricCanvasRef.current) {
+              fabricCanvasRef.current.requestRenderAll();
+            }
+          });
+        }
       } catch (err) {
         console.error('FabricStage render error:', err);
       }
@@ -567,7 +623,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     return () => {
       isCurrent = false;
     };
-  }, [page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements, isActive, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU]);
+  }, [
+    page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements,
+    isActive, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU,
+    catalog?.fontFamily,
+    JSON.stringify(catalog?.categoryVisibleParams)
+  ]);
 
   useEffect(() => {
     const unsub = useStore.subscribe((newState, prevState) => {

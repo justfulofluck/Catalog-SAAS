@@ -314,6 +314,7 @@ export interface Catalog {
   showPrice?: boolean;
   showSKU?: boolean;
   showTitle?: boolean;
+  categoryVisibleParams?: Record<string, string[]>; // categoryId -> array of enabled field keys
   gridCols?: number;
   gridRows?: number;
   gridSpacing?: number;

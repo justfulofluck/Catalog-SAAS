@@ -63,11 +63,11 @@ const AdminLogin: React.FC = () => {
         // 1. RECOVERY: OTP
         if (recoveryStep === 'otp') {
             return (
-                <form onSubmit={handleRecoverySubmit} className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">6-Digit Admin Token</label>
+                <form onSubmit={handleRecoverySubmit} className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading ml-1">6-Digit Admin Token</label>
                         <div className="relative group">
-                            <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                            <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" />
                             <input
                                 type="text"
                                 required
@@ -75,22 +75,22 @@ const AdminLogin: React.FC = () => {
                                 value={otp}
                                 onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
                                 placeholder="000000"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-lg font-mono font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300 tracking-[0.5em] text-center"
+                                className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[11px] pl-12 pr-4 py-3.5 text-lg font-mono font-bold text-white focus:border-[#0F3D3E] focus:ring-2 focus:ring-[#0F3D3E]/20 outline-none transition-all placeholder:text-[#444444] tracking-[0.5em] text-center"
                             />
                         </div>
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">New Secure Token</label>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading ml-1">New Secure Token</label>
                         <div className="relative group">
-                            <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                            <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" />
                             <input
                                 type="password"
                                 required
                                 value={newPassword}
                                 onChange={(e) => setNewPassword(e.target.value)}
                                 placeholder="New token string"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                                className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[11px] pl-12 pr-4 py-3.5 text-sm font-medium text-white focus:border-[#0F3D3E] focus:ring-2 focus:ring-[#0F3D3E]/20 outline-none transition-all placeholder:text-[#555555]"
                             />
                         </div>
                     </div>
@@ -98,7 +98,7 @@ const AdminLogin: React.FC = () => {
                     <button
                         type="submit"
                         disabled={isSubmitting || otp.length !== 6}
-                        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-black hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                        className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[11px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Reset Access'}
                     </button>
@@ -106,7 +106,7 @@ const AdminLogin: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => setRecoveryStep('email')}
-                        className="w-full text-center text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                        className="w-full text-center text-xs font-medium text-[#999999] hover:text-[#E2DCC8] transition-colors"
                     >
                         Resend Token
                     </button>
@@ -117,18 +117,18 @@ const AdminLogin: React.FC = () => {
         // 2. RECOVERY: EMAIL
         if (recoveryStep === 'email') {
             return (
-                <form onSubmit={handleRecoveryRequest} className="space-y-6 animate-in slide-in-from-right-4 duration-300">
-                    <div className="space-y-2">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Administrator Email</label>
+                <form onSubmit={handleRecoveryRequest} className="space-y-5 animate-in slide-in-from-right-4 duration-300">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading ml-1">Administrator Email</label>
                         <div className="relative group">
-                            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                            <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" />
                             <input
                                 type="email"
                                 required
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="admin@catalog.team"
-                                className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                                className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[11px] pl-12 pr-4 py-3.5 text-sm font-medium text-white focus:border-[#0F3D3E] focus:ring-2 focus:ring-[#0F3D3E]/20 outline-none transition-all placeholder:text-[#555555]"
                             />
                         </div>
                     </div>
@@ -136,7 +136,7 @@ const AdminLogin: React.FC = () => {
                     <button
                         type="submit"
                         disabled={isSubmitting}
-                        className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-black hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70"
+                        className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[11px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                     >
                         {isSubmitting ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Request Token Reset'}
                     </button>
@@ -144,9 +144,9 @@ const AdminLogin: React.FC = () => {
                     <button
                         type="button"
                         onClick={() => setRecoveryStep('none')}
-                        className="w-full flex items-center justify-center gap-1 text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors"
+                        className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-[#999999] hover:text-white transition-colors"
                     >
-                        <ArrowLeft size={10} /> Back to Login
+                        <ArrowLeft size={14} /> Back to Login
                     </button>
                 </form>
             );
@@ -154,53 +154,53 @@ const AdminLogin: React.FC = () => {
 
         // 3. LOGIN
         return (
-            <form onSubmit={handleLoginSubmit} className="space-y-6 animate-in fade-in duration-300">
+            <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in fade-in duration-300">
                 {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-600 text-xs font-bold p-3 rounded-xl flex items-center gap-2">
+                    <div className="bg-red-950/40 border border-red-800/60 text-red-400 text-xs font-medium p-3 rounded-[11px] flex items-center gap-2">
                         <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
                         {error}
                     </div>
                 )}
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Team Email or Admin ID</label>
+                <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading ml-1">Team Email or Admin ID</label>
                     <div className="relative group">
-                        <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                        <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" />
                         <input
                             type="text"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             placeholder="admin@catalog.team or admin_id"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-4 py-3.5 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                            className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[11px] pl-12 pr-4 py-3.5 text-sm font-medium text-white focus:border-[#0F3D3E] focus:ring-2 focus:ring-[#0F3D3E]/20 outline-none transition-all placeholder:text-[#555555]"
                         />
                     </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                     <div className="flex justify-between items-center ml-1">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Secure Token</label>
+                        <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading">Secure Token</label>
                         <button
                             type="button"
                             onClick={() => setRecoveryStep('email')}
-                            className="text-[10px] font-bold text-indigo-600 hover:text-indigo-500 transition-colors"
+                            className="text-[10px] font-bold text-[#E2DCC8] hover:underline transition-colors font-heading"
                         >
                             Reset Token?
                         </button>
                     </div>
                     <div className="relative group">
-                        <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-600 transition-colors" />
+                        <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" />
                         <input
                             type={showPassword ? "text" : "password"}
                             required
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             placeholder="••••••••••••"
-                            className="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-12 pr-12 py-3.5 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-600/5 outline-none transition-all placeholder:text-slate-300"
+                            className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[11px] pl-12 pr-12 py-3.5 text-sm font-medium text-white focus:border-[#0F3D3E] focus:ring-2 focus:ring-[#0F3D3E]/20 outline-none transition-all placeholder:text-[#555555]"
                         />
                         <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors"
+                            className="absolute right-4 top-1/2 -translate-y-1/2 text-[#666666] hover:text-white transition-colors"
                         >
                             {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
@@ -210,7 +210,7 @@ const AdminLogin: React.FC = () => {
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl hover:bg-black hover:-translate-y-0.5 transition-all flex items-center justify-center gap-2 disabled:opacity-70 mt-6"
+                    className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[11px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-4 active:scale-98"
                 >
                     {isSubmitting ? (
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
@@ -225,16 +225,15 @@ const AdminLogin: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-[#0f172a] flex items-center justify-center p-6 font-sans">
-            <div className="w-full max-w-md bg-white rounded-3xl shadow-[0_0_50px_rgba(79,70_229,0.15)] overflow-hidden">
-                <div className="bg-indigo-600 p-8 text-center relative overflow-hidden">
-                    <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
+        <div className="min-h-screen w-full bg-[#100F0F] text-white flex items-center justify-center p-6 font-sans">
+            <div className="w-full max-w-md bg-[#161616] rounded-[24px] border border-[#262626] shadow-2xl overflow-hidden">
+                <div className="bg-[#1c1c1c] p-8 text-center relative overflow-hidden border-b border-[#262626]">
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="w-16 h-16 bg-white/10 rounded-2xl flex items-center justify-center backdrop-blur-md mb-4 shadow-inner border border-white/20">
-                            <ShieldCheck size={32} className="text-white" />
+                        <div className="w-14 h-14 bg-[#0F3D3E]/10 border border-[#0F3D3E]/30 rounded-[14px] flex items-center justify-center mb-3">
+                            <ShieldCheck size={28} className="text-[#E2DCC8]" />
                         </div>
-                        <h2 className="text-2xl font-black text-white tracking-tight">Catalog Team</h2>
-                        <p className="text-indigo-200 text-xs font-bold uppercase tracking-widest mt-1">Authorized Personnel Only</p>
+                        <h2 className="text-2xl font-medium text-white tracking-tight font-heading">Catalog Team</h2>
+                        <p className="text-[#999999] text-xs font-medium uppercase tracking-widest mt-1">Authorized Personnel Only</p>
                     </div>
                 </div>
 
@@ -242,12 +241,12 @@ const AdminLogin: React.FC = () => {
                     {renderContent()}
 
                     {recoveryStep === 'none' && (
-                        <div className="mt-8 pt-6 border-t border-slate-50 text-center">
+                        <div className="mt-6 pt-5 border-t border-[#262626] text-center">
                             <button
                                 onClick={() => setView('dashboard')}
-                                className="text-[10px] font-bold text-slate-400 hover:text-indigo-600 flex items-center justify-center gap-1 mx-auto transition-colors"
+                                className="text-xs font-medium text-[#999999] hover:text-[#E2DCC8] flex items-center justify-center gap-1.5 mx-auto transition-colors font-heading"
                             >
-                                <ArrowLeft size={10} /> Back to User Login
+                                <ArrowLeft size={14} /> Back to User Login
                             </button>
                         </div>
                     )}

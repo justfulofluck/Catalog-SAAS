@@ -89,7 +89,7 @@ const ContextMenu: React.FC<Props> = ({ x, y, onClose, triggerSource = 'right-cl
       </div>
 
       {hasSubmenu && activeSubmenu === id && (
-        <div className="absolute left-full top-0 ml-1 w-48 bg-white border border-slate-200 shadow-2xl rounded-2xl py-1 z-[100] animate-in fade-in slide-in-from-left-2 duration-150">
+        <div className="absolute left-full top-0 ml-1 w-48 bg-white border border-slate-200 shadow-2xl rounded-[4px] py-1 z-[100] animate-in fade-in slide-in-from-left-2 duration-150">
           <SubmenuItem icon={AlignLeft} label="Left" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'left'))} />
           <SubmenuItem icon={AlignCenter} label="Centre" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'center'))} />
           <SubmenuItem icon={AlignRight} label="Right" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'right'))} />
@@ -116,7 +116,7 @@ const ContextMenu: React.FC<Props> = ({ x, y, onClose, triggerSource = 'right-cl
 
   return (
     <div
-      className="fixed z-[1000] w-64 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-[0_30px_60px_rgba(0,0,0,0.15)] rounded-2xl py-1 overflow-visible animate-in zoom-in-95 duration-150"
+      className="fixed z-[1000] w-64 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-[0_30px_60px_rgba(0,0,0,0.15)] rounded-[4px] py-1 overflow-visible animate-in zoom-in-95 duration-150"
       style={{ left: x, top: y }}
       onContextMenu={(e) => e.preventDefault()}
       onClick={(e) => e.stopPropagation()}

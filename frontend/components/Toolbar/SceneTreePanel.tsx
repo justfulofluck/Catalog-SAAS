@@ -39,7 +39,7 @@ const SceneTreePanel: React.FC = () => {
                 onDragOver={(e) => handleDragOver(e, section, index, displayList)}
                 onDragEnd={handleDragEnd}
                 onClick={() => setSelectedElements([el.id])}
-                className={`group flex items-center gap-2 px-2 py-1.5 rounded-lg mb-0.5 text-[11px] font-medium border border-transparent transition-all select-none relative
+                className={`group flex items-center gap-2 px-2 py-1.5 rounded-[4px] mb-0.5 text-[11px] font-medium border border-transparent transition-all select-none relative
                     ${isSelected
                         ? (isDark ? 'bg-indigo-500/20 border-indigo-500/30 text-indigo-200' : 'bg-indigo-50 border-indigo-100 text-indigo-700')
                         : (isDark ? 'text-slate-300 hover:bg-slate-800' : 'text-slate-600 hover:bg-slate-50')
@@ -174,7 +174,7 @@ const SceneTreePanel: React.FC = () => {
     return (
         <div
             ref={panelRef}
-            className={`fixed w-64 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border flex flex-col overflow-hidden z-[100] backdrop-blur-md transition-shadow ${isDark ? 'bg-slate-900/90 border-slate-700' : 'bg-white/95 border-slate-200'}`}
+            className={`fixed w-64 rounded-[4px] shadow-[0_20px_50px_rgba(0,0,0,0.2)] border flex flex-col overflow-hidden z-[100] backdrop-blur-md transition-shadow ${isDark ? 'bg-slate-900/90 border-slate-700' : 'bg-white/95 border-slate-200'}`}
             style={{ left: position.x, top: position.y, height: '500px' }}
         >
             {/* Header - Draggable */}
@@ -188,7 +188,7 @@ const SceneTreePanel: React.FC = () => {
                 </div>
                 <button
                     onClick={() => setIsSceneTreeOpen(false)}
-                    className={`p-1 rounded-md transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-400'}`}
+                    className={`p-1 rounded-[4px] transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-400' : 'hover:bg-slate-200 text-slate-400'}`}
                 >
                     <X size={12} />
                 </button>

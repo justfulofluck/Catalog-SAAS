@@ -16,7 +16,7 @@ const PagePreview: React.FC<{ page: any; index: number; catalog?: any }> = ({ pa
   const mr = catalog?.marginRight ?? 0;
 
   return (
-    <div className="w-48 aspect-[1/1.41] bg-white rounded-lg shadow-xl border border-slate-200 p-0 relative overflow-hidden">
+    <div className="w-48 aspect-[1/1.41] bg-white rounded-[4px] shadow-xl border border-slate-200 p-0 relative overflow-hidden">
       <div className="absolute top-2 left-2 text-[10px] font-black text-slate-300 z-10 pointer-events-none">P.{index + 1}</div>
 
       {/* Layout Visualization Layer - Scaled to match container */}
@@ -117,14 +117,14 @@ const PageManager: React.FC = () => {
         <div ref={dropdownRef} className="relative">
           <button
             onClick={() => setDropdownOpen(!isDropdownOpen)}
-            className="w-10 h-10 flex items-center justify-center bg-indigo-600 rounded-xl hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
+            className="w-10 h-10 flex items-center justify-center bg-indigo-600 rounded-[4px] hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 transition-all active:scale-95"
             title="Add Page"
           >
             <Plus size={20} className={`transition-transform duration-300 ${isDropdownOpen ? 'rotate-45' : ''}`} />
           </button>
 
           {isDropdownOpen && (
-            <div className="absolute right-full mr-2 top-0 w-56 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl z-[100] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            <div className="absolute right-full mr-2 top-0 w-56 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[4px] z-[100] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
               <div className="px-4 py-2 border-b border-slate-50 mb-1">
                 <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Select Blueprint</p>
               </div>
@@ -134,7 +134,7 @@ const PageManager: React.FC = () => {
                   onClick={() => handleAddPage(pt.type)}
                   className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
+                  <div className="w-8 h-8 rounded-[4px] bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
                     {pt.icon}
                   </div>
                   <div>
@@ -158,7 +158,7 @@ const PageManager: React.FC = () => {
           >
             <button
               className={`
-                w-10 h-10 rounded-xl flex items-center justify-center text-[10px] font-black transition-all relative
+                w-10 h-10 rounded-[4px] flex items-center justify-center text-[10px] font-black transition-all relative
                 ${currentPageIndex === index ? 'bg-indigo-50 text-indigo-600 ring-2 ring-indigo-600 ring-offset-2' : 'bg-slate-50 text-slate-400 hover:bg-slate-100 hover:text-slate-600'}
               `}
               onClick={() => setCurrentPageIndex(index)}
@@ -183,7 +183,7 @@ const PageManager: React.FC = () => {
       </div>
 
       <div className="p-4 border-t flex flex-col items-center gap-4">
-        <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-300 flex items-center justify-center">
+        <div className="w-8 h-8 rounded-[4px] bg-slate-50 text-slate-300 flex items-center justify-center">
           <Layout size={16} />
         </div>
       </div>
