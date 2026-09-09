@@ -3,6 +3,8 @@ import { CanvasElement, ElementType, Product, Catalog } from '../../types';
 import { workerPool } from '../../utils/workerPool';
 import { useStore } from '../../store/useStore';
 import { resolveFieldLabel } from '../../utils/fieldUtils';
+import { normalizeImageUrl } from '../../utils/imageUtils';
+import { applyCanvaSelectionStyle } from '../../utils/canvaControls';
 
 // Ensure all fabric images are loaded with crossOrigin = 'anonymous' to prevent tainted canvases
 config.imageProperties = { ...config.imageProperties, crossOrigin: 'anonymous' };
@@ -45,22 +47,92 @@ function rgba(color: string, opacity: number): string {
   return color;
 }
 
-function parseGradient(fillStr: string, w: number, h: number): { stops: { offset: number; color: string }[]; coords: { x1: number; y1: number; x2: number; y2: number } } | null {
+export function parseGradient(fillStr: string, w: number, h: number): { stops: { offset: number; color: string }[]; coords: { x1: number; y1: number; x2: number; y2: number } } | null {
   if (!fillStr || !fillStr.includes('linear-gradient')) return null;
-  const match = fillStr.match(/linear-gradient\s*\(\s*([^,]+)\s*,\s*(#[a-fA-F0-9]+)\s*,\s*(#[a-fA-F0-9]+)\s*\)/i);
-  if (!match) return null;
-  const dir = match[1].trim();
-  const c1 = match[2].trim();
-  const c2 = match[3].trim();
-  let coords: { x1: number; y1: number; x2: number; y2: number };
-  switch (dir) {
-    case 'to right': coords = { x1: 0, y1: 0, x2: w, y2: 0 }; break;
-    case 'to bottom': coords = { x1: 0, y1: 0, x2: 0, y2: h }; break;
-    case 'to bottom right': coords = { x1: 0, y1: 0, x2: w, y2: h }; break;
-    case 'to top right': coords = { x1: 0, y1: h, x2: w, y2: 0 }; break;
-    default: coords = { x1: 0, y1: 0, x2: w, y2: 0 };
+
+  // Extract contents inside linear-gradient(...)
+  const innerMatch = fillStr.match(/linear-gradient\s*\((.*)\)/i);
+  if (!innerMatch) return null;
+
+  // Split arguments by comma respecting parenthesis
+  const parts: string[] = [];
+  let current = '';
+  let parenDepth = 0;
+  for (const ch of innerMatch[1]) {
+    if (ch === '(') parenDepth++;
+    else if (ch === ')') parenDepth--;
+    if (ch === ',' && parenDepth === 0) {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
   }
-  return { coords, stops: [{ offset: 0, color: c1 }, { offset: 1, color: c2 }] };
+  if (current.trim()) parts.push(current.trim());
+
+  if (parts.length < 2) return null;
+
+  let dir = 'to right';
+  let colorParts: string[] = [];
+
+  const firstPart = parts[0].toLowerCase();
+  if (firstPart.includes('deg') || firstPart.startsWith('to ')) {
+    dir = parts[0];
+    colorParts = parts.slice(1);
+  } else {
+    colorParts = parts;
+  }
+
+  if (colorParts.length < 2) return null;
+
+  let coords: { x1: number; y1: number; x2: number; y2: number };
+  const d = dir.toLowerCase().trim();
+
+  if (d.includes('deg')) {
+    const angle = parseFloat(d) || 0;
+    const rad = ((angle - 90) * Math.PI) / 180;
+    const cx = w / 2;
+    const cy = h / 2;
+    const halfLen = Math.hypot(w, h) / 2;
+    coords = {
+      x1: Math.round(cx - Math.cos(rad) * halfLen),
+      y1: Math.round(cy - Math.sin(rad) * halfLen),
+      x2: Math.round(cx + Math.cos(rad) * halfLen),
+      y2: Math.round(cy + Math.sin(rad) * halfLen),
+    };
+  } else {
+    switch (d) {
+      case 'to right': coords = { x1: 0, y1: 0, x2: w, y2: 0 }; break;
+      case 'to left': coords = { x1: w, y1: 0, x2: 0, y2: 0 }; break;
+      case 'to bottom': coords = { x1: 0, y1: 0, x2: 0, y2: h }; break;
+      case 'to top': coords = { x1: 0, y1: h, x2: 0, y2: 0 }; break;
+      case 'to bottom right':
+      case 'to right bottom': coords = { x1: 0, y1: 0, x2: w, y2: h }; break;
+      case 'to top right':
+      case 'to right top': coords = { x1: 0, y1: h, x2: w, y2: 0 }; break;
+      case 'to bottom left':
+      case 'to left bottom': coords = { x1: w, y1: 0, x2: 0, y2: h }; break;
+      case 'to top left':
+      case 'to left top': coords = { x1: w, y1: h, x2: 0, y2: 0 }; break;
+      default: coords = { x1: 0, y1: 0, x2: w, y2: 0 };
+    }
+  }
+
+  const stops = colorParts.map((c, i) => {
+    // Parse color and optional offset e.g. "#FF0000 50%"
+    const cTokens = c.trim().split(/\s+(?=[0-9%])/);
+    const colorStr = cTokens[0].trim();
+    let offset = i / (colorParts.length - 1);
+    if (cTokens.length > 1) {
+      const parsedOffset = parseFloat(cTokens[1]);
+      if (!isNaN(parsedOffset)) {
+        offset = cTokens[1].includes('%') ? parsedOffset / 100 : parsedOffset;
+      }
+    }
+    return { offset, color: colorStr };
+  });
+
+  return { coords, stops };
 }
 
 function applyFill(obj: any, fill: string | undefined, w: number, h: number) {
@@ -281,7 +353,7 @@ async function loadSvgAsImage(svgString: string): Promise<HTMLImageElement> {
   });
 }
 
-export async function elementToFabricObject(
+async function _elementToFabricObject(
   el: CanvasElement,
   products: Product[],
   catalog?: Catalog,
@@ -435,7 +507,7 @@ export async function elementToFabricObject(
       return rect;
     }
     try {
-      let finalSrc = el.src;
+      let finalSrc = normalizeImageUrl(el.src);
       // Offload heavy image filtering and decoding to background worker if filters are present
       if (el.filters && (el.filters.brightness || el.filters.contrast || el.filters.blur)) {
         try {
@@ -452,7 +524,12 @@ export async function elementToFabricObject(
         }
       }
 
-      const img = await FabricImage.fromURL(finalSrc, { crossOrigin: 'anonymous' });
+      let img: FabricImage;
+      try {
+        img = await FabricImage.fromURL(finalSrc, { crossOrigin: 'anonymous' });
+      } catch {
+        img = await FabricImage.fromURL(finalSrc);
+      }
       img.set({
         ...common,
         scaleX: el.width / (img.width || 1),
@@ -499,11 +576,13 @@ export async function elementToFabricObject(
       const children: any[] = [];
       const shapeObj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill);
       if (shapeObj) children.push(shapeObj);
+      const iconFontFamily = (ic as any).fontFamily || (ic.iconLibrary === 'fontawesome' ? 'Font Awesome 6 Free' : 'Inter');
+      const iconFontWeight = (ic as any).fontWeight || ('900' as any);
       children.push(new Textbox(ic.iconName, {
-        left: 0, top: 0, width: w, height: h,
-        fontSize: iconSize, fontFamily: ic.iconLibrary === 'fontawesome' ? 'Font Awesome 6 Free' : 'Inter',
+        left: 0, top: Math.max(0, (h - iconSize * 1.15) / 2), width: w, height: h,
+        fontSize: iconSize, fontFamily: iconFontFamily,
         fill: ic.color || '#ffffff', textAlign: 'center', text: ic.iconName,
-        fontWeight: '900' as any, selectable: false, evented: false,
+        fontWeight: iconFontWeight, selectable: false, evented: false,
       }));
       const group = new Group(children, {
         left: el.x,
@@ -618,8 +697,14 @@ export async function elementToFabricObject(
 
       if (product.image || el.src) {
         try {
-          const imgUrl = (el.src || product.image).startsWith('/') ? `http://127.0.0.1:8000${el.src || product.image}` : (el.src || product.image);
-          const img = await FabricImage.fromURL(imgUrl, { crossOrigin: 'anonymous' });
+          const rawUrl = el.src || product.image;
+          const imgUrl = normalizeImageUrl(rawUrl);
+          let img: FabricImage;
+          try {
+            img = await FabricImage.fromURL(imgUrl, { crossOrigin: 'anonymous' });
+          } catch {
+            img = await FabricImage.fromURL(imgUrl);
+          }
           
           const naturalW = img.width || 1;
           const naturalH = img.height || 1;
@@ -725,6 +810,7 @@ export async function elementToFabricObject(
       clipPath: clipPath,
       opacity: el.opacity ?? 1,
       objectCaching: false,
+      subTargetCheck: true,
     });
 
     (group as any).id = el.id;
@@ -959,6 +1045,7 @@ export async function elementToFabricObject(
       originY: 'top',
       opacity: el.opacity ?? 1,
       objectCaching: false,
+      subTargetCheck: true,
     });
 
     (tableGroup as any).id = el.id;
@@ -967,6 +1054,18 @@ export async function elementToFabricObject(
   }
 
   return null;
+}
+
+export async function elementToFabricObject(
+  el: CanvasElement,
+  products: Product[],
+  catalog?: Catalog,
+): Promise<any> {
+  const obj = await _elementToFabricObject(el, products, catalog);
+  if (obj) {
+    applyCanvaSelectionStyle(obj);
+  }
+  return obj;
 }
 
 export async function renderElementsToCanvas(

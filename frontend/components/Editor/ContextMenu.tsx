@@ -1,168 +1,659 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import {
   Copy,
-  Scissors,
   Clipboard,
+  FilePlus,
   Trash2,
   Lock,
   Unlock,
-  Link as LinkIcon,
-  MessageSquare,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  AlignVerticalJustifyStart,
-  AlignVerticalJustifyCenter,
-  AlignVerticalJustifyEnd,
-  ChevronRight,
-  Layers,
-  Sparkles,
-  Type,
-  Layout
+  ChevronRight
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { CanvasElement } from '../../types';
 
-interface Props {
-  x: number;
-  y: number;
-  onClose: () => void;
-  triggerSource?: 'right-click' | 'toolbar';
+// Pixel-perfect Canva SVG Icons for Layer Submenu
+const BringToFrontIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M8 5V1m0 0L5.5 3.5M8 1l2.5 2.5" />
+    <path d="M8 6.5L13.5 9.25L8 12L2.5 9.25L8 6.5Z" />
+    <path d="M2.5 12L8 14.75L13.5 12" />
+  </svg>
+);
+
+const BringForwardIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M8 6V2m0 0L5.5 4.5M8 2l2.5 2.5" />
+    <path d="M8 8.5L13.5 11.25L8 14L2.5 11.25L8 8.5Z" />
+  </svg>
+);
+
+const SendBackwardIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M8 2L13.5 4.75L8 7.5L2.5 4.75L8 2Z" />
+    <path d="M8 10v4m0 0l2.5-2.5M8 14L5.5 11.5" />
+  </svg>
+);
+
+const SendToBackIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M8 1.25L13.5 4L8 6.75L2.5 4L8 1.25Z" />
+    <path d="M2.5 6.75L8 9.5L13.5 6.75" />
+    <path d="M8 11v4m0 0l2.5-2.5M8 15L5.5 12.5" />
+  </svg>
+);
+
+const ShowLayersIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M8 2L13.5 4.75L8 7.5L2.5 4.75L8 2Z" />
+    <path d="M2.5 8L8 10.75L13.5 8" />
+    <path d="M2.5 11.25L8 14L13.5 11.25" />
+  </svg>
+);
+
+// Pixel-perfect Canva SVG Icons for Align to Page Submenu
+const AlignLeftIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="2" y1="2" x2="2" y2="14" />
+    <rect x="2" y="3.5" width="8.5" height="3" rx="1.5" />
+    <rect x="2" y="9.5" width="5.5" height="3" rx="1.5" />
+  </svg>
+);
+
+const AlignCenterHorizontalIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="8" y1="1" x2="8" y2="15" />
+    <rect x="3.5" y="3.5" width="9" height="3" rx="1.5" />
+    <rect x="5.5" y="9.5" width="5" height="3" rx="1.5" />
+  </svg>
+);
+
+const AlignRightIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="14" y1="2" x2="14" y2="14" />
+    <rect x="5.5" y="3.5" width="8.5" height="3" rx="1.5" />
+    <rect x="8.5" y="9.5" width="5.5" height="3" rx="1.5" />
+  </svg>
+);
+
+const AlignTopIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="2" y1="2" x2="14" y2="2" />
+    <rect x="3.5" y="2" width="3" height="8.5" rx="1.5" />
+    <rect x="9.5" y="2" width="3" height="5.5" rx="1.5" />
+  </svg>
+);
+
+const AlignMiddleVerticalIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="1" y1="8" x2="15" y2="8" />
+    <rect x="3.5" y="3.5" width="3" height="9" rx="1.5" />
+    <rect x="9.5" y="5.5" width="3" height="5" rx="1.5" />
+  </svg>
+);
+
+const AlignBottomIcon: React.FC<{ size?: number; className?: string }> = ({ size = 16, className = '' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <line x1="2" y1="14" x2="14" y2="14" />
+    <rect x="3.5" y="5.5" width="3" height="8.5" rx="1.5" />
+    <rect x="9.5" y="8.5" width="3" height="5.5" rx="1.5" />
+  </svg>
+);
+
+// Reorder helper for layer positioning
+function calculateNewLayerOrder(
+  elements: CanvasElement[],
+  selectedIds: string[],
+  action: 'bringToFront' | 'bringForward' | 'sendBackward' | 'sendToBack'
+): string[] {
+  const currentIds = elements.map(e => e.id);
+  if (selectedIds.length === 0) return currentIds;
+
+  if (action === 'bringToFront') {
+    const unselected = currentIds.filter(id => !selectedIds.includes(id));
+    const selected = currentIds.filter(id => selectedIds.includes(id));
+    return [...unselected, ...selected];
+  }
+
+  if (action === 'sendToBack') {
+    const unselected = currentIds.filter(id => !selectedIds.includes(id));
+    const selected = currentIds.filter(id => selectedIds.includes(id));
+    return [...selected, ...unselected];
+  }
+
+  if (action === 'bringForward') {
+    const list = [...currentIds];
+    for (let i = list.length - 2; i >= 0; i--) {
+      if (selectedIds.includes(list[i]) && !selectedIds.includes(list[i + 1])) {
+        const temp = list[i];
+        list[i] = list[i + 1];
+        list[i + 1] = temp;
+      }
+    }
+    return list;
+  }
+
+  if (action === 'sendBackward') {
+    const list = [...currentIds];
+    for (let i = 1; i < list.length; i++) {
+      if (selectedIds.includes(list[i]) && !selectedIds.includes(list[i - 1])) {
+        const temp = list[i];
+        list[i] = list[i - 1];
+        list[i - 1] = temp;
+      }
+    }
+    return list;
+  }
+
+  return currentIds;
 }
 
-const ContextMenu: React.FC<Props> = ({ x, y, onClose, triggerSource = 'right-click' }) => {
+export interface ContextMenuProps {
+  x: number;
+  y: number;
+  type: 'page' | 'element';
+  pageIndex: number;
+  targetId?: string;
+  onClose: () => void;
+}
+
+const getSafeCoords = (
+  rawX: number,
+  rawY: number,
+  menuType: 'page' | 'element',
+  actualRect?: DOMRect | null
+) => {
+  const menuWidth = actualRect?.width || 260;
+  const menuHeight = actualRect?.height || (menuType === 'page' ? 260 : 320);
+  const margin = 12;
+
+  // Validate raw coordinates
+  let targetX = (typeof rawX === 'number' && !isNaN(rawX) && rawX > 0)
+    ? rawX
+    : (typeof window !== 'undefined' && (window as any).__lastContextMenuPos?.x > 0)
+      ? (window as any).__lastContextMenuPos.x
+      : Math.round((typeof window !== 'undefined' ? window.innerWidth : 1000) / 2 - menuWidth / 2);
+
+  let targetY = (typeof rawY === 'number' && !isNaN(rawY) && rawY > 0)
+    ? rawY
+    : (typeof window !== 'undefined' && (window as any).__lastContextMenuPos?.y > 0)
+      ? (window as any).__lastContextMenuPos.y
+      : Math.round((typeof window !== 'undefined' ? window.innerHeight : 800) / 2 - menuHeight / 2);
+
+  // Horizontal placement
+  const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+  const screenHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+  let posX = targetX;
+  if (posX + menuWidth > screenWidth - margin) {
+    posX = targetX - menuWidth;
+    if (posX < margin) {
+      posX = Math.max(margin, screenWidth - menuWidth - margin);
+    }
+  } else {
+    posX = Math.max(margin, posX);
+  }
+
+  // Vertical placement
+  let posY = targetY;
+  if (posY + menuHeight > screenHeight - margin) {
+    posY = Math.max(margin, screenHeight - menuHeight - margin);
+  } else {
+    posY = Math.max(margin, posY);
+  }
+
+  return { x: Math.round(posX), y: Math.round(posY) };
+};
+
+const ContextMenu: React.FC<ContextMenuProps> = ({
+  x,
+  y,
+  type,
+  pageIndex,
+  targetId,
+  onClose
+}) => {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  const [coords, setCoords] = useState(() => getSafeCoords(x, y, type));
+
   const {
-    currentPageIndex,
-    selectedElementIds,
     catalog,
+    selectedElementIds,
+    setSelectedElementIds,
     duplicateElement,
     removeElement,
     toggleLock,
     alignElements,
-    removeProductFromPage
+    reorderElements,
+    copySelectedElements,
+    pasteElements,
+    addPage,
+    duplicatePage,
+    setPageBackground,
+    pushHistory
   } = useStore();
 
-  const [activeSubmenu, setActiveSubmenu] = useState<string | null>(null);
+  const currentPage = catalog.pages[pageIndex];
+  const selectedElements = (currentPage?.elements || []).filter(el =>
+    selectedElementIds.includes(el.id)
+  );
 
-  const currentPage = catalog.pages[currentPageIndex];
-  const selectedElements = currentPage.elements.filter(el => selectedElementIds.includes(el.id));
-  const isAllLocked = selectedElements.every(el => el.locked);
-  const isAnyLocked = selectedElements.some(el => el.locked);
+  const isAllLocked = selectedElements.length > 0 && selectedElements.every(el => el.locked);
 
-  const productElements = selectedElements.filter(el => el.productId);
-  const productIds = Array.from(new Set(productElements.map(el => el.productId!)));
+  // Position adjustment on mount or whenever x/y/type changes
+  useEffect(() => {
+    const rect = menuRef.current?.getBoundingClientRect();
+    setCoords(getSafeCoords(x, y, type, rect));
+  }, [x, y, type]);
 
-  const handleAction = (action: () => void) => {
-    action();
+  // Close on Escape
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [onClose]);
+
+  const execute = (fn: () => void) => {
+    fn();
     onClose();
   };
 
-  const MenuItem = ({
+  // --- ACTIONS: ELEMENT ---
+  const handleCopyElement = () => {
+    execute(() => {
+      copySelectedElements();
+    });
+  };
+
+  const handlePaste = () => {
+    execute(() => {
+      pasteElements();
+    });
+  };
+
+  const handleDuplicateElement = () => {
+    execute(() => {
+      selectedElementIds.forEach(id => duplicateElement(pageIndex, id));
+    });
+  };
+
+  const handleDeleteElement = () => {
+    execute(() => {
+      pushHistory();
+      selectedElementIds.forEach(id => removeElement(pageIndex, id));
+      setSelectedElementIds([]);
+    });
+  };
+
+  const handleLayerAction = (action: 'bringToFront' | 'bringForward' | 'sendBackward' | 'sendToBack') => {
+    execute(() => {
+      if (!currentPage) return;
+      pushHistory();
+      const newOrder = calculateNewLayerOrder(currentPage.elements, selectedElementIds, action);
+      reorderElements(pageIndex, newOrder);
+    });
+  };
+
+  const handleAlign = (alignment: 'top' | 'middle' | 'bottom' | 'left' | 'center' | 'right') => {
+    execute(() => {
+      alignElements(pageIndex, selectedElementIds, alignment);
+    });
+  };
+
+  const handleToggleLockElement = () => {
+    execute(() => {
+      selectedElementIds.forEach(id => toggleLock(pageIndex, id));
+    });
+  };
+
+  // --- ACTIONS: PAGE ---
+  const handleCopyPage = () => {
+    execute(() => {
+      if (currentPage && currentPage.elements.length > 0) {
+        const allIds = currentPage.elements.map(el => el.id);
+        setSelectedElementIds(allIds);
+        copySelectedElements();
+      }
+    });
+  };
+
+  const handleAddPage = () => {
+    execute(() => {
+      addPage('interior');
+    });
+  };
+
+  const handleDuplicatePage = () => {
+    execute(() => {
+      duplicatePage(pageIndex);
+    });
+  };
+
+  const handleDeleteBackground = () => {
+    execute(() => {
+      setPageBackground(pageIndex, '#ffffff');
+    });
+  };
+
+  const handleLockBackground = () => {
+    execute(() => {
+      if (!currentPage) return;
+      pushHistory();
+      const allLocked = currentPage.elements.length > 0 && currentPage.elements.every(el => el.locked);
+      currentPage.elements.forEach(el => {
+        if (allLocked ? el.locked : !el.locked) {
+          toggleLock(pageIndex, el.id);
+        }
+      });
+    });
+  };
+
+  // Submenu placement (left or right based on screen edge)
+  const isSubmenuLeft = coords.x + 260 + 190 > window.innerWidth;
+
+  // Reusable Menu Item Component
+  const MenuItem: React.FC<{
+    icon: any;
+    label: string;
+    shortcut?: string;
+    hasSubmenu?: boolean;
+    submenuId?: string;
+    onClick?: () => void;
+    submenuContent?: React.ReactNode;
+  }> = ({
     icon: Icon,
     label,
     shortcut,
-    onClick,
     hasSubmenu,
-    id,
-    disabled = false,
-    danger = false,
-    isPremium = false
-  }: any) => (
-    <div
-      className={`
-        flex items-center justify-between px-3 py-2 text-[13px] transition-colors cursor-pointer relative
-        ${disabled ? 'opacity-30 cursor-not-allowed' : 'hover:bg-slate-100/80 active:bg-slate-200/50'}
-        ${danger ? 'hover:text-red-600' : 'text-slate-700'}
-      `}
-      onMouseEnter={() => hasSubmenu && setActiveSubmenu(id)}
-      onMouseLeave={() => hasSubmenu && setActiveSubmenu(null)}
-      onClick={!disabled ? onClick : undefined}
-    >
-      <div className="flex items-center gap-3">
-        <Icon size={16} className={`${danger ? 'text-red-400' : 'text-slate-400'}`} />
-        <span className="font-medium">{label}</span>
-        {isPremium && <Sparkles size={12} className="text-amber-500 ml-1" />}
-      </div>
-      <div className="flex items-center gap-2">
-        {shortcut && <span className="text-[10px] text-slate-300 font-mono uppercase tracking-tighter">{shortcut}</span>}
-        {hasSubmenu && <ChevronRight size={14} className="text-slate-300" />}
-      </div>
+    submenuId,
+    onClick,
+    submenuContent
+  }) => {
+    const isHovered = activeSubmenu === submenuId;
 
-      {hasSubmenu && activeSubmenu === id && (
-        <div className="absolute left-full top-0 ml-1 w-48 bg-white border border-slate-200 shadow-2xl rounded-[4px] py-1 z-[100] animate-in fade-in slide-in-from-left-2 duration-150">
-          <SubmenuItem icon={AlignLeft} label="Left" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'left'))} />
-          <SubmenuItem icon={AlignCenter} label="Centre" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'center'))} />
-          <SubmenuItem icon={AlignRight} label="Right" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'right'))} />
-          <div className="h-px bg-slate-50 my-1 mx-2" />
-          <SubmenuItem icon={AlignVerticalJustifyStart} label="Top" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'top'))} />
-          <SubmenuItem icon={AlignVerticalJustifyCenter} label="Middle" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'middle'))} />
-          <SubmenuItem icon={AlignVerticalJustifyEnd} label="Bottom" onClick={() => handleAction(() => alignElements(currentPageIndex, selectedElementIds, 'bottom'))} />
+    return (
+      <div
+        className="relative"
+        onMouseEnter={() => {
+          if (hasSubmenu && submenuId) setActiveSubmenu(submenuId);
+        }}
+        onMouseLeave={() => {
+          if (hasSubmenu && submenuId) setActiveSubmenu(null);
+        }}
+      >
+        <div
+          onClick={onClick}
+          className="flex items-center justify-between px-3 py-1.5 rounded-[6px] hover:bg-[#32363e] active:bg-[#3d424c] cursor-pointer text-[13px] text-white select-none transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <Icon size={16} strokeWidth={1.8} className="text-[#cbd5e1] group-hover:text-white shrink-0" />
+            <span className="font-normal text-[#f1f5f9] group-hover:text-white leading-tight tracking-wide">{label}</span>
+          </div>
+
+          <div className="flex items-center gap-1.5 ml-3">
+            {shortcut && (
+              <span className="text-[10px] font-medium text-[#a0a6b5] bg-[#31353d] px-1.5 py-0.5 rounded-[4px] tracking-tight font-sans">
+                {shortcut}
+              </span>
+            )}
+            {hasSubmenu && (
+              <ChevronRight size={14} className="text-[#a0a6b5] group-hover:text-white shrink-0" />
+            )}
+          </div>
         </div>
+
+        {/* Submenu Floating Panel */}
+        {hasSubmenu && isHovered && submenuContent && (
+          <div
+            className={`absolute top-0 bg-[#22252a] border border-[#343842] shadow-[0_20px_50px_rgba(0,0,0,0.75),0_6px_20px_rgba(0,0,0,0.5)] rounded-[10px] py-1.5 px-1 z-[1001] animate-in fade-in zoom-in-95 duration-100 ${
+              isSubmenuLeft ? 'right-[calc(100%+6px)]' : 'left-[calc(100%+6px)]'
+            }`}
+            style={{ backgroundColor: '#22252a' }}
+          >
+            {submenuContent}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const SubmenuItem: React.FC<{
+    icon?: any;
+    label: string;
+    shortcut?: string;
+    disabled?: boolean;
+    onClick: () => void;
+  }> = ({ icon: Icon, label, shortcut, disabled = false, onClick }) => (
+    <div
+      onClick={!disabled ? onClick : undefined}
+      className={`flex items-center justify-between px-3 py-1.5 rounded-[6px] text-[13px] select-none transition-colors group ${
+        disabled
+          ? 'text-[#626875] cursor-default'
+          : 'text-white hover:bg-[#32363e] active:bg-[#3d424c] cursor-pointer'
+      }`}
+    >
+      <div className="flex items-center gap-2.5">
+        {Icon && (
+          <Icon
+            size={16}
+            className={`${disabled ? 'text-[#626875]' : 'text-[#cbd5e1] group-hover:text-white'} shrink-0`}
+          />
+        )}
+        <span className={`font-normal leading-tight ${disabled ? 'text-[#626875]' : 'text-[#f1f5f9] group-hover:text-white'}`}>
+          {label}
+        </span>
+      </div>
+      {shortcut && (
+        <span
+          className={`text-[10px] font-medium px-1.5 py-0.5 rounded-[4px] tracking-tight font-sans ${
+            disabled ? 'text-[#555a66] bg-[#292c33]' : 'text-[#a0a6b5] bg-[#31353d]'
+          }`}
+        >
+          {shortcut}
+        </span>
       )}
     </div>
   );
 
-  const SubmenuItem = ({ icon: Icon, label, onClick }: any) => (
-    <div
-      className="flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 hover:bg-slate-100/80 hover:text-indigo-600 cursor-pointer"
-      onClick={onClick}
-    >
-      <Icon size={14} />
-      <span>{label}</span>
-    </div>
-  );
+  const Divider = () => <div className="h-px bg-[#343842] my-1 mx-2" />;
 
-  if (selectedElementIds.length === 0 && triggerSource === 'right-click') return null;
+  // Layer bounds check
+  const pageElements = currentPage?.elements || [];
+  const selectedIndices = pageElements
+    .map((el, idx) => (selectedElementIds.includes(el.id) ? idx : -1))
+    .filter(idx => idx !== -1);
 
-  return (
-    <div
-      className="fixed z-[1000] w-64 bg-white/95 backdrop-blur-xl border border-slate-200 shadow-[0_30px_60px_rgba(0,0,0,0.15)] rounded-[4px] py-1 overflow-visible animate-in zoom-in-95 duration-150"
-      style={{ left: x, top: y }}
-      onContextMenu={(e) => e.preventDefault()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <MenuItem icon={Copy} label="Copy" shortcut="Ctrl+C" onClick={() => { }} />
-      <MenuItem icon={Clipboard} label="Paste" shortcut="Ctrl+V" onClick={() => { }} />
-      <MenuItem icon={Layers} label="Duplicate" shortcut="Ctrl+D" onClick={() => handleAction(() => selectedElementIds.forEach(id => duplicateElement(currentPageIndex, id)))} />
+  const isAtFront = selectedIndices.length > 0 && Math.max(...selectedIndices) === pageElements.length - 1;
+  const isAtBack = selectedIndices.length > 0 && Math.min(...selectedIndices) === 0;
 
-      <div className="h-px bg-slate-100 my-1 mx-2" />
+  // Alignment check relative to page canvas
+  const isLandscape = currentPage?.orientation === 'landscape';
+  const pageWidth = isLandscape ? 1123 : 794;
+  const pageHeight = isLandscape ? 794 : 1123;
+  const firstSelected = selectedElements[0];
 
-      {productIds.length > 0 && (
+  const isAlignedLeft = firstSelected ? Math.abs(firstSelected.x) < 3 : false;
+  const isAlignedCenter = firstSelected ? Math.abs((firstSelected.x + firstSelected.width / 2) - pageWidth / 2) < 4 : false;
+  const isAlignedRight = firstSelected ? Math.abs((firstSelected.x + firstSelected.width) - pageWidth) < 3 : false;
+
+  const isAlignedTop = firstSelected ? Math.abs(firstSelected.y) < 3 : false;
+  const isAlignedMiddle = firstSelected ? Math.abs((firstSelected.y + firstSelected.height / 2) - pageHeight / 2) < 4 : false;
+  const isAlignedBottom = firstSelected ? Math.abs((firstSelected.y + firstSelected.height) - pageHeight) < 3 : false;
+
+  return ReactDOM.createPortal(
+    <>
+      {/* Invisible backdrop to capture outside clicks cleanly without event race conditions */}
+      <div
+        className="fixed inset-0 z-[9998] cursor-default"
+        onMouseDown={(e) => {
+          e.stopPropagation();
+          onClose();
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }}
+      />
+
+      <div
+        ref={menuRef}
+        className="fixed z-[9999] w-[260px] bg-[#22252a] border border-[#343842] shadow-[0_20px_50px_rgba(0,0,0,0.75),0_6px_20px_rgba(0,0,0,0.5)] rounded-[10px] py-1.5 px-1 select-none animate-in fade-in zoom-in-95 duration-100"
+        style={{ left: `${coords.x}px`, top: `${coords.y}px`, backgroundColor: '#22252a' }}
+        onContextMenu={(e) => e.preventDefault()}
+        onClick={(e) => e.stopPropagation()}
+      >
+      {type === 'page' ? (
+        /* PAGE CONTEXT MENU */
         <>
+          <MenuItem icon={Copy} label="Copy" shortcut="Ctrl+C" onClick={handleCopyPage} />
+          <MenuItem icon={Clipboard} label="Paste" shortcut="Ctrl+V" onClick={handlePaste} />
+          <MenuItem icon={FilePlus} label="Add page" shortcut="Ctrl+Enter" onClick={handleAddPage} />
+          <MenuItem icon={Copy} label="Duplicate page" shortcut="Ctrl+D" onClick={handleDuplicatePage} />
+          <MenuItem icon={Trash2} label="Delete background" shortcut="DELETE" onClick={handleDeleteBackground} />
+
+          <Divider />
+          <MenuItem icon={Lock} label="Lock background" onClick={handleLockBackground} />
+        </>
+      ) : (
+        /* SCREENSHOT 2: COMPONENT CONTEXT MENU */
+        <>
+          <MenuItem icon={Copy} label="Copy" shortcut="Ctrl+C" onClick={handleCopyElement} />
+          <MenuItem icon={Clipboard} label="Paste" shortcut="Ctrl+V" onClick={handlePaste} />
+          <MenuItem icon={Copy} label="Duplicate" shortcut="Ctrl+D" onClick={handleDuplicateElement} />
+          <MenuItem icon={Trash2} label="Delete" shortcut="DELETE" onClick={handleDeleteElement} />
+
+          <Divider />
+
+          {/* Layer Submenu (Screenshot 1 of prompt) */}
           <MenuItem
-            icon={Layout}
-            label={`Clear Product Layout`}
-            onClick={() => handleAction(() => productIds.forEach(pid => removeProductFromPage(currentPageIndex, pid)))}
+            icon={ShowLayersIcon}
+            label="Layer"
+            hasSubmenu={true}
+            submenuId="layer"
+            submenuContent={
+              <div className="w-56">
+                <SubmenuItem
+                  icon={BringToFrontIcon}
+                  label="Bring to front"
+                  shortcut="Ctrl+Alt+]"
+                  disabled={isAtFront}
+                  onClick={() => handleLayerAction('bringToFront')}
+                />
+                <SubmenuItem
+                  icon={BringForwardIcon}
+                  label="Bring forward"
+                  shortcut="Ctrl+]"
+                  disabled={isAtFront}
+                  onClick={() => handleLayerAction('bringForward')}
+                />
+                <SubmenuItem
+                  icon={SendBackwardIcon}
+                  label="Send backward"
+                  shortcut="Ctrl+["
+                  disabled={isAtBack}
+                  onClick={() => handleLayerAction('sendBackward')}
+                />
+                <SubmenuItem
+                  icon={SendToBackIcon}
+                  label="Send to back"
+                  shortcut="Ctrl+Alt+["
+                  disabled={isAtBack}
+                  onClick={() => handleLayerAction('sendToBack')}
+                />
+                <Divider />
+                <SubmenuItem
+                  icon={ShowLayersIcon}
+                  label="Show layers"
+                  shortcut="Alt+1"
+                  onClick={() => execute(() => {
+                    useStore.getState().setEditorTab('pages');
+                  })}
+                />
+              </div>
+            }
           />
-          <div className="h-px bg-slate-100 my-1 mx-2" />
+
+          {/* Align to page Submenu (Screenshot 2 of prompt) */}
+          <MenuItem
+            icon={AlignLeftIcon}
+            label="Align to page"
+            hasSubmenu={true}
+            submenuId="align"
+            submenuContent={
+              <div className="w-48">
+                <SubmenuItem
+                  icon={AlignLeftIcon}
+                  label="Left"
+                  disabled={isAlignedLeft}
+                  onClick={() => handleAlign('left')}
+                />
+                <SubmenuItem
+                  icon={AlignCenterHorizontalIcon}
+                  label="Center"
+                  disabled={isAlignedCenter}
+                  onClick={() => handleAlign('center')}
+                />
+                <SubmenuItem
+                  icon={AlignRightIcon}
+                  label="Right"
+                  disabled={isAlignedRight}
+                  onClick={() => handleAlign('right')}
+                />
+                <Divider />
+                <SubmenuItem
+                  icon={AlignTopIcon}
+                  label="Top"
+                  disabled={isAlignedTop}
+                  onClick={() => handleAlign('top')}
+                />
+                <SubmenuItem
+                  icon={AlignMiddleVerticalIcon}
+                  label="Middle"
+                  disabled={isAlignedMiddle}
+                  onClick={() => handleAlign('middle')}
+                />
+                <SubmenuItem
+                  icon={AlignBottomIcon}
+                  label="Bottom"
+                  disabled={isAlignedBottom}
+                  onClick={() => handleAlign('bottom')}
+                />
+              </div>
+            }
+          />
+
+          <Divider />
+
+          {/* Lock item */}
+          <MenuItem
+            icon={isAllLocked ? Unlock : Lock}
+            label={isAllLocked ? "Unlock" : "Lock"}
+            hasSubmenu={true}
+            submenuId="lock"
+            onClick={handleToggleLockElement}
+            submenuContent={
+              <div className="w-48">
+                <SubmenuItem
+                  icon={isAllLocked ? Unlock : Lock}
+                  label={isAllLocked ? "Unlock" : "Lock"}
+                  shortcut="Alt+Shift+L"
+                  onClick={handleToggleLockElement}
+                />
+              </div>
+            }
+          />
         </>
       )}
-
-      <MenuItem
-        icon={isAnyLocked ? Unlock : Lock}
-        label={isAnyLocked ? "Unlock" : "Lock"}
-        shortcut="Alt+Shift+L"
-        onClick={() => handleAction(() => selectedElementIds.forEach(id => toggleLock(currentPageIndex, id)))}
-      />
-
-      <MenuItem icon={Layers} label="Align to page" hasSubmenu={true} id="align" />
-
-      <div className="h-px bg-slate-100 my-1 mx-2" />
-
-      <MenuItem icon={LinkIcon} label="Link" shortcut="Ctrl+K" onClick={() => { }} />
-      <MenuItem icon={MessageSquare} label="Comment" shortcut="Ctrl+Alt+N" onClick={() => { }} />
-      <MenuItem icon={Type} label="Alternative text" onClick={() => { }} />
-
-      <div className="h-px bg-slate-100 my-1 mx-2" />
-
-      <MenuItem
-        icon={Trash2}
-        label="Delete"
-        danger={true}
-        shortcut="Del"
-        onClick={() => handleAction(() => selectedElementIds.forEach(id => removeElement(currentPageIndex, id)))}
-      />
-    </div>
+      </div>
+    </>,
+    document.body
   );
 };
 

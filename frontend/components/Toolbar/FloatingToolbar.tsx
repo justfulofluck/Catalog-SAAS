@@ -80,7 +80,10 @@ const FloatingToolbar: React.FC<Props> = ({
   }, [currentPage?.elements, catalog.headerElements, catalog.footerElements, selectedElementIds]);
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const [tempLink, setTempLink] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
+  const linkPopoverRef = useRef<HTMLDivElement>(null);
   const fillInputRef = useRef<HTMLInputElement>(null);
   const strokeInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
@@ -88,10 +91,11 @@ const FloatingToolbar: React.FC<Props> = ({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setShowMoreMenu(false);
+      if (linkPopoverRef.current && !linkPopoverRef.current.contains(e.target as Node)) setShowLinkPopover(false);
     };
-    if (showMoreMenu) document.addEventListener('mousedown', handleClickOutside);
+    if (showMoreMenu || showLinkPopover) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu]);
+  }, [showMoreMenu, showLinkPopover]);
 
   if (selectedElements.length === 0) return null;
 
@@ -209,13 +213,13 @@ const FloatingToolbar: React.FC<Props> = ({
 
 
 
-  const btnClass = 'p-1.5 rounded-[4px] text-slate-500 hover:text-indigo-600 hover:bg-slate-50 transition-all';
+  const btnClass = 'p-1.5 rounded-[4px] text-[#E2DCC8]/80 hover:text-white hover:bg-[#0F3D3E]/40 transition-all active:scale-95';
 
   const isTableElement = element.type === 'table' || !!element.tableData;
 
   return (
     <div
-      className="flex flex-row items-center gap-1 bg-white rounded-[6px] shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-200 p-1.5 animate-in zoom-in-95 duration-200 backdrop-blur-sm"
+      className="flex flex-row items-center gap-0.5 bg-[#141416] text-[#EDEDED] shadow-[0_12px_40px_rgba(0,0,0,0.6)] border border-[#E2DCC8]/20 rounded-[4px] p-1 animate-in zoom-in-95 duration-200 backdrop-blur-md"
       style={toolbarStyle as React.CSSProperties}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
@@ -223,7 +227,7 @@ const FloatingToolbar: React.FC<Props> = ({
       {/* If Table is selected: Add Edit Table Columns & Rows shortcut */}
       {isTableElement && (
         <button
-          className="px-2.5 py-1.5 rounded-[4px] bg-indigo-600 hover:bg-indigo-700 text-white flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
+          className="px-2.5 py-1.5 rounded-[4px] bg-[#0F3D3E] hover:bg-[#0F3D3E]/80 border border-[#E2DCC8]/30 text-white flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
           title="Edit Table Columns & Rows"
           onClick={() => {
             if (typeof setIsTableEditorOpen === 'function') {
@@ -243,42 +247,40 @@ const FloatingToolbar: React.FC<Props> = ({
       <button
         className={btnClass}
         title="Fill Color"
-        onClick={() => fillInputRef.current?.click()}
+        onClick={() => {
+          useStore.getState().openColorPicker({
+            type: 'fill',
+            color: currentFill,
+            title: 'Fill Color',
+            onChange: (color) => {
+              onFillChange?.(color);
+              selectedElementIds.forEach(id => internalUpdate(id, { fill: color }));
+            }
+          });
+        }}
       >
-        <div className="w-5 h-5 rounded-[3px] border border-slate-200 shadow-sm" style={{ backgroundColor: currentFill }} />
-        <input
-          ref={fillInputRef}
-          type="color"
-          value={currentFill}
-          className="sr-only"
-          onChange={(e) => {
-            const color = e.target.value;
-            onFillChange?.(color);
-            selectedElementIds.forEach(id => internalUpdate(id, { fill: color }));
-          }}
-        />
+        <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: currentFill }} />
       </button>
 
       {/* Stroke color */}
       <button
         className={btnClass}
         title="Stroke / Border Color"
-        onClick={() => strokeInputRef.current?.click()}
+        onClick={() => {
+          useStore.getState().openColorPicker({
+            type: 'stroke',
+            color: currentStroke === 'transparent' ? '#000000' : currentStroke,
+            title: 'Border / Stroke Color',
+            onChange: (color) => {
+              onStrokeChange?.(color);
+              selectedElementIds.forEach(id => internalUpdate(id, { stroke: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) }));
+            }
+          });
+        }}
       >
-        <div className="w-5 h-5 rounded-[3px] border-2" style={{ borderColor: currentStroke === 'transparent' ? '#cbd5e1' : currentStroke, backgroundColor: 'transparent' }}>
+        <div className="w-5 h-5 rounded-[2px] border-2" style={{ borderColor: currentStroke === 'transparent' ? '#666' : currentStroke, backgroundColor: 'transparent' }}>
           {currentStroke === 'transparent' && <div className="w-full h-full flex items-center justify-center text-red-400 text-[10px] font-bold leading-none">\</div>}
         </div>
-        <input
-          ref={strokeInputRef}
-          type="color"
-          value={currentStroke === 'transparent' ? '#000000' : currentStroke}
-          className="sr-only"
-          onChange={(e) => {
-            const color = e.target.value;
-            onStrokeChange?.(color);
-            selectedElementIds.forEach(id => internalUpdate(id, { stroke: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) }));
-          }}
-        />
       </button>
 
       {/* Icon color (if element has icons) */}
@@ -286,28 +288,28 @@ const FloatingToolbar: React.FC<Props> = ({
         <button
           className={btnClass}
           title="Icon Color"
-          onClick={() => iconInputRef.current?.click()}
+          onClick={() => {
+            useStore.getState().openColorPicker({
+              type: 'fill',
+              elementId: element.id,
+              color: element.iconConfig?.color || '#ffffff',
+              title: 'Icon Color',
+              onChange: (color) => {
+                updateElement(currentPageIndex, element.id, {
+                  iconConfig: { ...element.iconConfig!, color }
+                });
+              }
+            });
+          }}
         >
-          <div className="w-5 h-5 rounded-[3px] border border-slate-200 shadow-sm flex items-center justify-center bg-white relative">
-            <Palette size={12} className="text-slate-400 absolute inset-0 m-auto" />
-            <div className="w-4 h-4 rounded-[2px] border border-slate-100" style={{ backgroundColor: element.iconConfig.color || '#ffffff' }} />
+          <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm flex items-center justify-center bg-[#18181b] relative">
+            <Palette size={12} className="text-gray-400 absolute inset-0 m-auto" />
+            <div className="w-4 h-4 rounded-[2px] border border-white/10" style={{ backgroundColor: element.iconConfig.color || '#ffffff' }} />
           </div>
-          <input
-            ref={iconInputRef}
-            type="color"
-            value={element.iconConfig.color || '#ffffff'}
-            className="sr-only"
-            onChange={(e) => {
-              const color = e.target.value;
-              updateElement(currentPageIndex, element.id, {
-                iconConfig: { ...element.iconConfig!, color }
-              });
-            }}
-          />
         </button>
       )}
 
-      <div className="w-[1px] h-6 bg-slate-100 mx-0.5" />
+      <div className="w-[1px] h-5 bg-[#E2DCC8]/20 mx-0.5" />
 
       {/* Bring to front */}
       <button className={btnClass} title="Bring to Front" onClick={handleBringToFront}>
@@ -319,12 +321,90 @@ const FloatingToolbar: React.FC<Props> = ({
         <ArrowDownToLine size={16} strokeWidth={2} />
       </button>
 
-      <div className="w-[1px] h-6 bg-slate-100 mx-0.5" />
+      {/* Interactive Link Button */}
+      <div className="relative">
+        <button
+          className={`${btnClass} ${element.linkUrl || element.iconConfig?.linkUrl ? 'text-[#25D366] bg-[#25D366]/15' : ''}`}
+          title={element.linkUrl || element.iconConfig?.linkUrl ? `Active Link: ${element.linkUrl || element.iconConfig?.linkUrl}` : "Attach Link / Action"}
+          onClick={() => {
+            setTempLink(element.linkUrl || element.iconConfig?.linkUrl || '');
+            setShowLinkPopover(!showLinkPopover);
+          }}
+        >
+          <LinkIcon size={16} strokeWidth={2} />
+        </button>
+
+        {showLinkPopover && (
+          <div
+            ref={linkPopoverRef}
+            className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 p-3 bg-[#18181b] border border-[#262626] rounded-[4px] shadow-2xl w-64 z-[999] flex flex-col gap-2"
+          >
+            <div className="flex items-center justify-between text-[11px] font-bold text-white">
+              <span>Interactive Link / Action</span>
+              {(element.linkUrl || element.iconConfig?.linkUrl) && (
+                <button
+                  onClick={() => {
+                    updateElement(currentPageIndex, element.id, {
+                      linkUrl: undefined,
+                      linkType: undefined,
+                      iconConfig: element.iconConfig ? { ...element.iconConfig, linkUrl: undefined, linkType: undefined } : undefined
+                    });
+                    setTempLink('');
+                    setShowLinkPopover(false);
+                  }}
+                  className="text-[9px] text-red-400 hover:underline"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+            <input
+              type="text"
+              placeholder="https://wa.me/..., tel:..., URL"
+              value={tempLink}
+              onChange={(e) => setTempLink(e.target.value)}
+              className="w-full px-2 py-1 text-xs bg-[#121212] border border-[#333] rounded-[3px] text-white focus:outline-none focus:border-[#0F3D3E]"
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  updateElement(currentPageIndex, element.id, {
+                    linkUrl: tempLink.trim() || undefined,
+                    iconConfig: element.iconConfig ? { ...element.iconConfig, linkUrl: tempLink.trim() || undefined } : undefined
+                  });
+                  setShowLinkPopover(false);
+                }
+              }}
+            />
+            <div className="flex justify-end gap-1.5">
+              <button
+                onClick={() => setShowLinkPopover(false)}
+                className="px-2 py-0.5 text-[10px] text-slate-400 hover:text-white rounded-[2px]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  updateElement(currentPageIndex, element.id, {
+                    linkUrl: tempLink.trim() || undefined,
+                    iconConfig: element.iconConfig ? { ...element.iconConfig, linkUrl: tempLink.trim() || undefined } : undefined
+                  });
+                  setShowLinkPopover(false);
+                }}
+                className="px-2.5 py-0.5 text-[10px] font-semibold bg-[#0F3D3E] text-white rounded-[2px] hover:bg-[#155455]"
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="w-[1px] h-5 bg-[#E2DCC8]/20 mx-0.5" />
 
       {/* Lock */}
       <button
         onClick={handleLockClick}
-        className={`p-1.5 rounded-[4px] transition-all ${isAnyLocked ? 'text-indigo-600 bg-indigo-50' : btnClass}`}
+        className={`p-1.5 rounded-[4px] transition-all ${isAnyLocked ? 'text-white bg-[#0F3D3E] border border-[#E2DCC8]/30 shadow-sm' : btnClass}`}
         title={isAnyLocked ? "Unlock" : "Lock"}
       >
         {isAnyLocked ? <Lock size={16} strokeWidth={2} /> : <Unlock size={16} strokeWidth={2} />}
@@ -337,13 +417,12 @@ const FloatingToolbar: React.FC<Props> = ({
 
       {/* Delete */}
       <button
-        className="p-1.5 rounded-[4px] text-rose-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+        className="p-1.5 rounded-[4px] text-[#E2DCC8]/70 hover:text-red-400 hover:bg-red-500/20 transition-all active:scale-95"
         title="Delete"
         onClick={handleDelete}
       >
         <Trash2 size={16} strokeWidth={2} />
       </button>
-
 
     </div>
   );

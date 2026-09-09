@@ -3,6 +3,7 @@ import { Canvas } from 'fabric';
 import { Catalog, Product } from '../../types';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from './fabricRenderer';
+import { normalizeImageUrl } from '../../utils/imageUtils';
 
 export interface ExportProgressCallback {
   (current: number, total: number, status: string): void;
@@ -13,18 +14,19 @@ export interface ExportProgressCallback {
  */
 async function getCleanImageDataUrl(url: string): Promise<string> {
   if (!url || url.startsWith('data:')) return url;
+  const cleanUrl = normalizeImageUrl(url);
   try {
-    const res = await fetch(url, { mode: 'cors' });
-    if (!res.ok) return url;
+    const res = await fetch(cleanUrl, { mode: 'cors' });
+    if (!res.ok) return cleanUrl;
     const blob = await res.blob();
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => resolve(url);
+      reader.onerror = () => resolve(cleanUrl);
       reader.readAsDataURL(blob);
     });
   } catch {
-    return url;
+    return cleanUrl;
   }
 }
 

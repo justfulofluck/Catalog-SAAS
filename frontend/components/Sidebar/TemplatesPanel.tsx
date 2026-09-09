@@ -45,25 +45,31 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
   ];
 
   return (
-    <div className="flex flex-col h-full w-full shrink-0 relative font-sans transition-colors bg-[#161616] text-white">
+    <div className={`flex flex-col h-full w-full shrink-0 relative font-sans transition-colors ${
+      isDark ? 'bg-[#161616] text-white' : 'bg-white text-slate-800'
+    }`}>
       
       {/* Top Header - hidden when embedded in PagesPanel tabs */}
       {!hideHeader && (
-        <div className="h-14 px-3 py-2 border-b shrink-0 flex items-center justify-between transition-colors bg-[#161616] border-[#262626]">
+        <div className={`h-14 px-3 py-2 border-b shrink-0 flex items-center justify-between transition-colors ${
+          isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-100'
+        }`}>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-white shadow-sm">
               <LayoutTemplate size={13} />
             </div>
             <div>
-              <h3 className="text-[10px] font-bold uppercase tracking-wider text-white">
+              <h3 className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                 Template Studio
               </h3>
-              <p className="text-[8px] text-[#888] font-medium">Modular Page Outfits</p>
+              <p className={`text-[8px] font-medium ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Modular Page Outfits</p>
             </div>
           </div>
           <button
             onClick={() => setEditorTab(null)}
-            className="p-1 rounded-[4px] transition-colors hover:bg-[#262626] text-[#888] hover:text-white"
+            className={`p-1 rounded-[4px] transition-colors ${
+              isDark ? 'hover:bg-[#262626] text-[#888] hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-800'
+            }`}
           >
             <X size={12} />
           </button>
@@ -71,8 +77,12 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
       )}
 
       {/* Category Pill Navigation */}
-      <div className="p-2 border-b shrink-0 bg-[#141414] border-[#262626]">
-        <div className="grid grid-cols-5 gap-1 p-0.5 rounded-[4px] border bg-[#101010] border-[#262626]">
+      <div className={`p-2 border-b shrink-0 transition-colors ${
+        isDark ? 'bg-[#141414] border-[#262626]' : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className={`grid grid-cols-5 gap-1 p-0.5 rounded-[4px] border ${
+          isDark ? 'bg-[#101010] border-[#262626]' : 'bg-slate-200/60 border-slate-200'
+        }`}>
           {categories.map((cat) => {
             const Icon = cat.icon;
             const isActive = activeCategory === cat.id;
@@ -83,7 +93,7 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
                 className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-[3px] text-[9px] font-bold transition-all ${
                   isActive
                     ? 'bg-[#0F3D3E] text-white shadow-sm'
-                    : 'text-[#888] hover:text-white'
+                    : (isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900')
                 }`}
                 title={cat.desc}
               >

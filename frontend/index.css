@@ -1,5 +1,24 @@
 /* Akio Design System Styles */
 :root {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-surface-hover: #f1f5f9;
+  --color-primary: #0F3D3E;
+  --color-primary-hover: #155455;
+  --color-secondary: #0F3D3E;
+  --color-border: #e2e8f0;
+  --color-border-subtle: rgba(15, 61, 62, 0.15);
+  --color-text: #0f172a;
+  --color-text-secondary: #475569;
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Geist', sans-serif;
+
+  /* Spacing */
+  --space-unit: 20px;
+}
+
+html.dark {
   --color-bg: #100F0F;
   --color-surface: #161616;
   --color-surface-elevated: #171616;
@@ -11,11 +30,6 @@
   --color-border-subtle: rgba(226, 220, 200, 0.15);
   --color-text: #F1F1F1;
   --color-text-secondary: #E2DCC8;
-  --font-heading: 'Space Grotesk', sans-serif;
-  --font-body: 'Geist', sans-serif;
-
-  /* Spacing */
-  --space-unit: 20px;
 }
 
 /* Base Headings */
@@ -36,21 +50,20 @@ svg.image-layer,
 
 /* Akio Components */
 .akio-canvas {
-  background-color: #100F0F;
-  color: #F1F1F1;
+  background-color: var(--color-bg);
+  color: var(--color-text);
 }
 
 .akio-card {
-  background-color: #161616;
-  border: 1px solid #262626;
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: 4px;
-  box-shadow: 0 0 0 1px inset rgba(255, 255, 255, 0.02);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .akio-card:hover {
-  border-color: #333333;
-  background-color: #1a1a1a;
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
 }
 
 .akio-card-interactive {

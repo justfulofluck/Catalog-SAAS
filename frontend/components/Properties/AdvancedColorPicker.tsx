@@ -16,11 +16,27 @@ const AdvancedColorPicker: React.FC<AdvancedColorPickerProps> = ({ color, onChan
         setMode(isGradient ? 'gradient' : 'solid');
     }, [color]);
 
-    // Parse gradient string: linear-gradient(to right, #HEX, #HEX)
+    // Parse gradient string: linear-gradient(dir or deg, color1, color2)
     const parseGradient = (str: string) => {
         if (!str || !str.includes('linear-gradient')) return { c1: '#4F46E5', c2: '#EC4899', dir: 'to right' };
-        const match = str.match(/linear-gradient\s*\(\s*([^,]+)\s*,\s*(#[a-fA-F0-9]+)\s*,\s*(#[a-fA-F0-9]+)\s*\)/i);
-        if (match) return { dir: match[1].trim(), c1: match[2].trim(), c2: match[3].trim() };
+        const match = str.match(/linear-gradient\s*\((.*)\)/i);
+        if (match) {
+            const rawParts = match[1].split(',').map(s => s.trim());
+            if (rawParts.length >= 2) {
+                let dir = 'to right';
+                let c1 = '#4F46E5';
+                let c2 = '#EC4899';
+                if (rawParts[0].includes('deg') || rawParts[0].startsWith('to ')) {
+                    dir = rawParts[0];
+                    c1 = rawParts[1] || '#4F46E5';
+                    c2 = rawParts[2] || rawParts[1] || '#EC4899';
+                } else {
+                    c1 = rawParts[0] || '#4F46E5';
+                    c2 = rawParts[1] || '#EC4899';
+                }
+                return { dir, c1, c2 };
+            }
+        }
         return { c1: '#4F46E5', c2: '#EC4899', dir: 'to right' };
     };
 
@@ -71,9 +87,22 @@ const AdvancedColorPicker: React.FC<AdvancedColorPickerProps> = ({ color, onChan
     };
 
     useEffect(() => {
-        const targetColor = mode === 'solid' ? color : (activeColorIdx === 1 ? gradData.c1 : gradData.c2);
-        if (targetColor && !targetColor.includes('gradient')) {
-            setHsv(hexToHsv(targetColor));
+        if (color?.includes('linear-gradient')) {
+            const parsed = parseGradient(color);
+            setGradData(parsed);
+            const activeHex = activeColorIdx === 1 ? parsed.c1 : parsed.c2;
+            if (activeHex && !activeHex.includes('gradient')) {
+                setHsv(hexToHsv(activeHex));
+            }
+        } else if (color && !color.includes('gradient')) {
+            if (mode === 'solid') {
+                setHsv(hexToHsv(color));
+            } else {
+                const activeHex = activeColorIdx === 1 ? gradData.c1 : gradData.c2;
+                if (activeHex && !activeHex.includes('gradient')) {
+                    setHsv(hexToHsv(activeHex));
+                }
+            }
         }
     }, [color, mode, activeColorIdx]);
 

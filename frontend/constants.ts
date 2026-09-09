@@ -101,7 +101,7 @@ export const FULL_CATALOG_TEMPLATES: FullCatalogTemplate[] = [
           { id: 'vt-c-img-hero', type: 'image', x: 15, y: 15, width: 440, height: 430, src: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800', zIndex: 1 },
           { id: 'vt-c-img-garden', type: 'image', x: 420, y: 220, width: 360, height: 570, src: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=800', zIndex: 1 },
           { id: 'vt-c-img-arch', type: 'image', x: 340, y: 160, width: 230, height: 210, src: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
-          { id: 'vt-c-img-hall', type: 'image', x: 230, y: 280, width: 240, height: 250, src: 'https://images.unsplash.com/photo-1540518614846-7ede433c4ef5?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
+          { id: 'vt-c-img-hall', type: 'image', x: 230, y: 280, width: 240, height: 250, src: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
           // V-TAC Logo & Slogan in Top Right
           { id: 'vt-c-logo', type: 'text', x: 460, y: 35, width: 220, height: 60, text: 'V-TAC', fontSize: 56, fontFamily: 'Montserrat', fontWeight: '900', fill: '#00a651', letterSpacing: 2, zIndex: 3 },
           { id: 'vt-c-slogan', type: 'text', x: 530, y: 95, width: 200, height: 25, text: 'Meaningful Innovation.', fontSize: 15, fontFamily: 'Inter', fontWeight: '700', fill: '#ffffff', zIndex: 3 },
@@ -163,7 +163,7 @@ export const FULL_CATALOG_TEMPLATES: FullCatalogTemplate[] = [
 
           // --- SECTION 2: SLIM COMMERCIAL COB ---
           { id: 'vt-p2-divider-1', type: 'shape', x: 45, y: 390, width: 704, height: 1, fill: '#e2e8f0', zIndex: 1 },
-          { id: 'vt-p2-img-2', type: 'image', x: 45, y: 430, width: 260, height: 180, src: 'https://images.unsplash.com/photo-1540518614846-7ede433c4ef5?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
+          { id: 'vt-p2-img-2', type: 'image', x: 45, y: 430, width: 260, height: 180, src: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
           { id: 'vt-p2-title-2', type: 'text', x: 380, y: 420, width: 370, height: 35, text: 'SLIM COMMERCIAL COB', fontSize: 26, fontFamily: 'Montserrat', fontWeight: '900', fill: '#00a651', letterSpacing: 0.5, zIndex: 3 },
           {
             id: 'vt-p2-table-2',
@@ -360,7 +360,7 @@ export const COVER_TEMPLATES: PageTemplate[] = [
       { type: 'image', x: 15, y: 15, width: 440, height: 430, src: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800', zIndex: 1 },
       { type: 'image', x: 420, y: 220, width: 360, height: 570, src: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=800', zIndex: 1 },
       { type: 'image', x: 340, y: 160, width: 230, height: 210, src: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
-      { type: 'image', x: 230, y: 280, width: 240, height: 250, src: 'https://images.unsplash.com/photo-1540518614846-7ede433c4ef5?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
+      { type: 'image', x: 230, y: 280, width: 240, height: 250, src: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600', zIndex: 2 },
       // V-TAC Logo & Slogan in Top Right
       { type: 'text', x: 460, y: 35, width: 220, height: 60, text: 'V-TAC', fontSize: 56, fontFamily: 'Montserrat', fontWeight: '900', fill: '#00a651', letterSpacing: 2, zIndex: 3 },
       { type: 'text', x: 530, y: 95, width: 200, height: 25, text: 'Meaningful Innovation.', fontSize: 15, fontFamily: 'Inter', fontWeight: '700', fill: '#ffffff', zIndex: 3 },

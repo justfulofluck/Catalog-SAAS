@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Images, Search, X, Upload, Plus, FileImage, Image as ImageIcon, ExternalLink, Loader2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { MediaItem, AdminAsset } from '../../types';
+import { normalizeImageUrl } from '../../utils/imageUtils';
 
 const UNSPLASH_ACCESS_KEY = (import.meta as any).env.VITE_UNSPLASH_ACCESS_KEY || '';
 
@@ -96,7 +97,7 @@ const MediaAssetLibrary: React.FC = () => {
       height: 300,
       rotation: 0,
       opacity: 1,
-      src: item.url,
+      src: normalizeImageUrl(item.url),
       zIndex: 20
     });
   };
@@ -119,7 +120,7 @@ const MediaAssetLibrary: React.FC = () => {
   const handleDragStart = (e: React.DragEvent, item: MediaItem | AdminAsset) => {
     const dragData = {
       type: 'image',
-      url: item.url,
+      url: normalizeImageUrl(item.url),
       name: item.name,
       source: 'library'
     };

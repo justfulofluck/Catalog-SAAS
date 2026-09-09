@@ -98,7 +98,13 @@ export interface CanvasElement {
      iconLibrary: 'fontawesome';
      color?: string;
      size?: number;
+     fontFamily?: string;
+     fontWeight?: string;
+     linkUrl?: string;
+     linkType?: 'url' | 'whatsapp' | 'phone' | 'email';
    };
+   linkUrl?: string;
+   linkType?: 'url' | 'whatsapp' | 'phone' | 'email';
 }
 
 export interface GridTemplate {

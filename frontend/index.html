@@ -65,6 +65,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Geist:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
+      --color-bg: #f8fafc;
+      --color-surface: #ffffff;
+      --color-surface-elevated: #ffffff;
+      --color-primary: #0F3D3E;
+      --color-primary-hover: #155455;
+      --color-secondary: #0F3D3E;
+      --color-border: #e2e8f0;
+      --color-text: #0f172a;
+      --color-text-secondary: #475569;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-body: 'Geist', sans-serif;
+    }
+
+    html.dark {
       --color-bg: #100F0F;
       --color-surface: #161616;
       --color-surface-elevated: #171616;
@@ -74,17 +88,21 @@
       --color-border: #262626;
       --color-text: #F1F1F1;
       --color-text-secondary: #E2DCC8;
-      --font-heading: 'Space Grotesk', sans-serif;
-      --font-body: 'Geist', sans-serif;
     }
 
     body {
       margin: 0;
       padding: 0;
-      background-color: #0f0f0f;
-      color: #ffffff;
+      background-color: #f8fafc;
+      color: #0f172a;
       font-family: 'Geist', sans-serif;
       overflow: hidden;
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    html.dark body {
+      background-color: #0f0f0f;
+      color: #ffffff;
     }
 
     /* Headings font assignment */
@@ -180,6 +198,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Montserrat:ital,wght@0,300..900;1,300..900&family=Roboto:wght@300;400;500;700;900&family=Open+Sans:wght@300;400;600;700;800&family=Poppins:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
   <!-- Extended Fonts Collection -->
   <link href="https://fonts.googleapis.com/css2?family=Lato&family=Noto+Sans&family=Oswald&family=Raleway&family=PT+Sans&family=Work+Sans&family=DM+Sans&family=Nunito&family=Ubuntu&family=Mukta&family=Rubik&family=Quicksand&family=Hind&family=Nanum+Gothic&family=Fira+Sans&family=Barlow&family=Kanit&family=Josefin+Sans&family=Tajawal&family=IBM+Plex+Sans&family=Cabin&family=Anton&family=Dosis&family=Teko&family=Exo+2&family=Oxygen&family=Manrope&family=Signika&family=Asap&family=Karla&family=Merriweather&family=Playfair+Display&family=Lora&family=PT+Serif&family=Noto+Serif&family=Libre+Baskerville&family=Crimson+Text&family=EB+Garamond&family=Bitter&family=Cormorant+Garamond&family=Domine&family=Arvo&family=Vollkorn&family=Zilla+Slab&family=Spectral&family=Aleo&family=Neuton&family=Cardo&family=Tinos&family=Slabo+27px&family=Roboto+Slab&family=Bree+Serif&family=Frank+Ruhl+Libre&family=Rokkitt&family=Amiri&family=Gelasio&family=Quattrocento&family=Alice&family=Prata&family=Glegoo&family=Rufina&family=Gilda+Display&family=Caudex&family=Solway&family=Literata&family=Pacifico&family=Dancing+Script&family=Satisfy&family=Great+Vibes&family=Caveat&family=Kaushan+Script&family=Cookie&family=Sacramento&family=Alex+Brush&family=Yellowtail&family=Tangerine&family=Lobster&family=Lobster+Two&family=Marck+Script&family=Allura&family=Parisienne&family=Pinyon+Script&family=Grand+Hotel&family=Mr+Dafoe&family=Damion&family=Rouge+Script&family=Courgette&family=Niconne&family=Italianno&family=Rochester&family=Yesteryear&family=Herr+Von+Muellerhoff&family=Sail&family=Style+Script&family=Arizonia&display=swap" rel="stylesheet">
+  <!-- Canva Display & Typography Combinations Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Abril+Fatface&family=Alfa+Slab+One&family=Audiowide&family=Bebas+Neue&family=Bodoni+Moda:ital,opsz,wght@0,6..96,700;1,6..96,700&family=Bungee&family=Cinzel:wght@400;700;900&family=Cinzel+Decorative:wght@700;900&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Fredoka:wght@400;600;700&family=Orbitron:wght@600;900&family=Permanent+Marker&family=Pirata+One&family=Righteous&family=Rye&family=Shrikhand&family=Sniglet:wght@800&family=Special+Elite&display=swap" rel="stylesheet">
   
   <!-- Preload Font Awesome fonts for canvas rendering -->
   <link rel="preload" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/webfonts/fa-solid-900.woff2" as="font" type="font/woff2" crossorigin>

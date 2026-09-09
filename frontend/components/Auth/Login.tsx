@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../client';
+import GradientBlinds from '../Common/GradientBlinds';
 
 const Login: React.FC = () => {
   const { login, setView, error, plans, fetchPlans } = useStore();
@@ -416,8 +417,28 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#100F0F] text-[#F1F1F1] flex items-center justify-start p-6 md:pl-16 lg:pl-24 font-sans">
-      <div className="w-full max-w-md bg-[#161616] rounded-[4px] border border-[#262626] shadow-2xl overflow-hidden p-8 md:p-10 relative">
+    <div className="min-h-screen w-full bg-[#100F0F] text-[#F1F1F1] flex items-center justify-start p-6 md:pl-16 lg:pl-24 font-sans relative overflow-hidden">
+      {/* Interactive WebGL Gradient Blinds Background */}
+      <div className="absolute inset-0 z-0">
+        <GradientBlinds
+          gradientColors={['#0F3D3E', '#165B5D', '#4F46E5', '#E2DCC8']}
+          angle={20}
+          noise={0.25}
+          blindCount={14}
+          blindMinWidth={55}
+          spotlightRadius={0.55}
+          spotlightSoftness={1}
+          spotlightOpacity={1}
+          mouseDampening={0.15}
+          distortAmount={0}
+          shineDirection="left"
+          mixBlendMode="screen"
+        />
+        {/* Soft dark vignette on the left to ensure login card & branding have top contrast */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#100F0F] via-[#100F0F]/65 to-transparent pointer-events-none" />
+      </div>
+
+      <div className="w-full max-w-md bg-[#161616]/90 backdrop-blur-xl rounded-[4px] border border-[#262626] shadow-2xl overflow-hidden p-8 md:p-10 relative z-10">
         <div className="flex items-center gap-2 mb-8">
           <span className="font-bold text-xl tracking-tight font-heading text-[#F1F1F1]">catalogmakerr.</span>
         </div>

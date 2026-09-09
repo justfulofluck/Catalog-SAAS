@@ -15,8 +15,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
-        if instance.thumbnail and getattr(instance.thumbnail, 'name', '').startswith(('http://', 'https://')):
-            ret['thumbnail'] = instance.thumbnail.name
+        if instance.thumbnail:
+            if getattr(instance.thumbnail, 'name', '').startswith(('http://', 'https://')):
+                ret['thumbnail'] = instance.thumbnail.name
+            elif hasattr(instance.thumbnail, 'url'):
+                ret['thumbnail'] = instance.thumbnail.url
         return ret
 
     def get_subcategories(self, obj):
@@ -169,4 +172,13 @@ class ProductSerializer(serializers.ModelSerializer):
         if external_image_url:
             ret['image'] = external_image_url
 
+        return ret
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        if instance.image:
+            if getattr(instance.image, 'name', '').startswith(('http://', 'https://')):
+                ret['image'] = instance.image.name
+            elif hasattr(instance.image, 'url'):
+                ret['image'] = instance.image.url
         return ret

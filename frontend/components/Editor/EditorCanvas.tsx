@@ -3,11 +3,13 @@ import { Plus, Sparkles, BookOpen, List, FileText, Settings, ChevronUp, ChevronD
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import FabricStage from './FabricStage';
+import ContextMenu from './ContextMenu';
 import { FloatingTextToolbar } from '../Toolbar/FloatingTextToolbar';
 import FloatingToolbar from '../Toolbar/FloatingToolbar';
 import TableEditorModal from './TableEditorModal';
 import { saveSelection, restoreSelection } from '../../utils/textStyleSelection';
 import { CatalogPage, PageType } from '../../types';
+import { normalizeImageUrl } from '../../utils/imageUtils';
 
 const Divider = () => <div className="w-[1px] h-4 bg-slate-200 mx-1" />;
 
@@ -26,7 +28,8 @@ const EditorCanvas: React.FC = () => {
     addHeaderElement, addFooterElement,
     updateHeaderElement, updateFooterElement,
     removeHeaderElement, removeFooterElement,
-    copySelectedElements, pasteElements, addInteriorPageWithInheritedLayout
+    copySelectedElements, pasteElements, addInteriorPageWithInheritedLayout,
+    duplicatePage, removePage, openColorPicker
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -59,6 +62,23 @@ const EditorCanvas: React.FC = () => {
   }, [showAddPageMenu]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editConfig, setEditConfig] = useState<any | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    type: 'page' | 'element';
+    pageIndex: number;
+    targetId?: string;
+  } | null>(null);
+
+  // Listen for context menu requests from FabricStage or Page wrappers
+  useEffect(() => {
+    const handleOpenContextMenu = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      setContextMenu(detail);
+    };
+    window.addEventListener('catalog:openContextMenu', handleOpenContextMenu);
+    return () => window.removeEventListener('catalog:openContextMenu', handleOpenContextMenu);
+  }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLDivElement>(null);
@@ -588,9 +608,23 @@ const EditorCanvas: React.FC = () => {
         }
         break;
       case 'Escape':
+        if (contextMenu) setContextMenu(null);
         setSelectedElementIds([]);
         setEditingId(null);
         setEditConfig(null);
+        break;
+      case 'l':
+      case 'L':
+        if (e.altKey && e.shiftKey && selectedElementIds.length) {
+          e.preventDefault();
+          selectedElementIds.forEach(id => toggleLock(currentPageIndex, id));
+        }
+        break;
+      case 'Enter':
+        if (isMod) {
+          e.preventDefault();
+          addPage('interior');
+        }
         break;
       case 'c':
       case 'C':
@@ -604,6 +638,52 @@ const EditorCanvas: React.FC = () => {
         if (isMod) {
           e.preventDefault();
           pasteElements();
+        }
+        break;
+      case ']':
+        if (isMod && selectedElementIds.length && currentPage?.elements) {
+          e.preventDefault();
+          pushHistory();
+          const action = e.altKey ? 'bringToFront' : 'bringForward';
+          const currentIds = currentPage.elements.map(el => el.id);
+          let newOrder = [...currentIds];
+          if (action === 'bringToFront') {
+            const unselected = currentIds.filter(id => !selectedElementIds.includes(id));
+            const selected = currentIds.filter(id => selectedElementIds.includes(id));
+            newOrder = [...unselected, ...selected];
+          } else {
+            for (let i = newOrder.length - 2; i >= 0; i--) {
+              if (selectedElementIds.includes(newOrder[i]) && !selectedElementIds.includes(newOrder[i + 1])) {
+                const temp = newOrder[i];
+                newOrder[i] = newOrder[i + 1];
+                newOrder[i + 1] = temp;
+              }
+            }
+          }
+          useStore.getState().reorderElements(currentPageIndex, newOrder);
+        }
+        break;
+      case '[':
+        if (isMod && selectedElementIds.length && currentPage?.elements) {
+          e.preventDefault();
+          pushHistory();
+          const action = e.altKey ? 'sendToBack' : 'sendBackward';
+          const currentIds = currentPage.elements.map(el => el.id);
+          let newOrder = [...currentIds];
+          if (action === 'sendToBack') {
+            const unselected = currentIds.filter(id => !selectedElementIds.includes(id));
+            const selected = currentIds.filter(id => selectedElementIds.includes(id));
+            newOrder = [...selected, ...unselected];
+          } else {
+            for (let i = 1; i < newOrder.length; i++) {
+              if (selectedElementIds.includes(newOrder[i]) && !selectedElementIds.includes(newOrder[i - 1])) {
+                const temp = newOrder[i];
+                newOrder[i] = newOrder[i - 1];
+                newOrder[i - 1] = temp;
+              }
+            }
+          }
+          useStore.getState().reorderElements(currentPageIndex, newOrder);
         }
         break;
     }
@@ -722,15 +802,15 @@ const EditorCanvas: React.FC = () => {
 
           if (targetId && currentPage.type === 'interior') {
             const tEl = currentPage.elements.find(el => el.id === targetId);
-            updateElement(currentPageIndex, targetId, { type: tEl?.type === 'product-block' ? 'product-block' : 'image', src: data.url, productId: data.productId, cardTheme: tEl?.cardTheme, opacity: 1 });
+            updateElement(currentPageIndex, targetId, { type: tEl?.type === 'product-block' ? 'product-block' : 'image', src: normalizeImageUrl(data.url), productId: data.productId, cardTheme: tEl?.cardTheme, opacity: 1 });
           } else if (isHeaderDrop) {
             const headerY = marginTop + 10;
-            useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: headerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
+            useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: headerHeight - 20, rotation: 0, opacity: 1, src: normalizeImageUrl(data.url), productId: data.productId, zIndex: 50 });
           } else if (isFooterDrop) {
             const footerY = curH - marginBottom - footerHeight + 10;
-            useStore.getState().addFooterElement({ id: `footer-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: footerY, width: 200, height: footerHeight - 20, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
+            useStore.getState().addFooterElement({ id: `footer-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: footerY, width: 200, height: footerHeight - 20, rotation: 0, opacity: 1, src: normalizeImageUrl(data.url), productId: data.productId, zIndex: 50 });
           } else {
-            addElement(currentPageIndex, { id: `drop-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: dropX - 150, y: dropY - 150, width: 300, height: 300, rotation: 0, opacity: 1, src: data.url, productId: data.productId, zIndex: 50 });
+            addElement(currentPageIndex, { id: `drop-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: dropX - 150, y: dropY - 150, width: 300, height: 300, rotation: 0, opacity: 1, src: normalizeImageUrl(data.url), productId: data.productId, zIndex: 50 });
           }
           return;
         }
@@ -745,9 +825,9 @@ const EditorCanvas: React.FC = () => {
           const { addMedia } = useStore.getState();
           const mediaItem = await addMedia(file);
           if (targetId && i === 0 && currentPage.type === 'interior') {
-            updateElement(currentPageIndex, targetId, { type: 'image', src: mediaItem.url, opacity: 1 });
+            updateElement(currentPageIndex, targetId, { type: 'image', src: normalizeImageUrl(mediaItem.url), opacity: 1 });
           } else {
-            addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: mediaItem.url, zIndex: 60 });
+            addElement(currentPageIndex, { id: `drop-file-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: dropX - 100 + i * 20, y: dropY - 100 + i * 20, width: 250, height: 250, rotation: 0, opacity: 1, src: normalizeImageUrl(mediaItem.url), zIndex: 60 });
           }
         } catch (err) {
           console.error("Failed to upload dropped file:", err);
@@ -808,9 +888,11 @@ const EditorCanvas: React.FC = () => {
   if (!currentPage) return null;
   const snapTarget = dragOverTargetId ? currentPage.elements.find(el => el.id === dragOverTargetId) : null;
 
+  const isDark = uiTheme === 'dark';
+
   return (
     <div
-      className="flex-1 flex flex-col overflow-hidden relative bg-[#0e0e0e]"
+      className={`flex-1 flex flex-col overflow-hidden relative transition-colors duration-200 ${isDark ? 'bg-[#0e0e0e]' : 'bg-[#cbd5e1]'}`}
       ref={containerRef}
       onMouseDown={handlePanMouseDown}
       onMouseMove={handlePanMouseMove}
@@ -822,10 +904,14 @@ const EditorCanvas: React.FC = () => {
       <div
         ref={scrollContainerRef}
         className={`flex-1 overflow-hidden transition-colors duration-300 ${
-          isDragOver ? 'bg-[#0F3D3E]/10' : 'bg-[#121212]'
+          isDragOver 
+            ? (isDark ? 'bg-[#0F3D3E]/10' : 'bg-emerald-500/10') 
+            : (isDark ? 'bg-[#121212]' : 'bg-[#e2e8f0]')
         }`}
         style={{
-          backgroundImage: 'radial-gradient(#252525 1px, transparent 1px)',
+          backgroundImage: isDark 
+            ? 'radial-gradient(#252525 1px, transparent 1px)' 
+            : 'radial-gradient(#94a3b8 1px, transparent 1px)',
           backgroundSize: '24px 24px'
         }}
         onDragOver={handleDragOver}
@@ -852,6 +938,7 @@ const EditorCanvas: React.FC = () => {
             minHeight: '100%',
           }}
           onClick={(e) => {
+            if (contextMenu) setContextMenu(null);
             const clickedPage = (e.target as HTMLElement).closest('[data-page-index]');
             if (!clickedPage && !isPanning.current) {
               setSelectedElementIds([]);
@@ -860,6 +947,10 @@ const EditorCanvas: React.FC = () => {
               setSelectedPageIndex(null);
               setSelectedCategoryId(null);
             }
+          }}
+          onContextMenu={(e) => {
+            // Prevent native browser menu on canvas background
+            e.preventDefault();
           }}
         >
           {catalog.pages.map((page, pageIdx) => {
@@ -873,9 +964,109 @@ const EditorCanvas: React.FC = () => {
                 data-page-index={pageIdx}
                 className="flex flex-col items-center gap-2 shrink-0"
                 onClick={() => {
+                  if (contextMenu) setContextMenu(null);
                   if (!isActive) { setCurrentPageIndex(pageIdx); setSelectedElementIds([]); setEditingId(null); setEditConfig(null); }
                 }}
+                onContextMenu={(e) => {
+                  // If right-click was on the canvas, let FabricStage handle element vs page hit testing
+                  const targetEl = e.target as HTMLElement;
+                  if (targetEl.tagName === 'CANVAS' || targetEl.closest('.canvas-container')) {
+                    return;
+                  }
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (!isActive) {
+                    setCurrentPageIndex(pageIdx);
+                  }
+                  setContextMenu({
+                    x: e.clientX,
+                    y: e.clientY,
+                    type: 'page',
+                    pageIndex: pageIdx
+                  });
+                }}
               >
+                {/* Canva-style Contextual Top Bar for Page */}
+                <div
+                  className="flex items-center justify-between px-1 mb-1.5 transition-all select-none"
+                  style={{ width: curW * zoom }}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-bold tracking-tight text-white/80">
+                      Page {pageIdx + 1}
+                    </span>
+                    {page.type && (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/20">
+                        {page.type}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Contextual Action Pills */}
+                  <div className="flex items-center gap-1.5 bg-[#141416]/95 border border-[#E2DCC8]/20 backdrop-blur-md rounded-full px-2.5 py-1 shadow-lg">
+                    {/* Page Background Color Swatch Button (Canva-style) */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openColorPicker({
+                          type: 'background',
+                          color: page.backgroundColor || '#ffffff',
+                          title: `Page ${pageIdx + 1} Background`
+                        });
+                      }}
+                      className="flex items-center gap-1.5 hover:opacity-85 transition-all group"
+                      title="Change page background color"
+                    >
+                      <div
+                        className="w-5 h-5 rounded-full border border-white/40 shadow-sm group-hover:scale-110 transition-transform"
+                        style={{ background: page.backgroundColor || '#ffffff' }}
+                      />
+                      <span className="text-[10px] font-mono font-bold text-[#E2DCC8] uppercase">
+                        {page.backgroundColor || '#ffffff'}
+                      </span>
+                    </button>
+
+                    <div className="w-px h-3.5 bg-white/15 mx-0.5" />
+
+                    {/* Quick duplicate */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        duplicatePage(pageIdx);
+                      }}
+                      className="p-1 text-white/70 hover:text-white transition-colors"
+                      title="Duplicate Page"
+                    >
+                      <Copy size={13} />
+                    </button>
+
+                    {/* Quick Add page */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        addPage('interior');
+                      }}
+                      className="p-1 text-white/70 hover:text-white transition-colors"
+                      title="Add Page"
+                    >
+                      <Plus size={13} />
+                    </button>
+
+                    {/* Quick delete page if > 1 page */}
+                    {catalog.pages.length > 1 && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removePage(pageIdx);
+                        }}
+                        className="p-1 text-white/70 hover:text-red-400 transition-colors"
+                        title="Delete Page"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    )}
+                  </div>
+                </div>
 
                 {/* Page wrapper - White catalog sheet stands out prominently like Figma/Canva */}
                 <div
@@ -1271,6 +1462,18 @@ const EditorCanvas: React.FC = () => {
         <TableEditorModal
           elementId={editingTableElementId}
           onClose={() => setIsTableEditorOpen(false, null)}
+        />
+      )}
+
+      {/* Canva-Style Right-Click Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          type={contextMenu.type}
+          pageIndex={contextMenu.pageIndex}
+          targetId={contextMenu.targetId}
+          onClose={() => setContextMenu(null)}
         />
       )}
     </div>

@@ -22,7 +22,7 @@ interface Props {
     zoom: number;
 }
 
-const Divider = () => <div className="w-[1px] h-5 bg-slate-200/80 mx-1 shrink-0" />;
+const Divider = () => <div className="w-[1px] h-5 bg-[#E2DCC8]/20 mx-1 shrink-0" />;
 
 export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }) => {
     const setIsPropertyPanelOpen = useStore(state => state.setIsPropertyPanelOpen);
@@ -127,7 +127,11 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
             if (type === 'bold') success = toggleStyle('bold');
             else if (type === 'italic') success = toggleStyle('italic');
             else if (type === 'underline') success = toggleStyle('underline');
-            else if (type === 'color') success = toggleStyle('foreColor', value);
+            else if (type === 'color') {
+                if (value && !value.includes('gradient')) {
+                    success = toggleStyle('foreColor', value);
+                }
+            }
             if (success) return;
         }
 
@@ -150,7 +154,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
     return (
         <div
             ref={toolbarRef}
-            className="floating-toolbar absolute z-[2000] flex items-center gap-0.5 bg-white shadow-[0_8px_32px_rgba(0,0,0,0.15)] border border-slate-100 rounded-full p-1.5 select-none transition-all animate-in zoom-in-95 duration-200"
+            className="floating-toolbar absolute z-[2000] flex items-center gap-0.5 bg-[#141416] text-[#EDEDED] shadow-[0_12px_40px_rgba(0,0,0,0.6)] border border-[#E2DCC8]/20 rounded-[4px] p-1 select-none transition-all animate-in zoom-in-95 duration-200 backdrop-blur-md"
             style={{
                 left: (element.x * zoom) + dragOffsetRef.current.x,
                 top: Math.max(0, (element.y * zoom) - 85) + dragOffsetRef.current.y,
@@ -160,7 +164,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
             {/* Drag Handle */}
             <div
                 onMouseDown={handleDragStart}
-                className="cursor-move p-1 text-slate-300 hover:text-slate-500 transition-colors"
+                className="cursor-move p-1 text-[#E2DCC8]/40 hover:text-[#F1F1F1] rounded-[4px] transition-colors"
             >
                 <GripVertical size={16} />
             </div>
@@ -169,34 +173,34 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                 <button
                     onClick={() => setIsFontMenuOpen(v => !v)}
                     onMouseDown={preventFocusSteal}
-                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50 rounded-full text-slate-800 text-[12px] font-bold tracking-tight transition-all active:scale-95"
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-[4px] text-[12px] font-bold tracking-tight transition-all active:scale-95 ${isFontMenuOpen ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30' : 'text-[#F1F1F1] hover:bg-[#0F3D3E]/40 border border-transparent'}`}
                     style={{ fontFamily: font }}
                 >
-                    <span className="max-w-[70px] truncate">{font}</span>
-                    <ChevronDown size={12} className="text-slate-400 shrink-0" />
+                    <span className="max-w-[75px] truncate">{font}</span>
+                    <ChevronDown size={12} className="text-[#E2DCC8]/50 shrink-0" />
                 </button>
                 {isFontMenuOpen && (
-                    <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-0 w-64 bg-white border border-slate-200/60 rounded-[4px] shadow-2xl overflow-hidden z-50 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300 flex flex-col`}>
+                    <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2' : 'bottom-full mb-2'} left-0 w-64 bg-[#18181b] border border-[#E2DCC8]/20 rounded-[4px] shadow-2xl overflow-hidden z-50 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 flex flex-col text-[#EDEDED]`}>
                         {/* Search Bar - Fixed at top */}
-                        <div className="p-2.5 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2 sticky top-0 z-10">
-                            <Search size={14} className="text-slate-400" />
+                        <div className="p-2 border-b border-[#E2DCC8]/15 bg-[#121214] flex items-center gap-2 sticky top-0 z-10">
+                            <Search size={14} className="text-gray-400" />
                             <input
                                 autoFocus
                                 type="text"
                                 placeholder="Search fonts..."
                                 value={fontSearch}
                                 onChange={e => setFontSearch(e.target.value)}
-                                className="w-full bg-transparent border-none outline-none text-[12px] font-bold text-slate-700 placeholder:text-slate-300"
+                                className="w-full bg-transparent border-none outline-none text-[12px] font-bold text-[#F1F1F1] placeholder:text-gray-500"
                             />
                         </div>
                         {/* Font List - Scrollable area (limited to ~5 items) */}
                         <div
                             ref={fontScrollRef}
-                            className="max-h-[190px] overflow-y-auto custom-scrollbar p-0.5 flex flex-col gap-0.5 scroll-smooth overscroll-contain"
+                            className="max-h-[190px] overflow-y-auto custom-scrollbar p-1 flex flex-col gap-0.5 scroll-smooth overscroll-contain"
                         >
                             {filteredFonts.map(group => (
-                                <div key={group.label} className="flex flex-col p-1 mb-1 last:mb-0">
-                                    <div className="px-2 py-1 text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/80 rounded-[4px] mb-0.5">
+                                <div key={group.label} className="flex flex-col p-0.5 mb-1 last:mb-0">
+                                    <div className="px-2 py-1 text-[8px] font-black text-[#E2DCC8]/50 uppercase tracking-widest bg-white/5 rounded-[4px] mb-0.5">
                                         {group.label}
                                     </div>
                                     <div className="flex flex-col">
@@ -205,7 +209,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                                 key={f}
                                                 onMouseDown={preventFocusSteal}
                                                 onClick={() => { onUpdate({ fontFamily: f }); setIsFontMenuOpen(false); }}
-                                                className={`block w-full text-left px-3 py-1.5 text-[13px] hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] transition-all ${f === font ? 'text-indigo-600 font-bold bg-indigo-50' : 'text-slate-700'}`}
+                                                className={`block w-full text-left px-2.5 py-1.5 text-[12px] rounded-[4px] transition-all ${f === font ? 'bg-[#0F3D3E] text-white font-bold border border-[#E2DCC8]/30' : 'text-gray-300 hover:bg-[#0F3D3E]/30 hover:text-white'}`}
                                                 style={{ fontFamily: f }}
                                             >
                                                 {f}
@@ -215,7 +219,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                 </div>
                             ))}
                             {filteredFonts.length === 0 && (
-                                <div className="py-8 text-center text-slate-400 text-[11px] font-bold uppercase tracking-widest">
+                                <div className="py-8 text-center text-gray-500 text-[11px] font-bold uppercase tracking-widest">
                                     No fonts found
                                 </div>
                             )}
@@ -227,14 +231,15 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
             <Divider />
 
             {/* Font size */}
-            <div className="flex items-center gap-0.5 px-1">
+            <div className="flex items-center gap-0.5 px-0.5">
                 <button
                     onClick={() => {
                         const newSize = Math.max(6, size - 1);
                         onUpdate({ fontSize: newSize, width: element.width * (newSize / size) });
                     }}
                     onMouseDown={preventFocusSteal}
-                    className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-90"
+                    className="p-1.5 hover:bg-[#0F3D3E]/40 rounded-[4px] text-[#E2DCC8]/70 hover:text-white transition-all active:scale-90"
+                    title="Decrease size"
                 >
                     <Minus size={14} />
                 </button>
@@ -259,7 +264,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                             onUpdate({ fontSize: newSize, width: element.width * (newSize / size) });
                         }
                     }}
-                    className="w-10 text-center text-[13px] font-black text-slate-800 bg-transparent outline-none border-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    className="w-10 text-center text-[12px] font-black text-[#F1F1F1] bg-[#100F0F] border border-[#E2DCC8]/20 rounded-[4px] py-0.5 outline-none focus:border-[#0F3D3E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                     onClick={() => {
@@ -267,7 +272,8 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                         onUpdate({ fontSize: newSize, width: element.width * (newSize / size) });
                     }}
                     onMouseDown={preventFocusSteal}
-                    className="p-1.5 hover:bg-slate-50 rounded-full text-slate-400 hover:text-slate-600 transition-all active:scale-90"
+                    className="p-1.5 hover:bg-[#0F3D3E]/40 rounded-[4px] text-[#E2DCC8]/70 hover:text-white transition-all active:scale-90"
+                    title="Increase size"
                 >
                     <Plus size={14} />
                 </button>
@@ -276,57 +282,57 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
             <Divider />
 
             {/* Color & Formatting */}
-            <div className="flex items-center gap-0.5 px-1">
-                <div className="relative" ref={colorMenuRef}>
+            <div className="flex items-center gap-0.5 px-0.5">
+                <div className="relative">
                     <button
-                        onClick={() => setIsColorMenuOpen(!isColorMenuOpen)}
+                        onClick={() => {
+                            useStore.getState().openColorPicker({
+                                type: 'text',
+                                elementId: element.id,
+                                color: color,
+                                title: 'Text Color',
+                                onChange: (newVal) => handleAction('color', newVal)
+                            });
+                        }}
                         onMouseDown={preventFocusSteal}
-                        className={`p-2 rounded-full transition-all active:scale-95 ${isColorMenuOpen ? 'bg-slate-50 shadow-inner' : 'hover:bg-slate-50'} text-slate-700 relative`}
+                        className="p-1.5 rounded-[4px] transition-all active:scale-95 hover:bg-[#0F3D3E]/40 text-[#F1F1F1]"
                         title="Text Color"
                     >
                         <div className="flex flex-col items-center gap-0">
                             {color.includes('gradient') ? (
-                                <div className="w-[18px] h-[18px] rounded-full border border-slate-200" style={{ background: color }} />
+                                <div className="w-[18px] h-[18px] rounded-[2px] border border-white/20" style={{ background: color }} />
                             ) : (
                                 <div className="flex flex-col items-center">
-                                    <span className="font-serif font-black text-[15px] leading-tight" style={{ color }}>A</span>
-                                    <div className="w-4 h-[3.5px] rounded-full" style={{ backgroundColor: color }} />
+                                    <span className="font-serif font-black text-[14px] leading-tight" style={{ color }}>A</span>
+                                    <div className="w-4 h-[3px] rounded-[1px]" style={{ backgroundColor: color }} />
                                 </div>
                             )}
                         </div>
                     </button>
-                    {isColorMenuOpen && (
-                        <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-[220px] bg-white border border-slate-200/60 rounded-[4px] shadow-2xl p-3 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300 z-50`}>
-                            <AdvancedColorPicker
-                                color={color}
-                                onChange={(newVal) => handleAction('color', newVal)}
-                            />
-                        </div>
-                    )}
                 </div>
                 <button
                     onClick={() => handleAction('bold')}
                     onMouseDown={preventFocusSteal}
-                    className={`p-2 rounded-full transition-all active:scale-95 ${isBold ? 'text-indigo-600 bg-indigo-50' : 'hover:bg-slate-50 text-slate-600'}`}
+                    className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${isBold ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30 shadow-sm' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'}`}
                     title="Bold"
                 >
-                    <Bold size={16} strokeWidth={isBold ? 3 : 2} />
+                    <Bold size={15} strokeWidth={isBold ? 3 : 2} />
                 </button>
                 <button
                     onClick={() => handleAction('italic')}
                     onMouseDown={preventFocusSteal}
-                    className={`p-2 rounded-full transition-all active:scale-95 ${isItalic ? 'text-indigo-600 bg-indigo-50' : 'hover:bg-slate-50 text-slate-600'}`}
+                    className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${isItalic ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30 shadow-sm' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'}`}
                     title="Italic"
                 >
-                    <Italic size={16} strokeWidth={isItalic ? 3 : 2} />
+                    <Italic size={15} strokeWidth={isItalic ? 3 : 2} />
                 </button>
                 <button
                     onClick={() => handleAction('underline')}
                     onMouseDown={preventFocusSteal}
-                    className={`p-2 rounded-full transition-all active:scale-95 ${isUnderline ? 'text-indigo-600 bg-indigo-50' : 'hover:bg-slate-50 text-slate-600'}`}
+                    className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${isUnderline ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30 shadow-sm' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'}`}
                     title="Underline"
                 >
-                    <Underline size={16} strokeWidth={isUnderline ? 3 : 2} />
+                    <Underline size={15} strokeWidth={isUnderline ? 3 : 2} />
                 </button>
                 <button
                     onClick={() => {
@@ -334,26 +340,26 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                         onUpdate({ text: isUpper ? element.text?.toLowerCase() : element.text?.toUpperCase() });
                     }}
                     onMouseDown={preventFocusSteal}
-                    className="p-2 px-3 rounded-full hover:bg-slate-50 text-slate-600 transition-all active:scale-95"
-                    title="Uppercase"
+                    className="p-1.5 px-2 rounded-[4px] hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white transition-all active:scale-95"
+                    title="Uppercase / Lowercase"
                 >
-                    <span className="font-bold text-[14px]">Aa</span>
+                    <span className="font-bold text-[13px]">Aa</span>
                 </button>
             </div>
 
             <Divider />
 
             {/* Alignment & Text Settings */}
-            <div className="flex items-center gap-0.5 px-1">
+            <div className="flex items-center gap-0.5 px-0.5">
                 <button
                     onClick={() => handleAlignment(align === 'left' ? 'center' : align === 'center' ? 'right' : 'left')}
                     onMouseDown={preventFocusSteal}
-                    className="p-2 rounded-full hover:bg-slate-50 text-slate-600 transition-all active:scale-95"
+                    className="p-1.5 rounded-[4px] hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white transition-all active:scale-95"
                     title="Alignment"
                 >
-                    {align === 'left' && <AlignLeft size={16} />}
-                    {align === 'center' && <AlignCenter size={16} />}
-                    {align === 'right' && <AlignRight size={16} />}
+                    {align === 'left' && <AlignLeft size={15} />}
+                    {align === 'center' && <AlignCenter size={15} />}
+                    {align === 'right' && <AlignRight size={15} />}
                 </button>
 
                 {/* Text Settings Popover */}
@@ -361,25 +367,25 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     <button
                         onClick={() => setIsSettingsOpen(!isSettingsOpen)}
                         onMouseDown={preventFocusSteal}
-                        className={`p-2 rounded-full transition-all active:scale-95 ${isSettingsOpen ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                        className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${isSettingsOpen ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'}`}
                         title="Text Settings"
                     >
-                        <Sliders size={16} />
+                        <Sliders size={15} />
                     </button>
                     {isSettingsOpen && (
                         <div
-                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} left-1/2 -translate-x-1/2 w-[240px] bg-white border border-slate-200/60 rounded-[4px] shadow-2xl p-4 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-300`}
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 w-[240px] bg-[#18181b] border border-[#E2DCC8]/20 rounded-[4px] shadow-2xl p-3.5 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 text-[#EDEDED] z-50`}
                         >
-                            <div className="space-y-4">
+                            <div className="space-y-3.5">
                                 {/* Letter Spacing */}
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Letter Spacing</label>
+                                        <label className="text-[9px] font-black text-[#E2DCC8]/60 uppercase tracking-widest leading-none">Letter Spacing</label>
                                         <input
                                             type="number"
                                             value={Math.round((element.letterSpacing || 0))}
                                             onChange={e => onUpdate({ letterSpacing: parseFloat(e.target.value) || 0 })}
-                                            className="text-[11px] font-black text-indigo-600 bg-transparent w-12 text-right outline-none border-b border-transparent hover:border-slate-200 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0 p-0"
+                                            className="text-[11px] font-black text-[#F1F1F1] bg-[#100F0F] border border-[#E2DCC8]/20 rounded-[4px] px-1.5 py-0.5 w-12 text-right outline-none focus:border-[#0F3D3E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0"
                                         />
                                     </div>
                                     <input
@@ -389,13 +395,13 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         step="1"
                                         value={element.letterSpacing || 0}
                                         onChange={e => onUpdate({ letterSpacing: parseFloat(e.target.value) })}
-                                        className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                                        className="w-full h-1.5 bg-[#252528] rounded-[2px] appearance-none cursor-pointer accent-[#0F3D3E]"
                                     />
                                 </div>
                                 {/* Line Spacing */}
-                                <div className="space-y-2">
+                                <div className="space-y-1.5">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Line Spacing</label>
+                                        <label className="text-[9px] font-black text-[#E2DCC8]/60 uppercase tracking-widest leading-none">Line Spacing</label>
                                         <input
                                             type="text"
                                             value={element.lineHeight?.toString() || "1.2"}
@@ -403,7 +409,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                                 const val = parseFloat(e.target.value);
                                                 if (!isNaN(val)) onUpdate({ lineHeight: val });
                                             }}
-                                            className="text-[11px] font-black text-indigo-600 bg-transparent w-12 text-right outline-none border-b border-transparent hover:border-slate-200 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0 p-0"
+                                            className="text-[11px] font-black text-[#F1F1F1] bg-[#100F0F] border border-[#E2DCC8]/20 rounded-[4px] px-1.5 py-0.5 w-12 text-right outline-none focus:border-[#0F3D3E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0"
                                         />
                                     </div>
                                     <input
@@ -413,13 +419,13 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         step="0.1"
                                         value={element.lineHeight || 1.2}
                                         onChange={e => onUpdate({ lineHeight: parseFloat(e.target.value) })}
-                                        className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                                        className="w-full h-1.5 bg-[#252528] rounded-[2px] appearance-none cursor-pointer accent-[#0F3D3E]"
                                     />
                                 </div>
                                 {/* Transparency */}
-                                <div className="space-y-2 border-t border-slate-50 pt-3">
+                                <div className="space-y-1.5 border-t border-white/10 pt-2.5">
                                     <div className="flex justify-between items-center">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Transparency</label>
+                                        <label className="text-[9px] font-black text-[#E2DCC8]/60 uppercase tracking-widest leading-none">Transparency</label>
                                         <div className="flex items-center gap-0.5">
                                             <input
                                                 type="number"
@@ -430,9 +436,9 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                                     const val = parseInt(e.target.value);
                                                     if (!isNaN(val)) onUpdate({ opacity: Math.min(100, Math.max(0, val)) / 100 });
                                                 }}
-                                                className="text-[11px] font-black text-indigo-600 bg-transparent w-8 text-right outline-none border-b border-transparent hover:border-slate-200 focus:border-indigo-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0 p-0"
+                                                className="text-[11px] font-black text-[#F1F1F1] bg-[#100F0F] border border-[#E2DCC8]/20 rounded-[4px] px-1.5 py-0.5 w-10 text-right outline-none focus:border-[#0F3D3E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0"
                                             />
-                                            <span className="text-[11px] font-black text-indigo-600">%</span>
+                                            <span className="text-[11px] font-black text-[#E2DCC8]/60">%</span>
                                         </div>
                                     </div>
                                     <input
@@ -442,7 +448,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         step="0.01"
                                         value={element.opacity ?? 1}
                                         onChange={e => onUpdate({ opacity: parseFloat(e.target.value) })}
-                                        className="w-full h-1 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                                        className="w-full h-1.5 bg-[#252528] rounded-[2px] appearance-none cursor-pointer accent-[#0F3D3E]"
                                     />
                                 </div>
                             </div>
@@ -457,68 +463,68 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     <button
                         onClick={() => setIsLayerMenuOpen(!isLayerMenuOpen)}
                         onMouseDown={preventFocusSteal}
-                        className={`p-2 rounded-full transition-all active:scale-95 ${isLayerMenuOpen ? 'bg-indigo-50 text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`}
+                        className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${isLayerMenuOpen ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'}`}
                         title="Layer Position (Forward/Back)"
                     >
-                        <Layers size={16} />
+                        <Layers size={15} />
                     </button>
                     {isLayerMenuOpen && (
                         <div
-                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-3' : 'bottom-full mb-3'} right-0 w-[200px] bg-white border border-slate-200/80 rounded-[4px] shadow-2xl p-2 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 z-50`}
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2' : 'bottom-full mb-2'} right-0 w-[200px] bg-[#18181b] border border-[#E2DCC8]/20 rounded-[4px] shadow-2xl p-2 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 z-50 text-[#EDEDED]`}
                         >
                             <div className="space-y-1">
-                                <div className="px-3 py-1.5 border-b border-slate-100">
-                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Layer Order</span>
+                                <div className="px-2.5 py-1 border-b border-white/10">
+                                    <span className="text-[9px] font-black text-[#E2DCC8]/50 uppercase tracking-widest">Layer Order</span>
                                 </div>
                                 <button
                                     onClick={() => {
                                         reorderElement(currentPageIndex, element.id, 'front');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
+                                    className="w-full px-2.5 py-1.5 text-left text-xs font-bold text-gray-300 hover:bg-[#0F3D3E] hover:text-white rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Bring to Front</span>
-                                    <ArrowUpToLine size={14} className="text-slate-400" />
+                                    <ArrowUpToLine size={14} className="text-[#E2DCC8]/50" />
                                 </button>
                                 <button
                                     onClick={() => {
                                         reorderElement(currentPageIndex, element.id, 'forward');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
+                                    className="w-full px-2.5 py-1.5 text-left text-xs font-bold text-gray-300 hover:bg-[#0F3D3E] hover:text-white rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Bring Forward</span>
-                                    <ChevronUp size={14} className="text-slate-400" />
+                                    <ChevronUp size={14} className="text-[#E2DCC8]/50" />
                                 </button>
                                 <button
                                     onClick={() => {
                                         reorderElement(currentPageIndex, element.id, 'backward');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
+                                    className="w-full px-2.5 py-1.5 text-left text-xs font-bold text-gray-300 hover:bg-[#0F3D3E] hover:text-white rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Send Backward</span>
-                                    <ChevronDown size={14} className="text-slate-400" />
+                                    <ChevronDown size={14} className="text-[#E2DCC8]/50" />
                                 </button>
                                 <button
                                     onClick={() => {
                                         reorderElement(currentPageIndex, element.id, 'back');
                                         setIsLayerMenuOpen(false);
                                     }}
-                                    className="w-full px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 rounded-[4px] flex items-center justify-between transition-colors"
+                                    className="w-full px-2.5 py-1.5 text-left text-xs font-bold text-gray-300 hover:bg-[#0F3D3E] hover:text-white rounded-[4px] flex items-center justify-between transition-colors"
                                 >
                                     <span>Send to Back</span>
-                                    <ArrowDownToLine size={14} className="text-slate-400" />
+                                    <ArrowDownToLine size={14} className="text-[#E2DCC8]/50" />
                                 </button>
 
-                                <div className="pt-1 border-t border-slate-100">
+                                <div className="pt-1 border-t border-white/10">
                                     <button
                                         onClick={() => {
                                             setSidebarExpanded(true);
                                             setEditorTab('layers');
                                             setIsLayerMenuOpen(false);
                                         }}
-                                        className="w-full px-3 py-2 text-left text-[11px] font-black text-indigo-600 hover:bg-indigo-50 rounded-[4px] flex items-center gap-2 transition-colors uppercase tracking-wider"
+                                        className="w-full px-2.5 py-1.5 text-left text-[10px] font-black text-purple-400 hover:bg-purple-900/30 rounded-[4px] flex items-center gap-2 transition-colors uppercase tracking-wider"
                                     >
                                         <Layers size={13} />
                                         <span>Open Scene Tree</span>
@@ -538,10 +544,10 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                         setSelectedElementIds([]);
                     }}
                     onMouseDown={preventFocusSteal}
-                    className="p-2 rounded-full hover:bg-red-50 text-slate-500 hover:text-red-600 transition-all active:scale-95"
+                    className="p-1.5 rounded-[4px] hover:bg-red-500/20 text-[#E2DCC8]/70 hover:text-red-400 transition-all active:scale-95"
                     title="Delete Element (Del)"
                 >
-                    <Trash2 size={16} />
+                    <Trash2 size={15} />
                 </button>
             </div>
 

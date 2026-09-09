@@ -14,9 +14,8 @@ class MediaItemSerializer(serializers.ModelSerializer):
         }
 
     def get_url(self, obj):
-        request = self.context.get('request')
         if obj.file:
-            return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
         return None
         
     def create(self, validated_data):
@@ -39,7 +38,6 @@ class AdminAssetSerializer(serializers.ModelSerializer):
         read_only_fields = ('uuid', 'created_at', 'width', 'height', 'size_bytes', 'type')
 
     def get_url(self, obj):
-        request = self.context.get('request')
         if obj.file:
-            return request.build_absolute_uri(obj.file.url)
+            return obj.file.url
         return None

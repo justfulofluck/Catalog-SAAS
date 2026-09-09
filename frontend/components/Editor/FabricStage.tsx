@@ -5,6 +5,10 @@ import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
 import { elementToFabricObject } from './fabricRenderer';
 import { globalSpatialIndex, DistanceBadge } from '../../utils/spatialIndex';
+import { initCanvaGlobals, applyCanvaSelectionStyle, renderCanvaHoverOutline, CANVA_THEME } from '../../utils/canvaControls';
+
+// Initialize Canva-style controls globally on Fabric prototypes
+initCanvaGlobals();
 
 interface Props {
   page: CatalogPage;
@@ -16,6 +20,20 @@ interface Props {
   footerElements?: CanvasElement[];
   footerHeight?: number;
   editingId?: string | null;
+}
+
+// Global capture listener ensuring we always know the exact mouse coordinates of any right-click
+let lastRightClickPos = { x: 0, y: 0 };
+if (typeof window !== 'undefined') {
+  const recordRightClickPos = (e: MouseEvent | PointerEvent) => {
+    if (e.clientX > 0 || e.clientY > 0) {
+      lastRightClickPos = { x: e.clientX, y: e.clientY };
+      (window as any).__lastContextMenuPos = { x: e.clientX, y: e.clientY };
+    }
+  };
+  window.addEventListener('mousedown', recordRightClickPos, true);
+  window.addEventListener('pointerdown', recordRightClickPos, true);
+  window.addEventListener('contextmenu', recordRightClickPos, true);
 }
 
 const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = [], footerElements = [], footerHeight = 38, editingId = null }) => {
@@ -39,27 +57,112 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       height: curH * zoom,
       backgroundColor: page.backgroundColor || canvasBg,
       selection: true, // Enable click-and-drag area marquee multi-selection
-      selectionColor: 'rgba(99, 102, 241, 0.15)', // Translucent indigo selection box
-      selectionBorderColor: '#6366f1', // Solid indigo border
+      selectionColor: 'rgba(139, 61, 255, 0.12)', // Canva-style translucent purple
+      selectionBorderColor: CANVA_THEME.borderColor, // Signature Canva purple border
       selectionLineWidth: 1.5,
       preserveObjectStacking: true,
       enableRetinaScaling: true,
+      fireRightClick: true,
+      stopContextMenu: true,
     });
     canvas.setZoom(zoom);
 
     fabricCanvasRef.current = canvas;
 
     canvas.on('selection:created', (e: any) => {
+      const active = canvas.getActiveObject();
+      if (active) {
+        applyCanvaSelectionStyle(active);
+        active.setCoords();
+      }
+      canvas.requestRenderAll();
       const ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
       setSelectedElementIds(ids);
     });
 
     canvas.on('selection:updated', (e: any) => {
+      const active = canvas.getActiveObject();
+      if (active) {
+        applyCanvaSelectionStyle(active);
+        active.setCoords();
+      }
+      canvas.requestRenderAll();
       const ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
       setSelectedElementIds(ids);
     });
 
     canvas.on('selection:cleared', () => setSelectedElementIds([]));
+
+    // Canva-style auto hover outline for unselected components
+    let hoveredObject: any = null;
+
+    canvas.on('mouse:move', (e: any) => {
+      // Don't show hover outline while dragging, scaling, rotating, or drawing marquee
+      if ((canvas as any)._currentTransform || (canvas as any).isDrawingMode || (canvas as any)._isCurrentlyDrawingSelection) {
+        if (hoveredObject) {
+          hoveredObject = null;
+          canvas.requestRenderAll();
+        }
+        return;
+      }
+
+      // Check subTargets first (e.g. image or color swatch inside card), otherwise top target
+      let target = (e.subTargets && e.subTargets.length > 0) ? e.subTargets[0] : e.target;
+
+      // If hovering over the base background rect of a card group, treat the card as target
+      if (target && target.group && target === (target.group as any)._objects?.[0]) {
+        target = target.group;
+      }
+
+      const activeObj = canvas.getActiveObject();
+      const activeObjs = canvas.getActiveObjects();
+      const isAlreadyActive = target && (
+        target === activeObj ||
+        activeObjs.includes(target) ||
+        (target.group && (target.group === activeObj || activeObjs.includes(target.group)))
+      );
+
+      if (
+        target &&
+        !isAlreadyActive &&
+        target.visible !== false &&
+        target.selectable !== false &&
+        target !== canvas.backgroundImage
+      ) {
+        if (hoveredObject !== target) {
+          hoveredObject = target;
+          canvas.requestRenderAll();
+        }
+      } else {
+        if (hoveredObject) {
+          hoveredObject = null;
+          canvas.requestRenderAll();
+        }
+      }
+    });
+
+    canvas.on('mouse:out', () => {
+      if (hoveredObject) {
+        hoveredObject = null;
+        canvas.requestRenderAll();
+      }
+    });
+
+    // Override drawControls to render the purple hover outline
+    const origDrawControls = canvas.drawControls.bind(canvas);
+    canvas.drawControls = function (ctx: CanvasRenderingContext2D) {
+      origDrawControls(ctx);
+
+      if (
+        hoveredObject &&
+        hoveredObject.visible !== false &&
+        !(canvas as any)._currentTransform &&
+        !canvas.getActiveObjects().includes(hoveredObject) &&
+        (!hoveredObject.group || !canvas.getActiveObjects().includes(hoveredObject.group))
+      ) {
+        renderCanvaHoverOutline(ctx, hoveredObject);
+      }
+    };
 
     canvas.on('mouse:down', () => {
       canvas.calcOffset();
@@ -82,6 +185,149 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
       }
     });
+
+    // Handle Right-Click Context Menu for Page vs Components
+    let lastContextMenuTime = 0;
+
+    const triggerContextMenu = (eventOrOpt: any, targetFromFabric?: any, subTargetsFromFabric?: any[]) => {
+      // Prevent duplicate events within 150ms
+      const now = Date.now();
+      if (now - lastContextMenuTime < 150) return;
+      lastContextMenuTime = now;
+
+      // Extract native MouseEvent
+      const e = (eventOrOpt && typeof eventOrOpt.clientX === 'number')
+        ? eventOrOpt
+        : (eventOrOpt && eventOrOpt.e && typeof eventOrOpt.e.clientX === 'number')
+          ? eventOrOpt.e
+          : null;
+
+      if (e) {
+        e.preventDefault?.();
+        e.stopPropagation?.();
+        e.stopImmediatePropagation?.();
+      }
+
+      const clientX = (e && typeof e.clientX === 'number' && e.clientX > 0)
+        ? e.clientX
+        : (lastRightClickPos.x || window.innerWidth / 2);
+      const clientY = (e && typeof e.clientY === 'number' && e.clientY > 0)
+        ? e.clientY
+        : (lastRightClickPos.y || window.innerHeight / 2);
+
+      canvas.calcOffset();
+
+      // Helper: Only true Fabric objects with setCoords method (NOT DOM HTMLCanvasElement)
+      const isValidFabricObj = (obj: any) => obj && typeof obj.setCoords === 'function';
+
+      let target: any = null;
+      if (isValidFabricObj(targetFromFabric)) {
+        target = targetFromFabric;
+      } else if (isValidFabricObj(eventOrOpt?.target)) {
+        target = eventOrOpt.target;
+      }
+
+      const subTargets = subTargetsFromFabric || (eventOrOpt && eventOrOpt.subTargets);
+      if (!target && subTargets && subTargets.length > 0 && isValidFabricObj(subTargets[0])) {
+        target = subTargets[0];
+      }
+
+      // If no target yet, query canvas for the object under mouse pointer
+      if (!target && e) {
+        const targetInfo = canvas.findTarget(e) as any;
+        if (targetInfo) {
+          if (isValidFabricObj(targetInfo.target)) {
+            target = targetInfo.target;
+          } else if (isValidFabricObj(targetInfo)) {
+            target = targetInfo;
+          } else if (targetInfo.subTargets && targetInfo.subTargets.length > 0 && isValidFabricObj(targetInfo.subTargets[0])) {
+            target = targetInfo.subTargets[0];
+          }
+        }
+      }
+
+      // Fallback: If clicked while an object was already active/selected on canvas
+      if (!target) {
+        const active = canvas.getActiveObject();
+        if (active && isValidFabricObj(active)) {
+          target = active;
+        }
+      }
+
+      // If clicked on child of a card/group or subTarget, resolve to top group or card that has an id
+      if (target && target.group && (target.group as any).id) {
+        target = target.group;
+      }
+
+      const isFabricElement = target && isValidFabricObj(target) && target.id;
+
+      if (
+        isFabricElement &&
+        target.visible !== false &&
+        target.selectable !== false &&
+        target !== canvas.backgroundImage
+      ) {
+        // Component right-clicked (Screenshot 2: Component Menu)
+        const activeObjs = canvas.getActiveObjects();
+        const isAlreadyActive = target === canvas.getActiveObject() || activeObjs.includes(target);
+
+        if (!isAlreadyActive) {
+          canvas.setActiveObject(target);
+          applyCanvaSelectionStyle(target);
+          target.setCoords();
+          canvas.requestRenderAll();
+          if (target.id) {
+            setSelectedElementIds([target.id]);
+          }
+        }
+
+        if (useStore.getState().currentPageIndex !== pageIdx) {
+          useStore.getState().setCurrentPageIndex(pageIdx);
+        }
+
+        window.dispatchEvent(new CustomEvent('catalog:openContextMenu', {
+          detail: {
+            x: clientX,
+            y: clientY,
+            type: 'element',
+            pageIndex: pageIdx,
+            targetId: target.id
+          }
+        }));
+      } else {
+        // Empty page / background right-clicked (Screenshot 1: Page Menu)
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        setSelectedElementIds([]);
+
+        if (useStore.getState().currentPageIndex !== pageIdx) {
+          useStore.getState().setCurrentPageIndex(pageIdx);
+        }
+
+        window.dispatchEvent(new CustomEvent('catalog:openContextMenu', {
+          detail: {
+            x: clientX,
+            y: clientY,
+            type: 'page',
+            pageIndex: pageIdx
+          }
+        }));
+      }
+    };
+
+    // Listen to Fabric's internal contextmenu event
+    canvas.on('contextmenu', (opt: any) => {
+      triggerContextMenu(opt, opt?.target, opt?.subTargets);
+    });
+
+    // Also attach to upperCanvasEl as backup
+    const upperEl = canvas.upperCanvasEl;
+    const handleNativeContextMenu = (e: MouseEvent) => {
+      triggerContextMenu(e);
+    };
+    if (upperEl) {
+      upperEl.addEventListener('contextmenu', handleNativeContextMenu);
+    }
 
     let dragTimer: number | null = null;
     canvas.on('object:moving', (e: any) => {
@@ -331,6 +577,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     return () => {
       if (renderThrottleRef.current) clearTimeout(renderThrottleRef.current);
       if (dragTimer) clearTimeout(dragTimer);
+      if (upperEl) {
+        upperEl.removeEventListener('contextmenu', handleNativeContextMenu);
+      }
       canvas.dispose();
       fabricCanvasRef.current = null;
     };
@@ -394,6 +643,16 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         existingObjects.forEach((o: any) => { if (o.id) existingElMap.set(o.id, o); });
 
         const needsRebuild = (el: CanvasElement, existingObj: any) => {
+          if (el.type === 'text') {
+            const oldFill = existingObj._lastFill || '';
+            const newFill = el.fill || '';
+            const oldIsGrad = oldFill.includes('gradient');
+            const newIsGrad = newFill.includes('gradient');
+            if (oldIsGrad !== newIsGrad || (newIsGrad && oldFill !== newFill)) {
+              return true;
+            }
+            return false;
+          }
           if (el.type === 'table') {
             const oldTableJSON = existingObj._tableDataJSON;
             const newTableJSON = JSON.stringify(el.tableData || {});
@@ -442,8 +701,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const isActiveObj = canvas.getActiveObjects().includes(existingObj);
             const isTableRebuild = el.type === 'table' && !isActiveObj && needsRebuild(el, existingObj);
             const isProductRebuild = el.type === 'product-block' && needsRebuild(el, existingObj);
+            const isTextRebuild = el.type === 'text' && needsRebuild(el, existingObj);
 
-            if (isTableRebuild || isProductRebuild) {
+            if (isTableRebuild || isProductRebuild || isTextRebuild) {
               if (isActiveObj) {
                 canvas.discardActiveObject();
               }
@@ -456,6 +716,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 selectable: isActive && !el.locked && !isCurrentlyEditing,
                 evented: isActive && !el.locked && !isCurrentlyEditing,
               });
+              applyCanvaSelectionStyle(existingObj);
 
               if (!isActiveObj) {
                 existingObj.set({ left: el.x, top: el.y, angle: el.rotation || 0 });
@@ -465,6 +726,15 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 let parsedText = (el.text || '').replace(/<[^>]*>/g, '');
                 if (parsedText.includes('{{page}}')) {
                   parsedText = parsedText.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
+                }
+                if (parsedText.includes('{{totalPages}}')) {
+                  parsedText = parsedText.replace(/\{\{totalPages\}\}/gi, String(catalog.pages?.length || 1));
+                }
+                if (parsedText.includes('{{year}}')) {
+                  parsedText = parsedText.replace(/\{\{year\}\}/gi, String(new Date().getFullYear()));
+                }
+                if (parsedText.includes('{{catalog_name}}')) {
+                  parsedText = parsedText.replace(/\{\{catalog_name\}\}/gi, catalog.name || 'Catalog');
                 }
                 existingObj.set({
                   text: parsedText,
@@ -479,6 +749,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   charSpacing: el.letterSpacing || 0,
                   objectCaching: false,
                 });
+                existingObj._lastFill = el.fill || '';
                 if (!isActiveObj) {
                   existingObj.set({
                     width: el.width,
@@ -529,11 +800,23 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           }
 
           const tempEl = { ...el };
-          if (tempEl.type === 'text' && tempEl.text && tempEl.text.includes('{{page}}')) {
-            tempEl.text = tempEl.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
+          if (tempEl.type === 'text' && tempEl.text) {
+            if (tempEl.text.includes('{{page}}')) {
+              tempEl.text = tempEl.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
+            }
+            if (tempEl.text.includes('{{totalPages}}')) {
+              tempEl.text = tempEl.text.replace(/\{\{totalPages\}\}/gi, String(catalog.pages?.length || 1));
+            }
+            if (tempEl.text.includes('{{year}}')) {
+              tempEl.text = tempEl.text.replace(/\{\{year\}\}/gi, String(new Date().getFullYear()));
+            }
+            if (tempEl.text.includes('{{catalog_name}}')) {
+              tempEl.text = tempEl.text.replace(/\{\{catalog_name\}\}/gi, catalog.name || 'Catalog');
+            }
           }
           const obj = await elementToFabricObject(tempEl, products, catalog);
           if (obj) {
+            applyCanvaSelectionStyle(obj);
             obj.set('zIndex', el.zIndex || 0);
             obj.set({ selectable: isActive && !el.locked, evented: isActive && !el.locked });
             if (el.type === 'product-block') {
@@ -553,6 +836,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               obj._cardTheme = (el as any).cardTheme || '';
             } else if (el.type === 'table') {
               obj._tableDataJSON = JSON.stringify(el.tableData || {});
+            } else if (el.type === 'text') {
+              obj._lastFill = el.fill || '';
             }
           }
           return obj;
@@ -565,6 +850,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         const currentCanvasObjects = canvas.getObjects();
 
         validObjects.forEach((obj) => {
+          applyCanvaSelectionStyle(obj);
           if (!currentCanvasObjects.includes(obj)) {
             canvas.add(obj);
           }
@@ -576,9 +862,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const currentActive = canvas.getActiveObjects();
           if (selectedObjs.length > 0 && (!currentActive.length || !selectedObjs.every(o => currentActive.includes(o)))) {
             if (selectedObjs.length === 1) {
+              applyCanvaSelectionStyle(selectedObjs[0]);
               canvas.setActiveObject(selectedObjs[0]);
             } else if (selectedObjs.length > 1) {
               const sel = new ActiveSelection(selectedObjs, { canvas });
+              applyCanvaSelectionStyle(sel);
               canvas.setActiveObject(sel);
             }
           }

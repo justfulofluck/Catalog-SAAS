@@ -9,6 +9,7 @@ import { useStore } from '../../store/useStore';
 import { Product, CanvasElement, TableData } from '../../types';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { resolveFieldLabel } from '../../utils/fieldUtils';
+import { normalizeImageUrl } from '../../utils/imageUtils';
 
 interface TableParamOption {
   key: string;
@@ -353,8 +354,8 @@ const ProductLibrary: React.FC = () => {
     const targetCatId = selectedCategoryId || (selectedProds.length > 0 ? selectedProds[0].categoryId : null);
     const targetCat = categories.find(c => c.id === targetCatId) || activeCategory;
     
-    const categoryHeroImg = (targetCat?.thumbnail) ||
-      (targetCat?.images && targetCat.images.length > 0 ? targetCat.images[0] : '');
+    const categoryHeroImg = normalizeImageUrl((targetCat?.thumbnail) ||
+      (targetCat?.images && targetCat.images.length > 0 ? targetCat.images[0] : ''));
 
     const targetPage = catalog.pages[currentPageIndex];
     const pageHasHeader = (targetPage as any)?.hasHeader !== false && catalog.hasHeader && (targetPage?.type === 'product' || targetPage?.type === 'interior' || targetPage?.type === 'index');
@@ -577,7 +578,7 @@ const ProductLibrary: React.FC = () => {
 
     const dragData = {
       type: 'product',
-      url: getProductImage(product),
+      url: normalizeImageUrl(getProductImage(product)),
       name: product.name,
       productId: product.id
     };
@@ -784,10 +785,11 @@ const ProductLibrary: React.FC = () => {
                   {/* Thumbnail */}
                   <div className="w-9 h-9 rounded-[2px] overflow-hidden shrink-0 border transition-transform duration-300 bg-[#121212] border-[#2a2a2a]">
                     {(() => {
-                      const imgSrc = product.image || (product.customFields && Object.values(product.customFields).find(
+                      const rawSrc = product.image || (product.customFields && Object.values(product.customFields).find(
                         val => typeof val === 'string' && (val.startsWith('/media') || val.startsWith('http'))
                       )) || null;
-                      return imgSrc ? <img src={imgSrc as string} alt={product.name} className="w-full h-full object-contain" /> : (
+                      const imgSrc = rawSrc ? normalizeImageUrl(rawSrc as string) : null;
+                      return imgSrc ? <img src={imgSrc} alt={product.name} className="w-full h-full object-contain" /> : (
                         <div className="w-full h-full flex items-center justify-center text-[#555]">
                           <Package size={12} />
                         </div>

@@ -48,5 +48,17 @@ urlpatterns = [
     path("api/", include("catalogs.urls")),
 ]
 
+from django.views.static import serve
+from django.urls import re_path
+
+def serve_media_with_cors(request, path, document_root=None, show_indexes=False):
+    response = serve(request, path, document_root=document_root, show_indexes=show_indexes)
+    response["Access-Control-Allow-Origin"] = "*"
+    response["Access-Control-Allow-Methods"] = "GET, OPTIONS"
+    response["Access-Control-Allow-Headers"] = "*"
+    return response
+
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += [
+        re_path(r"^media/(?P<path>.*)$", serve_media_with_cors, {"document_root": settings.MEDIA_ROOT}),
+    ]

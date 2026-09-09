@@ -152,8 +152,23 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | null) => void;
+  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null) => void;
+  colorPickerTarget: {
+    type: 'background' | 'fill' | 'stroke' | 'text';
+    elementId?: string;
+    color: string;
+    title?: string;
+    onChange?: (color: string) => void;
+  } | null;
+  openColorPicker: (target: {
+    type: 'background' | 'fill' | 'stroke' | 'text';
+    elementId?: string;
+    color: string;
+    title?: string;
+    onChange?: (color: string) => void;
+  }) => void;
+  closeColorPicker: () => void;
 
   renameCatalog: (newName: string) => void;
   updateCatalogCategories: (categoryIds: string[]) => void;
@@ -274,7 +289,7 @@ export const useStore = create<State>((set, get) => ({
   isAdminAuthenticated: false,
   currentView: 'dashboard',
   isSidebarExpanded: true,
-  uiTheme: 'dark',
+  uiTheme: (typeof window !== 'undefined' && localStorage.getItem('catalogmakerr_ui_theme') === 'light') ? 'light' : 'dark',
   shouldRenderOutlines: true,
   defaultCurrency: '₹',
   isLoading: false,
@@ -410,6 +425,7 @@ export const useStore = create<State>((set, get) => ({
   catalogSetupName: '',
   draggingItem: null,
   editorTab: 'products',
+  colorPickerTarget: null,
   clipboard: [],
 
   viewingCatalogId: null,
@@ -702,7 +718,13 @@ export const useStore = create<State>((set, get) => ({
   setCreatingSubcategoryParentId: (id) => set({ creatingSubcategoryParentId: id }),
 
   // UI State & Tools
-  toggleUiTheme: () => set((state) => ({ uiTheme: state.uiTheme === 'light' ? 'dark' : 'light' })),
+  toggleUiTheme: () => set((state) => {
+    const nextTheme = state.uiTheme === 'light' ? 'dark' : 'light';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('catalogmakerr_ui_theme', nextTheme);
+    }
+    return { uiTheme: nextTheme };
+  }),
   setShouldRenderOutlines: (shouldRender) => set({ shouldRenderOutlines: shouldRender }),
 
   // Scene Tree (Layers)
@@ -1466,6 +1488,15 @@ export const useStore = create<State>((set, get) => ({
   setDragPosition: (activeDragPosition) => set({ activeDragPosition }),
 
   setEditorTab: (tab) => set({ editorTab: tab }),
+  openColorPicker: (target) => set({
+    colorPickerTarget: target,
+    editorTab: 'colors',
+    isSidebarExpanded: true
+  }),
+  closeColorPicker: () => set((state) => ({
+    colorPickerTarget: null,
+    editorTab: state.editorTab === 'colors' ? 'pages' : state.editorTab
+  })),
   setCatalogSetupName: (name) => set({ catalogSetupName: name }),
   setDraggingItem: (item) => set({ draggingItem: item }),
 

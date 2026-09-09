@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { PageType, CatalogPage, CanvasElement } from '../../types';
 import { THEMES, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from '../Editor/fabricRenderer';
+import { normalizeImageUrl } from '../../utils/imageUtils';
 import TemplatesPanel from './TemplatesPanel';
 
 const THUMB_BASE = 140;
@@ -16,6 +17,7 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
 
   const thumbW = THUMB_BASE;
   const thumbH = Math.round(thumbW * (PAGE_HEIGHT / PAGE_WIDTH));
+  const [renderTrigger, setRenderTrigger] = useState(0);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -65,77 +67,332 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
         ctx.rotate((el.rotation * Math.PI) / 180);
       }
 
-      if (el.type === 'shape') {
-        ctx.fillStyle = el.fill || '#cbd5e1';
+      if (el.type === 'shape' || el.type === 'comment') {
+        const getCanvasFill = () => {
+          if (!el.fill) return '#cbd5e1';
+          if (el.fill.includes('linear-gradient')) {
+            const match = el.fill.match(/linear-gradient\s*\(\s*([^,]+)\s*,\s*(#[a-fA-F0-9]+)\s*,\s*(#[a-fA-F0-9]+)\s*\)/i);
+            if (match) {
+              const dir = match[1].trim();
+              const c1 = match[2].trim();
+              const c2 = match[3].trim();
+              let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+              switch (dir) {
+                case 'to right': x2 = el.width; break;
+                case 'to bottom': y2 = el.height; break;
+                case 'to bottom right': x2 = el.width; y2 = el.height; break;
+                case 'to top right': y1 = el.height; x2 = el.width; break;
+                default: x2 = el.width;
+              }
+              const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+              grad.addColorStop(0, c1);
+              grad.addColorStop(1, c2);
+              return grad;
+            }
+          }
+          return el.fill;
+        };
+
+        ctx.fillStyle = getCanvasFill();
         if (el.shapeType === 'circle') {
           const r = Math.min(el.width, el.height) / 2;
           ctx.beginPath();
           ctx.arc(r, r, r, 0, Math.PI * 2);
           ctx.fill();
+        } else if (el.shapeType === 'line') {
+          ctx.strokeStyle = el.stroke || (typeof ctx.fillStyle === 'string' ? ctx.fillStyle : '#000000');
+          ctx.lineWidth = el.strokeWidth || 2;
+          ctx.beginPath();
+          ctx.moveTo(0, el.height / 2);
+          ctx.lineTo(el.width, el.height / 2);
+          ctx.stroke();
+        } else if (el.shapeType === 'roundedRect' || el.shapeType === 'pill') {
+          const r = el.shapeType === 'pill' ? Math.min(el.width, el.height) / 2 : Math.min(el.width, el.height) * 0.15;
+          ctx.beginPath();
+          if (typeof (ctx as any).roundRect === 'function') {
+            (ctx as any).roundRect(0, 0, el.width, el.height, r);
+          } else {
+            ctx.rect(0, 0, el.width, el.height);
+          }
+          ctx.fill();
         } else {
           ctx.fillRect(0, 0, el.width, el.height);
         }
+
+        if (el.stroke && el.strokeWidth && el.shapeType !== 'line') {
+          ctx.strokeStyle = el.stroke;
+          ctx.lineWidth = el.strokeWidth;
+          if (el.shapeType === 'circle') {
+            const r = Math.min(el.width, el.height) / 2;
+            ctx.beginPath();
+            ctx.arc(r, r, r, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if ((el.shapeType === 'roundedRect' || el.shapeType === 'pill') && typeof (ctx as any).roundRect === 'function') {
+            ctx.beginPath();
+            (ctx as any).roundRect(0, 0, el.width, el.height, el.shapeType === 'pill' ? Math.min(el.width, el.height) / 2 : Math.min(el.width, el.height) * 0.15);
+            ctx.stroke();
+          } else {
+            ctx.strokeRect(0, 0, el.width, el.height);
+          }
+        }
+
+        if (el.iconConfig) {
+          ctx.save();
+          const ic = el.iconConfig;
+          const iSize = ic.size || (Math.min(el.width, el.height) * 0.5);
+          const iFontFamily = (ic as any).fontFamily || 'Font Awesome 6 Free';
+          const iWeight = (ic as any).fontWeight || '900';
+          ctx.font = `${iWeight} ${iSize}px "${iFontFamily}", sans-serif`;
+          ctx.fillStyle = ic.color || '#ffffff';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(ic.iconName, el.width / 2, el.height / 2);
+          ctx.restore();
+        }
       } else if (el.type === 'text') {
-        let textContent = (el.text || '').replace(/<[^>]*>/g, '');
+        let textContent = (el.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
         if (textContent.includes('{{page}}')) {
           textContent = textContent.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageNum + 1));
         }
         ctx.fillStyle = el.fill || '#000000';
-        ctx.font = `${el.fontWeight || 'normal'} ${el.fontSize || 16}px ${el.fontFamily || 'Inter, sans-serif'}`;
+        const fontSize = el.fontSize || 16;
+        ctx.font = `${el.fontWeight || 'normal'} ${fontSize}px ${el.fontFamily || 'Inter, sans-serif'}`;
         ctx.textBaseline = 'top';
-        ctx.fillText(textContent, 0, 0, el.width);
+        
+        const textAlign = el.textAlign || 'left';
+        ctx.textAlign = textAlign;
+        let textX = 0;
+        if (textAlign === 'center') textX = el.width / 2;
+        else if (textAlign === 'right') textX = el.width;
+
+        const lines = textContent.split('\n');
+        const lineHeight = fontSize * (el.lineHeight || 1.2);
+        lines.forEach((line, idx) => {
+          ctx.fillText(line, textX, idx * lineHeight, el.width);
+        });
       } else if (el.type === 'image' && el.src) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
-        img.src = el.src;
+        img.src = normalizeImageUrl(el.src);
         if (img.complete && img.naturalWidth > 0) {
           ctx.drawImage(img, 0, 0, el.width, el.height);
         } else {
           img.onload = () => {
             if (!isMounted) return;
-            ctx.save();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.scale(scale, scale);
-            ctx.translate(el.x, el.y);
-            if (el.rotation) ctx.rotate((el.rotation * Math.PI) / 180);
-            ctx.globalAlpha = el.opacity ?? 1;
-            ctx.drawImage(img, 0, 0, el.width, el.height);
-            ctx.restore();
+            setRenderTrigger(prev => prev + 1);
           };
         }
+      } else if (el.type === 'table' || el.tableData) {
+        const td = el.tableData || {
+          headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING'],
+          rows: [
+            ['VT-2612', '12W V-TAC COB WHITE BODY', '75MM', 'W, W.W, N.W', '580', '20 PCS'],
+            ['VT-2612', '12W VTAC 3IN1 ON SWITCH', '75MM', 'W, W.W, N.W', '1,000', '20 PCS'],
+            ['VT-2612', '12W V-TAC COB DIMMABLE', '75MM', 'W, W.W, N.W', '1,500', '20 PCS']
+          ]
+        };
+
+        const headerBg = td.headerBg || '#002b36';
+        const headerTextColor = td.headerTextColor || '#ffffff';
+        const rowBg = td.rowBg || '#ffffff';
+        const alternateRowBg = td.alternateRowBg || '#f8fafc';
+        const borderColor = td.borderColor || '#334155';
+        const cellPadding = td.cellPadding || 6;
+        const headerFontSize = td.headerFontSize || 9.5;
+        const bodyFontSize = td.fontSize || 8.5;
+
+        const numCols = td.headers?.length || 1;
+        const dynamicHeaderFontSize = numCols > 6 ? Math.max(8.5, Math.min(headerFontSize, el.width / (numCols * 7.5))) : headerFontSize;
+        const dynamicBodyFontSize = numCols > 6 ? Math.max(8.0, Math.min(bodyFontSize, el.width / (numCols * 8.0))) : bodyFontSize;
+
+        const colWidths: number[] = [];
+        if (td.colWidths && td.colWidths.length === numCols) {
+          const totalRel = td.colWidths.reduce((a, b) => a + b, 0);
+          td.colWidths.forEach(w => colWidths.push((w / totalRel) * el.width));
+        } else {
+          const weights = td.headers.map((h) => {
+            const lower = (h || '').toLowerCase();
+            if (lower.includes('product') || lower.includes('spec') || lower.includes('name') || lower.includes('desc')) return 2.2;
+            if (lower.includes('model') || lower.includes('sku') || lower.includes('code')) return 1.5;
+            if (lower.includes('cut') || lower.includes('dim')) return 1.1;
+            if (lower.includes('color') || lower.includes('cct')) return 1.2;
+            if (lower.includes('price') || lower.includes('mrp')) return 1.1;
+            if (lower.includes('pack') || lower.includes('box')) return 1.1;
+            return 1.0;
+          });
+          const totalWeight = weights.reduce((a, b) => a + b, 0);
+          weights.forEach(w => colWidths.push((w / totalWeight) * el.width));
+        }
+
+        const estimateLines = (text: string, colW: number, fSize: number): number => {
+          if (!text) return 1;
+          const clean = text.toString().trim();
+          const avgCharWidth = fSize * 0.58;
+          const usableWidth = Math.max(15, colW - cellPadding * 2);
+          const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
+          const words = clean.split(/\s+/);
+          let lines = 1;
+          let curLineLen = 0;
+          words.forEach(word => {
+            if (curLineLen + word.length > charsPerLine) {
+              lines++;
+              curLineLen = word.length;
+            } else {
+              curLineLen += word.length + 1;
+            }
+          });
+          return lines;
+        };
+
+        let maxHeaderLines = 1;
+        td.headers.forEach((h, colIdx) => {
+          const l = estimateLines(h, colWidths[colIdx], dynamicHeaderFontSize);
+          if (l > maxHeaderLines) maxHeaderLines = l;
+        });
+        const headerRowHeight = Math.max(28, maxHeaderLines * (dynamicHeaderFontSize * 1.3) + cellPadding * 2);
+
+        const rowHeights: number[] = [];
+        (td.rows || []).forEach(row => {
+          let maxLinesInRow = 1;
+          row.forEach((cellText, colIdx) => {
+            const l = estimateLines(cellText, colWidths[colIdx] || (el.width / numCols), dynamicBodyFontSize);
+            if (l > maxLinesInRow) maxLinesInRow = l;
+          });
+          rowHeights.push(Math.max(26, maxLinesInRow * (dynamicBodyFontSize * 1.35) + cellPadding * 2));
+        });
+
+        const totalTableHeight = headerRowHeight + rowHeights.reduce((a, b) => a + b, 0);
+
+        // 1. Header Background
+        ctx.fillStyle = headerBg;
+        ctx.fillRect(0, 0, el.width, headerRowHeight);
+
+        // 2. Header Cells
+        let currentX = 0;
+        td.headers.forEach((headerText, colIdx) => {
+          const colW = colWidths[colIdx];
+          ctx.fillStyle = headerTextColor;
+          ctx.font = `900 ${dynamicHeaderFontSize}px Montserrat, sans-serif`;
+          ctx.textBaseline = 'middle';
+          
+          const isLeft = colIdx === 0 || colIdx === 1;
+          ctx.textAlign = isLeft ? 'left' : 'center';
+          const textX = isLeft ? currentX + cellPadding : currentX + colW / 2;
+          const textY = headerRowHeight / 2;
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(currentX, 0, colW, headerRowHeight);
+          ctx.clip();
+          ctx.fillText((headerText || '').toUpperCase(), textX, textY, colW - cellPadding * 2);
+          ctx.restore();
+
+          if (colIdx < numCols - 1) {
+            ctx.strokeStyle = borderColor;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(currentX + colW, 0);
+            ctx.lineTo(currentX + colW, headerRowHeight);
+            ctx.stroke();
+          }
+          currentX += colW;
+        });
+
+        // 3. Body Rows
+        let curY = headerRowHeight;
+        (td.rows || []).forEach((row, rowIdx) => {
+          const rHeight = rowHeights[rowIdx] || 26;
+          const bg = rowIdx % 2 === 1 ? alternateRowBg : rowBg;
+
+          ctx.fillStyle = bg;
+          ctx.fillRect(0, curY, el.width, rHeight);
+
+          // Horizontal row divider line
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, curY);
+          ctx.lineTo(el.width, curY);
+          ctx.stroke();
+
+          let cellX = 0;
+          row.forEach((cellText, colIdx) => {
+            const colW = colWidths[colIdx] || (el.width / numCols);
+            ctx.fillStyle = '#0f172a';
+            ctx.font = `${colIdx === 0 ? '700' : '500'} ${dynamicBodyFontSize}px Inter, sans-serif`;
+            ctx.textBaseline = 'middle';
+            
+            const isLeft = colIdx === 0 || colIdx === 1;
+            ctx.textAlign = isLeft ? 'left' : 'center';
+            const textX = isLeft ? cellX + cellPadding : cellX + colW / 2;
+            const textY = curY + rHeight / 2;
+
+            ctx.save();
+            ctx.beginPath();
+            ctx.rect(cellX, curY, colW, rHeight);
+            ctx.clip();
+            ctx.fillText(cellText || '-', textX, textY, colW - cellPadding * 2);
+            ctx.restore();
+
+            if (colIdx < numCols - 1) {
+              ctx.strokeStyle = borderColor;
+              ctx.lineWidth = 0.8;
+              ctx.beginPath();
+              ctx.moveTo(cellX + colW, curY);
+              ctx.lineTo(cellX + colW, curY + rHeight);
+              ctx.stroke();
+            }
+
+            cellX += colW;
+          });
+
+          curY += rHeight;
+        });
+
+        // 4. Outer table border
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(0, 0, el.width, totalTableHeight);
       } else if (el.type === 'product-block') {
         const prod = products.find(p => p.id === el.productId);
-        ctx.fillStyle = '#f8fafc';
+        ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, el.width, el.height);
         ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1.5;
         ctx.strokeRect(0, 0, el.width, el.height);
 
         const imgSrc = el.src || prod?.image;
+        const imgH = Math.max(30, el.height * 0.48);
         if (imgSrc) {
           const img = new Image();
           img.crossOrigin = 'anonymous';
-          img.src = imgSrc;
-          const imgH = el.height * 0.65;
+          img.src = normalizeImageUrl(imgSrc);
           if (img.complete && img.naturalWidth > 0) {
-            ctx.drawImage(img, 10, 10, el.width - 20, imgH - 10);
+            ctx.drawImage(img, 8, 8, el.width - 16, imgH - 12);
           } else {
             img.onload = () => {
               if (!isMounted) return;
-              ctx.save();
-              ctx.setTransform(1, 0, 0, 1, 0, 0);
-              ctx.scale(scale, scale);
-              ctx.translate(el.x, el.y);
-              ctx.drawImage(img, 10, 10, el.width - 20, imgH - 10);
-              ctx.restore();
+              setRenderTrigger(prev => prev + 1);
             };
           }
         }
 
+        let curTop = 8 + imgH;
         if (prod?.name) {
           ctx.fillStyle = '#0f172a';
-          ctx.font = 'bold 14px Inter, sans-serif';
+          ctx.font = 'bold 12px Inter, sans-serif';
           ctx.textBaseline = 'top';
-          ctx.fillText(prod.name, 10, el.height * 0.7, el.width - 20);
+          ctx.textAlign = 'left';
+          ctx.fillText(prod.name, 8, curTop, el.width - 16);
+          curTop += 16;
+        }
+
+        if (prod?.price) {
+          ctx.fillStyle = '#4f46e5';
+          ctx.font = 'bold 11px Inter, sans-serif';
+          ctx.textBaseline = 'top';
+          ctx.textAlign = 'left';
+          ctx.fillText(`${prod.currency || '₹'}${prod.price}`, 8, curTop, el.width - 16);
         }
       }
 
@@ -145,7 +402,7 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
     return () => {
       isMounted = false;
     };
-  }, [page, canvasBg, catalog, products, pageNum, thumbW, thumbH]);
+  }, [page, canvasBg, catalog, products, pageNum, thumbW, thumbH, renderTrigger]);
 
   return (
     <div className={`flex justify-center items-center py-2 w-full rounded-[4px] overflow-hidden ${isDark ? 'bg-[#121212]' : 'bg-slate-50/50'}`}>

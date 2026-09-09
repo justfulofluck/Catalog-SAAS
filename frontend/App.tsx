@@ -22,6 +22,8 @@ import PagesPanel from './components/Sidebar/PagesPanel';
 import ProjectSettingsPanel from './components/Sidebar/ProjectSettingsPanel';
 import ButtonsPanel from './components/Sidebar/ButtonsPanel';
 import HeaderFooterPanel from './components/Sidebar/HeaderFooterPanel';
+import TextPanel from './components/Sidebar/TextPanel';
+import ColorPanel from './components/Sidebar/ColorPanel';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
@@ -48,7 +50,8 @@ import {
   Sparkles,
   FileText,
   MousePointer2,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Type
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -180,12 +183,12 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (uiTheme === 'dark' || currentView === 'editor' || currentView === 'admin-dashboard') {
+    if (uiTheme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [uiTheme, currentView]);
+  }, [uiTheme]);
 
   if (loading) {
     return (
@@ -225,14 +228,15 @@ const App: React.FC = () => {
 
   // Editor View (Fullscreen)
   if (currentView === 'editor') {
+    const isDark = uiTheme === 'dark';
     return (
-      <div className="flex flex-col h-screen w-screen bg-[#100F0F] overflow-hidden font-sans text-[#F1F1F1]">
+      <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-[#f1f5f9] text-slate-800'}`}>
         <EditorToolbar />
         <div className="flex flex-1 overflow-hidden relative">
           {/* Icon rail + Sidebar Content container for click-outside detection */}
           <div ref={leftPanelRef} className="flex h-full z-40 relative">
             {/* Icon rail - always visible, fixed width */}
-            <div className="flex flex-col border-r border-[#E2DCC8]/15 bg-[#100F0F] shrink-0 h-full">
+            <div className={`flex flex-col border-r shrink-0 h-full transition-colors duration-200 ${isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F]' : 'border-slate-200 bg-white'}`}>
               <div className="flex flex-col w-14 items-center py-6 gap-6">
                 <button
                   onClick={() => {
@@ -243,7 +247,11 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'pages' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'pages' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
                   title="Pages"
                 >
                   <FileText size={20} />
@@ -257,10 +265,32 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'products' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'products' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
                   title="Product Assets"
                 >
                   <Package size={20} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (editorTab === 'text' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('text');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'text' && isSidebarExpanded 
+                      ? 'bg-[#7c3aed] text-white shadow-lg shadow-purple-900/30' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
+                  title="Text & Typography"
+                >
+                  <Type size={20} />
                 </button>
                 <button
                   onClick={() => {
@@ -271,7 +301,11 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'media' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'media' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
                   title="Media & Stock Images"
                 >
                   <Images size={20} />
@@ -286,7 +320,11 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'buttons' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'buttons' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
                   title="Buttons"
                 >
                   <MousePointer2 size={20} />
@@ -301,7 +339,11 @@ const App: React.FC = () => {
                       setSidebarExpanded(true);
                     }
                   }}
-                  className={`p-2.5 rounded-[4px] transition-all ${editorTab === 'header-footer' && isSidebarExpanded ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' : 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30'}`}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'header-footer' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
                   title="Header & Footer Settings"
                 >
                   <LayoutTemplate size={20} />
@@ -311,13 +353,17 @@ const App: React.FC = () => {
 
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
-              <div className={`h-full z-30 shadow-xl border-r border-[#E2DCC8]/15 transition-all duration-200 ${editorTab === 'products' ? 'w-[430px]' : 'w-[330px]'} shrink-0 bg-[#141414]`}>
+              <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
+                editorTab === 'products' ? 'w-[430px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
+              } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'products' && <ProductLibrary />}
+                {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
                 {editorTab === 'templates' && <TemplatesPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
                 {editorTab === 'header-footer' && <HeaderFooterPanel />}
+                {editorTab === 'colors' && <ColorPanel />}
               </div>
             )}
           </div>
@@ -358,20 +404,22 @@ const App: React.FC = () => {
     }
   };
 
+  const isDark = uiTheme === 'dark';
+
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#100F0F] font-sans text-[#F1F1F1]">
-      <aside className={`${sidebarWidth} bg-[#161616] border-r border-[#262626] flex flex-col pt-6 pb-3 z-30 shrink-0 transition-all duration-300 ease-in-out`}>
+    <div className={`flex h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-[#f8fafc] text-slate-800'}`}>
+      <aside className={`${sidebarWidth} ${isDark ? 'bg-[#161616] border-[#262626] text-[#F1F1F1]' : 'bg-white border-slate-200 text-slate-800'} border-r flex flex-col pt-6 pb-3 z-30 shrink-0 transition-all duration-300 ease-in-out`}>
         <div className={`flex ${isSidebarExpanded ? 'items-center justify-between px-6' : 'flex-col items-center gap-6 px-2'} mb-8`}>
           <div onClick={() => setView('dashboard')} className="flex items-center gap-3 cursor-pointer group shrink-0 overflow-hidden max-w-full">
             {isSidebarExpanded ? (
-              <span className="text-[#F1F1F1] font-medium text-xl tracking-tight font-heading animate-in fade-in slide-in-from-left-2 duration-300 truncate">catalogmakerr.</span>
+              <span className={`font-medium text-xl tracking-tight font-heading animate-in fade-in slide-in-from-left-2 duration-300 truncate ${isDark ? 'text-[#F1F1F1]' : 'text-slate-900'}`}>catalogmakerr.</span>
             ) : (
-              <span className="text-[#E2DCC8] font-medium text-xl tracking-tight font-heading truncate">c.</span>
+              <span className={`font-medium text-xl tracking-tight font-heading truncate ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>c.</span>
             )}
           </div>
           <button
             onClick={() => setSidebarExpanded(!isSidebarExpanded)}
-            className={`text-[#E2DCC8]/70 hover:text-[#F1F1F1] transition-colors p-1.5 rounded-[4px] hover:bg-[#222222] ${!isSidebarExpanded ? 'w-10 h-10 flex items-center justify-center' : ''}`}
+            className={`transition-colors p-1.5 rounded-[4px] ${isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#222222]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'} ${!isSidebarExpanded ? 'w-10 h-10 flex items-center justify-center' : ''}`}
             title={isSidebarExpanded ? "Collapse Sidebar" : "Expand Sidebar"}
           >
             <Menu size={20} />
@@ -379,43 +427,43 @@ const App: React.FC = () => {
         </div>
 
         <nav className="flex-1 px-4 space-y-1.5 overflow-y-auto">
-          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView === 'dashboard' ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/25 shadow-lg shadow-[#0F3D3E]/30' : 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]'}`}>
-            <LayoutDashboard size={20} className="shrink-0 text-[#E2DCC8]" />
+          <button onClick={() => setView('dashboard')} className={`w-full flex items-center gap-4 px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView === 'dashboard' ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/25 shadow-lg shadow-[#0F3D3E]/30' : (isDark ? 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}`}>
+            <LayoutDashboard size={20} className={`shrink-0 ${isDark ? 'text-[#E2DCC8]' : (currentView === 'dashboard' ? 'text-white' : 'text-slate-500')}`} />
             {isSidebarExpanded && <span className="tracking-tight">Dashboard</span>}
           </button>
 
-          <div className="h-px bg-[#262626] mx-2 my-3"></div>
+          <div className={`h-px mx-2 my-3 ${isDark ? 'bg-[#262626]' : 'bg-slate-200'}`}></div>
 
           <div className="space-y-1">
-            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCategoriesMenuOpen(!isCategoriesMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView.includes('category') || currentView === 'products-list' || currentView === 'media-library' ? 'text-[#F1F1F1] bg-[#1e1e1e]' : 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]'}`}>
+            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCategoriesMenuOpen(!isCategoriesMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView.includes('category') || currentView === 'products-list' || currentView === 'media-library' ? (isDark ? 'text-[#F1F1F1] bg-[#1e1e1e]' : 'text-slate-900 bg-slate-100 font-semibold') : (isDark ? 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}`}>
               <div className="flex items-center gap-4">
-                <FolderOpen size={20} className="shrink-0 text-[#E2DCC8]" />
+                <FolderOpen size={20} className={`shrink-0 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-500'}`} />
                 {isSidebarExpanded && <span className="tracking-tight">Inventory</span>}
               </div>
-              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCategoriesMenuOpen ? 'rotate-180 text-[#E2DCC8]' : ''}`} />}
+              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCategoriesMenuOpen ? 'rotate-180 text-[#0F3D3E]' : (isDark ? 'text-[#888]' : 'text-slate-400')}`} />}
             </button>
             {isCategoriesMenuOpen && isSidebarExpanded && (
-              <div className="ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l border-[#262626] pl-2 mt-1">
-                <button onClick={() => setView('category-list')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'category-list' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Categories</button>
-                <button onClick={() => { setActiveCategoryId(null); setView('products-list'); }} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'products-list' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>All Products</button>
-                <button onClick={() => setView('media-library')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'media-library' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Media</button>
+              <div className={`ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l pl-2 mt-1 ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
+                <button onClick={() => setView('category-list')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'category-list' ? (isDark ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#0F3D3E] bg-teal-50 font-bold border border-teal-200') : (isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')}`}>Categories</button>
+                <button onClick={() => { setActiveCategoryId(null); setView('products-list'); }} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'products-list' ? (isDark ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#0F3D3E] bg-teal-50 font-bold border border-teal-200') : (isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')}`}>All Products</button>
+                <button onClick={() => setView('media-library')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'media-library' ? (isDark ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#0F3D3E] bg-teal-50 font-bold border border-teal-200') : (isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')}`}>Media</button>
               </div>
             )}
           </div>
 
           <div className="space-y-1">
-            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCatalogMenuOpen(!isCatalogMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView.includes('catalog') || currentView === 'your-work' || currentView === 'publish' ? 'text-[#F1F1F1] bg-[#1e1e1e]' : 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]'}`}>
+            <button onClick={() => { if (!isSidebarExpanded) setSidebarExpanded(true); setCatalogMenuOpen(!isCatalogMenuOpen); }} className={`w-full flex items-center justify-between px-4 py-3 rounded-[4px] font-heading font-medium text-sm transition-all ${currentView.includes('catalog') || currentView === 'your-work' || currentView === 'publish' ? (isDark ? 'text-[#F1F1F1] bg-[#1e1e1e]' : 'text-slate-900 bg-slate-100 font-semibold') : (isDark ? 'text-[#E2DCC8]/70 hover:bg-[#1e1e1e] hover:text-[#F1F1F1]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900')}`}>
               <div className="flex items-center gap-4">
-                <BookOpen size={20} className="shrink-0 text-[#E2DCC8]" />
+                <BookOpen size={20} className={`shrink-0 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-500'}`} />
                 {isSidebarExpanded && <span className="tracking-tight">Publication</span>}
               </div>
-              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCatalogMenuOpen ? 'rotate-180 text-[#E2DCC8]' : ''}`} />}
+              {isSidebarExpanded && <ChevronDown size={14} className={`transition-transform ${isCatalogMenuOpen ? 'rotate-180 text-[#0F3D3E]' : (isDark ? 'text-[#888]' : 'text-slate-400')}`} />}
             </button>
             {isCatalogMenuOpen && isSidebarExpanded && (
-              <div className="ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l border-[#262626] pl-2 mt-1">
-                <button onClick={() => setView('catalog-setup')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'catalog-setup' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>New Catalog</button>
-                <button onClick={() => setView('your-work')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'your-work' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Your Work</button>
-                <button onClick={() => setView('publish')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'publish' ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]'}`}>Publish & Manage</button>
+              <div className={`ml-8 space-y-1 animate-in slide-in-from-top-2 duration-200 border-l pl-2 mt-1 ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
+                <button onClick={() => setView('catalog-setup')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'catalog-setup' ? (isDark ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#0F3D3E] bg-teal-50 font-bold border border-teal-200') : (isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')}`}>New Catalog</button>
+                <button onClick={() => setView('your-work')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'your-work' ? (isDark ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#0F3D3E] bg-teal-50 font-bold border border-teal-200') : (isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')}`}>Your Work</button>
+                <button onClick={() => setView('publish')} className={`w-full text-left py-2 px-3 rounded-[4px] text-xs font-medium transition-colors ${currentView === 'publish' ? (isDark ? 'text-[#E2DCC8] bg-[#0F3D3E]/50 font-bold border border-[#E2DCC8]/30' : 'text-[#0F3D3E] bg-teal-50 font-bold border border-teal-200') : (isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#1e1e1e]' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100')}`}>Publish & Manage</button>
               </div>
             )}
           </div>
@@ -423,34 +471,77 @@ const App: React.FC = () => {
 
         <div className="px-3 mt-auto space-y-2">
           {user?.businessId && isSidebarExpanded && (
-            <div className="px-3.5 py-2 bg-[#161616] rounded-[4px] border border-[#262626]">
-              <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider mb-0.5 flex items-center gap-1.5">
-                <Sparkles size={11} className="text-[#E2DCC8]" /> Industry
+            <div className={`px-3.5 py-2 rounded-[4px] border ${isDark ? 'bg-[#161616] border-[#262626]' : 'bg-slate-50 border-slate-200'}`}>
+              <p className={`text-[10px] font-bold uppercase tracking-wider mb-0.5 flex items-center gap-1.5 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+                <Sparkles size={11} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} /> Industry
               </p>
-              <p className="text-xs font-medium text-[#F1F1F1] truncate">
+              <p className={`text-xs font-medium truncate ${isDark ? 'text-[#F1F1F1]' : 'text-slate-800'}`}>
                 {businessTemplates.find(t => t.id === user.businessId)?.name || user.businessId}
               </p>
             </div>
           )}
 
+          {/* Quick Theme Switcher Button */}
+          <button
+            onClick={toggleUiTheme}
+            className={`w-full flex items-center justify-between p-2 rounded-[4px] border transition-all text-xs font-medium ${
+              isDark 
+                ? 'bg-[#161616] border-[#262626] text-[#E2DCC8] hover:bg-[#1c1b1b] hover:border-[#E2DCC8]/30' 
+                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
+            }`}
+            title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              {isDark ? <Sun size={15} className="text-amber-400 shrink-0" /> : <Moon size={15} className="text-indigo-600 shrink-0" />}
+              {isSidebarExpanded && <span className="truncate">{isDark ? 'Light Mode' : 'Dark Mode'}</span>}
+            </div>
+            {isSidebarExpanded && (
+              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] uppercase tracking-wider ${
+                isDark ? 'bg-[#222] text-[#888]' : 'bg-white text-slate-500 border border-slate-200'
+              }`}>
+                {isDark ? 'DARK' : 'LIGHT'}
+              </span>
+            )}
+          </button>
+
           {/* User & Settings Dropdown Trigger */}
           <div className="relative" ref={userMenuRef}>
             {isUserMenuOpen && (
               <div 
-                className={`absolute bottom-full mb-2 bg-[#161616] border border-[#262626] rounded-[4px] shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 ${
-                  isSidebarExpanded ? 'left-0 right-0 w-full' : 'left-0 w-56'
-                }`}
+                className={`absolute bottom-full mb-2 border rounded-[4px] shadow-2xl py-1.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150 ${
+                  isDark ? 'bg-[#161616] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-800'
+                } ${isSidebarExpanded ? 'left-0 right-0 w-full' : 'left-0 w-56'}`}
               >
                 {/* User Header in Dropdown */}
-                <div className="px-3 py-2 border-b border-[#262626] mb-1">
-                  <p className="text-xs font-semibold text-white truncate">{user?.name || 'User'}</p>
-                  <p className="text-[10px] text-[#888888] truncate">{user?.email}</p>
+                <div className={`px-3 py-2 border-b mb-1 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+                  <p className={`text-xs font-semibold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{user?.name || 'User'}</p>
+                  <p className={`text-[10px] truncate ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>{user?.email}</p>
                   {user?.businessName && (
-                    <p className="text-[10px] text-[#E2DCC8] truncate mt-0.5 flex items-center gap-1 font-medium">
+                    <p className={`text-[10px] truncate mt-0.5 flex items-center gap-1 font-medium ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                       <Briefcase size={10} className="text-[#0F3D3E]" /> {user.businessName}
                     </p>
                   )}
                 </div>
+
+                {/* Theme Toggle in Dropdown */}
+                <button
+                  onClick={() => {
+                    toggleUiTheme();
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors ${
+                    isDark ? 'text-[#cccccc] hover:text-white hover:bg-[#0F3D3E]/20' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    {isDark ? <Sun size={15} className="text-amber-400 shrink-0" /> : <Moon size={15} className="text-indigo-600 shrink-0" />}
+                    <span>Theme</span>
+                  </div>
+                  <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] uppercase tracking-wider ${
+                    isDark ? 'bg-[#262626] text-[#E2DCC8] border border-[#333]' : 'bg-slate-100 text-slate-700 border border-slate-200'
+                  }`}>
+                    {isDark ? 'Dark' : 'Light'}
+                  </span>
+                </button>
 
                 {/* Upgrade Plan */}
                 <button
@@ -458,12 +549,14 @@ const App: React.FC = () => {
                     setView('pricing');
                     setIsUserMenuOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors hover:bg-[#0F3D3E]/20 ${
-                    (currentView as string) === 'pricing' ? 'text-[#E2DCC8] bg-[#0F3D3E]/30' : 'text-[#cccccc] hover:text-white'
+                  className={`w-full flex items-center justify-between px-3 py-2 text-xs font-medium transition-colors ${
+                    isDark 
+                      ? ((currentView as string) === 'pricing' ? 'text-[#E2DCC8] bg-[#0F3D3E]/30' : 'text-[#cccccc] hover:text-white hover:bg-[#0F3D3E]/20')
+                      : ((currentView as string) === 'pricing' ? 'text-[#0F3D3E] bg-teal-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100')
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
-                    <Rocket size={15} className="text-[#E2DCC8] shrink-0" />
+                    <Rocket size={15} className={isDark ? "text-[#E2DCC8] shrink-0" : "text-[#0F3D3E] shrink-0"} />
                     <span>Upgrade Plan</span>
                   </div>
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 uppercase tracking-wider">
@@ -477,15 +570,17 @@ const App: React.FC = () => {
                     setView('settings');
                     setIsUserMenuOpen(false);
                   }}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors hover:bg-[#0F3D3E]/20 ${
-                    currentView === 'settings' ? 'text-[#E2DCC8] bg-[#0F3D3E]/30' : 'text-[#cccccc] hover:text-white'
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium transition-colors ${
+                    isDark
+                      ? (currentView === 'settings' ? 'text-[#E2DCC8] bg-[#0F3D3E]/30' : 'text-[#cccccc] hover:text-white hover:bg-[#0F3D3E]/20')
+                      : (currentView === 'settings' ? 'text-[#0F3D3E] bg-teal-50' : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100')
                   }`}
                 >
-                  <Settings size={15} className="text-[#888888] shrink-0" />
+                  <Settings size={15} className={isDark ? "text-[#888888] shrink-0" : "text-slate-400 shrink-0"} />
                   <span>Settings</span>
                 </button>
 
-                <div className="h-px bg-[#262626] my-1" />
+                <div className={`h-px my-1 ${isDark ? 'bg-[#262626]' : 'bg-slate-100'}`} />
 
                 {/* Logout */}
                 <button
@@ -493,7 +588,7 @@ const App: React.FC = () => {
                     setIsUserMenuOpen(false);
                     logout();
                   }}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors"
                 >
                   <LogOut size={15} className="shrink-0" />
                   <span>Sign Out</span>
@@ -507,8 +602,8 @@ const App: React.FC = () => {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className={`w-full flex items-center gap-3 p-2 rounded-[4px] border transition-all text-left group ${
                 isUserMenuOpen
-                  ? 'bg-[#171616] border-[#0F3D3E] ring-1 ring-[#0F3D3E]/40'
-                  : 'bg-[#161616] border-[#262626] hover:bg-[#1a1919] hover:border-[#E2DCC8]/20'
+                  ? (isDark ? 'bg-[#171616] border-[#0F3D3E] ring-1 ring-[#0F3D3E]/40' : 'bg-slate-100 border-[#0F3D3E] ring-1 ring-[#0F3D3E]/30')
+                  : (isDark ? 'bg-[#161616] border-[#262626] hover:bg-[#1a1919] hover:border-[#E2DCC8]/20' : 'bg-white border-slate-200 hover:bg-slate-50 hover:border-slate-300')
               }`}
               title="Account & Settings"
             >
@@ -518,19 +613,19 @@ const App: React.FC = () => {
 
               {isSidebarExpanded && (
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-white truncate leading-snug">{user?.name}</p>
-                  <p className="text-[10px] text-[#999999] truncate leading-tight flex items-center gap-1.5 mt-0.5">
-                    <Briefcase size={10} className="text-[#E2DCC8] shrink-0" />
+                  <p className={`text-xs font-semibold truncate leading-snug ${isDark ? 'text-white' : 'text-slate-900'}`}>{user?.name}</p>
+                  <p className={`text-[10px] truncate leading-tight flex items-center gap-1.5 mt-0.5 ${isDark ? 'text-[#999999]' : 'text-slate-500'}`}>
+                    <Briefcase size={10} className={isDark ? "text-[#E2DCC8] shrink-0" : "text-[#0F3D3E] shrink-0"} />
                     <span className="truncate">{user?.businessName || user?.email}</span>
                   </p>
                 </div>
               )}
 
               {isSidebarExpanded && (
-                <div className="text-[#777777] group-hover:text-white transition-colors pl-1">
+                <div className={`${isDark ? 'text-[#777777] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-700'} transition-colors pl-1`}>
                   <ChevronDown
                     size={14}
-                    className={`transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[#E2DCC8]' : ''}`}
+                    className={`transition-transform duration-200 ${isUserMenuOpen ? 'rotate-180 text-[#0F3D3E]' : ''}`}
                   />
                 </div>
               )}
@@ -538,7 +633,7 @@ const App: React.FC = () => {
           </div>
         </div>
       </aside>
-      <div className="flex flex-1 flex-col overflow-hidden bg-[#100F0F]">{renderContent()}</div>
+      <div className={`flex flex-1 flex-col overflow-hidden transition-colors duration-200 ${isDark ? 'bg-[#100F0F]' : 'bg-[#f8fafc]'}`}>{renderContent()}</div>
     </div>
   );
 };

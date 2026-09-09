@@ -25,10 +25,18 @@ export const SCRIPT_FONTS = [
     'Yesteryear', 'Herr Von Muellerhoff', 'Sail', 'Style Script', 'Arizonia'
 ];
 
+export const DISPLAY_FONTS = [
+    'Bebas Neue', 'Cinzel', 'Cinzel Decorative', 'Shrikhand', 'Righteous',
+    'Bungee', 'Fredoka', 'Permanent Marker', 'Orbitron', 'Special Elite',
+    'Courier Prime', 'Abril Fatface', 'Alfa Slab One', 'Pirata One',
+    'Sniglet', 'Bodoni Moda', 'Audiowide', 'Rye'
+];
+
 export const CATEGORIZED_FONTS = [
+    { label: 'Display & Pop (Canva Style)', fonts: DISPLAY_FONTS },
     { label: 'Sans-Serif (Clean, Modern)', fonts: SANS_SERIF_FONTS },
     { label: 'Serif (Classic, Formal)', fonts: SERIF_FONTS },
     { label: 'Script & Cursive (Elegant, Playful)', fonts: SCRIPT_FONTS }
 ];
 
-export const ALL_FONTS = [...SANS_SERIF_FONTS, ...SERIF_FONTS, ...SCRIPT_FONTS];
+export const ALL_FONTS = [...DISPLAY_FONTS, ...SANS_SERIF_FONTS, ...SERIF_FONTS, ...SCRIPT_FONTS];
