@@ -61,6 +61,10 @@ interface State {
   isPropertyPanelOpen: boolean;
   isTableEditorOpen: boolean;
   editingTableElementId: string | null;
+  isHeaderDesignerOpen: boolean;
+  editingHeaderTemplate: any | null;
+  isFooterDesignerOpen: boolean;
+  editingFooterTemplate: any | null;
   catalogSetupName: string;
 
   viewingCatalogId: string | null;
@@ -141,6 +145,8 @@ interface State {
   setHoveredElementId: (id: string | null) => void;
   setIsPropertyPanelOpen: (isOpen: boolean) => void;
   setIsTableEditorOpen: (isOpen: boolean, elementId?: string | null) => void;
+  setIsHeaderDesignerOpen: (isOpen: boolean, template?: any | null) => void;
+  setIsFooterDesignerOpen: (isOpen: boolean, template?: any | null) => void;
   setCurrentPageIndex: (index: number) => void;
   setZoom: (zoom: number) => void;
   setCatalogSetupName: (name: string) => void;
@@ -422,6 +428,10 @@ export const useStore = create<State>((set, get) => ({
   isPropertyPanelOpen: true,
   isTableEditorOpen: false,
   editingTableElementId: null,
+  isHeaderDesignerOpen: false,
+  editingHeaderTemplate: null,
+  isFooterDesignerOpen: false,
+  editingFooterTemplate: null,
   catalogSetupName: '',
   draggingItem: null,
   editorTab: 'products',
@@ -853,13 +863,13 @@ export const useStore = create<State>((set, get) => ({
   reorderHeaderElements: (newOrderIds) => set((state) => {
     const elementMap = new Map(state.catalog.headerElements.map(el => [el.id, el]));
     const newElements = newOrderIds.map(id => elementMap.get(id)).filter(Boolean) as CanvasElement[];
-    return { catalog: { ...state.catalog, headerElements: newElements.map((el, idx) => ({ ...el, zIndex: idx })) } };
+    return { catalog: { ...state.catalog, headerElements: newElements.map((el, idx) => ({ ...el, zIndex: 1000 + idx })) } };
   }),
 
   reorderFooterElements: (newOrderIds) => set((state) => {
     const elementMap = new Map(state.catalog.footerElements.map(el => [el.id, el]));
     const newElements = newOrderIds.map(id => elementMap.get(id)).filter(Boolean) as CanvasElement[];
-    return { catalog: { ...state.catalog, footerElements: newElements.map((el, idx) => ({ ...el, zIndex: idx })) } };
+    return { catalog: { ...state.catalog, footerElements: newElements.map((el, idx) => ({ ...el, zIndex: 2000 + idx })) } };
   }),
   setDefaultCurrency: (currency) => set({ defaultCurrency: currency }),
 
@@ -935,7 +945,10 @@ export const useStore = create<State>((set, get) => ({
     try {
       const response = await systemTemplatesApi.getAll();
       const data = (response as any).data || response;
-      set({ systemTemplates: Array.isArray(data) ? data : [] });
+      const list = Array.isArray(data)
+        ? data
+        : (Array.isArray((data as any)?.results) ? (data as any).results : []);
+      set({ systemTemplates: list });
     } catch (error) {
       console.error("Failed to fetch system templates", error);
     }
@@ -1476,6 +1489,14 @@ export const useStore = create<State>((set, get) => ({
     isTableEditorOpen: isOpen,
     editingTableElementId: isOpen ? (elementId || null) : null
   }),
+  setIsHeaderDesignerOpen: (isOpen, template = null) => set({
+    isHeaderDesignerOpen: isOpen,
+    editingHeaderTemplate: isOpen ? (template || null) : null
+  }),
+  setIsFooterDesignerOpen: (isOpen, template = null) => set({
+    isFooterDesignerOpen: isOpen,
+    editingFooterTemplate: isOpen ? (template || null) : null
+  }),
   setCurrentPageIndex: (index) => set({ currentPageIndex: index, selectedPageIndex: index }),
   setZoom: (zoom: number) => set({ zoom }),
   updateCatalog: (updates) => set((state) => ({
@@ -1714,6 +1735,9 @@ export const useStore = create<State>((set, get) => ({
       }
 
       set({ isLoading: false });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('active_catalog_id', backendId);
+      }
       return backendId;
     } catch (error: any) {
       console.error("Failed to save catalog", error);
@@ -1724,8 +1748,11 @@ export const useStore = create<State>((set, get) => ({
   },
 
   loadCatalog: (id) => set((state) => {
-    const catalogToLoad = state.savedCatalogs.find(c => c.id === id);
+    const catalogToLoad = state.savedCatalogs.find(c => String(c.id) === String(id));
     if (catalogToLoad) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('active_catalog_id', String(id));
+      }
       return {
         catalog: JSON.parse(JSON.stringify(catalogToLoad)),
         currentView: 'editor',
@@ -1794,7 +1821,21 @@ export const useStore = create<State>((set, get) => ({
         };
       });
 
-      set({ savedCatalogs: catalogs, isLoading: false });
+      const savedActiveId = typeof window !== 'undefined' ? localStorage.getItem('active_catalog_id') : null;
+      let activeCatalog = get().catalog;
+      if (savedActiveId && catalogs.length > 0) {
+        const matched = catalogs.find((c: any) => String(c.id) === String(savedActiveId));
+        if (matched) {
+          activeCatalog = JSON.parse(JSON.stringify(matched));
+        }
+      } else if (catalogs.length > 0 && String(activeCatalog.id).startsWith('cat-')) {
+        activeCatalog = JSON.parse(JSON.stringify(catalogs[0]));
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('active_catalog_id', String(activeCatalog.id));
+        }
+      }
+
+      set({ savedCatalogs: catalogs, catalog: activeCatalog, isLoading: false });
     } catch (error) {
       console.error("Failed to fetch catalogs", error);
       set({ isLoading: false });
@@ -3085,9 +3126,9 @@ export const useStore = create<State>((set, get) => ({
     set((state) => {
       const newHeaderElements = template.elements.map((el, i) => ({
         ...el,
-        id: `hdr-el-${Date.now()}-${i}`,
-        locked: false,
-        zIndex: el.zIndex ?? (i + 1),
+        id: el.id || `hdr-el-${Date.now()}-${i}`,
+        locked: el.locked ?? false,
+        zIndex: 1000 + (el.zIndex !== undefined ? el.zIndex : (i + 1)),
         opacity: el.opacity ?? 1,
         rotation: el.rotation ?? 0
       })) as CanvasElement[];
@@ -3110,9 +3151,9 @@ export const useStore = create<State>((set, get) => ({
     set((state) => {
       const newFooterElements = template.elements.map((el, i) => ({
         ...el,
-        id: `ftr-el-${Date.now()}-${i}`,
-        locked: false,
-        zIndex: el.zIndex ?? (i + 1),
+        id: el.id || `ftr-el-${Date.now()}-${i}`,
+        locked: el.locked ?? false,
+        zIndex: 2000 + (el.zIndex !== undefined ? el.zIndex : (i + 1)),
         opacity: el.opacity ?? 1,
         rotation: el.rotation ?? 0
       })) as CanvasElement[];
@@ -3525,7 +3566,7 @@ export const useStore = create<State>((set, get) => ({
   addHeaderElement: (element) => set((state) => ({
     catalog: {
       ...state.catalog,
-      headerElements: [...(state.catalog.headerElements || []), element],
+      headerElements: [...(state.catalog.headerElements || []), { ...element, zIndex: 1000 + ((state.catalog.headerElements || []).length + 1) }],
       updatedAt: new Date().toISOString()
     }
   })),
@@ -3533,7 +3574,7 @@ export const useStore = create<State>((set, get) => ({
   addFooterElement: (element) => set((state) => ({
     catalog: {
       ...state.catalog,
-      footerElements: [...(state.catalog.footerElements || []), element],
+      footerElements: [...(state.catalog.footerElements || []), { ...element, zIndex: 2000 + ((state.catalog.footerElements || []).length + 1) }],
       updatedAt: new Date().toISOString()
     }
   })),
@@ -3658,6 +3699,7 @@ export const useStore = create<State>((set, get) => ({
         get().fetchCatalogs();
         get().fetchMedia();
         get().fetchAdminAssets();
+        get().fetchSystemTemplates();
       } else {
         set({
           isAuthenticated: true,
@@ -3668,6 +3710,7 @@ export const useStore = create<State>((set, get) => ({
         get().fetchCategories();
         get().fetchCatalogs();
         get().fetchMedia();
+        get().fetchSystemTemplates();
       }
 
     } catch (error) {

@@ -148,10 +148,13 @@ const EditorCanvas: React.FC = () => {
   useEffect(() => {
     const handler = (e: Event) => {
       const { id, pageIndex } = (e as CustomEvent).detail;
+      // Header elements cannot be edited in the main editor canvas
+      if (catalog.headerElements?.some(item => item.id === id)) {
+        return;
+      }
       if (pageIndex !== undefined) setCurrentPageIndex(pageIndex);
       const page = catalog.pages[pageIndex ?? currentPageIndex];
       const el = page?.elements.find(item => item.id === id) ||
-        catalog.headerElements?.find(item => item.id === id) ||
         catalog.footerElements?.find(item => item.id === id);
       if (el) {
         setEditingId(id);
@@ -797,15 +800,16 @@ const EditorCanvas: React.FC = () => {
       try {
         const data = JSON.parse(json);
         if (data.type === 'image' || data.type === 'product') {
-          const isHeaderDrop = dropY < (marginTop + headerHeight);
+          const effectiveHeaderH = catalog.headerHeight || 113.4;
+          const isHeaderDrop = dropY < effectiveHeaderH;
           const isFooterDrop = dropY > (curH - marginBottom - footerHeight);
 
           if (targetId && currentPage.type === 'interior') {
             const tEl = currentPage.elements.find(el => el.id === targetId);
             updateElement(currentPageIndex, targetId, { type: tEl?.type === 'product-block' ? 'product-block' : 'image', src: normalizeImageUrl(data.url), productId: data.productId, cardTheme: tEl?.cardTheme, opacity: 1 });
           } else if (isHeaderDrop) {
-            const headerY = marginTop + 10;
-            useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: headerHeight - 20, rotation: 0, opacity: 1, src: normalizeImageUrl(data.url), productId: data.productId, zIndex: 50 });
+            const headerY = 10;
+            useStore.getState().addHeaderElement({ id: `header-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: headerY, width: 200, height: effectiveHeaderH - 20, rotation: 0, opacity: 1, src: normalizeImageUrl(data.url), productId: data.productId, zIndex: 50 });
           } else if (isFooterDrop) {
             const footerY = curH - marginBottom - footerHeight + 10;
             useStore.getState().addFooterElement({ id: `footer-el-${Date.now()}-${++idCounterRef.current}`, type: 'image', x: Math.max(marginLeft + 10, dropX - 100), y: footerY, width: 200, height: footerHeight - 20, rotation: 0, opacity: 1, src: normalizeImageUrl(data.url), productId: data.productId, zIndex: 50 });
@@ -1092,7 +1096,7 @@ const EditorCanvas: React.FC = () => {
                                   className="absolute bg-[#1e1e1e] text-[#aaa] border border-[#333] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-l-md shadow-sm transition-all"
                                   style={{
                                     left: 0,
-                                    top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom / 2,
+                                    top: ((catalog.headerHeight || 113.4) * zoom) / 2,
                                     transform: 'translate(-100%, -50%)',
                                     opacity: isActive ? 1 : 0.4
                                   }}
@@ -1102,7 +1106,7 @@ const EditorCanvas: React.FC = () => {
                                 {isActive && (
                                   <div
                                     className="absolute left-0 right-0 border-b border-dashed border-[#0F3D3E]/40 pointer-events-none"
-                                    style={{ top: (catalog.marginTop || 0) * zoom + (catalog.headerHeight || 40) * zoom }}
+                                    style={{ top: (catalog.headerHeight || 113.4) * zoom }}
                                   />
                                 )}
                               </>

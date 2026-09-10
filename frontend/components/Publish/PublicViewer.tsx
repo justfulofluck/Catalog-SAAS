@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import { elementToFabricObject } from '../Editor/fabricRenderer';
 import { jsPDF } from 'jspdf';
+import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
 const PublicViewer: React.FC = () => {
   const { savedCatalogs, viewingCatalogId, setView, activeThemeId } = useStore();
@@ -38,18 +39,35 @@ const PublicViewer: React.FC = () => {
     const render = async () => {
       canvas.clear();
       canvas.backgroundColor = catalog.backgroundColor || '#ffffff';
-
       const footerYOffset = pageH - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
+
+      const pageCategory = getPageCategoryName(currentPage, [], products, catalog);
+      const dynamicContext = {
+        pageNumber: currentPageIndex + 1,
+        totalPages: catalog.pages.length,
+        catalogName: catalog.name || 'Catalog',
+        categoryName: pageCategory,
+        companyName: (catalog as any).company || 'V-TAC',
+        year: new Date().getFullYear(),
+      };
+
       const allElements = [
-        ...(catalog.headerElements || []),
-        ...currentPage.elements,
-        ...(catalog.footerElements || []).map(el => ({
+        ...currentPage.elements.map(el => ({
           ...el,
-          y: (el.y || 0) + footerYOffset,
-          text: el.type === 'text' && el.text?.includes('{{page}}')
-            ? el.text.replace(/\{\{page\}\}/gi, String(currentPageIndex + 1))
-            : el.text,
+          zIndex: el.zIndex !== undefined ? el.zIndex : 0,
+          text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
         })),
+        ...(catalog.hasHeader !== false ? (catalog.headerElements || []).map((el, idx) => ({
+          ...el,
+          zIndex: 1000 + (el.zIndex !== undefined ? el.zIndex : idx),
+          text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+        })) : []),
+        ...(catalog.hasFooter !== false ? (catalog.footerElements || []).map((el, idx) => ({
+          ...el,
+          zIndex: 2000 + (el.zIndex !== undefined ? el.zIndex : idx),
+          y: (el.y || 0) + footerYOffset,
+          text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+        })) : []),
       ];
 
       const objects = await Promise.all(

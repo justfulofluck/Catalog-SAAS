@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Layout, Type, Image, X
+  Layout, Type, Image, X, Sparkles
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PX_PER_MM, PAGE_HEIGHT, PAGE_WIDTH } from '../../constants';
@@ -15,6 +15,8 @@ const HeaderFooterPanel: React.FC = () => {
     currentPageIndex,
     setSelectedElementIds,
     setEditorTab,
+    setIsHeaderDesignerOpen,
+    setIsFooterDesignerOpen,
     uiTheme
   } = useStore();
 
@@ -25,10 +27,19 @@ const HeaderFooterPanel: React.FC = () => {
   const toMm = (px: number) => Math.round(px / PX_PER_MM);
   const toPx = (mm: number) => Math.round(mm * PX_PER_MM);
 
-  // Sync local state when store changes
+  // Sync local state when store changes and sanitize headerHeight
   React.useEffect(() => {
     if (catalog.headerHeight) {
-      setLocalHeaderMm(toMm(catalog.headerHeight).toString());
+      const mm = toMm(catalog.headerHeight);
+      if (mm < 15) {
+        setLocalHeaderMm('30');
+        updateProjectSettings({ headerHeight: toPx(30) });
+      } else {
+        setLocalHeaderMm(mm.toString());
+      }
+    } else {
+      setLocalHeaderMm('30');
+      updateProjectSettings({ headerHeight: toPx(30) });
     }
   }, [catalog.headerHeight]);
 
@@ -63,6 +74,30 @@ const HeaderFooterPanel: React.FC = () => {
 
       {/* Panel Content Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {/* Custom Header Studio Launch Card */}
+        <div className={`p-3.5 rounded-[6px] border transition-all ${
+          isDark
+            ? 'bg-gradient-to-br from-[#0F3D3E]/30 via-[#161616] to-[#121212] border-[#0F3D3E]/40'
+            : 'bg-gradient-to-br from-[#0F3D3E]/10 via-slate-50 to-white border-[#0F3D3E]/30'
+        }`}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles size={14} className="text-[#E2DCC8]" />
+            <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Custom Header Studio
+            </h4>
+          </div>
+          <p className={`text-[10px] leading-relaxed mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+            Design reusable master header themes with drag & drop. Only the header section is edited!
+          </p>
+          <button
+            onClick={() => setIsHeaderDesignerOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] text-[#E2DCC8] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold shadow-md hover:shadow-cyan-950/40 transition-all"
+          >
+            <Layout size={13} />
+            <span>Launch Header Designer</span>
+          </button>
+        </div>
+
         {/* Header Controls Card */}
         <div className={`p-3.5 rounded-[4px] border transition-all ${
           isDark ? 'border-[#262626] bg-[#1a1a1a]' : 'border-slate-200 bg-slate-50'
@@ -88,21 +123,21 @@ const HeaderFooterPanel: React.FC = () => {
                 }`}>
                   <input
                     type="number"
-                    min="3"
-                    max="30"
+                    min="15"
+                    max="60"
                     value={localHeaderMm}
                     onChange={(e) => {
                       const rawVal = e.target.value;
                       setLocalHeaderMm(rawVal);
                       const val = parseInt(rawVal);
                       if (!isNaN(val)) {
-                        const clamped = Math.max(3, Math.min(30, val));
+                        const clamped = Math.max(15, Math.min(60, val));
                         updateProjectSettings({ headerHeight: toPx(clamped) });
                       }
                     }}
                     onBlur={(e) => {
                       const val = parseInt(e.target.value);
-                      const clamped = isNaN(val) ? 30 : Math.max(3, Math.min(30, val));
+                      const clamped = isNaN(val) ? 30 : Math.max(15, Math.min(60, val));
                       setLocalHeaderMm(clamped.toString());
                       updateProjectSettings({ headerHeight: toPx(clamped) });
                     }}
@@ -115,10 +150,10 @@ const HeaderFooterPanel: React.FC = () => {
               </div>
               <input
                 type="range"
-                min="3"
-                max="30"
+                min="15"
+                max="60"
                 step="1"
-                value={toMm(catalog.headerHeight || 113.4)}
+                value={toMm(catalog.headerHeight && catalog.headerHeight >= toPx(15) ? catalog.headerHeight : toPx(30))}
                 onChange={(e) => updateProjectSettings({ headerHeight: toPx(parseInt(e.target.value)) })}
                 className={`w-full h-1.5 rounded-[4px] appearance-none cursor-pointer accent-[#0F3D3E] ${
                   isDark ? 'bg-[#262626]' : 'bg-slate-200'
@@ -161,6 +196,30 @@ const HeaderFooterPanel: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+
+        {/* Custom Footer Studio Launch Card */}
+        <div className={`p-3.5 rounded-[6px] border transition-all ${
+          isDark
+            ? 'bg-gradient-to-br from-[#0F3D3E]/30 via-[#161616] to-[#121212] border-[#0F3D3E]/40'
+            : 'bg-gradient-to-br from-[#0F3D3E]/10 via-slate-50 to-white border-[#0F3D3E]/30'
+        }`}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles size={14} className="text-[#E2DCC8]" />
+            <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Custom Footer Studio
+            </h4>
+          </div>
+          <p className={`text-[10px] leading-relaxed mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+            Design reusable master footer themes with drag & drop. Only the footer section is edited!
+          </p>
+          <button
+            onClick={() => setIsFooterDesignerOpen(true)}
+            className="w-full flex items-center justify-center gap-2 py-2.5 px-3 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] text-[#E2DCC8] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold shadow-md hover:shadow-cyan-950/40 transition-all"
+          >
+            <Layout size={13} />
+            <span>Launch Footer Designer</span>
+          </button>
         </div>
 
         {/* Footer Controls Card */}

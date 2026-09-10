@@ -16,6 +16,8 @@ class SystemTemplateViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAuthenticated()]
         return [permissions.IsAdminUser()]
 
 class ThemeViewSet(viewsets.ReadOnlyModelViewSet):

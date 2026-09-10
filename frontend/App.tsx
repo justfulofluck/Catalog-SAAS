@@ -24,6 +24,8 @@ import ButtonsPanel from './components/Sidebar/ButtonsPanel';
 import HeaderFooterPanel from './components/Sidebar/HeaderFooterPanel';
 import TextPanel from './components/Sidebar/TextPanel';
 import ColorPanel from './components/Sidebar/ColorPanel';
+import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
+import FooterDesignerModal from './components/Editor/FooterDesignerModal';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
@@ -73,7 +75,9 @@ const App: React.FC = () => {
     uiTheme,
     toggleUiTheme,
     businessTemplates,
-    checkAuth
+    checkAuth,
+    isHeaderDesignerOpen,
+    isFooterDesignerOpen
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -379,6 +383,11 @@ const App: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Master Header Designer / Studio Modal */}
+        {isHeaderDesignerOpen && <HeaderDesignerModal />}
+        {/* Master Footer Designer / Studio Modal */}
+        {isFooterDesignerOpen && <FooterDesignerModal />}
       </div>
     );
   }
@@ -634,6 +643,8 @@ const App: React.FC = () => {
         </div>
       </aside>
       <div className={`flex flex-1 flex-col overflow-hidden transition-colors duration-200 ${isDark ? 'bg-[#100F0F]' : 'bg-[#f8fafc]'}`}>{renderContent()}</div>
+      {isHeaderDesignerOpen && <HeaderDesignerModal />}
+      {isFooterDesignerOpen && <FooterDesignerModal />}
     </div>
   );
 };

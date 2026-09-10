@@ -157,7 +157,7 @@ function applyFill(obj: any, fill: string | undefined, w: number, h: number) {
   }
 }
 
-function getPolyPoints(shapeType: string, w: number, h: number): { x: number; y: number }[] {
+export function getPolyPoints(shapeType: string, w: number, h: number): { x: number; y: number }[] {
   const cx = w / 2, cy = h / 2;
   const r = Math.min(w, h) / 2;
   const pts: { x: number; y: number }[] = [];
@@ -165,6 +165,15 @@ function getPolyPoints(shapeType: string, w: number, h: number): { x: number; y:
     case 'triangle': {
       for (let i = 0; i < 3; i++) {
         const a = (i * 2 * Math.PI / 3) - Math.PI / 2;
+        pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
+      }
+      const minX = Math.min(...pts.map(p => p.x));
+      const minY = Math.min(...pts.map(p => p.y));
+      return pts.map(p => ({ x: p.x - minX, y: p.y - minY }));
+    }
+    case 'triangleDown': {
+      for (let i = 0; i < 3; i++) {
+        const a = (i * 2 * Math.PI / 3) + Math.PI / 2;
         pts.push({ x: cx + r * Math.cos(a), y: cy + r * Math.sin(a) });
       }
       const minX = Math.min(...pts.map(p => p.x));
@@ -233,7 +242,7 @@ function getPolyPoints(shapeType: string, w: number, h: number): { x: number; y:
   }
 }
 
-function buildShape(
+export function buildShape(
   shapeType: string, w: number, h: number,
   stroke: string | undefined, strokeWidth: number,
   fill: string | undefined, fallbackFill: string | undefined,
@@ -394,9 +403,19 @@ async function _elementToFabricObject(
       }
     }
 
+    const cleanRawText = (el.text || '').replace(/<[^>]*>/g, '');
+    let textWidth = el.width || 100;
+    if (!cleanRawText.includes('\n')) {
+      const estimatedMinW = Math.ceil(cleanRawText.length * (el.fontSize || 16) * 0.72);
+      if (textWidth < estimatedMinW) {
+        textWidth = estimatedMinW + 20;
+      }
+    }
+
     const textProps: Record<string, any> = {
-      ...common, width: el.width,
-      text: (el.text || '').replace(/<[^>]*>/g, ''),
+      ...common,
+      width: textWidth,
+      text: cleanRawText,
       fontSize: el.fontSize || 16,
       fontFamily: el.fontFamily || 'Inter',
       fontWeight: el.fontWeight || 'normal',
@@ -407,7 +426,7 @@ async function _elementToFabricObject(
       charSpacing: el.letterSpacing || 0,
       splitByGrapheme: false,
     };
-    applyFill(textProps, el.fill, el.width, el.height);
+    applyFill(textProps, el.fill, textWidth, el.height);
 
     if (hasEffect) {
       const color = el.effectColor || '#000000';
@@ -497,6 +516,14 @@ async function _elementToFabricObject(
     }
 
     const tb = new Textbox(textProps.text, textProps);
+    // If text has no explicit newlines, ensure tb width accommodates its rendered single-line text
+    if (!textProps.text.includes('\n')) {
+      const naturalW = (tb as any).calcTextWidth ? (tb as any).calcTextWidth() : 0;
+      if (naturalW > 0 && tb.width < naturalW + 6) {
+        tb.set('width', Math.ceil(naturalW + 15));
+        tb.setCoords();
+      }
+    }
     setCommon(tb);
     return tb;
   }

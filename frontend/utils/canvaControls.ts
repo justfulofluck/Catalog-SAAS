@@ -17,6 +17,9 @@ export const CANVA_THEME = {
   sidePillWidth: 7, // 7px width
   sidePillHeight: 22, // 22px height
   sidePillRadius: 3.5, // Smooth pill / capsule curvature
+  topPillWidth: 22, // 22px width for top/bottom horizontal pills
+  topPillHeight: 7, // 7px height for top/bottom horizontal pills
+  topPillRadius: 3.5, // Smooth pill curvature
   actionButtonSize: 28, // Elevated circular action buttons
   actionButtonOffsetY: 32, // Distance below bottom selection border
   actionButtonSpacing: 18, // Centers at -18px and +18px (36px apart)
@@ -79,6 +82,62 @@ export function renderCanvaSidePillControl(
   const w = CANVA_THEME.sidePillWidth;
   const h = CANVA_THEME.sidePillHeight;
   const r = CANVA_THEME.sidePillRadius;
+
+  // Soft elevation shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 1;
+
+  ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') {
+    ctx.roundRect(-w / 2, -h / 2, w, h, r);
+  } else {
+    const hw = w / 2;
+    const hh = h / 2;
+    ctx.moveTo(-hw + r, -hh);
+    ctx.lineTo(hw - r, -hh);
+    ctx.quadraticCurveTo(hw, -hh, hw, -hh + r);
+    ctx.lineTo(hw, hh - r);
+    ctx.quadraticCurveTo(hw, hh, hw - r, hh);
+    ctx.lineTo(-hw + r, hh);
+    ctx.quadraticCurveTo(-hw, hh, -hw, hh - r);
+    ctx.lineTo(-hw, -hh + r);
+    ctx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
+  }
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Subtle clean border for contrast against white backgrounds
+  ctx.shadowColor = 'transparent';
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+/**
+ * Render horizontal white pill/capsule control for top and bottom height resizing (mt / mb) (matching Canva screenshot).
+ */
+export function renderCanvaTopBottomPillControl(
+  this: Control,
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  _styleOverride: any,
+  fabricObject: any
+) {
+  ctx.save();
+  ctx.translate(left, top);
+
+  // Rotate pill with object's angle
+  const angle = fabricObject?.getTotalAngle?.() ?? fabricObject?.angle ?? 0;
+  ctx.rotate((angle * Math.PI) / 180);
+
+  const w = CANVA_THEME.topPillWidth;
+  const h = CANVA_THEME.topPillHeight;
+  const r = CANVA_THEME.topPillRadius;
 
   // Soft elevation shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
@@ -335,7 +394,8 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       y: 0,
       actionHandler: isTextbox ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isTextbox ? 'resizing' : controlsUtils.scaleOrSkewActionName,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? undefined : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -347,12 +407,39 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       y: 0,
       actionHandler: isTextbox ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isTextbox ? 'resizing' : controlsUtils.scaleOrSkewActionName,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? undefined : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
       touchSizeX: 24,
       touchSizeY: 28,
+    }),
+
+    // Top & Bottom Horizontal Pill Handles (Height Resizing & Expansion)
+    mt: new Control({
+      x: 0,
+      y: -0.5,
+      actionHandler: controlsUtils.scalingYOrSkewingX,
+      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+      getActionName: controlsUtils.scaleOrSkewActionName,
+      render: renderCanvaTopBottomPillControl,
+      sizeX: CANVA_THEME.topPillWidth + 4,
+      sizeY: CANVA_THEME.topPillHeight + 4,
+      touchSizeX: 28,
+      touchSizeY: 24,
+    }),
+    mb: new Control({
+      x: 0,
+      y: 0.5,
+      actionHandler: controlsUtils.scalingYOrSkewingX,
+      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+      getActionName: controlsUtils.scaleOrSkewActionName,
+      render: renderCanvaTopBottomPillControl,
+      sizeX: CANVA_THEME.topPillWidth + 4,
+      sizeY: CANVA_THEME.topPillHeight + 4,
+      touchSizeX: 28,
+      touchSizeY: 24,
     }),
 
     // Bottom Action Button: Rotate
@@ -392,11 +479,95 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
 }
 
 /**
+ * Specialized Canva-style controls for horizontal lines, dividers, and rules:
+ * - Only left (ml) and right (mr) side pill handles for width resizing
+ * - Centered move/drag button below the line
+ * - No rotate control (divider rules should never rotate into diagonal/curling angles)
+ * - No corner controls (prevents overlapping handle clashing on thin 1-3px lines)
+ */
+export function createCanvaLineControls(): Record<string, Control> {
+  return {
+    ml: new Control({
+      x: -0.5,
+      y: 0,
+      actionHandler: controlsUtils.scalingXOrSkewingY,
+      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+      getActionName: controlsUtils.scaleOrSkewActionName,
+      render: renderCanvaSidePillControl,
+      sizeX: CANVA_THEME.sidePillWidth + 4,
+      sizeY: CANVA_THEME.sidePillHeight + 4,
+      touchSizeX: 24,
+      touchSizeY: 28,
+    }),
+    mr: new Control({
+      x: 0.5,
+      y: 0,
+      actionHandler: controlsUtils.scalingXOrSkewingY,
+      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+      getActionName: controlsUtils.scaleOrSkewActionName,
+      render: renderCanvaSidePillControl,
+      sizeX: CANVA_THEME.sidePillWidth + 4,
+      sizeY: CANVA_THEME.sidePillHeight + 4,
+      touchSizeX: 24,
+      touchSizeY: 28,
+    }),
+    drag: new Control({
+      x: 0,
+      y: 0.5,
+      offsetX: 0, // Centered directly below the divider line
+      offsetY: 20,
+      actionHandler: controlsUtils.dragHandler,
+      cursorStyleHandler: () => 'move',
+      actionName: 'drag',
+      withConnection: false,
+      render: renderCanvaMoveButton,
+      sizeX: CANVA_THEME.actionButtonSize,
+      sizeY: CANVA_THEME.actionButtonSize,
+      touchSizeX: CANVA_THEME.actionButtonSize + 8,
+      touchSizeY: CANVA_THEME.actionButtonSize + 8,
+    }),
+  };
+}
+
+/**
  * Applies Canva selection styling (purple border, custom controls, no top mtr) to any object.
+ * Automatically detects horizontal divider rules and lines to apply lockRotation and specialized line controls.
  */
 export function applyCanvaSelectionStyle(obj: any) {
   if (!obj) return;
   const isText = obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text';
+  const isLine = obj.type === 'line' ||
+    obj.isDivider === true ||
+    (obj.type === 'rect' && (
+      (obj.height <= 4 && (obj.width || 0) >= 40) ||
+      (typeof obj.id === 'string' && (
+        obj.id.startsWith('hdr-div') ||
+        obj.id.startsWith('hdr-dbl') ||
+        obj.id.includes('line') ||
+        obj.id.includes('accent')
+      ))
+    ));
+
+  if (isLine) {
+    obj.set({
+      borderColor: CANVA_THEME.borderColor,
+      borderScaleFactor: 1.5,
+      borderOpacityWhenMoving: 1,
+      borderDashArray: null,
+      cornerColor: CANVA_THEME.cornerColor,
+      cornerStrokeColor: CANVA_THEME.cornerStrokeColor,
+      cornerStyle: 'circle',
+      cornerSize: CANVA_THEME.cornerSize,
+      transparentCorners: false,
+      padding: 6,
+      lockRotation: true,
+      lockScalingY: true,
+      hasRotatingPoint: false,
+    });
+    obj.controls = createCanvaLineControls();
+    return;
+  }
+
   obj.set({
     borderColor: CANVA_THEME.borderColor,
     borderScaleFactor: 1.5,

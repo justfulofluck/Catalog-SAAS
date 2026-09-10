@@ -4,6 +4,7 @@ import { Catalog, Product } from '../../types';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from './fabricRenderer';
 import { normalizeImageUrl } from '../../utils/imageUtils';
+import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
 export interface ExportProgressCallback {
   (current: number, total: number, status: string): void;
@@ -83,15 +84,32 @@ export async function exportCatalogToPDF(
       const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
       const footerYOffset = PAGE_HEIGHT - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
 
+      const pageCategory = getPageCategoryName(page, [], products, catalog);
+      const dynamicContext = {
+        pageNumber: i + 1,
+        totalPages: totalPages,
+        catalogName: catalog.name || 'Catalog',
+        categoryName: pageCategory,
+        companyName: (catalog as any).company || 'V-TAC',
+        year: new Date().getFullYear(),
+      };
+
       const allElements = [
-        ...(pageHasHeader ? catalog.headerElements || [] : []),
-        ...page.elements,
-        ...(pageHasFooter ? (catalog.footerElements || []).map((el: any) => ({
+        ...page.elements.map(el => ({
           ...el,
+          zIndex: el.zIndex !== undefined ? el.zIndex : 0,
+          text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+        })),
+        ...(pageHasHeader ? (catalog.headerElements || []).map((el: any, idx: number) => ({
+          ...el,
+          zIndex: 1000 + (el.zIndex !== undefined ? el.zIndex : idx),
+          text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+        })) : []),
+        ...(pageHasFooter ? (catalog.footerElements || []).map((el: any, idx: number) => ({
+          ...el,
+          zIndex: 2000 + (el.zIndex !== undefined ? el.zIndex : idx),
           y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerYOffset),
-          text: el.type === 'text' && el.text?.includes('{{page}}')
-            ? el.text.replace(/\{\{page\}\}/gi, String(i + 1))
-            : el.text,
+          text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
         })) : []),
       ];
 

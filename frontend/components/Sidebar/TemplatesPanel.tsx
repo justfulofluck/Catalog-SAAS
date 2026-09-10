@@ -2,7 +2,8 @@
 import React, { useState } from 'react';
 import { 
   LayoutTemplate, Check, Info, BookOpen, 
-  List, Flag, X, ArrowUpToLine, ArrowDownToLine, Grid3X3
+  List, Flag, X, ArrowUpToLine, ArrowDownToLine, Grid3X3,
+  Plus, Sparkles, Edit3, Trash2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { 
@@ -22,6 +23,9 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
     applyCoverTemplate, applyIndexTemplate, applyClosingTemplate, 
     applyInventoryLayout, applyHeaderTemplate, applyFooterTemplate, 
     systemTemplates,
+    setIsHeaderDesignerOpen,
+    setIsFooterDesignerOpen,
+    deleteSystemTemplate,
     uiTheme, setEditorTab 
   } = useStore();
 
@@ -116,15 +120,25 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
               <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">All Interior Pages</span>
             </div>
 
-            {/* Dynamic Custom Headers from Admin */}
+            {/* Custom Header Studio Button */}
+            <button
+              onClick={() => setIsHeaderDesignerOpen(true)}
+              className="w-full flex items-center justify-center gap-2 p-2.5 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] text-[#E2DCC8] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold shadow-sm transition-all"
+            >
+              <Plus size={14} />
+              <span>Design Custom Header</span>
+            </button>
+
+            {/* Dynamic Custom Headers from Admin / User */}
             {systemTemplates.filter(st => st.is_active && st.type === 'header').map((tmpl) => {
               const headerElements = tmpl.pages_data?.[0]?.elements || [];
+              const headerHeight = tmpl.pages_data?.[0]?.height || 113.4;
               const headerObj = {
                 id: `sys-hdr-${tmpl.id}`,
                 name: tmpl.name,
                 description: tmpl.description || tmpl.category,
                 type: 'header' as const,
-                height: 113.4,
+                height: headerHeight,
                 previewText: tmpl.name,
                 elements: headerElements
               };
@@ -140,8 +154,13 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
                     isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
                   }`}
                 >
-                  <div className="p-2.5 rounded-[4px] bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
-                    {tmpl.name} (Custom Header)
+                  <div className="p-2 rounded-[4px] bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 flex items-center justify-between">
+                    <span className="font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate font-semibold">
+                      {tmpl.name}
+                    </span>
+                    <span className="text-[9px] text-[#888] font-mono">
+                      {Math.round(headerHeight / 3.78)}mm
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -152,13 +171,42 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
                       </div>
                       <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description || tmpl.category}</p>
                     </div>
-                    {appliedId === `sys-hdr-${tmpl.id}` ? (
-                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
-                        <Check size={11} /> Applied
-                      </span>
-                    ) : (
-                      <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
-                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      {/* Edit in Studio */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsHeaderDesignerOpen(true, tmpl);
+                        }}
+                        className="p-1 rounded bg-[#1c1c1f] hover:bg-[#28282c] border border-[#333] text-slate-300 hover:text-white transition-colors"
+                        title="Edit in Header Designer"
+                      >
+                        <Edit3 size={12} />
+                      </button>
+
+                      {/* Delete Custom Header */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Delete "${tmpl.name}" header template?`)) {
+                            await deleteSystemTemplate(tmpl.id);
+                          }
+                        }}
+                        className="p-1 rounded bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/40 text-rose-400 hover:text-rose-300 transition-colors"
+                        title="Delete Template"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+
+                      {appliedId === `sys-hdr-${tmpl.id}` ? (
+                        <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
+                          <Check size={11} /> Applied
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -328,15 +376,25 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
               <span className="text-[9px] bg-indigo-50 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-300 font-bold px-1.5 py-0.5 rounded">All Interior Pages</span>
             </div>
 
+            {/* Custom Footer Studio Button */}
+            <button
+              onClick={() => setIsFooterDesignerOpen(true)}
+              className="w-full flex items-center justify-center gap-2 p-2.5 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] text-[#E2DCC8] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold shadow-sm transition-all"
+            >
+              <Plus size={14} />
+              <span>Design Custom Footer</span>
+            </button>
+
             {/* Dynamic Custom Footers from Admin */}
             {systemTemplates.filter(st => st.is_active && st.type === 'footer').map((tmpl) => {
               const footerElements = tmpl.pages_data?.[0]?.elements || [];
+              const footerHeight = tmpl.pages_data?.[0]?.height || 75.6;
               const footerObj = {
                 id: `sys-ftr-${tmpl.id}`,
                 name: tmpl.name,
                 description: tmpl.description || tmpl.category,
                 type: 'footer' as const,
-                height: 75.6,
+                height: footerHeight,
                 previewText: tmpl.name,
                 elements: footerElements
               };
@@ -352,8 +410,11 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
                     isDark ? 'bg-slate-900 hover:border-indigo-400' : 'bg-indigo-50/20 hover:border-indigo-600'
                   }`}
                 >
-                  <div className="p-2.5 rounded-[4px] bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 truncate">
-                    {tmpl.name} (Custom Footer)
+                  <div className="p-2.5 rounded-[4px] bg-indigo-50/60 dark:bg-slate-950 border border-indigo-200/50 dark:border-slate-800 mb-2 font-mono text-[9px] text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span className="truncate font-semibold">{tmpl.name} (Custom Footer)</span>
+                    <span className="text-[9px] text-[#888] font-mono shrink-0 ml-2">
+                      {Math.round(footerHeight / 3.78)}mm
+                    </span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -364,13 +425,42 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
                       </div>
                       <p className="text-[9px] text-slate-400 mt-0.5 leading-tight">{tmpl.description || tmpl.category}</p>
                     </div>
-                    {appliedId === `sys-ftr-${tmpl.id}` ? (
-                      <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
-                        <Check size={11} /> Applied
-                      </span>
-                    ) : (
-                      <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
-                    )}
+
+                    <div className="flex items-center gap-1.5">
+                      {/* Edit in Studio */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsFooterDesignerOpen(true, tmpl);
+                        }}
+                        className="p-1 rounded bg-[#1c1c1f] hover:bg-[#28282c] border border-[#333] text-slate-300 hover:text-white transition-colors"
+                        title="Edit in Footer Designer"
+                      >
+                        <Edit3 size={12} />
+                      </button>
+
+                      {/* Delete Custom Footer */}
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Delete custom footer "${tmpl.name}"?`)) {
+                            await deleteSystemTemplate(tmpl.id);
+                          }
+                        }}
+                        className="p-1 rounded bg-[#1c1c1f] hover:bg-rose-950/60 border border-[#333] text-slate-400 hover:text-rose-400 transition-colors"
+                        title="Delete Footer"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+
+                      {appliedId === `sys-ftr-${tmpl.id}` ? (
+                        <span className="flex items-center gap-1 text-[9px] font-black text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-1 rounded-full animate-in zoom-in-50">
+                          <Check size={11} /> Applied
+                        </span>
+                      ) : (
+                        <span className="text-[8px] font-black uppercase tracking-wider bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">Custom</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

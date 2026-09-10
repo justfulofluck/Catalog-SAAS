@@ -6,6 +6,7 @@ import { PageType, CatalogPage, CanvasElement } from '../../types';
 import { THEMES, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from '../Editor/fabricRenderer';
 import { normalizeImageUrl } from '../../utils/imageUtils';
+import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 import TemplatesPanel from './TemplatesPanel';
 
 const THUMB_BASE = 140;
@@ -42,15 +43,29 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
     const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
     const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
     const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || 38) - (catalog.marginBottom || 0);
+    const pageCategory = getPageCategoryName(page, [], products, catalog);
+    const dynamicContext = {
+      pageNumber: page.pageNumber || pageNum + 1,
+      totalPages: catalog.pages?.length || 1,
+      catalogName: catalog.name || 'Catalog',
+      categoryName: pageCategory,
+      companyName: (catalog as any)?.company || 'V-TAC',
+      year: new Date().getFullYear(),
+    };
+
     const allElements = [
-      ...(pageHasHeader ? catalog.headerElements || [] : []),
-      ...page.elements,
+      ...(pageHasHeader ? (catalog.headerElements || []).map((el: any) => ({
+        ...el,
+        text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+      })) : []),
+      ...page.elements.map((el: any) => ({
+        ...el,
+        text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+      })),
       ...(pageHasFooter ? (catalog.footerElements || []).map((el: any) => ({
         ...el,
         y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
-        text: el.type === 'text' && el.text?.includes('{{page}}')
-          ? el.text.replace(/\{\{page\}\}/gi, String(pageNum + 1))
-          : el.text,
+        text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text,
       })) : []),
     ];
 
@@ -150,10 +165,7 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
           ctx.restore();
         }
       } else if (el.type === 'text') {
-        let textContent = (el.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, '');
-        if (textContent.includes('{{page}}')) {
-          textContent = textContent.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageNum + 1));
-        }
+        let textContent = resolveDynamicText((el.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, ''), dynamicContext);
         ctx.fillStyle = el.fill || '#000000';
         const fontSize = el.fontSize || 16;
         ctx.font = `${el.fontWeight || 'normal'} ${fontSize}px ${el.fontFamily || 'Inter, sans-serif'}`;

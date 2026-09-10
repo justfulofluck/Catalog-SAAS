@@ -359,7 +359,7 @@ const ProductLibrary: React.FC = () => {
 
     const targetPage = catalog.pages[currentPageIndex];
     const pageHasHeader = (targetPage as any)?.hasHeader !== false && catalog.hasHeader && (targetPage?.type === 'product' || targetPage?.type === 'interior' || targetPage?.type === 'index');
-    const headerBottom = pageHasHeader ? (catalog.marginTop || 0) + (catalog.headerHeight || 40) + 20 : (catalog.marginTop || 0) + 20;
+    const headerBottom = pageHasHeader ? (catalog.headerHeight || 113.4) + 15 : (catalog.marginTop || 20);
 
     const pageElements = targetPage?.elements || [];
     const contentElements = pageElements.filter(el => {

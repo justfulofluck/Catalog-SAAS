@@ -6,6 +6,7 @@ import { CatalogPage, CanvasElement } from '../../types';
 import { elementToFabricObject } from './fabricRenderer';
 import { globalSpatialIndex, DistanceBadge } from '../../utils/spatialIndex';
 import { initCanvaGlobals, applyCanvaSelectionStyle, renderCanvaHoverOutline, CANVA_THEME } from '../../utils/canvaControls';
+import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
 // Initialize Canva-style controls globally on Fabric prototypes
 initCanvaGlobals();
@@ -45,6 +46,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const { selectedElementIds, setSelectedElementIds, updateElement, updateElements, pushHistory, catalog } = useStore();
   const products = useStore((state) => state.products);
+  const categories = useStore((state) => state.categories);
+  const user = useStore((state) => state.user);
 
   const curW = PAGE_WIDTH;
   const curH = PAGE_HEIGHT;
@@ -174,9 +177,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     canvas.on('mouse:dblclick', (e: any) => {
       const obj = e.target;
       if (obj && obj.id) {
-        const el = page.elements.find(item => item.id === obj.id) ||
-                   headerElements?.find(item => item.id === obj.id) ||
-                   footerElements?.find(item => item.id === obj.id);
+        // Header & Footer elements cannot be edited on the main canvas (only in their respective Studio)
+        if (headerElements?.some(item => item.id === obj.id) || footerElements?.some(item => item.id === obj.id)) {
+          return;
+        }
+        const el = page.elements.find(item => item.id === obj.id);
         if (el && el.type === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdx } }));
         } else if (el && (el.type === 'table' || el.tableData)) {
@@ -404,11 +409,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         if (obj && obj.id) {
           const isHeader = headerElements?.some(el => el.id === obj.id);
           const isFooter = footerElements?.some(el => el.id === obj.id);
+          if (isHeader || isFooter) return; // Header and Footer cannot be moved in the main editor
           const updates = { x: obj.left || 0, y: obj.top || 0 };
-          
-          if (isHeader) useStore.getState().updateHeaderElement(obj.id, updates);
-          else if (isFooter) useStore.getState().updateFooterElement(obj.id, updates);
-          else updateElement(pageIdx, obj.id, updates);
+          updateElement(pageIdx, obj.id, updates);
         }
       }, 16);
     });
@@ -423,24 +426,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           x: Math.round(isMulti ? (obj.left || 0) - objW / 2 : (obj.left || 0)),
           y: Math.round(isMulti ? (obj.top || 0) - objH / 2 : (obj.top || 0)),
           w: Math.round(objW),
-          h: Math.round(objH)
+          h: Math.round(objH),
         });
       }
     });
 
     canvas.on('object:modified', (e: any) => {
-      setActiveGuides([]);
-      setActiveDistanceBadges([]);
-      setActiveDimensions(null);
-      dragTimer = null;
       const obj = e.target as any;
-
-      const isMulti = obj && (
-        obj instanceof ActiveSelection ||
-        obj.type === 'ActiveSelection' ||
-        obj.type === 'activeSelection' ||
-        'multiSelectionStacking' in obj
-      );
+      const isMulti = obj instanceof ActiveSelection || obj.type === 'ActiveSelection' || obj.type === 'activeSelection' || 'multiSelectionStacking' in obj;
 
       if (isMulti) {
         pushHistory();
@@ -453,31 +446,28 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           
           const isHeader = headerElements?.some(el => el.id === child.id);
           const isFooter = footerElements?.some(el => el.id === child.id);
-          const el = page.elements.find((e: CanvasElement) => e.id === child.id) ||
-                     headerElements?.find(e => e.id === child.id) ||
-                     footerElements?.find(e => e.id === child.id);
+          if (isHeader || isFooter) return; // Header and Footer cannot be modified in main editor
+          const el = page.elements.find((e: CanvasElement) => e.id === child.id);
           
           const matrix = child.calcTransformMatrix();
           const decomposed = util.qrDecompose(matrix);
           const normAngle = Math.round(((decomposed.angle % 360) + 360) % 360);
 
           // Absolute origin position on canvas for originX: 'left', originY: 'top'
-          const canvasOrigin = new Point(0, 0).transform(matrix);
+          const leftTopPoint = child.getPointByOrigin('left', 'top');
 
           const updates: any = {
-            x: Math.round(canvasOrigin.x),
-            y: Math.round(canvasOrigin.y),
+            x: Math.round(leftTopPoint.x),
+            y: Math.round(leftTopPoint.y),
             rotation: normAngle,
           };
-          
-          if (isScaled) {
-            const childSx = Math.abs(decomposed.scaleX);
-            const childSy = Math.abs(decomposed.scaleY);
 
-            if (el && el.type === 'text') {
-              const newWidth = Math.max(20, (child.width || el.width) * childSx);
-              updates.width = Math.round(newWidth);
-              updates.height = child.height || el.height;
+          if (isScaled) {
+            const childSx = Math.abs(child.scaleX || 1);
+            const childSy = Math.abs(child.scaleY || 1);
+
+            if (child instanceof IText || child.type === 'i-text' || child.type === 'text') {
+              updates.width = Math.max(20, Math.round((child.width || (el?.width || 0)) * childSx));
             } else if (child instanceof Circle) {
               const newRadius = (child.radius || (el?.width ? el.width / 2 : 0)) * childSx;
               updates.width = Math.round(newRadius * 2);
@@ -488,13 +478,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             }
           }
           
-          if (isHeader) {
-            useStore.getState().updateHeaderElement(child.id, updates);
-          } else if (isFooter) {
-            useStore.getState().updateFooterElement(child.id, updates);
-          } else {
-            pageUpdates.push({ id: child.id, updates });
-          }
+          pageUpdates.push({ id: child.id, updates });
         });
 
         if (pageUpdates.length > 0) {
@@ -503,9 +487,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       } else if (obj && obj.id) {
         const isHeader = headerElements?.some(el => el.id === obj.id);
         const isFooter = footerElements?.some(el => el.id === obj.id);
-        const el = page.elements.find((e: CanvasElement) => e.id === obj.id) ||
-                   headerElements?.find(e => e.id === obj.id) ||
-                   footerElements?.find(e => e.id === obj.id);
+        if (isHeader || isFooter) return; // Header and Footer cannot be modified in the main editor
+        const el = page.elements.find((e: CanvasElement) => e.id === obj.id);
         
         const updates: any = { x: obj.left || 0, y: obj.top || 0, rotation: obj.angle || 0 };
         const sx = Math.abs(obj.scaleX || 1);
@@ -568,9 +551,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
         pushHistory();
         
-        if (isHeader) useStore.getState().updateHeaderElement(obj.id, updates);
-        else if (isFooter) useStore.getState().updateFooterElement(obj.id, updates);
-        else updateElement(pageIdx, obj.id, updates);
+        updateElement(pageIdx, obj.id, updates);
       }
     });
 
@@ -605,16 +586,35 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       try {
         const existingObjects = canvas.getObjects();
         const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || footerHeight || 38) - (catalog.marginBottom || 0);
+
+        const pageCategory = getPageCategoryName(page, categories, products, catalog);
+        const dynamicContext = {
+          pageNumber: page.pageNumber || pageIdx + 1,
+          totalPages: catalog.pages?.length || 1,
+          catalogName: catalog.name || 'Catalog',
+          categoryName: pageCategory,
+          companyName: (user as any)?.businessName || catalog.company || 'V-TAC',
+          year: new Date().getFullYear()
+        };
+
         const formattedFooterElements = (footerElements || []).map((el: any) => ({
           ...el,
           y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
-          text: el.type === 'text' && el.text?.includes('{{page}}')
-            ? el.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1))
+          text: el.type === 'text'
+            ? resolveDynamicText(el.text, dynamicContext)
             : el.text
         }));
+
+        const formattedHeaderElements = (headerElements || []).map((el: any) => ({
+          ...el,
+          text: el.type === 'text'
+            ? resolveDynamicText(el.text, dynamicContext)
+            : el.text
+        }));
+
         const allElements = [
           ...page.elements,
-          ...(headerElements || []),
+          ...formattedHeaderElements,
           ...formattedFooterElements
         ];
 
@@ -649,6 +649,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const oldIsGrad = oldFill.includes('gradient');
             const newIsGrad = newFill.includes('gradient');
             if (oldIsGrad !== newIsGrad || (newIsGrad && oldFill !== newFill)) {
+              return true;
+            }
+            const expectedText = resolveDynamicText((el.text || '').replace(/<[^>]*>/g, ''), dynamicContext);
+            if (existingObj.text !== expectedText) {
               return true;
             }
             return false;
@@ -692,9 +696,24 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             oldFontFamily !== newFontFamily || oldCardTheme !== newCardTheme;
         };
 
-        const objectPromises = allElements.map(async (el: CanvasElement) => {
+        const getEffectiveZIndex = (el: CanvasElement, idx: number) => {
+          const isHdr = headerElements?.some(h => h.id === el.id);
+          if (isHdr) {
+            return 1000 + (el.zIndex !== undefined ? el.zIndex : idx);
+          }
+          const isFtr = footerElements?.some(f => f.id === el.id);
+          if (isFtr) {
+            return 2000 + (el.zIndex !== undefined ? el.zIndex : idx);
+          }
+          return el.zIndex !== undefined ? el.zIndex : idx;
+        };
+
+        const objectPromises = allElements.map(async (el: CanvasElement, elIdx: number) => {
           if (el.locked && !isActive) return null;
 
+          const isHdr = headerElements?.some(h => h.id === el.id);
+          const isFtr = footerElements?.some(f => f.id === el.id);
+          const isLockedGlobal = isHdr || isFtr;
           const existingObj = existingElMap.get(el.id);
 
           if (existingObj) {
@@ -713,29 +732,31 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               existingObj.set({
                 opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
                 visible: isCurrentlyEditing ? false : (el.visible !== false),
-                selectable: isActive && !el.locked && !isCurrentlyEditing,
-                evented: isActive && !el.locked && !isCurrentlyEditing,
+                selectable: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
+                evented: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
               });
-              applyCanvaSelectionStyle(existingObj);
+
+              if (isLockedGlobal) {
+                existingObj.set({
+                  hasControls: false,
+                  hasBorders: false,
+                  lockMovementX: true,
+                  lockMovementY: true,
+                  lockRotation: true,
+                  lockScalingX: true,
+                  lockScalingY: true,
+                  hoverCursor: 'default'
+                });
+              } else {
+                applyCanvaSelectionStyle(existingObj);
+              }
 
               if (!isActiveObj) {
                 existingObj.set({ left: el.x, top: el.y, angle: el.rotation || 0 });
               }
 
               if (el.type === 'text') {
-                let parsedText = (el.text || '').replace(/<[^>]*>/g, '');
-                if (parsedText.includes('{{page}}')) {
-                  parsedText = parsedText.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
-                }
-                if (parsedText.includes('{{totalPages}}')) {
-                  parsedText = parsedText.replace(/\{\{totalPages\}\}/gi, String(catalog.pages?.length || 1));
-                }
-                if (parsedText.includes('{{year}}')) {
-                  parsedText = parsedText.replace(/\{\{year\}\}/gi, String(new Date().getFullYear()));
-                }
-                if (parsedText.includes('{{catalog_name}}')) {
-                  parsedText = parsedText.replace(/\{\{catalog_name\}\}/gi, catalog.name || 'Catalog');
-                }
+                let parsedText = resolveDynamicText((el.text || '').replace(/<[^>]*>/g, ''), dynamicContext);
                 existingObj.set({
                   text: parsedText,
                   fontSize: el.fontSize || 16,
@@ -751,8 +772,15 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 });
                 existingObj._lastFill = el.fill || '';
                 if (!isActiveObj) {
+                  let safeW = el.width || 100;
+                  if (!parsedText.includes('\n')) {
+                    const naturalW = (existingObj as any).calcTextWidth ? (existingObj as any).calcTextWidth() : 0;
+                    if (naturalW > 0 && safeW < naturalW + 6) {
+                      safeW = Math.ceil(naturalW + 15);
+                    }
+                  }
                   existingObj.set({
-                    width: el.width,
+                    width: safeW,
                     scaleX: 1,
                     scaleY: 1,
                   });
@@ -786,13 +814,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   const unscaledH = (existingObj as any).height || 1;
                   existingObj.set({ scaleX: el.width / unscaledW, scaleY: el.height / unscaledH });
                 }
-                existingObj.set('zIndex', el.zIndex || 0);
+                existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
                 existingObj.setCoords();
                 existingObj.dirty = true;
                 return existingObj;
               }
 
-              existingObj.set('zIndex', el.zIndex || 0);
+              existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
               existingObj.setCoords();
               existingObj.dirty = true;
               return existingObj;
@@ -801,24 +829,29 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
           const tempEl = { ...el };
           if (tempEl.type === 'text' && tempEl.text) {
-            if (tempEl.text.includes('{{page}}')) {
-              tempEl.text = tempEl.text.replace(/\{\{page\}\}/gi, String(page.pageNumber || pageIdx + 1));
-            }
-            if (tempEl.text.includes('{{totalPages}}')) {
-              tempEl.text = tempEl.text.replace(/\{\{totalPages\}\}/gi, String(catalog.pages?.length || 1));
-            }
-            if (tempEl.text.includes('{{year}}')) {
-              tempEl.text = tempEl.text.replace(/\{\{year\}\}/gi, String(new Date().getFullYear()));
-            }
-            if (tempEl.text.includes('{{catalog_name}}')) {
-              tempEl.text = tempEl.text.replace(/\{\{catalog_name\}\}/gi, catalog.name || 'Catalog');
-            }
+            tempEl.text = resolveDynamicText(tempEl.text, dynamicContext);
           }
           const obj = await elementToFabricObject(tempEl, products, catalog);
           if (obj) {
-            applyCanvaSelectionStyle(obj);
-            obj.set('zIndex', el.zIndex || 0);
-            obj.set({ selectable: isActive && !el.locked, evented: isActive && !el.locked });
+            obj.set('zIndex', getEffectiveZIndex(el, elIdx));
+            obj.set({
+              selectable: !isLockedGlobal && isActive && !el.locked,
+              evented: !isLockedGlobal && isActive && !el.locked
+            });
+            if (isLockedGlobal) {
+              obj.set({
+                hasControls: false,
+                hasBorders: false,
+                lockMovementX: true,
+                lockMovementY: true,
+                lockRotation: true,
+                lockScalingX: true,
+                lockScalingY: true,
+                hoverCursor: 'default'
+              });
+            } else {
+              applyCanvaSelectionStyle(obj);
+            }
             if (el.type === 'product-block') {
               obj._productId = el.productId;
               obj._src = el.src;
