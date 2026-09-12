@@ -1,4 +1,4 @@
-﻿import CanvasKitInit, { CanvasKit, Surface } from 'canvaskit-wasm';
+import CanvasKitInit, { CanvasKit, Surface } from 'canvaskit-wasm';
 import { CanvasElement, CatalogPage, Product, Catalog } from '../types';
 
 let ckInstance: CanvasKit | null = null;
@@ -11,7 +11,7 @@ export async function getCanvasKit(): Promise<CanvasKit> {
   if (ckInstance) return ckInstance;
   if (!ckInitPromise) {
     ckInitPromise = CanvasKitInit({
-      locateFile: (file: string) => https://unpkg.com/canvaskit-wasm@0.39.1/bin/,
+      locateFile: (file: string) => `https://unpkg.com/canvaskit-wasm@0.39.1/bin/${file}`,
     }).then((ck) => {
       ckInstance = ck;
       return ck;

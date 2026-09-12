@@ -112,7 +112,19 @@ const PropertyPanel: React.FC = () => {
       if (appliedLocally) return;
     }
 
-    selectedElementIds.forEach(id => updateElement(currentPageIndex, id, updates));
+    selectedElementIds.forEach(id => {
+      const el = currentPage?.elements.find(item => item.id === id);
+      const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line' || (typeof el?.id === 'string' && el?.id.includes('line'));
+      const finalUpdates = { ...updates };
+      if (isLine) {
+        if ('fill' in updates && !('stroke' in updates)) {
+          finalUpdates.stroke = updates.fill;
+        } else if ('stroke' in updates && !('fill' in updates)) {
+          finalUpdates.fill = updates.stroke;
+        }
+      }
+      updateElement(currentPageIndex, id, finalUpdates);
+    });
   };
 
   const renderSectionHeader = (title: string, icon: React.ReactNode) => (
@@ -336,6 +348,9 @@ const handleOpenEffects = () => {
                       </button>
                     </div>
                   </div>
+                </div>
+              </section>
+            )}
             {/* Table Formatting & Live Column/Row Editor Section */}
             {selectedElement?.type === 'table' && selectedElement.tableData && (
               <section>

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Canvas, Circle, ActiveSelection, config, util, Point } from 'fabric';
+import { Canvas, Circle, ActiveSelection, Rect, config, util, Point } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
@@ -49,16 +49,29 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const categories = useStore((state) => state.categories);
   const user = useStore((state) => state.user);
 
+  // Keep latest page, pageIdx and isActive in refs so event listener closures never access stale props
+  const pageRef = useRef(page);
+  pageRef.current = page;
+  const pageIdxRef = useRef(pageIdx);
+  pageIdxRef.current = pageIdx;
+  const isActiveRef = useRef(isActive);
+  isActiveRef.current = isActive;
+  // Shared flag: suppresses selection:cleared during render-cycle ActiveSelection discard
+  const suppressSelectionClearedRef = useRef(false);
+
   const curW = PAGE_WIDTH;
   const curH = PAGE_HEIGHT;
+  // Artboard bleed padding: allows selection outline, handles, and elements to extend freely outside the sheet into the workspace
+  const CANVAS_PAD_X = 500;
+  const CANVAS_PAD_Y = 80;
 
   useEffect(() => {
     if (!canvasRef.current) return;
 
     const canvas = new Canvas(canvasRef.current, {
-      width: curW * zoom,
-      height: curH * zoom,
-      backgroundColor: page.backgroundColor || canvasBg,
+      width: (curW + CANVAS_PAD_X * 2) * zoom,
+      height: (curH + CANVAS_PAD_Y * 2) * zoom,
+      backgroundColor: 'transparent',
       selection: true, // Enable click-and-drag area marquee multi-selection
       selectionColor: 'rgba(139, 61, 255, 0.12)', // Canva-style translucent purple
       selectionBorderColor: CANVA_THEME.borderColor, // Signature Canva purple border
@@ -67,34 +80,129 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       enableRetinaScaling: true,
       fireRightClick: true,
       stopContextMenu: true,
+      controlsAboveOverlay: true,
     });
-    canvas.setZoom(zoom);
+    canvas.controlsAboveOverlay = true;
+    // Set viewport transform to offset world (0,0) by CANVAS_PAD_X and CANVAS_PAD_Y
+    canvas.viewportTransform = [zoom, 0, 0, zoom, CANVAS_PAD_X * zoom, CANVAS_PAD_Y * zoom];
+
+    // Visually clip all object artwork to the page sheet boundary [0, curW] x [0, curH],
+    // while keeping selection bounding border, corner circles, and drag handles completely unclipped and clickable
+    const origRenderObjects = (canvas as any)._renderObjects.bind(canvas);
+    (canvas as any)._renderObjects = function (ctx: CanvasRenderingContext2D, objects: any[]) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, curW, curH);
+      ctx.clip();
+      origRenderObjects(ctx, objects);
+      ctx.restore();
+    };
 
     fabricCanvasRef.current = canvas;
 
+    // Helper: expand selection to include all elements sharing the same groupId
+    const expandGroupSelection = (selectedIds: string[]) => {
+      const currentPage = pageRef.current;
+      if (!currentPage?.elements) return selectedIds;
+      const groupIds = new Set<string>();
+      selectedIds.forEach(id => {
+        const el = currentPage.elements.find(e => e.id === id);
+        if (el?.groupId) groupIds.add(el.groupId);
+      });
+      if (groupIds.size === 0) return selectedIds;
+      // Add all elements that share any of the group IDs
+      const expandedIds = new Set(selectedIds);
+      currentPage.elements.forEach(el => {
+        if (el.groupId && groupIds.has(el.groupId)) {
+          expandedIds.add(el.id);
+        }
+      });
+      return Array.from(expandedIds);
+    };
+
+    // Guard flag: prevents recursive selection events and state corruption during group expansion.
+    // When we call discardActiveObject() + setActiveObject() inside selection:created,
+    // Fabric fires selection:cleared and then selection:created again synchronously.
+    // Without this guard, the intermediate selection:cleared wipes selectedElementIds in the store,
+    // and the subscribe block interferes with the canvas — ultimately causing the render effect
+    // to not find existing objects and recreate them, losing the originals.
+    let _isExpandingGroup = false;
+
     canvas.on('selection:created', (e: any) => {
+      if (_isExpandingGroup) return; // Re-entry from setActiveObject inside expansion — skip
       const active = canvas.getActiveObject();
       if (active) {
         applyCanvaSelectionStyle(active);
         active.setCoords();
       }
       canvas.requestRenderAll();
-      const ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
+      let ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
+      ids = expandGroupSelection(ids);
+      // If the selection expanded due to groupId, create an ActiveSelection with all siblings
+      const currentActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
+      if (ids.length > currentActiveIds.length) {
+        _isExpandingGroup = true;
+        try {
+          canvas.discardActiveObject();
+          const objsToSelect = canvas.getObjects().filter((o: any) => ids.includes(o.id));
+          if (objsToSelect.length > 1) {
+            const sel = new ActiveSelection(objsToSelect, { canvas });
+            applyCanvaSelectionStyle(sel);
+            canvas.setActiveObject(sel);
+            canvas.requestRenderAll();
+          } else if (objsToSelect.length === 1) {
+            canvas.setActiveObject(objsToSelect[0]);
+            canvas.requestRenderAll();
+          }
+        } finally {
+          _isExpandingGroup = false;
+        }
+      }
       setSelectedElementIds(ids);
     });
 
     canvas.on('selection:updated', (e: any) => {
+      if (_isExpandingGroup) return; // Re-entry guard
       const active = canvas.getActiveObject();
       if (active) {
         applyCanvaSelectionStyle(active);
         active.setCoords();
       }
       canvas.requestRenderAll();
-      const ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
-      setSelectedElementIds(ids);
+      let ids = (e.selected || []).map((o: any) => o.id).filter(Boolean) as string[] || [];
+      // Also include currently active objects that weren't deselected
+      const allActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
+      const mergedIds = Array.from(new Set([...ids, ...allActiveIds]));
+      const expandedIds = expandGroupSelection(mergedIds);
+      if (expandedIds.length > allActiveIds.length) {
+        _isExpandingGroup = true;
+        try {
+          canvas.discardActiveObject();
+          const objsToSelect = canvas.getObjects().filter((o: any) => expandedIds.includes(o.id));
+          if (objsToSelect.length > 1) {
+            const sel = new ActiveSelection(objsToSelect, { canvas });
+            applyCanvaSelectionStyle(sel);
+            canvas.setActiveObject(sel);
+            canvas.requestRenderAll();
+          } else if (objsToSelect.length === 1) {
+            canvas.setActiveObject(objsToSelect[0]);
+            canvas.requestRenderAll();
+          }
+        } finally {
+          _isExpandingGroup = false;
+        }
+      }
+      setSelectedElementIds(expandedIds);
     });
 
-    canvas.on('selection:cleared', () => setSelectedElementIds([]));
+    canvas.on('selection:cleared', () => {
+      // Don't clear store selection during group expansion — the discardActiveObject()
+      // is only temporary and will be immediately followed by a new setActiveObject()
+      if (_isExpandingGroup) return;
+      // Don't clear during render-cycle ActiveSelection discard
+      if (suppressSelectionClearedRef.current) return;
+      setSelectedElementIds([]);
+    });
 
     // Canva-style auto hover outline for unselected components
     let hoveredObject: any = null;
@@ -167,10 +275,43 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       }
     };
 
-    canvas.on('mouse:down', () => {
+    canvas.on('mouse:down', (opt: any) => {
       canvas.calcOffset();
-      if (useStore.getState().currentPageIndex !== pageIdx) {
-        useStore.getState().setCurrentPageIndex(pageIdx);
+      if (useStore.getState().currentPageIndex !== pageIdxRef.current) {
+        useStore.getState().setCurrentPageIndex(pageIdxRef.current);
+      }
+
+      const target = opt.target;
+      const isTransform = !!(canvas as any)._currentTransform;
+      if (isTransform) return;
+
+      // 1. Clicked on empty canvas or padding outside any object
+      if (!target) {
+        canvas.discardActiveObject();
+        canvas.requestRenderAll();
+        setSelectedElementIds([]);
+        return;
+      }
+
+      // 2. Clicked on ActiveSelection (multi-selection)
+      if (target instanceof ActiveSelection || target.type === 'ActiveSelection' || target.type === 'activeSelection') {
+        const subTargets = (opt.subTargets || []).filter((st: any) => st && st !== target && st.id);
+        if (subTargets.length === 0) {
+          // User clicked on empty space between objects in the selection -> Deselect
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
+          setSelectedElementIds([]);
+        } else if (subTargets.length === 1 && !opt.e?.shiftKey) {
+          // User clicked directly on one child element inside the selection -> select that single element
+          const singleObj = subTargets[0];
+          if (singleObj && singleObj.id) {
+            canvas.setActiveObject(singleObj);
+            applyCanvaSelectionStyle(singleObj);
+            singleObj.setCoords();
+            canvas.requestRenderAll();
+            setSelectedElementIds([singleObj.id]);
+          }
+        }
       }
     });
 
@@ -181,12 +322,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         if (headerElements?.some(item => item.id === obj.id) || footerElements?.some(item => item.id === obj.id)) {
           return;
         }
-        const el = page.elements.find(item => item.id === obj.id);
+        const el = pageRef.current.elements.find(item => item.id === obj.id);
         if (el && el.type === 'text') {
-          window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdx } }));
+          window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el && (el.type === 'table' || el.tableData)) {
-          useStore.getState().setIsTableEditorOpen(true, el.id);
-          window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: el.id, pageIndex: pageIdx } }));
+          useStore.getState().setEditorTab('grid');
+          window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         }
       }
     });
@@ -251,20 +392,25 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
       }
 
-      // Fallback: If clicked while an object was already active/selected on canvas
-      if (!target) {
-        const active = canvas.getActiveObject();
-        if (active && isValidFabricObj(active)) {
-          target = active;
-        }
+      // Fallback: If clicked while an object or multi-selection was already active on canvas
+      const currentActive = canvas.getActiveObject();
+      const currentActiveObjects = canvas.getActiveObjects();
+
+      // Check if target is part of the current active multiple selection
+      const isTargetInMultiSelection = target && currentActiveObjects.includes(target);
+      const isMultiActive = currentActive instanceof ActiveSelection || currentActiveObjects.length > 1;
+
+      if (!target && isMultiActive && isValidFabricObj(currentActive)) {
+        target = currentActive;
       }
 
       // If clicked on child of a card/group or subTarget, resolve to top group or card that has an id
-      if (target && target.group && (target.group as any).id) {
+      if (target && target.group && !(target.group instanceof ActiveSelection) && (target.group as any).id) {
         target = target.group;
       }
 
-      const isFabricElement = target && isValidFabricObj(target) && target.id;
+      const isMultiSelectionTarget = target instanceof ActiveSelection || (isMultiActive && isTargetInMultiSelection);
+      const isFabricElement = (target && isValidFabricObj(target) && target.id) || isMultiSelectionTarget;
 
       if (
         isFabricElement &&
@@ -272,22 +418,29 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         target.selectable !== false &&
         target !== canvas.backgroundImage
       ) {
-        // Component right-clicked (Screenshot 2: Component Menu)
-        const activeObjs = canvas.getActiveObjects();
-        const isAlreadyActive = target === canvas.getActiveObject() || activeObjs.includes(target);
+        // Component or Multi-selection right-clicked
+        if (isMultiSelectionTarget) {
+          // Keep existing multiple selected elements
+          const activeIds = currentActiveObjects.map((o: any) => o.id).filter(Boolean);
+          if (activeIds.length > 0) {
+            setSelectedElementIds(activeIds);
+          }
+        } else {
+          const isAlreadyActive = target === currentActive || currentActiveObjects.includes(target);
 
-        if (!isAlreadyActive) {
-          canvas.setActiveObject(target);
-          applyCanvaSelectionStyle(target);
-          target.setCoords();
-          canvas.requestRenderAll();
-          if (target.id) {
-            setSelectedElementIds([target.id]);
+          if (!isAlreadyActive) {
+            canvas.setActiveObject(target);
+            applyCanvaSelectionStyle(target);
+            target.setCoords();
+            canvas.requestRenderAll();
+            if (target.id) {
+              setSelectedElementIds([target.id]);
+            }
           }
         }
 
-        if (useStore.getState().currentPageIndex !== pageIdx) {
-          useStore.getState().setCurrentPageIndex(pageIdx);
+        if (useStore.getState().currentPageIndex !== pageIdxRef.current) {
+          useStore.getState().setCurrentPageIndex(pageIdxRef.current);
         }
 
         window.dispatchEvent(new CustomEvent('catalog:openContextMenu', {
@@ -295,8 +448,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             x: clientX,
             y: clientY,
             type: 'element',
-            pageIndex: pageIdx,
-            targetId: target.id
+            pageIndex: pageIdxRef.current,
+            targetId: target.id || (currentActiveObjects[0] as any)?.id
           }
         }));
       } else {
@@ -305,8 +458,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         canvas.requestRenderAll();
         setSelectedElementIds([]);
 
-        if (useStore.getState().currentPageIndex !== pageIdx) {
-          useStore.getState().setCurrentPageIndex(pageIdx);
+        if (useStore.getState().currentPageIndex !== pageIdxRef.current) {
+          useStore.getState().setCurrentPageIndex(pageIdxRef.current);
         }
 
         window.dispatchEvent(new CustomEvent('catalog:openContextMenu', {
@@ -314,7 +467,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             x: clientX,
             y: clientY,
             type: 'page',
-            pageIndex: pageIdx
+            pageIndex: pageIdxRef.current
           }
         }));
       }
@@ -356,7 +509,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           zIndex: obj.zIndex || 0,
         };
 
-        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6);
+        const activeMargins = catalog.showMargins !== false ? {
+          top: catalog.marginTop || 0,
+          bottom: curH - (catalog.marginBottom || 0),
+          left: catalog.marginLeft || 0,
+          right: curW - (catalog.marginRight || 0),
+        } : undefined;
+
+        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6, activeMargins);
         if (snapX !== null) {
           obj.set('left', snapX);
         }
@@ -383,7 +543,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           zIndex: 9999,
         };
 
-        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6);
+        const activeMargins = catalog.showMargins !== false ? {
+          top: catalog.marginTop || 0,
+          bottom: curH - (catalog.marginBottom || 0),
+          left: catalog.marginLeft || 0,
+          right: curW - (catalog.marginRight || 0),
+        } : undefined;
+
+        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6, activeMargins);
         if (snapX !== null) {
           obj.set('left', snapX + objW / 2);
         }
@@ -411,7 +578,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const isFooter = footerElements?.some(el => el.id === obj.id);
           if (isHeader || isFooter) return; // Header and Footer cannot be moved in the main editor
           const updates = { x: obj.left || 0, y: obj.top || 0 };
-          updateElement(pageIdx, obj.id, updates);
+          updateElement(pageIdxRef.current, obj.id, updates);
         }
       }, 16);
     });
@@ -447,18 +614,21 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const isHeader = headerElements?.some(el => el.id === child.id);
           const isFooter = footerElements?.some(el => el.id === child.id);
           if (isHeader || isFooter) return; // Header and Footer cannot be modified in main editor
-          const el = page.elements.find((e: CanvasElement) => e.id === child.id);
+          const el = pageRef.current.elements.find((e: CanvasElement) => e.id === child.id);
           
           const matrix = child.calcTransformMatrix();
           const decomposed = util.qrDecompose(matrix);
           const normAngle = Math.round(((decomposed.angle % 360) + 360) % 360);
 
-          // Absolute origin position on canvas for originX: 'left', originY: 'top'
-          const leftTopPoint = child.getPointByOrigin('left', 'top');
+          // Absolute position from the full transform matrix.
+          // matrix[4] and matrix[5] are the center coordinates in canvas space.
+          // For originX:'left'/originY:'top', offset by half the scaled dimensions.
+          const childW = (child.width || 0) * Math.abs(decomposed.scaleX || 1);
+          const childH = (child.height || 0) * Math.abs(decomposed.scaleY || 1);
 
           const updates: any = {
-            x: Math.round(leftTopPoint.x),
-            y: Math.round(leftTopPoint.y),
+            x: Math.round(matrix[4] - childW / 2),
+            y: Math.round(matrix[5] - childH / 2),
             rotation: normAngle,
           };
 
@@ -482,15 +652,25 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         });
 
         if (pageUpdates.length > 0) {
-          updateElements(pageIdx, pageUpdates);
+          updateElements(pageIdxRef.current, pageUpdates);
         }
       } else if (obj && obj.id) {
         const isHeader = headerElements?.some(el => el.id === obj.id);
         const isFooter = footerElements?.some(el => el.id === obj.id);
         if (isHeader || isFooter) return; // Header and Footer cannot be modified in the main editor
-        const el = page.elements.find((e: CanvasElement) => e.id === obj.id);
+        const el = pageRef.current.elements.find((e: CanvasElement) => e.id === obj.id);
         
-        const updates: any = { x: obj.left || 0, y: obj.top || 0, rotation: obj.angle || 0 };
+        const isDivider = (typeof obj.id === 'string' && (obj.id.includes('line') || obj.id.includes('div'))) || el?.shapeType === 'line';
+        let posX = obj.left || 0;
+        let posY = obj.top || 0;
+        if (isDivider || obj.originX === 'center') {
+          const objW = (obj.width || 0) * (Math.abs(obj.scaleX || 1));
+          const objH = (obj.height || 0) * (Math.abs(obj.scaleY || 1));
+          posX = (obj.left || 0) - objW / 2;
+          posY = (obj.top || 0) - objH / 2;
+        }
+
+        const updates: any = { x: Math.round(posX), y: Math.round(posY), rotation: Math.round(obj.angle || 0) };
         const sx = Math.abs(obj.scaleX || 1);
         const sy = Math.abs(obj.scaleY || 1);
         
@@ -551,8 +731,17 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
         pushHistory();
         
-        updateElement(pageIdx, obj.id, updates);
+        updateElement(pageIdxRef.current, obj.id, updates);
       }
+      setActiveGuides([]);
+      setActiveDistanceBadges([]);
+      setActiveDimensions(null);
+    });
+
+    canvas.on('mouse:up', () => {
+      setActiveGuides([]);
+      setActiveDistanceBadges([]);
+      setActiveDimensions(null);
     });
 
     return () => {
@@ -569,8 +758,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   useEffect(() => {
     if (!fabricCanvasRef.current) return;
     const canvas = fabricCanvasRef.current;
-    canvas.setDimensions({ width: curW * zoom, height: curH * zoom });
-    canvas.setZoom(zoom);
+    canvas.controlsAboveOverlay = true;
+    canvas.setDimensions({
+      width: (curW + CANVAS_PAD_X * 2) * zoom,
+      height: (curH + CANVAS_PAD_Y * 2) * zoom,
+    });
+    canvas.viewportTransform = [zoom, 0, 0, zoom, CANVAS_PAD_X * zoom, CANVAS_PAD_Y * zoom];
     canvas.calcOffset();
     canvas.requestRenderAll();
   }, [zoom, curW, curH]);
@@ -584,8 +777,23 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     const loadObjects = async () => {
       if ((canvas as any)._currentTransform) return;
       try {
+        // CRITICAL: In Fabric.js, objects inside an ActiveSelection are temporarily
+        // removed from canvas._objects. If we call canvas.getObjects() while an
+        // ActiveSelection exists, those objects won't be found, leading to duplicate
+        // creation and the originals being lost. Discard the selection first, then
+        // restore it after rendering.
+        let savedActiveIds: string[] = [];
+        const activeObj = canvas.getActiveObject();
+        if (activeObj && (activeObj instanceof ActiveSelection || (activeObj as any).type === 'activeSelection')) {
+          savedActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
+          suppressSelectionClearedRef.current = true;
+          canvas.discardActiveObject();
+          suppressSelectionClearedRef.current = false;
+        }
+
         const existingObjects = canvas.getObjects();
-        const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || footerHeight || 38) - (catalog.marginBottom || 0);
+        const effectiveFooterHeight = catalog.footerHeight || footerHeight || 75.6;
+        const footerBaseY = PAGE_HEIGHT - effectiveFooterHeight;
 
         const pageCategory = getPageCategoryName(page, categories, products, catalog);
         const dynamicContext = {
@@ -597,13 +805,17 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           year: new Date().getFullYear()
         };
 
-        const formattedFooterElements = (footerElements || []).map((el: any) => ({
-          ...el,
-          y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
-          text: el.type === 'text'
-            ? resolveDynamicText(el.text, dynamicContext)
-            : el.text
-        }));
+        const formattedFooterElements = (footerElements || []).map((el: any) => {
+          const isFullBg = el.id?.startsWith('ftr-bg') || (el.type === 'shape' && (el.width || 0) >= 700 && (el.height || 0) >= (effectiveFooterHeight - 5));
+          return {
+            ...el,
+            height: isFullBg ? effectiveFooterHeight : el.height,
+            y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
+            text: el.type === 'text'
+              ? resolveDynamicText(el.text, dynamicContext)
+              : el.text
+          };
+        });
 
         const formattedHeaderElements = (headerElements || []).map((el: any) => ({
           ...el,
@@ -651,10 +863,6 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             if (oldIsGrad !== newIsGrad || (newIsGrad && oldFill !== newFill)) {
               return true;
             }
-            const expectedText = resolveDynamicText((el.text || '').replace(/<[^>]*>/g, ''), dynamicContext);
-            if (existingObj.text !== expectedText) {
-              return true;
-            }
             return false;
           }
           if (el.type === 'table') {
@@ -662,6 +870,20 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const newTableJSON = JSON.stringify(el.tableData || {});
             const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
             return oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
+          }
+          if (el.type === 'shape' || el.type === 'comment') {
+            const oldFill = existingObj._lastFill || existingObj.fill || '';
+            const newFill = el.fill || '';
+            const oldStroke = existingObj.stroke || '';
+            const newStroke = el.stroke || '';
+            const oldShapeType = existingObj._shapeType || '';
+            const newShapeType = el.shapeType || '';
+            const oldH = (existingObj.height || 0) * (existingObj.scaleY || 1);
+            const oldW = (existingObj.width || 0) * (existingObj.scaleX || 1);
+            if (oldShapeType !== newShapeType || oldFill !== newFill || oldStroke !== newStroke || Math.abs(el.height - oldH) > 1 || Math.abs(el.width - oldW) > 1) {
+              return true;
+            }
+            return false;
           }
           if (el.type !== 'product-block') return false;
           const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
@@ -709,8 +931,6 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         };
 
         const objectPromises = allElements.map(async (el: CanvasElement, elIdx: number) => {
-          if (el.locked && !isActive) return null;
-
           const isHdr = headerElements?.some(h => h.id === el.id);
           const isFtr = footerElements?.some(f => f.id === el.id);
           const isLockedGlobal = isHdr || isFtr;
@@ -718,11 +938,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
           if (existingObj) {
             const isActiveObj = canvas.getActiveObjects().includes(existingObj);
-            const isTableRebuild = el.type === 'table' && !isActiveObj && needsRebuild(el, existingObj);
+            const isTableRebuild = el.type === 'table' && needsRebuild(el, existingObj);
             const isProductRebuild = el.type === 'product-block' && needsRebuild(el, existingObj);
-            const isTextRebuild = el.type === 'text' && needsRebuild(el, existingObj);
+            const isShapeRebuild = (el.type === 'shape' || el.type === 'comment') && needsRebuild(el, existingObj);
 
-            if (isTableRebuild || isProductRebuild || isTextRebuild) {
+            if (isTableRebuild || isProductRebuild || isShapeRebuild) {
               if (isActiveObj) {
                 canvas.discardActiveObject();
               }
@@ -773,10 +993,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 existingObj._lastFill = el.fill || '';
                 if (!isActiveObj) {
                   let safeW = el.width || 100;
-                  if (!parsedText.includes('\n')) {
+                  if (!el.width && !parsedText.includes('\n')) {
                     const naturalW = (existingObj as any).calcTextWidth ? (existingObj as any).calcTextWidth() : 0;
-                    if (naturalW > 0 && safeW < naturalW + 6) {
-                      safeW = Math.ceil(naturalW + 15);
+                    if (naturalW > 0) {
+                      safeW = Math.ceil(naturalW + 10);
                     }
                   }
                   existingObj.set({
@@ -821,6 +1041,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               }
 
               existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
+              existingObj._groupId = el.groupId || undefined;
               existingObj.setCoords();
               existingObj.dirty = true;
               return existingObj;
@@ -833,10 +1054,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           }
           const obj = await elementToFabricObject(tempEl, products, catalog);
           if (obj) {
+            const isCurrentlyEditing = isActive && el.id === editingId;
             obj.set('zIndex', getEffectiveZIndex(el, elIdx));
             obj.set({
-              selectable: !isLockedGlobal && isActive && !el.locked,
-              evented: !isLockedGlobal && isActive && !el.locked
+              opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
+              visible: isCurrentlyEditing ? false : (el.visible !== false),
+              selectable: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
+              evented: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
             });
             if (isLockedGlobal) {
               obj.set({
@@ -871,7 +1095,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               obj._tableDataJSON = JSON.stringify(el.tableData || {});
             } else if (el.type === 'text') {
               obj._lastFill = el.fill || '';
+            } else if (el.type === 'shape' || el.type === 'comment') {
+              obj._shapeType = el.shapeType || '';
             }
+            obj._groupId = el.groupId || undefined;
           }
           return obj;
         });
@@ -882,16 +1109,36 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         const validObjects = resolvedObjects.filter(Boolean);
         const currentCanvasObjects = canvas.getObjects();
 
+        // Deduplication guard: async render cycles can race, causing two Fabric objects
+        // for the same element ID. Build a set of IDs we're about to place, then remove
+        // any stale duplicates already on the canvas before adding the fresh ones.
+        const validIdSet = new Set<string>();
+        validObjects.forEach((obj: any) => { if (obj.id) validIdSet.add(obj.id); });
+
+        currentCanvasObjects.forEach((canvasObj: any) => {
+          if (canvasObj.id && validIdSet.has(canvasObj.id) && !validObjects.includes(canvasObj)) {
+            canvas.remove(canvasObj);
+          }
+        });
+
         validObjects.forEach((obj) => {
           applyCanvaSelectionStyle(obj);
-          if (!currentCanvasObjects.includes(obj)) {
+          // Re-check after dedup removal
+          if (!canvas.getObjects().includes(obj)) {
             canvas.add(obj);
           }
         });
 
-        // Restore active selection if the active table/element was rebuilt
-        if (isActive && selectedElementIds.length > 0) {
-          const selectedObjs = validObjects.filter((o: any) => o && o.id && selectedElementIds.includes(o.id));
+        // Restore active selection if the active table/element was rebuilt, but never select the object currently being edited in HTML overlay
+        // Read selectedElementIds fresh from the store to avoid stale closure issues during paste
+        // Also merge savedActiveIds from the pre-render ActiveSelection discard
+        const freshSelectedIds = useStore.getState().selectedElementIds || [];
+        const mergedSelectedIds = savedActiveIds.length > 0
+          ? Array.from(new Set([...freshSelectedIds, ...savedActiveIds]))
+          : freshSelectedIds;
+        if (isActive && mergedSelectedIds.length > 0) {
+          const selectableIds = mergedSelectedIds.filter(id => id !== editingId);
+          const selectedObjs = validObjects.filter((o: any) => o && o.id && selectableIds.includes(o.id));
           const currentActive = canvas.getActiveObjects();
           if (selectedObjs.length > 0 && (!currentActive.length || !selectedObjs.every(o => currentActive.includes(o)))) {
             if (selectedObjs.length === 1) {
@@ -923,9 +1170,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
         canvas._objects.sort((a: any, b: any) => (a.get('zIndex') || 0) - (b.get('zIndex') || 0));
         
-        // Dynamically update canvas background color
-        const targetBg = page.backgroundColor || canvasBg || '#ffffff';
-        canvas.backgroundColor = targetBg;
+        // Keep canvas background transparent so page sheet div provides the visual background,
+        // and outer CANVAS_PAD padding stays transparent for bleed controls
+        canvas.backgroundColor = 'transparent';
         canvas.renderAll();
 
         if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
@@ -946,34 +1193,40 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     };
   }, [
     page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements,
-    isActive, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU,
+    footerHeight, catalog?.footerHeight, catalog?.marginBottom,
+    isActive, editingId, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU,
     catalog?.fontFamily,
     JSON.stringify(catalog?.categoryVisibleParams)
   ]);
 
   useEffect(() => {
     const unsub = useStore.subscribe((newState, prevState) => {
+      // Only the active page's FabricStage should react to selection changes.
+      // Without this guard, every page's canvas fires discardActiveObject(),
+      // wiping visually-rendered objects on inactive canvases during paste.
+      if (!isActiveRef.current) return;
+
       const newIds = newState.selectedElementIds || [];
       const oldIds = prevState?.selectedElementIds || [];
       
       if (newIds !== oldIds) {
         if (fabricCanvasRef.current) {
           const canvas = fabricCanvasRef.current;
-          if ((canvas as any)._currentTransform) return;
           const currentActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
-          
-          if (JSON.stringify(currentActiveIds.sort()) !== JSON.stringify([...newIds].sort())) {
+          if (newIds.length === 0) {
             canvas.discardActiveObject();
-            if (newIds.length > 0) {
-              const objsToSelect = canvas.getObjects().filter((o: any) => newIds.includes(o.id));
-              if (objsToSelect.length === 1) {
-                canvas.setActiveObject(objsToSelect[0]);
-              } else if (objsToSelect.length > 1) {
-                const sel = new ActiveSelection(objsToSelect, { canvas });
-                canvas.setActiveObject(sel);
-              }
+            canvas.requestRenderAll();
+          } else if (JSON.stringify(currentActiveIds.sort()) !== JSON.stringify([...newIds].sort())) {
+            if ((canvas as any)._currentTransform) return;
+            canvas.discardActiveObject();
+            const objsToSelect = canvas.getObjects().filter((o: any) => newIds.includes(o.id));
+            if (objsToSelect.length === 1) {
+              canvas.setActiveObject(objsToSelect[0]);
+            } else if (objsToSelect.length > 1) {
+              const sel = new ActiveSelection(objsToSelect, { canvas });
+              canvas.setActiveObject(sel);
             }
-            canvas.renderAll();
+            canvas.requestRenderAll();
           }
         }
       }
@@ -1011,8 +1264,19 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   }, []);
 
   return (
-    <div style={{ width: curW * zoom, height: curH * zoom, border: isActive ? '2px solid #4f46e5' : '1px solid #e2e8f0', overflow: 'hidden', position: 'relative' }}>
-      <canvas ref={canvasRef} />
+    <div style={{ width: curW * zoom, height: curH * zoom, position: 'relative' }}>
+      <div
+        style={{
+          position: 'absolute',
+          left: -CANVAS_PAD_X * zoom,
+          top: -CANVAS_PAD_Y * zoom,
+          width: (curW + CANVAS_PAD_X * 2) * zoom,
+          height: (curH + CANVAS_PAD_Y * 2) * zoom,
+          pointerEvents: isActive ? 'auto' : 'none',
+        }}
+      >
+        <canvas ref={canvasRef} />
+      </div>
       {/* Real-time spatial alignment guide overlays */}
       {activeGuides.map((guide, idx) => (
         <div

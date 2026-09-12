@@ -1,8 +1,10 @@
 
 import { create } from 'zustand';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate } from '../types';
-import { INITIAL_PRODUCTS, PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, GRID_TEMPLATES, HEADER_FOOTER_HEIGHT, FULL_CATALOG_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES } from '../constants';
-import { authApi, systemTemplatesApi } from '../client';
+import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection } from '../types';
+import { authApi, systemTemplatesApi, adminAssetsApi } from '../client';
+import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, FULL_CATALOG_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES, GRID_TEMPLATES } from '../constants';
+import { normalizeImageUrl, resolveProductImage, resolveProductTitle } from '../utils/imageUtils';
+import { resolveFieldLabel } from '../utils/fieldUtils';
 
 interface User {
   id: string;
@@ -12,6 +14,7 @@ interface User {
   role: 'user' | 'admin';
   status: 'active' | 'suspended';
   joinedAt: string;
+  businessId?: string | number;
   businessName?: string;
   subscription_plan?: string;
   subscription_end_date?: string;
@@ -97,7 +100,6 @@ interface State {
   reorderElements: (pageIndex: number, newOrderIds: string[]) => void;
   reorderHeaderElements: (newOrderIds: string[]) => void;
   reorderFooterElements: (newOrderIds: string[]) => void;
-  setSelectedElements: (ids: string[]) => void;
   setDefaultCurrency: (currency: string) => void;
 
   updateUser: (updates: Partial<User>) => void;
@@ -145,6 +147,14 @@ interface State {
   setHoveredElementId: (id: string | null) => void;
   setIsPropertyPanelOpen: (isOpen: boolean) => void;
   setIsTableEditorOpen: (isOpen: boolean, elementId?: string | null) => void;
+  isGridStudioOpen: boolean;
+  gridStudioPageIndex: number | null;
+  setIsGridStudioOpen: (isOpen: boolean, pageIndex?: number | null) => void;
+  applyProductGridToPage: (pageIndex: number, sections: ProductGridSection[], options?: { gap?: number; bgPadding?: number }) => void;
+  reflowCatalogPages: (startPageIndex?: number) => void;
+  swapPageSections: (pageIndex: number, secIdxA: number, secIdxB: number) => void;
+  deletePageSection: (pageIndex: number, secIdx: number) => void;
+  autoGenerateCatalogFromAllCategories: () => void;
   setIsHeaderDesignerOpen: (isOpen: boolean, template?: any | null) => void;
   setIsFooterDesignerOpen: (isOpen: boolean, template?: any | null) => void;
   setCurrentPageIndex: (index: number) => void;
@@ -158,8 +168,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null) => void;
+  editorTab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null) => void;
   colorPickerTarget: {
     type: 'background' | 'fill' | 'stroke' | 'text';
     elementId?: string;
@@ -227,7 +237,13 @@ interface State {
     name: string,
     template: GridTemplate,
     categoryIds: string[],
-    options?: { includeCover: boolean; includeIndex: boolean; includeCategoryCovers: boolean; selectedTemplateId?: string }
+    options?: { 
+      includeCover: boolean; 
+      includeIndex: boolean; 
+      includeCategoryCovers: boolean; 
+      selectedTemplateId?: string;
+      tableHeaders?: string[];
+    }
   ) => void;
   applyCoverTemplate: (pageIndex: number | null, template: PageTemplate) => void;
   applyIndexTemplate: (pageIndex: number | null, template: PageTemplate) => void;
@@ -262,7 +278,7 @@ interface State {
 
   // Clipboard
   copySelectedElements: () => void;
-  pasteElements: () => void;
+  pasteElements: (targetPos?: { x: number; y: number }, targetPageIdx?: number) => void;
 }
 
 const INITIAL_MEDIA: MediaItem[] = [];
@@ -428,6 +444,8 @@ export const useStore = create<State>((set, get) => ({
   isPropertyPanelOpen: true,
   isTableEditorOpen: false,
   editingTableElementId: null,
+  isGridStudioOpen: false,
+  gridStudioPageIndex: null,
   isHeaderDesignerOpen: false,
   editingHeaderTemplate: null,
   isFooterDesignerOpen: false,
@@ -1423,28 +1441,52 @@ export const useStore = create<State>((set, get) => ({
   fetchAdminAssets: async () => {
     try {
       const response = await adminAssetsApi.getAll();
-      set({ adminAssets: response.data });
+      const assets = Array.isArray(response) ? response : ((response as any)?.data || []);
+      set({ adminAssets: assets });
     } catch (error) {
       console.error('Error fetching admin assets:', error);
     }
   },
 
   addMedia: async (file: File): Promise<MediaItem> => {
-    const { mediaApi } = await import('../client');
-    const response = await mediaApi.upload(file);
-    const m = (response as any).data || response;
-    const newItem: MediaItem = {
-      id: String(m.id),
-      name: m.name,
-      type: m.type || 'image',
-      url: m.url,
-      createdAt: m.created_at || new Date().toISOString(),
-      size: m.size_bytes ? `${(m.size_bytes / 1024).toFixed(1)} KB` : '0 KB'
-    };
-    set((state) => ({
-      mediaItems: [newItem, ...state.mediaItems]
-    }));
-    return newItem;
+    try {
+      const { mediaApi } = await import('../client');
+      const response = await mediaApi.upload(file);
+      const m = (response as any).data || response;
+      const newItem: MediaItem = {
+        id: String(m.id || Date.now()),
+        name: m.name || file.name,
+        type: m.type || 'image',
+        url: m.url || '',
+        createdAt: m.created_at || new Date().toISOString(),
+        size: m.size_bytes ? `${(m.size_bytes / 1024).toFixed(1)} KB` : `${(file.size / 1024).toFixed(1)} KB`
+      };
+      set((state) => ({
+        mediaItems: [newItem, ...state.mediaItems]
+      }));
+      return newItem;
+    } catch (error) {
+      console.warn("Backend upload failed, saving locally in store:", error);
+      return new Promise<MediaItem>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const localUrl = (ev.target?.result as string) || '';
+          const localItem: MediaItem = {
+            id: `local-${Date.now()}-${Math.random().toString(36).substr(2, 6)}`,
+            name: file.name,
+            type: 'image',
+            url: localUrl,
+            createdAt: new Date().toISOString(),
+            size: `${(file.size / 1024).toFixed(1)} KB`
+          };
+          set((state) => ({
+            mediaItems: [localItem, ...state.mediaItems]
+          }));
+          resolve(localItem);
+        };
+        reader.readAsDataURL(file);
+      });
+    }
   },
 
   removeMedia: async (id: string) => {
@@ -2012,18 +2054,19 @@ export const useStore = create<State>((set, get) => ({
 
     if (!element) return state;
 
-    if (element.groupId && (updates.x !== undefined || updates.y !== undefined)) {
-      const dx = updates.x !== undefined ? updates.x - element.x : 0;
-      const dy = updates.y !== undefined ? updates.y - element.y : 0;
+    const hasPositionMove = (typeof updates.x === 'number' && updates.x !== element.x) ||
+                            (typeof updates.y === 'number' && updates.y !== element.y);
+
+    if (element.groupId && hasPositionMove) {
+      const dx = typeof updates.x === 'number' ? updates.x - element.x : 0;
+      const dy = typeof updates.y === 'number' ? updates.y - element.y : 0;
 
       page.elements = page.elements.map(el => {
         if (el.groupId === element.groupId) {
-          const elUpdates = { ...updates };
-          if (el.id !== elementId) {
-            elUpdates.x = el.x + dx;
-            elUpdates.y = el.y + dy;
+          if (el.id === elementId) {
+            return { ...el, ...updates };
           }
-          return { ...el, ...elUpdates };
+          return { ...el, x: el.x + dx, y: el.y + dy };
         }
         return el;
       });
@@ -2812,75 +2855,420 @@ export const useStore = create<State>((set, get) => ({
       return gridElements;
     };
 
-    // Iterate through selected categories to generate content pages
-    categoryIds.forEach(categoryId => {
-      const catProducts = state.products.filter(p => p.categoryId === categoryId);
-      const category = state.categories.find(c => c.id === categoryId);
+    // Dynamic target table headers for generated tables
+    const targetHeaders: string[] = options?.tableHeaders && options.tableHeaders.length > 0
+      ? options.tableHeaders
+      : ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'];
 
-      if (catProducts.length === 0) return;
+    // Helper to generate a table row matching targetHeaders from a product or variant
+    const generateCatalogRow = (headers: string[], p: Product, v?: ProductVariant): string[] => {
+      const findCustomValue = (keyQuery: string): string | null => {
+        const targetNorm = keyQuery.toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (!targetNorm) return null;
 
-      // Record TOC Entry for this category
-      tocEntries.push({
-        name: category?.name || 'Category',
-        pageNumber: contentPageCounter
+        const matchingSchemaIds: string[] = [];
+        for (const cat of state.categories) {
+          if (cat.customSchema && Array.isArray(cat.customSchema)) {
+            for (const f of cat.customSchema) {
+              const fLabelNorm = (f.label || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              const fKeyNorm = (f.key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              const fNameNorm = (f.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+              if (fLabelNorm === targetNorm || fKeyNorm === targetNorm || fNameNorm === targetNorm ||
+                  (fLabelNorm && (fLabelNorm.includes(targetNorm) || targetNorm.includes(fLabelNorm)))) {
+                if (f.id) matchingSchemaIds.push(f.id);
+              }
+            }
+          }
+        }
+
+        // 1. Check variant.customAttributes
+        if (v?.customAttributes && typeof v.customAttributes === 'object') {
+          if (v.customAttributes[keyQuery] !== undefined && v.customAttributes[keyQuery] !== null) {
+            const val = String(v.customAttributes[keyQuery]).trim();
+            if (val && val !== '-') return val;
+          }
+          for (const [k, val] of Object.entries(v.customAttributes)) {
+            if (matchingSchemaIds.some(sId => sId.toLowerCase() === k.toLowerCase())) {
+              if (val !== undefined && val !== null) {
+                const s = String(val).trim();
+                if (s && s !== '-') return s;
+              }
+            }
+          }
+          for (const [k, val] of Object.entries(v.customAttributes)) {
+            const resolved = resolveFieldLabel(k, state.categories as any, p);
+            if (resolved && resolved.toLowerCase().replace(/[^a-z0-9]/g, '') === targetNorm) {
+              if (val !== undefined && val !== null) {
+                const s = String(val).trim();
+                if (s && s !== '-') return s;
+              }
+            }
+          }
+        }
+
+        // 2. Check product.customFields
+        if (p.customFields && typeof p.customFields === 'object') {
+          if (p.customFields[keyQuery] !== undefined && p.customFields[keyQuery] !== null) {
+            const val = String(p.customFields[keyQuery]).trim();
+            if (val && val !== '-') return val;
+          }
+          for (const [k, val] of Object.entries(p.customFields)) {
+            if (matchingSchemaIds.some(sId => sId.toLowerCase() === k.toLowerCase())) {
+              if (val !== undefined && val !== null) {
+                const s = String(val).trim();
+                if (s && s !== '-') return s;
+              }
+            }
+          }
+          for (const [k, val] of Object.entries(p.customFields)) {
+            const resolved = resolveFieldLabel(k, state.categories as any, p);
+            if (resolved && resolved.toLowerCase().replace(/[^a-z0-9]/g, '') === targetNorm) {
+              if (val !== undefined && val !== null) {
+                const s = String(val).trim();
+                if (s && s !== '-') return s;
+              }
+            }
+          }
+        }
+
+        return null;
+      };
+
+      return headers.map(hdr => {
+        const h = hdr.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+        // Direct custom field match
+        const customMatch = findCustomValue(hdr);
+        if (customMatch) return customMatch;
+
+        // Model Number (Strictly Model No - never SKU fallback)
+        if (h.includes('model') || h.includes('itemno') || h === 'item' || h === 'code' || h === 'itemcode') {
+          const modelVal = findCustomValue('model_no') || findCustomValue('model') || 
+                           findCustomValue('model_number') || findCustomValue('modelno') ||
+                           findCustomValue('item_code') || findCustomValue('item_no') ||
+                           findCustomValue('item_number');
+          if (modelVal) return modelVal;
+          return '-';
+        }
+
+        // SKU (Only if explicitly SKU)
+        if (h === 'sku') {
+          const skuVal = findCustomValue('sku');
+          if (skuVal) return skuVal;
+          if (v?.sku && v.sku !== '-' && !v.sku.startsWith('Untitled') && !v.sku.startsWith('GEN-') && !v.sku.startsWith('PRE-')) {
+            return v.sku;
+          }
+          if (p.sku && p.sku !== '-' && !p.sku.startsWith('Untitled') && !p.sku.startsWith('GEN-') && !p.sku.startsWith('PRE-')) {
+            return p.sku;
+          }
+          return '-';
+        }
+
+        // Product Name / Description
+        if (h.includes('product') || h.includes('spec') || h.includes('desc') || h.includes('name') || h.includes('title')) {
+          const nameVal = findCustomValue('product_name') || findCustomValue('description') || findCustomValue('spec') || findCustomValue('title');
+          if (nameVal) return nameVal;
+          if (v?.name && v.name !== 'Untitled Product' && v.name !== '-') return v.name;
+          if (p.name && p.name !== 'Untitled Product' && p.name !== '-') return p.name;
+          return '-';
+        }
+
+        // Cut-out / Size / Dimension
+        if (h.includes('cut') || h.includes('size') || h.includes('dim') || h.includes('dia')) {
+          const cutVal = findCustomValue('cut_out') || findCustomValue('cutout') || findCustomValue('size') || findCustomValue('dimension') || findCustomValue('dia');
+          if (cutVal) return cutVal;
+          if (v?.cutOut && v.cutOut !== '-') return v.cutOut;
+          return '-';
+        }
+
+        // Price / MRP / DLP
+        if (h.includes('price') || h.includes('mrp') || h.includes('rate') || h.includes('dlp') || h.includes('dealer')) {
+          const priceVal = findCustomValue('price') || findCustomValue('mrp') || findCustomValue('dealer_price') || findCustomValue('dlp') || findCustomValue('rate');
+          if (priceVal) return priceVal;
+          const numPrice = v?.price ?? p.price;
+          if (numPrice !== undefined && numPrice !== null && numPrice !== '' && numPrice !== '-') {
+            return String(numPrice).startsWith('₹') || String(numPrice).startsWith('$') ? String(numPrice) : `${p.currency || '₹'}${numPrice}`;
+          }
+          return '-';
+        }
+
+        // Color / CCT / Shade
+        if (h.includes('color') || h.includes('cct') || h.includes('shade') || h.includes('temp')) {
+          const colorVal = findCustomValue('color') || findCustomValue('cct') || findCustomValue('shade') || findCustomValue('temperature');
+          if (colorVal) return colorVal;
+          if (v?.color && v.color !== '-') return v.color;
+          return '-';
+        }
+
+        // Packing / Box Qty
+        if (h.includes('pack') || h.includes('box') || h.includes('qty')) {
+          const packVal = findCustomValue('packing') || findCustomValue('box_qty') || findCustomValue('qty') || findCustomValue('pack');
+          if (packVal) return packVal;
+          if (v?.packing && v.packing !== '-') return v.packing;
+          return '-';
+        }
+
+        // Wattage / Power
+        if (h.includes('watt') || h.includes('power')) {
+          const powerVal = findCustomValue('wattage') || findCustomValue('power') || findCustomValue('watt') || findCustomValue('watts');
+          if (powerVal) return powerVal;
+          return '-';
+        }
+
+        return '-';
+      });
+    };
+
+    const isVTAC = options?.selectedTemplateId === 'tpl-v-tac' || !options?.selectedTemplateId;
+
+    if (isVTAC) {
+      // 1. Convert selected categories into 3-section V-TAC layout
+      const categorySections: ProductGridSection[] = [];
+
+      categoryIds.forEach((categoryId, catIdx) => {
+        const catProducts = state.products.filter(p => String(p.categoryId) === String(categoryId));
+        const category = state.categories.find(c => String(c.id) === String(categoryId));
+        if (!category && catProducts.length === 0) return;
+
+        const catName = category?.name || `Category ${catIdx + 1}`;
+        const catImg = resolveProductImage(catProducts[0], category, catProducts);
+        const headers = [...targetHeaders];
+
+        const rows: string[][] = [];
+        catProducts.forEach(prod => {
+          if (prod.variants && prod.variants.length > 0) {
+            prod.variants.forEach(v => rows.push(generateCatalogRow(headers, prod, v)));
+          } else {
+            rows.push(generateCatalogRow(headers, prod));
+          }
+        });
+
+        if (rows.length === 0) {
+          rows.push(headers.map((h, i) => i === 1 ? `${catName} Series` : '-'));
+        }
+
+        categorySections.push({
+          id: `sec-${Date.now()}-${catIdx}`,
+          title: catName.toUpperCase(),
+          titleColor: '#00a651',
+          titleFontSize: 22,
+          imageSrc: catImg,
+          hasBackground: false,
+          backgroundColor: '#e2e8f0',
+          tableData: {
+            headers,
+            rows,
+            headerBg: '#002b36',
+            headerTextColor: '#ffffff',
+            alternateRowBg: '#f8fafc',
+            rowBg: '#ffffff',
+            borderColor: '#002b36',
+            fontSize: 7.5,
+            headerFontSize: 8,
+            cellPadding: 4
+          }
+        });
+
+        tocEntries.push({
+          name: catName,
+          pageNumber: contentPageCounter
+        });
       });
 
-      // Category Section Page (Divider/Cover) - CONDITIONAL
-      if (options.includeCategoryCovers) {
-        const sectionCoverElements: CanvasElement[] = [
-          {
-            id: `sec-title-${categoryId}-${Date.now()}`,
-            type: 'text',
-            x: 0, y: (PAGE_HEIGHT + headerH - footerH) / 2 - 40, width: PAGE_WIDTH, height: 80,
-            text: category?.name || 'Category',
-            fontSize: 48,
-            fontFamily: theme.headingFont,
-            fontWeight: '900',
-            fill: theme.headingColor,
-            textAlign: 'center',
-            zIndex: 1,
-            rotation: 0,
-            opacity: 1
-          },
-          {
-            id: `sec-desc-${categoryId}-${Date.now()}`,
-            type: 'text',
-            x: 40, y: (PAGE_HEIGHT + headerH - footerH) / 2 + 50, width: PAGE_WIDTH - 80, height: 40,
-            text: `${catProducts.length} Items`,
-            fontSize: 16,
-            fontFamily: theme.fontFamily,
-            fill: theme.bodyColor,
-            textAlign: 'center',
-            zIndex: 1,
-            rotation: 0,
-            opacity: 1
+      // Bucket sections into pages (3 distinct categories / sections per page)
+      const pageBuckets: { sections: ProductGridSection[] }[] = [];
+      for (let i = 0; i < categorySections.length; i += 3) {
+        const chunk = categorySections.slice(i, i + 3).map((sec, sIdx) => ({
+          ...sec,
+          hasBackground: sIdx % 2 === 1
+        }));
+        pageBuckets.push({ sections: chunk });
+      }
+
+      const leftMargin = curCatalog.marginLeft || 35;
+      const rightMargin = curCatalog.marginRight || 35;
+      const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+
+      pageBuckets.forEach((bucket, pIdx) => {
+        const pageNumber = contentPageCounter++;
+        const pageHasHeader = curCatalog.hasHeader !== false;
+        const pageHasFooter = curCatalog.hasFooter !== false;
+        const headerH = pageHasHeader ? (curCatalog.headerHeight || 113.4) : 0;
+        const footerH = pageHasFooter ? (curCatalog.footerHeight || 75.6) : 0;
+
+        const topBound = Math.max(headerH + 15, curCatalog.marginTop || 20);
+        const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, curCatalog.marginBottom || 20);
+        const availableHeight = bottomBound - topBound;
+
+        const sectionCount = Math.max(1, bucket.sections.length);
+        const gap = 15;
+        const totalGaps = (sectionCount - 1) * gap;
+        const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / sectionCount));
+
+        const elements: CanvasElement[] = [];
+        const timestamp = Date.now();
+
+        bucket.sections.forEach((sec, idx) => {
+          const curY = Math.round(topBound + idx * (sectionHeight + gap));
+          const sectionId = `grid-sec-${timestamp}-${pIdx}-${idx}`;
+
+          // Background Stripe
+          if (sec.hasBackground) {
+            elements.push({
+              id: `${sectionId}-bg`,
+              type: 'shape',
+              shapeType: 'rect',
+              x: 0,
+              y: curY - 5,
+              width: PAGE_WIDTH,
+              height: sectionHeight + 10,
+              fill: sec.backgroundColor || '#e2e8f0',
+              zIndex: idx * 10 + 1,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
           }
-        ];
+
+          // Product / Category Image
+          const imageWidth = 240;
+          const imageHeight = Math.max(70, sectionHeight - 10);
+          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+          elements.push({
+            id: `${sectionId}-img`,
+            type: 'image',
+            x: leftMargin,
+            y: curY,
+            width: imageWidth,
+            height: imageHeight,
+            src: finalImgSrc,
+            zIndex: idx * 10 + 2,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Right Title
+          const rightX = leftMargin + 255;
+          const rightWidth = Math.max(200, contentWidth - 255);
+
+          elements.push({
+            id: `${sectionId}-title`,
+            type: 'text',
+            x: rightX,
+            y: curY + 4,
+            width: rightWidth,
+            height: 32,
+            text: sec.title || `PRODUCT SERIES ${idx + 1}`,
+            fontSize: sec.titleFontSize || 22,
+            fontFamily: 'Montserrat',
+            fontWeight: '900',
+            fill: sec.titleColor || '#00a651',
+            letterSpacing: 0.5,
+            zIndex: idx * 10 + 3,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Table
+          const tableY = curY + 40;
+          elements.push({
+            id: `${sectionId}-table`,
+            type: 'table',
+            x: rightX,
+            y: tableY,
+            width: rightWidth,
+            height: Math.max(60, sectionHeight - 45),
+            tableData: sec.tableData,
+            zIndex: idx * 10 + 4,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+        });
 
         allPages.push({
-          id: `p-section-${categoryId}`,
-          pageNumber: contentPageCounter,
-          elements: sectionCoverElements,
-          type: 'intro',
-          categoryId: categoryId,
-          backgroundColor: category?.color || theme.backgroundColor
+          id: `page-gen-${timestamp}-${pIdx}`,
+          pageNumber,
+          type: 'interior',
+          title: `Product Page ${pIdx + 1}`,
+          orientation: 'portrait',
+          backgroundColor: '#ffffff',
+          elements
         });
-        contentPageCounter++;
-      }
+      });
+    } else {
+      // Iterate through selected categories to generate content pages for generic templates
+      categoryIds.forEach(categoryId => {
+        const catProducts = state.products.filter(p => p.categoryId === categoryId);
+        const category = state.categories.find(c => c.id === categoryId);
 
-      // Product Grids for this Category
-      const productsPerPage = template.cols * template.rows;
-      for (let i = 0; i < catProducts.length; i += productsPerPage) {
-        allPages.push({
-          id: `p-grid-${categoryId}-${i}-${Date.now()}`,
-          pageNumber: contentPageCounter,
-          elements: generatePageElements(catProducts.slice(i, i + productsPerPage)),
-          type: 'product',
-          categoryId: categoryId
+        if (catProducts.length === 0) return;
+
+        // Record TOC Entry for this category
+        tocEntries.push({
+          name: category?.name || 'Category',
+          pageNumber: contentPageCounter
         });
-        contentPageCounter++;
-      }
-    });
+
+        // Category Section Page (Divider/Cover) - CONDITIONAL
+        if (options.includeCategoryCovers) {
+          const sectionCoverElements: CanvasElement[] = [
+            {
+              id: `sec-title-${categoryId}-${Date.now()}`,
+              type: 'text',
+              x: 0, y: (PAGE_HEIGHT + headerH - footerH) / 2 - 40, width: PAGE_WIDTH, height: 80,
+              text: category?.name || 'Category',
+              fontSize: 48,
+              fontFamily: theme.headingFont,
+              fontWeight: '900',
+              fill: theme.headingColor,
+              textAlign: 'center',
+              zIndex: 1,
+              rotation: 0,
+              opacity: 1
+            },
+            {
+              id: `sec-desc-${categoryId}-${Date.now()}`,
+              type: 'text',
+              x: 40, y: (PAGE_HEIGHT + headerH - footerH) / 2 + 50, width: PAGE_WIDTH - 80, height: 40,
+              text: `${catProducts.length} Items`,
+              fontSize: 16,
+              fontFamily: theme.fontFamily,
+              fill: theme.bodyColor,
+              textAlign: 'center',
+              zIndex: 1,
+              rotation: 0,
+              opacity: 1
+            }
+          ];
+
+          allPages.push({
+            id: `p-section-${categoryId}`,
+            pageNumber: contentPageCounter,
+            elements: sectionCoverElements,
+            type: 'intro',
+            categoryId: categoryId,
+            backgroundColor: category?.color || theme.backgroundColor
+          });
+          contentPageCounter++;
+        }
+
+        // Product Grids for this Category
+        const productsPerPage = template.cols * template.rows;
+        for (let i = 0; i < catProducts.length; i += productsPerPage) {
+          allPages.push({
+            id: `p-grid-${categoryId}-${i}-${Date.now()}`,
+            pageNumber: contentPageCounter,
+            elements: generatePageElements(catProducts.slice(i, i + productsPerPage)),
+            type: 'product',
+            categoryId: categoryId
+          });
+          contentPageCounter++;
+        }
+      });
+    }
 
     // Generate and Insert Index Page if enabled
     if (options.includeIndex) {
@@ -3617,6 +4005,1103 @@ export const useStore = create<State>((set, get) => ({
     }
   })),
 
+  setIsGridStudioOpen: (isOpen, pageIndex = null) => set({
+    isGridStudioOpen: isOpen,
+    gridStudioPageIndex: pageIndex !== null ? pageIndex : get().currentPageIndex
+  }),
+
+  applyProductGridToPage: (pageIndex, sections, options) => {
+    get().pushHistory();
+    set((state) => {
+      const { catalog } = state;
+      const targetPage = catalog.pages[pageIndex];
+      if (!targetPage) return state;
+
+      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader && targetPage.type !== 'cover');
+      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter && targetPage.type !== 'cover');
+
+      const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
+      const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
+
+      const topBound = Math.max(headerH + 15, catalog.marginTop || 20);
+      const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, catalog.marginBottom || 20);
+      const availableHeight = bottomBound - topBound;
+
+      const sectionCount = Math.max(1, sections.length);
+      const gap = options?.gap ?? 15;
+      const totalGaps = (sectionCount - 1) * gap;
+      const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / sectionCount));
+
+      const leftMargin = catalog.marginLeft || 35;
+      const rightMargin = catalog.marginRight || 35;
+      const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+
+      const newElements: CanvasElement[] = [];
+      const timestamp = Date.now();
+
+      sections.forEach((sec, idx) => {
+        const curY = Math.round(topBound + idx * (sectionHeight + gap));
+        const sectionId = `grid-sec-${timestamp}-${idx}`;
+
+        // 1. Background Stripe (if enabled)
+        if (sec.hasBackground) {
+          newElements.push({
+            id: `${sectionId}-bg`,
+            type: 'shape',
+            shapeType: 'rect',
+            x: 0,
+            y: curY - 5,
+            width: PAGE_WIDTH,
+            height: sectionHeight + 10,
+            fill: sec.backgroundColor || '#e2e8f0',
+            zIndex: idx * 10 + 1,
+            rotation: 0,
+            opacity: 1
+          });
+        }
+
+        // 2. Product Image on Left (approx 240px width)
+        const imageWidth = 240;
+        const imageHeight = sectionHeight - 10;
+        const imgX = leftMargin;
+        const imgY = curY;
+        const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+
+        newElements.push({
+          id: `${sectionId}-img`,
+          type: 'image',
+          x: imgX,
+          y: imgY,
+          width: imageWidth,
+          height: imageHeight,
+          src: finalImgSrc,
+          zIndex: idx * 10 + 2,
+          rotation: 0,
+          opacity: 1
+        });
+
+        // 3. Right Column: Title + Table
+        const rightX = leftMargin + 255;
+        const rightWidth = Math.max(200, contentWidth - 255);
+
+        // Title
+        const titleText = sec.title || `PRODUCT SERIES ${idx + 1}`;
+        newElements.push({
+          id: `${sectionId}-title`,
+          type: 'text',
+          x: rightX,
+          y: curY + 4,
+          width: rightWidth,
+          height: 32,
+          text: titleText,
+          fontSize: sec.titleFontSize || 22,
+          fontFamily: 'Montserrat',
+          fontWeight: '900',
+          fill: sec.titleColor || '#00a651',
+          letterSpacing: 0.5,
+          zIndex: idx * 10 + 3,
+          rotation: 0,
+          opacity: 1
+        });
+
+        // Specs Table
+        const tableY = curY + 40;
+        const tableData: TableData = sec.tableData || {
+          headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+          rows: [
+            ['VT-01', '12W COB DOWNLIGHT', '75MM', '₹1200', 'W, W.W, N.W'],
+            ['VT-02', '18W COB DOWNLIGHT', '90MM', '₹1500', 'W, W.W, N.W']
+          ],
+          headerBg: '#002b36',
+          headerTextColor: '#ffffff',
+          alternateRowBg: '#f8fafc',
+          rowBg: '#ffffff',
+          borderColor: '#002b36',
+          fontSize: 7.5,
+          headerFontSize: 8,
+          cellPadding: 4
+        };
+
+        newElements.push({
+          id: `${sectionId}-table`,
+          type: 'table',
+          x: rightX,
+          y: tableY,
+          width: rightWidth,
+          height: Math.max(65, sectionHeight - 45),
+          tableData,
+          zIndex: idx * 10 + 4,
+          rotation: 0,
+          opacity: 1
+        });
+      });
+
+      const newPages = [...catalog.pages];
+      newPages[pageIndex] = {
+        ...targetPage,
+        elements: newElements
+      };
+
+      return {
+        catalog: {
+          ...catalog,
+          pages: newPages,
+          updatedAt: new Date().toISOString()
+        },
+        currentPageIndex: pageIndex,
+        isGridStudioOpen: false,
+        gridStudioPageIndex: null,
+        selectedElementIds: []
+      };
+    });
+  },
+
+  reflowCatalogPages: (startPageIndex) => {
+    get().pushHistory();
+    set((state) => {
+      const { catalog } = state;
+      const pages = [...catalog.pages];
+
+      // Helper to extract sections from a page
+      const extractSections = (page: CatalogPage): ProductGridSection[] => {
+        if (!page || !page.elements || page.elements.length === 0) return [];
+        const titles = page.elements.filter(el => el.type === 'text' && (el.fontSize || 0) >= 16);
+        const tables = page.elements.filter(el => el.type === 'table' && el.tableData);
+        const images = page.elements.filter(el => el.type === 'image');
+        const backgrounds = page.elements.filter(el => el.type === 'shape' && (el.width || 0) >= 500);
+
+        if (titles.length === 0 && tables.length === 0) return [];
+
+        if (titles.length > 0) {
+          const sortedTitles = [...titles].sort((a, b) => a.y - b.y);
+          return sortedTitles.map((t, idx) => {
+            const nearestTable = tables.find(tbl => Math.abs(tbl.y - t.y) < 180);
+            const nearestImg = images.find(img => Math.abs(img.y - t.y) < 180);
+            const nearestBg = backgrounds.find(bg => Math.abs(bg.y - t.y) < 180);
+
+            return {
+              id: `sec-${idx + 1}`,
+              title: t.text?.replace(/<[^>]*>/g, '') || `SERIES ${idx + 1}`,
+              titleColor: t.fill || '#00a651',
+              titleFontSize: t.fontSize || 22,
+              imageSrc: nearestImg?.src || '',
+              hasBackground: !!nearestBg,
+              backgroundColor: nearestBg?.fill || '#e2e8f0',
+              tableData: nearestTable?.tableData || {
+                headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+                rows: [['VT-01', '12W COB', '75MM', '₹1200', 'W, W.W']],
+                headerBg: '#002b36',
+                headerTextColor: '#ffffff',
+                alternateRowBg: '#f8fafc',
+                rowBg: '#ffffff',
+                borderColor: '#002b36',
+                fontSize: 7.5,
+                headerFontSize: 8,
+                cellPadding: 4
+              }
+            };
+          });
+        }
+
+        const sortedTables = [...tables].sort((a, b) => a.y - b.y);
+        return sortedTables.map((tbl, idx) => {
+          const nearestImg = images.find(img => Math.abs(img.y - tbl.y) < 180);
+          const nearestBg = backgrounds.find(bg => Math.abs(bg.y - tbl.y) < 180);
+          return {
+            id: `sec-${idx + 1}`,
+            title: `SERIES ${idx + 1}`,
+            titleColor: '#00a651',
+            titleFontSize: 22,
+            imageSrc: nearestImg?.src || '',
+            hasBackground: !!nearestBg,
+            backgroundColor: nearestBg?.fill || '#e2e8f0',
+            tableData: tbl.tableData || {
+              headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+              rows: [['VT-01', '12W COB', '75MM', '₹1200', 'W, W.W']],
+              headerBg: '#002b36',
+              headerTextColor: '#ffffff',
+              alternateRowBg: '#f8fafc',
+              rowBg: '#ffffff',
+              borderColor: '#002b36',
+              fontSize: 7.5,
+              headerFontSize: 8,
+              cellPadding: 4
+            }
+          };
+        });
+      };
+
+      // Helper to lay out sections on a page
+      const layoutSections = (sections: ProductGridSection[], page: CatalogPage, timestamp: number): CanvasElement[] => {
+        if (sections.length === 0) return [];
+        const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
+        const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+
+        const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
+        const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
+
+        const topBound = Math.max(headerH + 15, catalog.marginTop || 20);
+        const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, catalog.marginBottom || 20);
+        const availableHeight = bottomBound - topBound;
+
+        const sectionCount = sections.length;
+        const gap = 15;
+        const totalGaps = (sectionCount - 1) * gap;
+
+        const weights = sections.map(sec => {
+          const rowCount = sec.tableData?.rows?.length || 2;
+          return Math.max(1, 0.7 + rowCount * 0.25);
+        });
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+        const leftMargin = catalog.marginLeft || 35;
+        const rightMargin = catalog.marginRight || 35;
+        const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+
+        const newElements: CanvasElement[] = [];
+        let curY = topBound;
+
+        sections.forEach((sec, idx) => {
+          const sectionHeight = Math.max(
+            110,
+            Math.floor(((availableHeight - totalGaps) * weights[idx]) / totalWeight)
+          );
+          const sectionId = `grid-sec-${timestamp}-${idx}`;
+
+          // Background Stripe
+          if (sec.hasBackground) {
+            newElements.push({
+              id: `${sectionId}-bg`,
+              type: 'shape',
+              shapeType: 'rect',
+              x: 0,
+              y: curY - 5,
+              width: PAGE_WIDTH,
+              height: sectionHeight + 10,
+              fill: sec.backgroundColor || '#e2e8f0',
+              zIndex: idx * 10 + 1,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
+
+          // Left Image
+          const imageWidth = 240;
+          const imageHeight = Math.max(70, sectionHeight - 10);
+          if (sec.imageSrc) {
+            newElements.push({
+              id: `${sectionId}-img`,
+              type: 'image',
+              x: leftMargin,
+              y: curY,
+              width: imageWidth,
+              height: imageHeight,
+              src: sec.imageSrc,
+              zIndex: idx * 10 + 2,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
+
+          // Right Column: Title
+          const rightX = leftMargin + 255;
+          const rightWidth = Math.max(200, contentWidth - 255);
+
+          newElements.push({
+            id: `${sectionId}-title`,
+            type: 'text',
+            x: rightX,
+            y: curY + 4,
+            width: rightWidth,
+            height: 32,
+            text: sec.title || `SERIES ${idx + 1}`,
+            fontSize: sec.titleFontSize || 22,
+            fontFamily: 'Montserrat',
+            fontWeight: '900',
+            fill: sec.titleColor || '#00a651',
+            letterSpacing: 0.5,
+            zIndex: idx * 10 + 3,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Table
+          const tableY = curY + 40;
+          newElements.push({
+            id: `${sectionId}-table`,
+            type: 'table',
+            x: rightX,
+            y: tableY,
+            width: rightWidth,
+            height: Math.max(60, sectionHeight - 45),
+            tableData: sec.tableData,
+            zIndex: idx * 10 + 4,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          curY += sectionHeight + gap;
+        });
+
+        return newElements;
+      };
+
+      // 1. Identify interior / product page indices strictly (never touch cover, index, or closing pages)
+      const interiorIndices = pages
+        .map((p, idx) => {
+          if (p.type === 'cover' || p.type === 'index' || p.type === 'closing') return -1;
+          if (idx === 0 && (p.type === 'cover' || (pages.length > 1 && !p.type))) return -1;
+          return idx;
+        })
+        .filter(idx => idx !== -1);
+
+      if (interiorIndices.length === 0) return state;
+
+      const eligibleIndices = startPageIndex !== undefined
+        ? interiorIndices.filter(idx => idx >= startPageIndex)
+        : interiorIndices;
+
+      if (eligibleIndices.length === 0) return state;
+
+      // 2. Extract all sections in sequence
+      const allSections: ProductGridSection[] = [];
+      eligibleIndices.forEach(pIdx => {
+        const pSections = extractSections(pages[pIdx]);
+        allSections.push(...pSections);
+      });
+
+      if (allSections.length === 0) return state;
+
+      // 3. Bucket sections by available height budget
+      const getSecEstimatedHeight = (sec: ProductGridSection) => {
+        const rows = sec.tableData?.rows?.length || 2;
+        return 130 + rows * 28;
+      };
+
+      const MAX_PAGE_BUDGET = 880;
+      const sectionBuckets: ProductGridSection[][] = [];
+      let currentBucket: ProductGridSection[] = [];
+      let currentBudget = 0;
+
+      allSections.forEach(sec => {
+        const estH = getSecEstimatedHeight(sec);
+        if (currentBucket.length >= 4 || (currentBucket.length >= 2 && currentBudget + estH > MAX_PAGE_BUDGET)) {
+          sectionBuckets.push(currentBucket);
+          currentBucket = [sec];
+          currentBudget = estH;
+        } else {
+          currentBucket.push(sec);
+          currentBudget += estH;
+        }
+      });
+      if (currentBucket.length > 0) {
+        sectionBuckets.push(currentBucket);
+      }
+
+      // 4. Distribute across pages
+      const timestamp = Date.now();
+      const updatedPages = [...pages];
+
+      // Add extra interior pages if needed
+      while (eligibleIndices.length < sectionBuckets.length) {
+        const lastEligibleIdx = eligibleIndices[eligibleIndices.length - 1];
+        const newPage: CatalogPage = {
+          id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          pageNumber: updatedPages.length + 1,
+          type: 'interior',
+          orientation: 'portrait',
+          backgroundColor: '#ffffff',
+          elements: []
+        };
+        updatedPages.splice(lastEligibleIdx + 1, 0, newPage);
+        eligibleIndices.push(lastEligibleIdx + 1);
+      }
+
+      // Lay out buckets
+      sectionBuckets.forEach((bucket, bIdx) => {
+        const pIdx = eligibleIndices[bIdx];
+        const targetPage = updatedPages[pIdx];
+        const nonGridElements = (targetPage.elements || []).filter(el =>
+          !el.sectionTag && !el.id.startsWith('grid-sec-') && !['table', 'shape'].includes(el.type) && (el.type !== 'text' || (el.fontSize || 0) < 16)
+        );
+
+        const newGridElements = layoutSections(bucket, targetPage, timestamp + bIdx);
+        updatedPages[pIdx] = {
+          ...targetPage,
+          elements: [...newGridElements, ...nonGridElements]
+        };
+      });
+
+      // Clear remaining eligible pages that received no sections
+      for (let i = sectionBuckets.length; i < eligibleIndices.length; i++) {
+        const pIdx = eligibleIndices[i];
+        const targetPage = updatedPages[pIdx];
+        const nonGridElements = (targetPage.elements || []).filter(el =>
+          !el.sectionTag && !el.id.startsWith('grid-sec-') && el.type !== 'table'
+        );
+        updatedPages[pIdx] = {
+          ...targetPage,
+          elements: nonGridElements
+        };
+      }
+
+      return {
+        catalog: {
+          ...catalog,
+          pages: updatedPages,
+          updatedAt: new Date().toISOString()
+        }
+      };
+    });
+  },
+
+  swapPageSections: (pageIndex, secIdxA, secIdxB) => {
+    get().pushHistory();
+    set((state) => {
+      const { catalog } = state;
+      const targetPage = catalog.pages[pageIndex];
+      if (!targetPage) return state;
+
+      const titles = (targetPage.elements || []).filter(el => el.type === 'text' && (el.fontSize || 0) >= 16);
+      const tables = (targetPage.elements || []).filter(el => el.type === 'table' && el.tableData);
+      const images = (targetPage.elements || []).filter(el => el.type === 'image');
+      const backgrounds = (targetPage.elements || []).filter(el => el.type === 'shape' && (el.width || 0) >= 500);
+
+      const sortedTitles = [...titles].sort((a, b) => a.y - b.y);
+      if (sortedTitles.length < 2) return state;
+
+      const sections: ProductGridSection[] = sortedTitles.map((t, idx) => {
+        const nearestTable = tables.find(tbl => Math.abs(tbl.y - t.y) < 180);
+        const nearestImg = images.find(img => Math.abs(img.y - t.y) < 180);
+        const nearestBg = backgrounds.find(bg => Math.abs(bg.y - t.y) < 180);
+
+        return {
+          id: `sec-${idx + 1}`,
+          title: t.text?.replace(/<[^>]*>/g, '') || `SERIES ${idx + 1}`,
+          titleColor: t.fill || '#00a651',
+          titleFontSize: t.fontSize || 22,
+          imageSrc: nearestImg?.src || '',
+          hasBackground: !!nearestBg,
+          backgroundColor: nearestBg?.fill || '#e2e8f0',
+          tableData: nearestTable?.tableData || {
+            headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+            rows: [['VT-01', '12W COB', '75MM', '₹1200', 'W, W.W']],
+            headerBg: '#002b36',
+            headerTextColor: '#ffffff',
+            alternateRowBg: '#f8fafc',
+            rowBg: '#ffffff',
+            borderColor: '#002b36',
+            fontSize: 7.5,
+            headerFontSize: 8,
+            cellPadding: 4
+          }
+        };
+      });
+
+      if (secIdxA < 0 || secIdxA >= sections.length || secIdxB < 0 || secIdxB >= sections.length) return state;
+
+      const temp = sections[secIdxA];
+      sections[secIdxA] = sections[secIdxB];
+      sections[secIdxB] = temp;
+
+      const timestamp = Date.now();
+      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader && targetPage.type !== 'cover');
+      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter && targetPage.type !== 'cover');
+
+      const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
+      const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
+
+      const topBound = Math.max(headerH + 15, catalog.marginTop || 20);
+      const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, catalog.marginBottom || 20);
+      const availableHeight = bottomBound - topBound;
+
+      const sectionCount = sections.length;
+      const gap = 15;
+      const totalGaps = (sectionCount - 1) * gap;
+
+      const weights = sections.map(sec => {
+        const rowCount = sec.tableData?.rows?.length || 2;
+        return Math.max(1, 0.7 + rowCount * 0.25);
+      });
+      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+      const leftMargin = catalog.marginLeft || 35;
+      const rightMargin = catalog.marginRight || 35;
+      const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+
+      const newElements: CanvasElement[] = [];
+      let curY = topBound;
+
+      sections.forEach((sec, idx) => {
+        const sectionHeight = Math.max(
+          110,
+          Math.floor(((availableHeight - totalGaps) * weights[idx]) / totalWeight)
+        );
+        const sectionId = `grid-sec-${timestamp}-${idx}`;
+
+        if (sec.hasBackground) {
+          newElements.push({
+            id: `${sectionId}-bg`,
+            type: 'shape',
+            shapeType: 'rect',
+            x: 0,
+            y: curY - 5,
+            width: PAGE_WIDTH,
+            height: sectionHeight + 10,
+            fill: sec.backgroundColor || '#e2e8f0',
+            zIndex: idx * 10 + 1,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+        }
+
+        const imageWidth = 240;
+        const imageHeight = Math.max(70, sectionHeight - 10);
+        if (sec.imageSrc) {
+          newElements.push({
+            id: `${sectionId}-img`,
+            type: 'image',
+            x: leftMargin,
+            y: curY,
+            width: imageWidth,
+            height: imageHeight,
+            src: sec.imageSrc,
+            zIndex: idx * 10 + 2,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+        }
+
+        const rightX = leftMargin + 255;
+        const rightWidth = Math.max(200, contentWidth - 255);
+
+        newElements.push({
+          id: `${sectionId}-title`,
+          type: 'text',
+          x: rightX,
+          y: curY + 4,
+          width: rightWidth,
+          height: 32,
+          text: sec.title || `SERIES ${idx + 1}`,
+          fontSize: sec.titleFontSize || 22,
+          fontFamily: 'Montserrat',
+          fontWeight: '900',
+          fill: sec.titleColor || '#00a651',
+          letterSpacing: 0.5,
+          zIndex: idx * 10 + 3,
+          rotation: 0,
+          opacity: 1,
+          sectionTag: sectionId
+        });
+
+        const tableY = curY + 40;
+        newElements.push({
+          id: `${sectionId}-table`,
+          type: 'table',
+          x: rightX,
+          y: tableY,
+          width: rightWidth,
+          height: Math.max(60, sectionHeight - 45),
+          tableData: sec.tableData,
+          zIndex: idx * 10 + 4,
+          rotation: 0,
+          opacity: 1,
+          sectionTag: sectionId
+        });
+
+        curY += sectionHeight + gap;
+      });
+
+      const nonGridElements = (targetPage.elements || []).filter(el =>
+        !el.sectionTag && !el.id.startsWith('grid-sec-') && !['table', 'shape'].includes(el.type) && (el.type !== 'text' || (el.fontSize || 0) < 16)
+      );
+
+      const newPages = [...catalog.pages];
+      newPages[pageIndex] = {
+        ...targetPage,
+        elements: [...newElements, ...nonGridElements]
+      };
+
+      return {
+        catalog: {
+          ...catalog,
+          pages: newPages,
+          updatedAt: new Date().toISOString()
+        }
+      };
+    });
+  },
+
+  deletePageSection: (pageIndex, secIdx) => {
+    get().pushHistory();
+    set((state) => {
+      const { catalog } = state;
+      const targetPage = catalog.pages[pageIndex];
+      if (!targetPage) return state;
+
+      const titles = (targetPage.elements || []).filter(el => el.type === 'text' && (el.fontSize || 0) >= 16);
+      const tables = (targetPage.elements || []).filter(el => el.type === 'table' && el.tableData);
+      const images = (targetPage.elements || []).filter(el => el.type === 'image');
+      const backgrounds = (targetPage.elements || []).filter(el => el.type === 'shape' && (el.width || 0) >= 500);
+
+      const sortedTitles = [...titles].sort((a, b) => a.y - b.y);
+      if (sortedTitles.length === 0) return state;
+
+      const sections: ProductGridSection[] = sortedTitles.map((t, idx) => {
+        const nearestTable = tables.find(tbl => Math.abs(tbl.y - t.y) < 180);
+        const nearestImg = images.find(img => Math.abs(img.y - t.y) < 180);
+        const nearestBg = backgrounds.find(bg => Math.abs(bg.y - t.y) < 180);
+
+        return {
+          id: `sec-${idx + 1}`,
+          title: t.text?.replace(/<[^>]*>/g, '') || `SERIES ${idx + 1}`,
+          titleColor: t.fill || '#00a651',
+          titleFontSize: t.fontSize || 22,
+          imageSrc: nearestImg?.src || '',
+          hasBackground: !!nearestBg,
+          backgroundColor: nearestBg?.fill || '#e2e8f0',
+          tableData: nearestTable?.tableData || {
+            headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+            rows: [['VT-01', '12W COB', '75MM', '₹1200', 'W, W.W']],
+            headerBg: '#002b36',
+            headerTextColor: '#ffffff',
+            alternateRowBg: '#f8fafc',
+            rowBg: '#ffffff',
+            borderColor: '#002b36',
+            fontSize: 7.5,
+            headerFontSize: 8,
+            cellPadding: 4
+          }
+        };
+      });
+
+      const remainingSections = sections.filter((_, idx) => idx !== secIdx);
+
+      const newPages = [...catalog.pages];
+      if (remainingSections.length === 0) {
+        newPages[pageIndex] = {
+          ...targetPage,
+          elements: []
+        };
+      } else {
+        const timestamp = Date.now();
+        const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader && targetPage.type !== 'cover');
+        const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter && targetPage.type !== 'cover');
+
+        const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
+        const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
+
+        const topBound = Math.max(headerH + 15, catalog.marginTop || 20);
+        const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, catalog.marginBottom || 20);
+        const availableHeight = bottomBound - topBound;
+
+        const sectionCount = remainingSections.length;
+        const gap = 15;
+        const totalGaps = (sectionCount - 1) * gap;
+
+        const weights = remainingSections.map(sec => {
+          const rowCount = sec.tableData?.rows?.length || 2;
+          return Math.max(1, 0.7 + rowCount * 0.25);
+        });
+        const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+        const leftMargin = catalog.marginLeft || 35;
+        const rightMargin = catalog.marginRight || 35;
+        const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+
+        const newElements: CanvasElement[] = [];
+        let curY = topBound;
+
+        remainingSections.forEach((sec, idx) => {
+          const sectionHeight = Math.max(
+            110,
+            Math.floor(((availableHeight - totalGaps) * weights[idx]) / totalWeight)
+          );
+          const sectionId = `grid-sec-${timestamp}-${idx}`;
+
+          if (sec.hasBackground) {
+            newElements.push({
+              id: `${sectionId}-bg`,
+              type: 'shape',
+              shapeType: 'rect',
+              x: 0,
+              y: curY - 5,
+              width: PAGE_WIDTH,
+              height: sectionHeight + 10,
+              fill: sec.backgroundColor || '#e2e8f0',
+              zIndex: idx * 10 + 1,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
+
+          const imageWidth = 240;
+          const imageHeight = Math.max(70, sectionHeight - 10);
+          if (sec.imageSrc) {
+            newElements.push({
+              id: `${sectionId}-img`,
+              type: 'image',
+              x: leftMargin,
+              y: curY,
+              width: imageWidth,
+              height: imageHeight,
+              src: sec.imageSrc,
+              zIndex: idx * 10 + 2,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
+
+          const rightX = leftMargin + 255;
+          const rightWidth = Math.max(200, contentWidth - 255);
+
+          newElements.push({
+            id: `${sectionId}-title`,
+            type: 'text',
+            x: rightX,
+            y: curY + 4,
+            width: rightWidth,
+            height: 32,
+            text: sec.title || `SERIES ${idx + 1}`,
+            fontSize: sec.titleFontSize || 22,
+            fontFamily: 'Montserrat',
+            fontWeight: '900',
+            fill: sec.titleColor || '#00a651',
+            letterSpacing: 0.5,
+            zIndex: idx * 10 + 3,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          const tableY = curY + 40;
+          newElements.push({
+            id: `${sectionId}-table`,
+            type: 'table',
+            x: rightX,
+            y: tableY,
+            width: rightWidth,
+            height: Math.max(60, sectionHeight - 45),
+            tableData: sec.tableData,
+            zIndex: idx * 10 + 4,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          curY += sectionHeight + gap;
+        });
+
+        const nonGridElements = (targetPage.elements || []).filter(el =>
+          !el.sectionTag && !el.id.startsWith('grid-sec-') && !['table', 'shape'].includes(el.type) && (el.type !== 'text' || (el.fontSize || 0) < 16)
+        );
+
+        newPages[pageIndex] = {
+          ...targetPage,
+          elements: [...newElements, ...nonGridElements]
+        };
+      }
+
+      return {
+        catalog: {
+          ...catalog,
+          pages: newPages,
+          updatedAt: new Date().toISOString()
+        }
+      };
+    });
+  },
+
+  autoGenerateCatalogFromAllCategories: () => {
+    get().pushHistory();
+    set((state) => {
+      const { catalog, categories, products } = state;
+      if (!products || products.length === 0) return state;
+
+      // Helper to generate a single table row from a product or variant
+      const generateRow = (p: Product, v?: ProductVariant): string[] => {
+        const cfValues = p.customFields ? Object.values(p.customFields).filter(val => typeof val === 'string' && val.trim() !== '') as string[] : [];
+
+        // 1. Model / SKU
+        let model = v?.sku || p.sku || '-';
+        if (model === '-' || model.startsWith('Untitled')) {
+          const vtMatch = cfValues.find(val => /^VT-[\w-]+/i.test(val.trim()));
+          if (vtMatch) model = vtMatch.trim();
+        }
+
+        // 2. Product Name / Specification
+        let name = v?.name && v.name !== '-' ? v.name : (p.name && p.name !== '-' ? p.name : '-');
+        if (name === '-' || name.toLowerCase() === 'untitled product') {
+          const specMatch = cfValues.find(val => /\d+W\b|SERIES|COB|DOWNLIGHT|CYLINDER|TRACK/i.test(val));
+          if (specMatch) name = specMatch.trim();
+          else if (model !== '-') name = model;
+        }
+
+        // 3. Cut-Out
+        const directCut = (v as any)?.cutOut || p.customFields?.cutOut || (v?.customAttributes as any)?.cutOut || (v?.customAttributes as any)?.cut_out || p.customFields?.size;
+        let cutOut = directCut;
+        if (!cutOut) {
+          const mmMatch = cfValues.find(val => /\b\d+\s*MM\b/i.test(val));
+          cutOut = mmMatch ? mmMatch.trim() : '75MM';
+        }
+
+        // 4. Price
+        const priceVal = v?.price ?? p.price;
+        let price = '₹1200';
+        if (priceVal !== undefined && priceVal !== null && priceVal !== '' && priceVal !== '-') {
+          price = String(priceVal).startsWith('₹') || String(priceVal).startsWith('$') ? String(priceVal) : `₹${priceVal}`;
+        } else {
+          const priceMatch = cfValues.find(val => /^₹?\s*\d+(\.\d+)?$/.test(val));
+          if (priceMatch) price = priceMatch.startsWith('₹') ? priceMatch : `₹${priceMatch}`;
+        }
+
+        // 5. Color
+        const directColor = v?.color || p.customFields?.color || (v?.customAttributes as any)?.color || (v?.customAttributes as any)?.cct;
+        let color = directColor;
+        if (!color) {
+          const colorMatch = cfValues.find(val => /W,\s*W\.W|3000K|4000K|6500K|CCT|WARM|WHITE/i.test(val));
+          color = colorMatch ? colorMatch.trim() : 'W, W.W, N.W';
+        }
+
+        return [model, name, cutOut, price, color];
+      };
+
+      // Group products by category
+      const categoryGroups: { categoryId?: string | number; categoryName: string; prods: Product[] }[] = [];
+
+      if (categories && categories.length > 0) {
+        categories.forEach(cat => {
+          const catProds = products.filter(p => String(p.categoryId) === String(cat.id));
+          if (catProds.length > 0) {
+            categoryGroups.push({
+              categoryId: cat.id,
+              categoryName: cat.name,
+              prods: catProds
+            });
+          }
+        });
+
+        // Uncategorized products
+        const uncategorized = products.filter(p => !p.categoryId || !categories.some(c => String(c.id) === String(p.categoryId)));
+        if (uncategorized.length > 0) {
+          categoryGroups.push({
+            categoryId: undefined,
+            categoryName: 'General Products',
+            prods: uncategorized
+          });
+        }
+      } else {
+        categoryGroups.push({
+          categoryId: undefined,
+          categoryName: 'Catalog Products',
+          prods: products
+        });
+      }
+
+      // Convert each category into 1 dedicated grid section (containing all product models as rows in its table)
+      const allCategorySections: ProductGridSection[] = [];
+
+      categoryGroups.forEach((group, catIdx) => {
+        const targetCat = categories?.find(c => String(c.id) === String(group.categoryId));
+        const catImg = resolveProductImage(group.prods[0], targetCat, group.prods);
+        const headers = ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'];
+
+        // Build all model rows from products in this category
+        const rows: string[][] = [];
+        group.prods.forEach(prod => {
+          if (prod.variants && prod.variants.length > 0) {
+            prod.variants.forEach(v => rows.push(generateRow(prod, v)));
+          } else {
+            rows.push(generateRow(prod));
+          }
+        });
+
+        if (rows.length === 0) {
+          rows.push(['-', `${group.categoryName} Series`, '75MM', '₹1200', 'W, W.W, N.W']);
+        }
+
+        allCategorySections.push({
+          id: `sec-${Date.now()}-${catIdx}`,
+          title: group.categoryName.toUpperCase(),
+          titleColor: '#00a651',
+          titleFontSize: 22,
+          imageSrc: catImg,
+          hasBackground: false,
+          backgroundColor: '#e2e8f0',
+          tableData: {
+            headers,
+            rows,
+            headerBg: '#002b36',
+            headerTextColor: '#ffffff',
+            alternateRowBg: '#f8fafc',
+            rowBg: '#ffffff',
+            borderColor: '#002b36',
+            fontSize: 7.5,
+            headerFontSize: 8,
+            cellPadding: 4,
+            colWidths: [65, 140, 55, 55, 60]
+          }
+        });
+      });
+
+      // Bucket sections into pages (exactly 3 distinct categories/sections per page)
+      const pageBuckets: { sections: ProductGridSection[] }[] = [];
+      for (let i = 0; i < allCategorySections.length; i += 3) {
+        const chunk = allCategorySections.slice(i, i + 3).map((sec, sIdx) => ({
+          ...sec,
+          hasBackground: sIdx % 2 === 1
+        }));
+        pageBuckets.push({ sections: chunk });
+      }
+
+      // Preserve cover page if first page is cover
+      const coverPage = catalog.pages[0]?.type === 'cover' ? catalog.pages[0] : null;
+      const closingPage = catalog.pages.find(p => p.type === 'closing');
+
+      // Build pages
+      const newPages: CatalogPage[] = [];
+      if (coverPage) {
+        newPages.push({ ...coverPage, pageNumber: 1 });
+      }
+
+      const timestamp = Date.now();
+      const leftMargin = catalog.marginLeft || 35;
+      const rightMargin = catalog.marginRight || 35;
+      const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+
+      pageBuckets.forEach((bucket, pIdx) => {
+        const pageNumber = newPages.length + 1;
+        const pageHasHeader = catalog.hasHeader !== false;
+        const pageHasFooter = catalog.hasFooter !== false;
+        const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
+        const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
+
+        const topBound = Math.max(headerH + 15, catalog.marginTop || 20);
+        const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, catalog.marginBottom || 20);
+        const availableHeight = bottomBound - topBound;
+
+        const sectionCount = Math.max(1, bucket.sections.length);
+        const gap = 15;
+        const totalGaps = (sectionCount - 1) * gap;
+        const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / sectionCount));
+
+        const elements: CanvasElement[] = [];
+
+        bucket.sections.forEach((sec, idx) => {
+          const curY = Math.round(topBound + idx * (sectionHeight + gap));
+          const sectionId = `grid-sec-${timestamp}-${pIdx}-${idx}`;
+
+          // Background Stripe
+          if (sec.hasBackground) {
+            elements.push({
+              id: `${sectionId}-bg`,
+              type: 'shape',
+              shapeType: 'rect',
+              x: 0,
+              y: curY - 5,
+              width: PAGE_WIDTH,
+              height: sectionHeight + 10,
+              fill: sec.backgroundColor || '#e2e8f0',
+              zIndex: idx * 10 + 1,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
+
+          // Product Image
+          const imageWidth = 240;
+          const imageHeight = Math.max(70, sectionHeight - 10);
+          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+          elements.push({
+            id: `${sectionId}-img`,
+            type: 'image',
+            x: leftMargin,
+            y: curY,
+            width: imageWidth,
+            height: imageHeight,
+            src: finalImgSrc,
+            zIndex: idx * 10 + 2,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Right Title
+          const rightX = leftMargin + 255;
+          const rightWidth = Math.max(200, contentWidth - 255);
+
+          elements.push({
+            id: `${sectionId}-title`,
+            type: 'text',
+            x: rightX,
+            y: curY + 4,
+            width: rightWidth,
+            height: 32,
+            text: sec.title || `PRODUCT SERIES ${idx + 1}`,
+            fontSize: sec.titleFontSize || 22,
+            fontFamily: 'Montserrat',
+            fontWeight: '900',
+            fill: sec.titleColor || '#00a651',
+            letterSpacing: 0.5,
+            zIndex: idx * 10 + 3,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Table
+          const tableY = curY + 40;
+          elements.push({
+            id: `${sectionId}-table`,
+            type: 'table',
+            x: rightX,
+            y: tableY,
+            width: rightWidth,
+            height: Math.max(60, sectionHeight - 45),
+            tableData: sec.tableData,
+            zIndex: idx * 10 + 4,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+        });
+
+        newPages.push({
+          id: `page-gen-${timestamp}-${pIdx}`,
+          pageNumber,
+          type: 'interior',
+          title: bucket.categoryName,
+          categoryId: bucket.categoryId,
+          orientation: 'portrait',
+          backgroundColor: '#ffffff',
+          elements
+        });
+      });
+
+      if (closingPage) {
+        newPages.push({ ...closingPage, pageNumber: newPages.length + 1 });
+      }
+
+      return {
+        catalog: {
+          ...catalog,
+          pages: newPages,
+          updatedAt: new Date().toISOString()
+        },
+        currentPageIndex: coverPage && newPages.length > 1 ? 1 : 0
+      };
+    });
+  },
+
   copySelectedElements: () => {
     const { selectedElementIds, catalog, currentPageIndex } = get();
     if (selectedElementIds.length === 0) return;
@@ -3640,31 +5125,73 @@ export const useStore = create<State>((set, get) => ({
     set({ clipboard: elementsToCopy });
   },
 
-  pasteElements: () => {
+  pasteElements: (targetPos?: { x: number; y: number }, targetPageIdx?: number) => {
     const { clipboard, catalog, currentPageIndex } = get();
     if (clipboard.length === 0) return;
 
     get().pushHistory();
 
-    const stamp = Date.now();
+    const resolvedPageIndex = (typeof targetPageIdx === 'number' && targetPageIdx >= 0 && targetPageIdx < catalog.pages.length)
+      ? targetPageIdx
+      : ((currentPageIndex >= 0 && currentPageIndex < catalog.pages.length) ? currentPageIndex : 0);
+
+    const pageElements = catalog.pages[resolvedPageIndex]?.elements || [];
+
+    // Track sequential paste count to cascade consecutive pastes cleanly (like Canva/Figma)
+    let pasteCount = (useStore as any)._pasteSequenceCount || 0;
+    const lastPos = (useStore as any)._lastPasteTargetPos;
+    if (
+      targetPos &&
+      lastPos &&
+      Math.abs(targetPos.x - lastPos.x) < 5 &&
+      Math.abs(targetPos.y - lastPos.y) < 5
+    ) {
+      pasteCount += 1;
+    } else if (!targetPos && lastPos === null) {
+      pasteCount += 1;
+    } else {
+      pasteCount = 1;
+    }
+    (useStore as any)._pasteSequenceCount = pasteCount;
+    (useStore as any)._lastPasteTargetPos = targetPos ? { ...targetPos } : null;
+
+    const stagger = (pasteCount - 1) * 20;
+
+    let offsetX = 20 + stagger;
+    let offsetY = 20 + stagger;
+
+    if (targetPos && typeof targetPos.x === 'number' && typeof targetPos.y === 'number') {
+      const minX = Math.min(...clipboard.map(el => el.x));
+      const minY = Math.min(...clipboard.map(el => el.y));
+      const maxX = Math.max(...clipboard.map(el => el.x + (el.width || 0)));
+      const maxY = Math.max(...clipboard.map(el => el.y + (el.height || 0)));
+      const centerX = (minX + maxX) / 2;
+      const centerY = (minY + maxY) / 2;
+
+      offsetX = (targetPos.x - centerX) + stagger;
+      offsetY = (targetPos.y - centerY) + stagger;
+    }
+
+    const uniqueStamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const pastedElements = clipboard.map((el, idx) => ({
       ...el,
-      id: `paste-${el.id}-${stamp}-${idx}`,
-      x: el.x + 20,
-      y: el.y + 20,
-      zIndex: (catalog.pages[currentPageIndex]?.elements.length || 0) + idx,
+      id: `paste-${uniqueStamp}-${idx}`,
+      x: Math.round(el.x + offsetX),
+      y: Math.round(el.y + offsetY),
+      zIndex: pageElements.length + idx + 1,
       groupId: undefined
     }));
 
     const newPages = [...catalog.pages];
-    if (newPages[currentPageIndex]) {
-      newPages[currentPageIndex] = {
-        ...newPages[currentPageIndex],
-        elements: [...newPages[currentPageIndex].elements, ...pastedElements]
+    if (newPages[resolvedPageIndex]) {
+      newPages[resolvedPageIndex] = {
+        ...newPages[resolvedPageIndex],
+        elements: [...newPages[resolvedPageIndex].elements, ...pastedElements]
       };
 
       set({
         catalog: { ...catalog, pages: newPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: resolvedPageIndex,
         selectedElementIds: pastedElements.map(el => el.id)
       });
     }

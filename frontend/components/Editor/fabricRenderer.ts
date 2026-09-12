@@ -37,6 +37,101 @@ class WaveShape extends Rect {
   }
 }
 
+export class HorizontalLineShape extends Rect {
+  _render(ctx: CanvasRenderingContext2D) {
+    const w = this.width;
+    const halfW = w / 2;
+    const strokeWidth = this.strokeWidth || 2;
+    const strokeColor = (this.stroke as string) || (this.fill as string) || '#cbd5e1';
+
+    ctx.save();
+    ctx.beginPath();
+    // Centered from -halfW to halfW along local y=0
+    ctx.moveTo(-halfW, 0);
+    ctx.lineTo(halfW, 0);
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+export class CurvedLineShape extends Rect {
+  _render(ctx: CanvasRenderingContext2D) {
+    const w = this.width;
+    const h = Math.max(this.height, 20);
+    const halfH = h / 2;
+    const strokeWidth = this.strokeWidth || 2;
+    const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
+
+    ctx.save();
+    ctx.beginPath();
+    // Smooth S-curve spline connector from (0, halfH) to (w, halfH)
+    ctx.moveTo(0, halfH);
+    ctx.bezierCurveTo(w * 0.35, halfH - h * 0.45, w * 0.65, halfH + h * 0.45, w, halfH);
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Endpoint anchor circles matching Canva connectors
+    const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
+    ctx.fillStyle = strokeColor;
+    ctx.beginPath();
+    ctx.arc(0, halfH, endCircleRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(w, halfH, endCircleRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+export class ElbowLineShape extends Rect {
+  _render(ctx: CanvasRenderingContext2D) {
+    const w = this.width;
+    const h = Math.max(this.height, 20);
+    const halfH = h / 2;
+    const strokeWidth = this.strokeWidth || 2;
+    const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
+    const cornerR = Math.min(8, Math.min(w * 0.15, h * 0.25));
+
+    ctx.save();
+    ctx.beginPath();
+    // Step/Elbow connector: horizontal start -> vertical step -> horizontal end with rounded corners
+    const midX = w / 2;
+    const startY = halfH - h * 0.35;
+    const endY = halfH + h * 0.35;
+
+    ctx.moveTo(0, startY);
+    ctx.arcTo(midX, startY, midX, halfH, cornerR);
+    ctx.arcTo(midX, endY, w, endY, cornerR);
+    ctx.lineTo(w, endY);
+
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = strokeWidth;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.stroke();
+
+    // Endpoint anchor circles matching Canva connectors
+    const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
+    ctx.fillStyle = strokeColor;
+    ctx.beginPath();
+    ctx.arc(0, startY, endCircleRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(w, endY, endCircleRadius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
 function rgba(color: string, opacity: number): string {
   if (color.startsWith('#')) {
     const r = parseInt(color.slice(1, 3), 16);
@@ -136,9 +231,21 @@ export function parseGradient(fillStr: string, w: number, h: number): { stops: {
 }
 
 function applyFill(obj: any, fill: string | undefined, w: number, h: number) {
+  const isLineType = obj instanceof Line || 
+    obj instanceof HorizontalLineShape || 
+    obj instanceof CurvedLineShape || 
+    obj instanceof ElbowLineShape || 
+    obj.shapeType === 'line' || 
+    obj.shapeType === 'curved-line' || 
+    obj.shapeType === 'elbow-line';
+
   if (!fill) {
     if (typeof obj.set === 'function') obj.set('fill', '#ffffff');
     else obj.fill = '#ffffff';
+    if (isLineType) {
+      if (typeof obj.set === 'function') obj.set('stroke', '#cbd5e1');
+      else obj.stroke = '#cbd5e1';
+    }
     return;
   }
   const parsed = parseGradient(fill, w, h);
@@ -154,6 +261,12 @@ function applyFill(obj: any, fill: string | undefined, w: number, h: number) {
   } else {
     if (typeof obj.set === 'function') obj.set('fill', fill);
     else obj.fill = fill;
+  }
+
+  if (isLineType) {
+    const strokeVal = fill && !fill.includes('gradient') ? fill : '#cbd5e1';
+    if (typeof obj.set === 'function') obj.set('stroke', strokeVal);
+    else obj.stroke = strokeVal;
   }
 }
 
@@ -264,9 +377,28 @@ export function buildShape(
     case 'circle':
       return new Circle({ ...shapeProps, radius: Math.min(w, h) / 2, fill: fillColor });
     case 'line':
-      return new Line([0, h / 2, w, h / 2], {
+      return new HorizontalLineShape({
+        width: w,
+        height: Math.max(h, 12),
+        stroke: stroke || fillColor || '#cbd5e1',
+        strokeWidth: strokeWidth || 2.5,
+        fill: 'transparent',
+      });
+    case 'curved-line':
+      return new CurvedLineShape({
+        width: w,
+        height: Math.max(h, 20),
         stroke: stroke || fillColor || '#000000',
-        strokeWidth: strokeWidth || 2, fill: 'transparent',
+        strokeWidth: strokeWidth || 3,
+        fill: stroke || fillColor || '#000000',
+      });
+    case 'elbow-line':
+      return new ElbowLineShape({
+        width: w,
+        height: Math.max(h, 20),
+        stroke: stroke || fillColor || '#000000',
+        strokeWidth: strokeWidth || 3,
+        fill: stroke || fillColor || '#000000',
       });
     case 'cloud':
       return new CloudShape({ ...shapeProps, width: w, height: h, fill: fillColor });
@@ -405,7 +537,7 @@ async function _elementToFabricObject(
 
     const cleanRawText = (el.text || '').replace(/<[^>]*>/g, '');
     let textWidth = el.width || 100;
-    if (!cleanRawText.includes('\n')) {
+    if (!el.width && !cleanRawText.includes('\n')) {
       const estimatedMinW = Math.ceil(cleanRawText.length * (el.fontSize || 16) * 0.72);
       if (textWidth < estimatedMinW) {
         textWidth = estimatedMinW + 20;
@@ -425,6 +557,7 @@ async function _elementToFabricObject(
       underline: el.textDecoration?.includes('underline') || false,
       charSpacing: el.letterSpacing || 0,
       splitByGrapheme: false,
+      editable: false, // Disable Fabric's native text editing — the app uses its own HTML overlay
     };
     applyFill(textProps, el.fill, textWidth, el.height);
 
@@ -639,7 +772,9 @@ async function _elementToFabricObject(
     if (obj) {
       setCommon(obj);
       obj.set({ width: w, height: h });
+      (obj as any).shapeType = shapeType;
       if (obj instanceof Circle) obj.set({ radius: Math.min(w, h) / 2 });
+      applyCanvaSelectionStyle(obj);
     }
     return obj;
   }

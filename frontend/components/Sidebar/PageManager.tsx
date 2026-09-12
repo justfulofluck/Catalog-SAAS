@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Files, Plus, Trash2, Layout, MoreVertical, BookOpen, FileText, List, Flag, ChevronDown, Copy } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PageType } from '../../types';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 
 // Mini Map Preview Component
 const PagePreview: React.FC<{ page: any; index: number; catalog?: any }> = ({ page, index, catalog }) => {

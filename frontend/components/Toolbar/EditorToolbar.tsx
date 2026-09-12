@@ -46,10 +46,24 @@ const EditorToolbar: React.FC = () => {
   } = useStore();
   const [isCommiting, setIsCommiting] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [isLineMenuOpen, setIsLineMenuOpen] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
   const [isTextMenuOpen, setIsTextMenuOpen] = useState(false);
+  const lineMenuRef = useRef<HTMLDivElement>(null);
   const shapeMenuRef = useRef<HTMLDivElement>(null);
   const textMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (lineMenuRef.current && !lineMenuRef.current.contains(e.target as Node)) {
+        setIsLineMenuOpen(false);
+      }
+    };
+    if (isLineMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isLineMenuOpen]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -116,6 +130,25 @@ const EditorToolbar: React.FC = () => {
       zIndex: 10
     });
     setIsShapeMenuOpen(false);
+  };
+
+  const handleAddLine = (lineType: 'line' | 'curved-line' | 'elbow-line' = 'line') => {
+    addElement(currentPageIndex, {
+      id: `line-${Date.now()}`,
+      type: 'shape',
+      shapeType: lineType,
+      x: 150,
+      y: 200,
+      width: 260,
+      height: lineType === 'line' ? 2 : 40,
+      rotation: 0,
+      opacity: 1,
+      fill: '#0f172a',
+      stroke: '#0f172a',
+      strokeWidth: 3,
+      zIndex: 10
+    });
+    setIsLineMenuOpen(false);
   };
 
   const handleSave = async () => {
@@ -243,6 +276,83 @@ const EditorToolbar: React.FC = () => {
           </div>
 
           <div className={`flex gap-1 px-3 border-r ${isDark ? 'border-[#E2DCC8]/15' : 'border-slate-200'}`}>
+            {/* Lines & Connectors Menu */}
+            <div className="relative" ref={lineMenuRef}>
+              <button
+                onClick={() => setIsLineMenuOpen(!isLineMenuOpen)}
+                className={`p-2 rounded-[4px] transition-all flex items-center gap-1 ${
+                  isLineMenuOpen
+                    ? 'bg-[#0F3D3E] text-white'
+                    : (isDark ? 'text-[#888888] hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/20' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200')
+                }`}
+                title="Lines & Connectors"
+              >
+                {/* Diagonal line icon matching Screenshot 1 */}
+                <svg viewBox="0 0 24 24" className="w-[18px] h-[18px] stroke-current" fill="none" strokeWidth="2.5" strokeLinecap="round">
+                  <line x1="4" y1="20" x2="20" y2="4" />
+                </svg>
+                <ChevronDown size={12} />
+              </button>
+              {isLineMenuOpen && (
+                <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 border rounded-[6px] z-[100] p-2.5 w-[230px] shadow-2xl ${
+                  isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'
+                }`}>
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#888888] mb-2 px-1">
+                    Lines & Connectors
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* Straight Line */}
+                    <button
+                      onClick={() => handleAddLine('line')}
+                      className={`p-2 rounded-[4px] flex flex-col items-center justify-center gap-1.5 transition-colors border ${
+                        isDark ? 'border-[#262626] hover:border-[#0F3D3E] hover:bg-[#0F3D3E]/20 text-[#E2DCC8]' : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-700'
+                      }`}
+                      title="Straight Line Connector"
+                    >
+                      <svg viewBox="0 0 40 24" className="w-9 h-6 stroke-current" fill="none">
+                        <line x1="6" y1="12" x2="34" y2="12" strokeWidth="2.5" strokeLinecap="round" />
+                        <circle cx="6" cy="12" r="3" fill="currentColor" />
+                        <circle cx="34" cy="12" r="3" fill="currentColor" />
+                      </svg>
+                      <span className="text-[9px] font-semibold">Straight</span>
+                    </button>
+
+                    {/* Curved Line */}
+                    <button
+                      onClick={() => handleAddLine('curved-line')}
+                      className={`p-2 rounded-[4px] flex flex-col items-center justify-center gap-1.5 transition-colors border ${
+                        isDark ? 'border-[#262626] hover:border-[#0F3D3E] hover:bg-[#0F3D3E]/20 text-[#E2DCC8]' : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-700'
+                      }`}
+                      title="Curved Spline Connector"
+                    >
+                      <svg viewBox="0 0 40 24" className="w-9 h-6 stroke-current" fill="none">
+                        <path d="M 6 17 C 16 7, 24 21, 34 7" strokeWidth="2.5" strokeLinecap="round" fill="none" />
+                        <circle cx="6" cy="17" r="3" fill="currentColor" />
+                        <circle cx="34" cy="7" r="3" fill="currentColor" />
+                      </svg>
+                      <span className="text-[9px] font-semibold">Curved</span>
+                    </button>
+
+                    {/* Elbow / Step Line */}
+                    <button
+                      onClick={() => handleAddLine('elbow-line')}
+                      className={`p-2 rounded-[4px] flex flex-col items-center justify-center gap-1.5 transition-colors border ${
+                        isDark ? 'border-[#262626] hover:border-[#0F3D3E] hover:bg-[#0F3D3E]/20 text-[#E2DCC8]' : 'border-slate-200 hover:border-slate-400 hover:bg-slate-50 text-slate-700'
+                      }`}
+                      title="Elbow / Step Connector"
+                    >
+                      <svg viewBox="0 0 40 24" className="w-9 h-6 stroke-current" fill="none">
+                        <path d="M 6 18 H 20 V 6 H 34" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+                        <circle cx="6" cy="18" r="3" fill="currentColor" />
+                        <circle cx="34" cy="6" r="3" fill="currentColor" />
+                      </svg>
+                      <span className="text-[9px] font-semibold">Elbow</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="relative" ref={shapeMenuRef}>
               <button
                 onClick={() => setIsShapeMenuOpen(!isShapeMenuOpen)}

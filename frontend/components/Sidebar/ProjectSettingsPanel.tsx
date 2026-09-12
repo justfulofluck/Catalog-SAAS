@@ -3,11 +3,8 @@ import {
     X, Settings, Sparkles, Palette, Type, ChevronDown
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { FONTS, CATEGORIZED_FONTS, PX_PER_MM } from '../../constants';
+import { FONTS, CATEGORIZED_FONTS } from '../../constants';
 import AdvancedColorPicker from '../Properties/AdvancedColorPicker';
-
-const toMm = (px: number) => Math.round(px / PX_PER_MM);
-const toPx = (mm: number) => Math.round(mm * PX_PER_MM);
 
 const ProjectSettingsPanel: React.FC = () => {
     const {
@@ -172,49 +169,6 @@ const ProjectSettingsPanel: React.FC = () => {
                                 ))}
                             </div>
                         </div>
-                    </div>
-                </section>
-
-                {/* 3. Page Margins Section */}
-                <section className={`space-y-3 pt-4 border-t ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
-                    <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] ${
-                        isDark ? 'bg-[#222222]' : 'bg-slate-100'
-                    }`}>
-                        <Settings size={13} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
-                        <span className={`text-[10px] font-black uppercase tracking-widest ${
-                            isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
-                        }`}>Page Margins</span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 px-0.5">
-                        {[
-                            { label: 'Top', val: catalog.marginTop || 0, key: 'marginTop' },
-                            { label: 'Bottom', val: catalog.marginBottom || 0, key: 'marginBottom' },
-                            { label: 'Left', val: catalog.marginLeft || 0, key: 'marginLeft' },
-                            { label: 'Right', val: catalog.marginRight || 0, key: 'marginRight' },
-                        ].map((m) => (
-                            <div key={m.label} className="space-y-1">
-                                <span className="text-[9px] font-bold text-[#888888] uppercase block">{m.label}</span>
-                                <div className={`flex items-center border rounded-[4px] px-2.5 py-1.5 transition-all focus-within:border-[#0F3D3E] ${
-                                    isDark ? 'border-[#262626] bg-[#1a1a1a]' : 'border-slate-200 bg-slate-50'
-                                }`}>
-                                    <input
-                                        type="number"
-                                        value={toMm(m.val)}
-                                        onChange={(e) => {
-                                            const rawVal = e.target.value;
-                                            const val = parseInt(rawVal);
-                                            if (!isNaN(val)) updateProjectSettings({ [m.key]: toPx(val) });
-                                            else if (rawVal === '') updateProjectSettings({ [m.key]: 0 });
-                                        }}
-                                        className={`w-full bg-transparent outline-none text-xs font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                                            isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
-                                        }`}
-                                    />
-                                    <span className="text-[9px] font-bold text-[#888888] ml-1">mm</span>
-                                </div>
-                            </div>
-                        ))}
                     </div>
                 </section>
             </div>

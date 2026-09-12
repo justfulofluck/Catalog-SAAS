@@ -1,17 +1,64 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react';
-import { Plus, Sparkles, BookOpen, List, FileText, Settings, ChevronUp, ChevronDown, Copy, Trash2, ChevronsUp, ChevronsDown, Navigation } from 'lucide-react';
+import { Plus, Sparkles, Zap, BookOpen, List, FileText, Settings, ChevronUp, ChevronDown, Copy, Trash2, ChevronsUp, ChevronsDown, Navigation } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import FabricStage from './FabricStage';
 import ContextMenu from './ContextMenu';
 import { FloatingTextToolbar } from '../Toolbar/FloatingTextToolbar';
 import FloatingToolbar from '../Toolbar/FloatingToolbar';
-import TableEditorModal from './TableEditorModal';
+import ProductGridStudioModal from './ProductGridStudioModal';
 import { saveSelection, restoreSelection } from '../../utils/textStyleSelection';
 import { CatalogPage, PageType } from '../../types';
 import { normalizeImageUrl } from '../../utils/imageUtils';
 
 const Divider = () => <div className="w-[1px] h-4 bg-slate-200 mx-1" />;
+
+interface PageSectionSummary {
+  index: number;
+  y: number;
+  height: number;
+  title: string;
+}
+
+const getPageSectionsSummary = (page: CatalogPage | undefined): PageSectionSummary[] => {
+  if (!page || !page.elements || page.elements.length === 0) return [];
+  if (page.type === 'cover' || page.type === 'index' || page.type === 'closing') return [];
+
+  const titles = page.elements.filter(el => el.type === 'text' && (el.fontSize || 0) >= 16);
+  const tables = page.elements.filter(el => el.type === 'table' && el.tableData);
+  const shapes = page.elements.filter(el => el.type === 'shape' && (el.width || 0) >= 500);
+
+  if (titles.length < 1 && tables.length < 1) return [];
+
+  if (titles.length > 0) {
+    const sortedTitles = [...titles].sort((a, b) => a.y - b.y);
+    return sortedTitles.map((t, idx) => {
+      const nearestTable = tables.find(tbl => Math.abs(tbl.y - t.y) < 180);
+      const nearestShape = shapes.find(s => Math.abs(s.y - t.y) < 180);
+      const minY = Math.min(t.y, nearestShape ? nearestShape.y : t.y);
+      const maxY = Math.max(
+        t.y + (t.height || 30),
+        nearestTable ? nearestTable.y + (nearestTable.height || 60) : t.y + 100,
+        nearestShape ? nearestShape.y + (nearestShape.height || 120) : t.y + 100
+      );
+
+      return {
+        index: idx,
+        y: minY,
+        height: Math.max(80, maxY - minY),
+        title: t.text?.replace(/<[^>]*>/g, '') || `Section ${idx + 1}`
+      };
+    });
+  }
+
+  const sortedTables = [...tables].sort((a, b) => a.y - b.y);
+  return sortedTables.map((tbl, idx) => ({
+    index: idx,
+    y: Math.max(0, tbl.y - 30),
+    height: Math.max(80, (tbl.height || 80) + 40),
+    title: `Section ${idx + 1}`
+  }));
+};
 
 const EditorCanvas: React.FC = () => {
   const {
@@ -22,6 +69,10 @@ const EditorCanvas: React.FC = () => {
     addElement, addMedia, draggingItem, setDraggingItem,
     pushHistory, uiTheme, activeTool, setIsPropertyPanelOpen,
     isTableEditorOpen, editingTableElementId, setIsTableEditorOpen,
+    isGridStudioOpen, gridStudioPageIndex, setIsGridStudioOpen,
+    applyProductGridToPage, reflowCatalogPages,
+    swapPageSections, deletePageSection,
+    setEditorTab, setSidebarExpanded,
     addPage, setCurrentPageIndex, guides, activeDragPosition,
     isProjectSettingsOpen, setIsProjectSettingsOpen, updateProjectSettings,
     setSelectedPageIndex, setSelectedCategoryId,
@@ -82,13 +133,27 @@ const EditorCanvas: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const textInputRef = useRef<HTMLDivElement>(null);
+  const activeEditingTextRef = useRef<string | null>(null);
+  const textDebounceTimerRef = useRef<number | null>(null);
+  const editConfigRef = useRef<any | null>(null);
+  const isSavingRef = useRef<boolean>(false);
   const idCounterRef = useRef(0);
   const panRef = useRef({ x: 0, y: 0 });
   const isPanning = useRef(false);
   const lastPointerPosition = useRef({ x: 0, y: 0 });
+  const lastMousePosRef = useRef<{ clientX: number; clientY: number } | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const panContentRef = useRef<HTMLDivElement>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  // Track pointer location globally to paste at mouse position
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      lastMousePosRef.current = { clientX: e.clientX, clientY: e.clientY };
+    };
+    window.addEventListener('mousemove', handleMouseMove, { passive: true });
+    return () => window.removeEventListener('mousemove', handleMouseMove);
+  }, []);
 
   // Constraint helper (Defined early so all hooks can access it)
   const getClampedPan = useCallback((nextX: number, nextY: number) => {
@@ -144,6 +209,66 @@ const EditorCanvas: React.FC = () => {
     return () => window.removeEventListener('catalog:scrollToPage', handler);
   }, [scrollToPageIndex]);
 
+  const saveContent = useCallback((shouldClose = false) => {
+    if (textDebounceTimerRef.current) {
+      clearTimeout(textDebounceTimerRef.current);
+      textDebounceTimerRef.current = null;
+    }
+
+    const currentConfig = editConfigRef.current;
+    if (currentConfig?.id) {
+      let content = activeEditingTextRef.current;
+      if (textInputRef.current) {
+        const domText = (textInputRef.current.innerText || textInputRef.current.textContent || '').replace(/<[^>]*>/g, '');
+        // Only override if domText has meaningful content or activeEditingTextRef was empty
+        if (domText.trim().length > 0 || !content) {
+          content = domText;
+        }
+      }
+
+      // If user completely cleared the text or whitespace, restore existing text to prevent accidental deletion
+      if (!content || !content.trim()) {
+        content = currentConfig.text || activeEditingTextRef.current || '';
+      }
+
+      const isHeader = catalog.headerElements?.some(el => el.id === currentConfig.id);
+      const isFooter = catalog.footerElements?.some(el => el.id === currentConfig.id);
+
+      const updates: any = { text: content };
+      if (!isHeader && !isFooter && textInputRef.current) {
+        const newHeight = Math.max(20, textInputRef.current.scrollHeight / zoom);
+        if (Math.abs(newHeight - currentConfig.height) > 1) {
+          updates.height = newHeight;
+        }
+      }
+
+      if (isHeader) {
+        updateHeaderElement(currentConfig.id, updates);
+      } else if (isFooter) {
+        updateFooterElement(currentConfig.id, updates);
+      } else if (currentConfig.id === 'header') {
+        updateProjectSettings({ headerText: content });
+      } else if (currentConfig.id === 'footer') {
+        updateProjectSettings({ footerText: content });
+      } else {
+        const targetPageIndex = currentConfig.pageIndex !== undefined ? currentConfig.pageIndex : currentPageIndex;
+        updateElement(targetPageIndex, currentConfig.id, updates);
+      }
+
+      if (shouldClose) {
+        activeEditingTextRef.current = null;
+        editConfigRef.current = null;
+        setEditingId(null);
+        setEditConfig(null);
+      }
+    } else if (shouldClose) {
+      activeEditingTextRef.current = null;
+      editConfigRef.current = null;
+      setEditingId(null);
+      setEditConfig(null);
+    }
+  }, [currentPageIndex, zoom, catalog.headerElements, catalog.footerElements, updateElement, updateHeaderElement, updateFooterElement, updateProjectSettings]);
+
   // Listen for double-click text editing
   useEffect(() => {
     const handler = (e: Event) => {
@@ -152,14 +277,22 @@ const EditorCanvas: React.FC = () => {
       if (catalog.headerElements?.some(item => item.id === id)) {
         return;
       }
+
+      // If already editing another element, flush its contents first before opening the new one
+      if (editConfigRef.current && editConfigRef.current.id !== id) {
+        saveContent(true);
+      }
+
       if (pageIndex !== undefined) setCurrentPageIndex(pageIndex);
       const page = catalog.pages[pageIndex ?? currentPageIndex];
       const el = page?.elements.find(item => item.id === id) ||
         catalog.footerElements?.find(item => item.id === id);
       if (el) {
-        setEditingId(id);
-        setEditConfig({
+        activeEditingTextRef.current = el.text || '';
+        const resolvedPageIndex = pageIndex !== undefined ? pageIndex : currentPageIndex;
+        const newConfig = {
           id: el.id,
+          pageIndex: resolvedPageIndex,
           x: el.x,
           y: el.y,
           width: el.width,
@@ -186,59 +319,42 @@ const EditorCanvas: React.FC = () => {
           textStrokeWidth: el.textStrokeWidth,
           effectSpread: el.effectSpread,
           effectRoundness: el.effectRoundness
-        });
+        };
+        editConfigRef.current = newConfig;
+        setEditingId(id);
+        setEditConfig(newConfig);
       }
     };
     window.addEventListener('catalog:editText', handler);
     return () => window.removeEventListener('catalog:editText', handler);
-  }, [catalog.pages, catalog.headerElements, catalog.footerElements, currentPageIndex, setCurrentPageIndex]);
+  }, [catalog.pages, catalog.headerElements, catalog.footerElements, currentPageIndex, setCurrentPageIndex, saveContent]);
 
-  // Listen for catalog:editTable event to open Table Editor Modal
+  // Listen for catalog:editTable event to switch to Grid Studio in sidebar
   useEffect(() => {
     const handleEditTable = (e: any) => {
-      const { id, pageIndex } = e.detail || {};
+      const { pageIndex } = e.detail || {};
       if (pageIndex !== undefined && pageIndex !== currentPageIndex) {
         setCurrentPageIndex(pageIndex);
       }
-      if (id) {
-        setIsTableEditorOpen(true, id);
-      }
+      setEditorTab('grid');
     };
     window.addEventListener('catalog:editTable', handleEditTable);
     return () => window.removeEventListener('catalog:editTable', handleEditTable);
-  }, [currentPageIndex, setCurrentPageIndex, setIsTableEditorOpen]);
+  }, [currentPageIndex, setCurrentPageIndex, setEditorTab]);
 
   const handleBatchUpdate = (updates: Partial<any>) => {
-    if (editConfig?.id) {
-      if (editConfig.id === 'header') updateProjectSettings({ headerText: updates.text });
-      else if (editConfig.id === 'footer') updateProjectSettings({ footerText: updates.text });
+    const cur = editConfigRef.current;
+    if (cur?.id) {
+      if (cur.id === 'header') updateProjectSettings({ headerText: updates.text });
+      else if (cur.id === 'footer') updateProjectSettings({ footerText: updates.text });
       else {
+        editConfigRef.current = { ...cur, ...updates };
         setEditConfig((prev: any) => prev ? ({ ...prev, ...updates }) : null);
-        updateElement(currentPageIndex, editConfig.id, updates);
+        const targetPageIndex = cur.pageIndex !== undefined ? cur.pageIndex : currentPageIndex;
+        updateElement(targetPageIndex, cur.id, updates);
       }
     }
   };
-
-  const saveContent = useCallback((shouldClose = false) => {
-    if (editConfig?.id && textInputRef.current) {
-      // Use innerText and regex to strip any remaining HTML tags
-      let content = textInputRef.current.innerText.replace(/<[^>]*>/g, '');
-      // If content is empty/newlines only, make it empty string
-      if (!content.trim()) content = "";
-
-      if (content !== editConfig.text) {
-        const html = textInputRef.current?.innerHTML || '';
-        if (editConfig.id === 'header') updateProjectSettings({ headerText: html });
-        else if (editConfig.id === 'footer') updateProjectSettings({ footerText: html });
-        else updateElement(currentPageIndex, editConfig.id, { text: html });
-      }
-
-      if (shouldClose) {
-        setEditingId(null);
-        setEditConfig(null);
-      }
-    }
-  }, [editConfig, currentPageIndex, updateElement, updateProjectSettings]);
 
   useEffect(() => { setShowTextToolbar(false); }, [editConfig?.id]);
 
@@ -612,22 +728,8 @@ const EditorCanvas: React.FC = () => {
         break;
       case 'Escape':
         if (contextMenu) setContextMenu(null);
+        saveContent(true);
         setSelectedElementIds([]);
-        setEditingId(null);
-        setEditConfig(null);
-        break;
-      case 'l':
-      case 'L':
-        if (e.altKey && e.shiftKey && selectedElementIds.length) {
-          e.preventDefault();
-          selectedElementIds.forEach(id => toggleLock(currentPageIndex, id));
-        }
-        break;
-      case 'Enter':
-        if (isMod) {
-          e.preventDefault();
-          addPage('interior');
-        }
         break;
       case 'c':
       case 'C':
@@ -640,7 +742,60 @@ const EditorCanvas: React.FC = () => {
       case 'V':
         if (isMod) {
           e.preventDefault();
-          pasteElements();
+          let targetPos: { x: number; y: number } | undefined = undefined;
+          let targetPageIdx: number = currentPageIndex;
+
+          if (lastMousePosRef.current) {
+            const { clientX, clientY } = lastMousePosRef.current;
+            const curZoom = zoom || 1;
+
+            // First check if the pointer is directly inside/over any page sheet
+            const allPageContainers = Array.from(document.querySelectorAll('[data-page-index]')) as HTMLElement[];
+            for (const container of allPageContainers) {
+              const pIdxAttr = container.getAttribute('data-page-index');
+              const pageIdxNum = pIdxAttr ? parseInt(pIdxAttr, 10) : -1;
+              const sheetEl = container.querySelector('.bg-white') as HTMLElement | null;
+              if (sheetEl && pageIdxNum >= 0) {
+                const rect = sheetEl.getBoundingClientRect();
+                if (
+                  clientX >= rect.left - 40 &&
+                  clientX <= rect.right + 40 &&
+                  clientY >= rect.top - 40 &&
+                  clientY <= rect.bottom + 40
+                ) {
+                  targetPageIdx = pageIdxNum;
+                  targetPos = {
+                    x: Math.max(0, Math.min(PAGE_WIDTH, (clientX - rect.left) / curZoom)),
+                    y: Math.max(0, Math.min(PAGE_HEIGHT, (clientY - rect.top) / curZoom))
+                  };
+                  break;
+                }
+              }
+            }
+
+            // Fallback to active page if not hovering directly over any page
+            if (!targetPos) {
+              const pageEl = document.querySelector(`[data-page-index="${currentPageIndex}"] .bg-white`) as HTMLElement | null;
+              if (pageEl) {
+                const rect = pageEl.getBoundingClientRect();
+                const pageX = (clientX - rect.left) / curZoom;
+                const pageY = (clientY - rect.top) / curZoom;
+                if (
+                  pageX >= -100 &&
+                  pageX <= PAGE_WIDTH + 100 &&
+                  pageY >= -100 &&
+                  pageY <= PAGE_HEIGHT + 100
+                ) {
+                  targetPos = {
+                    x: Math.max(0, Math.min(PAGE_WIDTH, pageX)),
+                    y: Math.max(0, Math.min(PAGE_HEIGHT, pageY))
+                  };
+                }
+              }
+            }
+          }
+
+          pasteElements(targetPos, targetPageIdx);
         }
         break;
       case ']':
@@ -690,7 +845,7 @@ const EditorCanvas: React.FC = () => {
         }
         break;
     }
-  }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements, updateElement, pushHistory, catalog, removeHeaderElement, removeFooterElement, copySelectedElements, pasteElements]);
+  }, [selectedElementIds, currentPageIndex, nudgeElement, removeElement, duplicateElement, undo, redo, zoom, setZoom, setSelectedElementIds, groupSelected, ungroupSelected, toggleLock, currentPage?.elements, updateElement, pushHistory, catalog, removeHeaderElement, removeFooterElement, copySelectedElements, pasteElements, saveContent]);
 
   useEffect(() => { window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, [handleKeyDown]);
 
@@ -855,7 +1010,8 @@ const EditorCanvas: React.FC = () => {
         fontStyle: el.fontStyle || 'normal',
         fontFamily: el.fontFamily,
         align: el.textAlign || 'left',
-        text: el.text || '',
+        // If the user is actively typing, don't overwrite their text with the stale/in-flight store value
+        text: activeEditingTextRef.current !== null ? activeEditingTextRef.current : (el.text || ''),
         textDecoration: el.textDecoration || 'none',
         lineHeight: el.lineHeight || 1.2,
         letterSpacing: el.letterSpacing || 0,
@@ -934,7 +1090,7 @@ const EditorCanvas: React.FC = () => {
       >
         <div
           ref={panContentRef}
-          className="flex flex-col items-center py-12 gap-10"
+          className="flex flex-col items-center py-12 pl-12 pr-6 gap-10"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px)`,
             width: 'fit-content',
@@ -992,7 +1148,7 @@ const EditorCanvas: React.FC = () => {
               >
                 {/* Canva-style Contextual Top Bar for Page */}
                 <div
-                  className="flex items-center justify-between px-1 mb-1.5 transition-all select-none"
+                  className="relative z-[70] flex items-center justify-between px-1 mb-1.5 transition-all select-none"
                   style={{ width: curW * zoom }}
                 >
                   <div className="flex items-center gap-2">
@@ -1029,6 +1185,37 @@ const EditorCanvas: React.FC = () => {
                         {page.backgroundColor || '#ffffff'}
                       </span>
                     </button>
+
+                    {/* 3-Product Grid Studio & Reflow Buttons (Interior/Product Pages Only) */}
+                    {(page.type === 'interior' || (page.type !== 'cover' && page.type !== 'index' && page.type !== 'closing')) && (
+                      <>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setCurrentPageIndex(pageIdx);
+                            setEditorTab('grid-studio');
+                            setSidebarExpanded(true);
+                          }}
+                          className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] text-[#E2DCC8] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold shadow-md shadow-[#0F3D3E]/20 transition-all hover:scale-105 active:scale-95"
+                          title="Design and auto-align 3-Product Grid on this page"
+                        >
+                          <Sparkles size={11} className="text-[#E2DCC8]" />
+                          <span>3-Product Grid</span>
+                        </button>
+
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            reflowCatalogPages();
+                          }}
+                          className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1e293b] hover:bg-[#334155] text-sky-300 border border-sky-500/30 rounded-[4px] text-[10px] font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
+                          title="Auto-reflow and pack product grids across all pages (underflow/overflow)"
+                        >
+                          <Zap size={11} className="text-sky-400" />
+                          <span>Reflow Pages</span>
+                        </button>
+                      </>
+                    )}
 
                     <div className="w-px h-3.5 bg-white/15 mx-0.5" />
 
@@ -1079,7 +1266,7 @@ const EditorCanvas: React.FC = () => {
                       ? (isDragOver ? 'ring-4 ring-[#0F3D3E] shadow-[0_25px_70px_rgba(0,0,0,0.6)]' : 'ring-2 ring-[#0F3D3E] shadow-[0_25px_60px_rgba(0,0,0,0.55)]')
                       : 'opacity-90 hover:opacity-100 cursor-pointer shadow-[0_15px_40px_rgba(0,0,0,0.4)] border border-[#2a2a2a]'
                   }`}
-                  style={{ width: curW * zoom, height: curH * zoom }}
+                  style={{ width: curW * zoom, height: curH * zoom, backgroundColor: page.backgroundColor || '#ffffff', zIndex: isActive ? 20 : 1 }}
                 >
                   {/* Floating Labels and Boundaries */}
                   {(() => {
@@ -1117,7 +1304,7 @@ const EditorCanvas: React.FC = () => {
                                   className="absolute bg-[#1e1e1e] text-[#aaa] border border-[#333] text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-l-md shadow-sm transition-all"
                                   style={{
                                     left: 0,
-                                    top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40) / 2) * zoom,
+                                    top: (curH - (catalog.footerHeight || 75.6) / 2) * zoom,
                                     transform: 'translate(-100%, -50%)',
                                     opacity: isActive ? 1 : 0.4
                                   }}
@@ -1127,11 +1314,33 @@ const EditorCanvas: React.FC = () => {
                                 {isActive && (
                                   <div
                                     className="absolute left-0 right-0 border-t border-dashed border-[#0F3D3E]/40 pointer-events-none"
-                                    style={{ top: (curH - (catalog.marginBottom || 0) - (catalog.footerHeight || 40)) * zoom }}
+                                    style={{ top: (curH - (catalog.footerHeight || 75.6)) * zoom }}
                                   />
                                 )}
                               </>
                             )}
+                          </div>
+                        )}
+
+                        {/* Canva-style Visual Dotted / Dashed Page Margin Safety Box */}
+                        {isActive && catalog.showMargins !== false && (
+                          <div
+                            className="absolute pointer-events-none z-[45] border border-dashed transition-all duration-150"
+                            style={{
+                              left: `${(catalog.marginLeft || 0) * zoom}px`,
+                              top: `${(catalog.marginTop || 0) * zoom}px`,
+                              width: `${Math.max(0, curW - (catalog.marginLeft || 0) - (catalog.marginRight || 0)) * zoom}px`,
+                              height: `${Math.max(0, curH - (catalog.marginTop || 0) - (catalog.marginBottom || 0)) * zoom}px`,
+                              borderColor: 'rgba(15, 61, 62, 0.45)', // Elegant Canva teal/cyan dashed guide
+                              borderWidth: '1px',
+                            }}
+                          >
+                            {/* Subtle safety margin badge in top-left corner */}
+                            <span
+                              className="absolute left-1 top-1 text-[8px] font-mono font-bold uppercase tracking-wider text-[#0F3D3E]/50 select-none"
+                            >
+                              Safety Margin
+                            </span>
                           </div>
                         )}
 
@@ -1182,6 +1391,9 @@ const EditorCanvas: React.FC = () => {
                         transformOrigin: 'top left',
                         pointerEvents: 'auto',
                       }}
+                      onClick={(e) => e.stopPropagation()}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                     >
                       <div
                         contentEditable suppressContentEditableWarning
@@ -1238,61 +1450,72 @@ const EditorCanvas: React.FC = () => {
                           minHeight: 20 * zoom,
                           boxSizing: 'border-box',
                         }}
-                        onBlur={() => {
-                          const html = textInputRef.current?.innerHTML || '';
-                          if (catalog.headerElements.some(el => el.id === editConfig.id)) {
-                            updateHeaderElement(editConfig.id, { text: html });
-                          } else if (catalog.footerElements.some(el => el.id === editConfig.id)) {
-                            updateFooterElement(editConfig.id, { text: html });
-                          } else {
-                            updateElement(currentPageIndex, editConfig.id, { text: html });
+                        onKeyDown={(e) => {
+                          if (e.key === 'Escape') {
+                            e.preventDefault();
+                            saveContent(true);
+                          }
+                        }}
+                        onBlur={(e) => {
+                          // Only save if focus left the editing container completely (e.g. not clicking the toolbar or inside the element)
+                          const related = e.relatedTarget as HTMLElement | null;
+                          if (related && (e.currentTarget.contains(related) || related.closest('.text-toolbar') || related.closest('[data-text-toolbar]'))) {
+                            return;
                           }
                           saveContent(true);
                         }}
                         onInput={(e) => {
                           const target = e.currentTarget as HTMLElement;
-                          const html = target.innerHTML;
+                          let content = target.innerText || target.textContent || '';
+                          content = content.replace(/<[^>]*>/g, '');
 
-                          const isHeader = catalog.headerElements.some(el => el.id === editConfig.id);
-                          const isFooter = catalog.footerElements.some(el => el.id === editConfig.id);
+                          const cur = editConfigRef.current;
+                          if (cur?.id) {
+                            activeEditingTextRef.current = content;
+                            const isHeader = catalog.headerElements?.some(el => el.id === cur.id);
+                            const isFooter = catalog.footerElements?.some(el => el.id === cur.id);
+                            const updates: any = { text: content };
 
-                          if (editConfig.id) {
-                            const updates: any = { text: html };
-
-                            // Only auto-resize height for standard page elements
+                            // Auto-resize height for standard page elements
                             if (!isHeader && !isFooter) {
                               const newHeight = Math.max(20, target.scrollHeight / zoom);
-                              if (Math.abs(newHeight - editConfig.height) > 1) {
+                              if (Math.abs(newHeight - cur.height) > 1) {
                                 updates.height = newHeight;
                               }
                             }
 
+                            // Keep local edit config in sync immediately without touching canvas
+                            editConfigRef.current = { ...cur, ...updates };
                             setEditConfig(prev => prev ? ({ ...prev, ...updates }) : null);
 
-                            if (isHeader) {
-                              updateHeaderElement(editConfig.id, updates);
-                            } else if (isFooter) {
-                              updateFooterElement(editConfig.id, updates);
-                            } else {
-                              updateElement(currentPageIndex, editConfig.id, updates);
-                            }
+                            // Debounce the background store update so typing stays 100% smooth without canvas flicker
+                            if (textDebounceTimerRef.current) clearTimeout(textDebounceTimerRef.current);
+                            textDebounceTimerRef.current = window.setTimeout(() => {
+                              if (isHeader) {
+                                updateHeaderElement(cur.id, updates);
+                              } else if (isFooter) {
+                                updateFooterElement(cur.id, updates);
+                              } else {
+                                const targetPageIndex = cur.pageIndex !== undefined ? cur.pageIndex : currentPageIndex;
+                                updateElement(targetPageIndex, cur.id, updates);
+                              }
+                            }, 300);
                           }
                         }}
                         ref={(el) => {
                           textInputRef.current = el;
-                          if (el && editConfig) {
-                            if (document.activeElement !== el) {
-                              el.innerHTML = editConfig.text;
-                              el.focus();
-                              // Move cursor to end
-                              const range = document.createRange();
-                              const sel = window.getSelection();
-                              range.selectNodeContents(el);
-                              range.collapse(false);
-                              if (sel) {
-                                sel.removeAllRanges();
-                                sel.addRange(range);
-                              }
+                          if (el && editConfig && (el as any)._initializedForId !== editConfig.id) {
+                            (el as any)._initializedForId = editConfig.id;
+                            el.innerText = (editConfig.text || '').replace(/<[^>]*>/g, '');
+                            el.focus();
+                            // Move cursor to end
+                            const range = document.createRange();
+                            const sel = window.getSelection();
+                            range.selectNodeContents(el);
+                            range.collapse(false);
+                            if (sel) {
+                              sel.removeAllRanges();
+                              sel.addRange(range);
                             }
                           }
                         }}
@@ -1315,10 +1538,15 @@ const EditorCanvas: React.FC = () => {
                           const mappedForEdit: any = { ...updates };
                           if (updates.fill !== undefined) mappedForEdit.color = updates.fill;
                           if (updates.textAlign !== undefined) mappedForEdit.align = updates.textAlign;
+                          if (updates.text !== undefined) activeEditingTextRef.current = updates.text;
+                          
+                          if (editConfigRef.current) {
+                            editConfigRef.current = { ...editConfigRef.current, ...mappedForEdit };
+                          }
                           setEditConfig(prev => prev ? { ...prev, ...mappedForEdit } : null);
 
                           if (updates.text !== undefined && textInputRef.current) {
-                            textInputRef.current.innerHTML = updates.text;
+                            textInputRef.current.innerText = (updates.text || '').replace(/<[^>]*>/g, '');
                           }
 
                           // 2. Update store
@@ -1327,7 +1555,8 @@ const EditorCanvas: React.FC = () => {
                           } else if (catalog.footerElements?.some(el => el.id === editingId)) {
                             updateFooterElement(editingId, updates);
                           } else {
-                            updateElement(currentPageIndex, editingId, updates);
+                            const targetPageIndex = editConfigRef.current?.pageIndex !== undefined ? editConfigRef.current.pageIndex : currentPageIndex;
+                            updateElement(targetPageIndex, editingId, updates);
                           }
                         } else if (selectedTextElement) {
                           if (catalog.headerElements?.some(el => el.id === selectedTextElement.id)) {
@@ -1364,13 +1593,100 @@ const EditorCanvas: React.FC = () => {
                     />
                   )
                   }
+
+                  {/* Right-Side Floating Section Quick-Action Docks (for interior/product pages) */}
+                  {isActive && (page.type === 'interior' || (page.type !== 'cover' && page.type !== 'index' && page.type !== 'closing')) && (() => {
+                    const sectionsSummary = getPageSectionsSummary(page);
+                    if (sectionsSummary.length < 1) return null;
+
+                    return sectionsSummary.map((secSummary, sIdx) => {
+                      const isFirst = sIdx === 0;
+                      const isLast = sIdx === sectionsSummary.length - 1;
+                      const centerY = (secSummary.y + (secSummary.height / 2)) * zoom;
+
+                      return (
+                        <div
+                          key={`sec-dock-${sIdx}`}
+                          className="absolute z-[60] flex flex-col items-center bg-[#141416]/95 border border-[#E2DCC8]/30 backdrop-blur-md rounded-full py-1.5 px-1 shadow-2xl transition-all hover:scale-105 hover:border-[#0F3D3E]"
+                          style={{
+                            left: (curW * zoom) + 12,
+                            top: Math.max(10, centerY - 55),
+                          }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {/* Section number indicator badge */}
+                          <span className="w-5 h-5 rounded-full bg-[#0F3D3E] text-[#E2DCC8] flex items-center justify-center text-[9px] font-black mb-1 shadow-sm">
+                            #{sIdx + 1}
+                          </span>
+
+                          {/* ↑ Move Up */}
+                          <button
+                            type="button"
+                            disabled={isFirst}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              swapPageSections(pageIdx, sIdx, sIdx - 1);
+                            }}
+                            className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                            title={`Move Section #${sIdx + 1} Up`}
+                          >
+                            <ChevronUp size={14} />
+                          </button>
+
+                          {/* ↓ Move Down */}
+                          <button
+                            type="button"
+                            disabled={isLast}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              swapPageSections(pageIdx, sIdx, sIdx + 1);
+                            }}
+                            className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-20 disabled:hover:bg-transparent transition-all"
+                            title={`Move Section #${sIdx + 1} Down`}
+                          >
+                            <ChevronDown size={14} />
+                          </button>
+
+                          {/* ⚙️ Open in Left Sidebar Studio */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setCurrentPageIndex(pageIdx);
+                              setEditorTab('grid-studio');
+                              setSidebarExpanded(true);
+                            }}
+                            className="p-1 rounded-full text-[#E2DCC8] hover:text-white hover:bg-[#0F3D3E] transition-all my-0.5"
+                            title={`Configure Section #${sIdx + 1} in Left Sidebar Studio`}
+                          >
+                            <Settings size={13} />
+                          </button>
+
+                          {/* 🗑️ Delete Section */}
+                          {sectionsSummary.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deletePageSection(pageIdx, sIdx);
+                              }}
+                              className="p-1 rounded-full text-slate-400 hover:text-red-400 hover:bg-red-500/20 transition-all"
+                              title={`Delete Section #${sIdx + 1}`}
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    });
+                  })()}
                 </div>
               </div>
             );
           })}
 
           {/* Add New Page */}
-          <div className="shrink-0 flex flex-col items-center mb-10" ref={addPageMenuRef}>
+          <div className="relative z-[70] shrink-0 flex flex-col items-center mb-10" ref={addPageMenuRef}>
             <div className="relative" style={{ width: (catalog.pages[catalog.pages.length - 1]?.orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH) * zoom }}>
               <button
                 onClick={() => setShowAddPageMenu(prev => !prev)}
@@ -1461,11 +1777,13 @@ const EditorCanvas: React.FC = () => {
         </div>
       </div>
 
-      {/* Table & Specifications Editor Modal */}
-      {isTableEditorOpen && (
-        <TableEditorModal
-          elementId={editingTableElementId}
-          onClose={() => setIsTableEditorOpen(false, null)}
+
+
+      {/* 3-Product Grid Studio Modal */}
+      {isGridStudioOpen && (
+        <ProductGridStudioModal
+          pageIndex={gridStudioPageIndex}
+          onClose={() => setIsGridStudioOpen(false, null)}
         />
       )}
 

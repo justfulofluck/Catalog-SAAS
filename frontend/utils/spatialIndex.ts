@@ -66,7 +66,8 @@ export class SpatialIndex {
    */
   public findSnapTargets(
     currentBox: BoundingBox,
-    threshold: number = 6
+    threshold: number = 6,
+    margins?: { top?: number; bottom?: number; left?: number; right?: number }
   ): SnapResult {
     let snapX: number | null = null;
     let snapY: number | null = null;
@@ -183,6 +184,46 @@ export class SpatialIndex {
               displayValue: (gap / 10).toFixed(1)
             });
           }
+        }
+      }
+    }
+
+    // Canva-style Margin line alignment checks (Left, Right, Top, Bottom)
+    if (margins) {
+      // Left Margin snap
+      if (typeof margins.left === 'number' && margins.left > 0) {
+        const diffLeft = Math.abs(currentBox.minX - margins.left);
+        if (diffLeft < minDiffX) {
+          minDiffX = diffLeft;
+          snapX = margins.left;
+          guideLines.push({ type: 'vertical', pos: margins.left });
+        }
+      }
+      // Right Margin snap
+      if (typeof margins.right === 'number' && margins.right > 0) {
+        const diffRight = Math.abs(currentBox.maxX - margins.right);
+        if (diffRight < minDiffX) {
+          minDiffX = diffRight;
+          snapX = margins.right - (currentBox.maxX - currentBox.minX);
+          guideLines.push({ type: 'vertical', pos: margins.right });
+        }
+      }
+      // Top Margin snap
+      if (typeof margins.top === 'number' && margins.top > 0) {
+        const diffTop = Math.abs(currentBox.minY - margins.top);
+        if (diffTop < minDiffY) {
+          minDiffY = diffTop;
+          snapY = margins.top;
+          guideLines.push({ type: 'horizontal', pos: margins.top });
+        }
+      }
+      // Bottom Margin snap
+      if (typeof margins.bottom === 'number' && margins.bottom > 0) {
+        const diffBottom = Math.abs(currentBox.maxY - margins.bottom);
+        if (diffBottom < minDiffY) {
+          minDiffY = diffBottom;
+          snapY = margins.bottom - (currentBox.maxY - currentBox.minY);
+          guideLines.push({ type: 'horizontal', pos: margins.bottom });
         }
       }
     }

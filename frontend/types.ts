@@ -1,7 +1,7 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table';
 export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
-export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line';
-export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image';
+export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line' | 'curved-line' | 'elbow-line';
+export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image' | 'minimal-pill';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
 
@@ -37,6 +37,17 @@ export interface TableData {
   colWidths?: number[];
 }
 
+export interface ProductGridSection {
+  id: string;
+  imageSrc?: string;
+  title: string;
+  titleColor?: string;
+  titleFontSize?: number;
+  tableData: TableData;
+  hasBackground?: boolean;
+  backgroundColor?: string;
+}
+
 export interface CanvasElement {
    id: string;
    type: ElementType;
@@ -65,6 +76,7 @@ export interface CanvasElement {
    zIndex: number;
    author?: string;
    groupId?: string;
+   sectionTag?: string;
    locked?: boolean;
    visible?: boolean;
    effectStyle?: 'none' | 'hollow' | 'outline' | 'shadow' | 'lift' | 'neon' | 'glitch' | 'echo' | 'splice' | 'background';
@@ -274,6 +286,7 @@ export interface Catalog {
   headerText?: string;
   footerText?: string;
   backgroundColor?: string;
+  fontFamily?: string;
   paginationStyle?: PaginationStyle;
   logoStyle?: LogoStyle;
   headerLogoUrl?: string;
@@ -311,6 +324,7 @@ export interface Catalog {
   marginLeft?: number;
   marginRight?: number;
   marginColor?: string;
+  showMargins?: boolean;
 
   // Master Layers (Editable Header/Footer)
   headerElements: CanvasElement[];

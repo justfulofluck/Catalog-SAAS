@@ -6,6 +6,7 @@ import {
   ActiveSelection,
   Textbox,
   Group,
+  Point,
   util,
 } from 'fabric';
 
@@ -105,20 +106,20 @@ export function renderCanvaSidePillControl(
     ctx.lineTo(-hw, -hh + r);
     ctx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
   }
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = CANVA_THEME.borderColor;
   ctx.fill();
 
-  // Subtle clean border for contrast against white backgrounds
+  // Subtle clean border
   ctx.shadowColor = 'transparent';
   ctx.lineWidth = 1;
-  ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.stroke();
 
   ctx.restore();
 }
 
 /**
- * Render horizontal white pill/capsule control for top and bottom height resizing (mt / mb) (matching Canva screenshot).
+ * Render horizontal pill/capsule control for top and bottom height resizing (mt / mb) (matching Canva screenshot).
  */
 export function renderCanvaTopBottomPillControl(
   this: Control,
@@ -161,13 +162,13 @@ export function renderCanvaTopBottomPillControl(
     ctx.lineTo(-hw, -hh + r);
     ctx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
   }
-  ctx.fillStyle = '#ffffff';
+  ctx.fillStyle = CANVA_THEME.borderColor;
   ctx.fill();
 
-  // Subtle clean border for contrast against white backgrounds
+  // Subtle clean border
   ctx.shadowColor = 'transparent';
   ctx.lineWidth = 1;
-  ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.stroke();
 
   ctx.restore();
@@ -395,7 +396,7 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       actionHandler: isTextbox ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: isTextbox ? 'resizing' : undefined,
-      getActionName: isTextbox ? undefined : controlsUtils.scaleOrSkewActionName,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -408,7 +409,7 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       actionHandler: isTextbox ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: isTextbox ? 'resizing' : undefined,
-      getActionName: isTextbox ? undefined : controlsUtils.scaleOrSkewActionName,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -479,43 +480,221 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
 }
 
 /**
- * Specialized Canva-style controls for horizontal lines, dividers, and rules:
- * - Only left (ml) and right (mr) side pill handles for width resizing
- * - Centered move/drag button below the line
- * - No rotate control (divider rules should never rotate into diagonal/curling angles)
- * - No corner controls (prevents overlapping handle clashing on thin 1-3px lines)
+ * Active dragging handle identifier for lines ('ml' | 'mr' | null)
+ * Used to render the active dragged endpoint in Canva purple (#8B3DFF) matching Screenshot 2 & 3.
+ */
+let activeLineDraggingControlKey: string | null = null;
+
+/**
+ * Render circular endpoint controls for lines/connectors.
+ * When dragged/active: solid purple fill (#8B3DFF) matching Canva Screenshot 2 & 3.
+ * When idle: white circle with subtle outline and elevation shadow matching Screenshot 1 & 4.
+ */
+export function renderCanvaLineEndpointControl(
+  this: Control,
+  ctx: CanvasRenderingContext2D,
+  left: number,
+  top: number,
+  _styleOverride: any,
+  fabricObject: any
+) {
+  ctx.save();
+  ctx.translate(left, top);
+
+  const radius = (this.sizeX || CANVA_THEME.cornerSize) / 2;
+  const isDraggingThis = activeLineDraggingControlKey === (this as any).controlKey &&
+    fabricObject?.canvas?.getActiveObject() === fabricObject;
+
+  // Soft elevation shadow
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.28)';
+  ctx.shadowBlur = 4;
+  ctx.shadowOffsetX = 0;
+  ctx.shadowOffsetY = 1;
+
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
+
+  if (isDraggingThis) {
+    // Signature Canva purple active dragged endpoint (Screenshot 2 & 3)
+    ctx.fillStyle = CANVA_THEME.borderColor; // '#8B3DFF'
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  } else {
+    // Idle white circular endpoint (Screenshot 1 & 4)
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+/**
+ * Action handler for dragging line endpoints (ml = left start point, mr = right end point).
+ * Features:
+ * 1. Moves only the dragged endpoint while pinning the opposite anchor endpoint.
+ * 2. Dynamically updates line width and rotation angle.
+ * 3. Magnetic Snapping: Snaps to 0°/180° (horizontal) and 90°/-90° (vertical) within 3.5 degrees.
+ * 4. Active Handle Feedback: Marks active handle for purple glow.
+ */
+function createLineEndpointActionHandler(endpoint: 'ml' | 'mr') {
+  return function (eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+    const target = transform.target;
+    if (!target) return false;
+
+    activeLineDraggingControlKey = endpoint;
+
+    // Anchor is the opposite endpoint
+    // Object angle in radians
+    const currentAngleRad = ((target.angle || 0) * Math.PI) / 180;
+    const halfW = (target.width || 100) / 2;
+    const center = target.getCenterPoint ? target.getCenterPoint() : new Point(target.left || 0, target.top || 0);
+
+    // Opposite anchor coordinate in canvas space
+    // If dragging 'mr' (right), anchor is 'ml' (-halfW); if dragging 'ml' (left), anchor is 'mr' (+halfW)
+    const anchorSign = endpoint === 'mr' ? -1 : 1;
+    const anchorX = center.x + anchorSign * halfW * Math.cos(currentAngleRad);
+    const anchorY = center.y + anchorSign * halfW * Math.sin(currentAngleRad);
+
+    // Vector from fixed anchor to mouse pointer (x, y)
+    let dx = x - anchorX;
+    let dy = y - anchorY;
+
+    // Invert vector if dragging left endpoint so direction points from left to right
+    if (endpoint === 'ml') {
+      dx = -dx;
+      dy = -dy;
+    }
+
+    let length = Math.sqrt(dx * dx + dy * dy);
+    if (length < 10) length = 10; // Prevent collapse
+
+    // Calculate raw angle in degrees (-180 to 180)
+    let angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+
+    // --- Magnetic Snapping (Canva-style) ---
+    const snapTolerance = 4.0; // degrees threshold for magnetic snap
+    let snapped = false;
+
+    // Horizontal snap: 0°
+    if (Math.abs(angleDeg) < snapTolerance) {
+      angleDeg = 0;
+      snapped = true;
+    } else if (Math.abs(angleDeg - 180) < snapTolerance || Math.abs(angleDeg + 180) < snapTolerance) {
+      angleDeg = 180;
+      snapped = true;
+    }
+    // Vertical snap: 90° and -90°
+    else if (Math.abs(angleDeg - 90) < snapTolerance) {
+      angleDeg = 90;
+      snapped = true;
+    } else if (Math.abs(angleDeg + 90) < snapTolerance) {
+      angleDeg = -90;
+      snapped = true;
+    }
+
+    const finalAngleRad = (angleDeg * Math.PI) / 180;
+
+    // Midpoint formula between fixed anchor and new dragged endpoint:
+    const draggedEndX = endpoint === 'mr'
+      ? anchorX + length * Math.cos(finalAngleRad)
+      : anchorX - length * Math.cos(finalAngleRad);
+    const draggedEndY = endpoint === 'mr'
+      ? anchorY + length * Math.sin(finalAngleRad)
+      : anchorY - length * Math.sin(finalAngleRad);
+
+    const midX = (anchorX + draggedEndX) / 2;
+    const midY = (anchorY + draggedEndY) / 2;
+
+    target.set({
+      width: Math.round(length),
+      scaleX: 1,
+      scaleY: 1,
+      angle: Math.round(angleDeg),
+      left: Math.round(midX),
+      top: Math.round(midY),
+      originX: 'center',
+      originY: 'center',
+    });
+
+    target.setCoords();
+
+    if (target.canvas) {
+      target.canvas.requestRenderAll();
+    }
+
+    return true;
+  };
+}
+
+/**
+ * Specialized Canva-style controls for lines, dividers, and connectors:
+ * - 2 circular endpoints (ml and mr) that support endpoint dragging + magnetic snapping
+ * - 2 bottom floating action buttons (rotate, drag)
+ * - Clean appearance with no surrounding bounding box outline (matching Canva Screenshots 1-4)
  */
 export function createCanvaLineControls(): Record<string, Control> {
+  const mlCtrl = new Control({
+    x: -0.5,
+    y: 0,
+    actionHandler: createLineEndpointActionHandler('ml'),
+    cursorStyleHandler: () => 'crosshair',
+    actionName: 'dragEndpoint',
+    render: renderCanvaLineEndpointControl,
+    sizeX: CANVA_THEME.cornerSize,
+    sizeY: CANVA_THEME.cornerSize,
+    touchSizeX: 30,
+    touchSizeY: 30,
+  });
+  (mlCtrl as any).controlKey = 'ml';
+
+  const mrCtrl = new Control({
+    x: 0.5,
+    y: 0,
+    actionHandler: createLineEndpointActionHandler('mr'),
+    cursorStyleHandler: () => 'crosshair',
+    actionName: 'dragEndpoint',
+    render: renderCanvaLineEndpointControl,
+    sizeX: CANVA_THEME.cornerSize,
+    sizeY: CANVA_THEME.cornerSize,
+    touchSizeX: 30,
+    touchSizeY: 30,
+  });
+  (mrCtrl as any).controlKey = 'mr';
+
   return {
-    ml: new Control({
-      x: -0.5,
-      y: 0,
-      actionHandler: controlsUtils.scalingXOrSkewingY,
-      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      getActionName: controlsUtils.scaleOrSkewActionName,
-      render: renderCanvaSidePillControl,
-      sizeX: CANVA_THEME.sidePillWidth + 4,
-      sizeY: CANVA_THEME.sidePillHeight + 4,
-      touchSizeX: 24,
-      touchSizeY: 28,
+    // Left endpoint handle
+    ml: mlCtrl,
+    // Right endpoint handle
+    mr: mrCtrl,
+    // Bottom Action Button 1: Rotate
+    rotate: new Control({
+      x: 0,
+      y: 0.5,
+      offsetX: -CANVA_THEME.actionButtonSpacing,
+      offsetY: CANVA_THEME.actionButtonOffsetY,
+      actionHandler: controlsUtils.rotationWithSnapping,
+      cursorStyleHandler: controlsUtils.rotationStyleHandler,
+      actionName: 'rotate',
+      withConnection: false,
+      render: renderCanvaRotateButton,
+      sizeX: CANVA_THEME.actionButtonSize,
+      sizeY: CANVA_THEME.actionButtonSize,
+      touchSizeX: CANVA_THEME.actionButtonSize + 8,
+      touchSizeY: CANVA_THEME.actionButtonSize + 8,
     }),
-    mr: new Control({
-      x: 0.5,
-      y: 0,
-      actionHandler: controlsUtils.scalingXOrSkewingY,
-      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      getActionName: controlsUtils.scaleOrSkewActionName,
-      render: renderCanvaSidePillControl,
-      sizeX: CANVA_THEME.sidePillWidth + 4,
-      sizeY: CANVA_THEME.sidePillHeight + 4,
-      touchSizeX: 24,
-      touchSizeY: 28,
-    }),
+    // Bottom Action Button 2: Move / Drag
     drag: new Control({
       x: 0,
       y: 0.5,
-      offsetX: 0, // Centered directly below the divider line
-      offsetY: 20,
+      offsetX: CANVA_THEME.actionButtonSpacing,
+      offsetY: CANVA_THEME.actionButtonOffsetY,
       actionHandler: controlsUtils.dragHandler,
       cursorStyleHandler: () => 'move',
       actionName: 'drag',
@@ -531,12 +710,15 @@ export function createCanvaLineControls(): Record<string, Control> {
 
 /**
  * Applies Canva selection styling (purple border, custom controls, no top mtr) to any object.
- * Automatically detects horizontal divider rules and lines to apply lockRotation and specialized line controls.
+ * Automatically detects lines and connectors to apply specialized line controls.
  */
 export function applyCanvaSelectionStyle(obj: any) {
   if (!obj) return;
   const isText = obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text';
   const isLine = obj.type === 'line' ||
+    obj.shapeType === 'line' ||
+    obj.shapeType === 'curved-line' ||
+    obj.shapeType === 'elbow-line' ||
     obj.isDivider === true ||
     (obj.type === 'rect' && (
       (obj.height <= 4 && (obj.width || 0) >= 40) ||
@@ -549,22 +731,52 @@ export function applyCanvaSelectionStyle(obj: any) {
     ));
 
   if (isLine) {
+    // Ensure origin is centered for correct endpoint dragging and rotation
+    if (obj.originX !== 'center' || obj.originY !== 'center') {
+      if (typeof obj.translateToCenterPoint === 'function') {
+        const center = obj.getCenterPoint();
+        obj.set({
+          originX: 'center',
+          originY: 'center',
+          left: center.x,
+          top: center.y,
+        });
+      } else {
+        obj.set({
+          originX: 'center',
+          originY: 'center',
+        });
+      }
+    }
+
     obj.set({
-      borderColor: CANVA_THEME.borderColor,
+      hasBorders: false, // In Canva, lines have NO rectangular bounding box outline (Screenshot 1 & 4)
+      borderColor: 'transparent',
       borderScaleFactor: 1.5,
       borderOpacityWhenMoving: 1,
-      borderDashArray: null,
       cornerColor: CANVA_THEME.cornerColor,
       cornerStrokeColor: CANVA_THEME.cornerStrokeColor,
       cornerStyle: 'circle',
       cornerSize: CANVA_THEME.cornerSize,
       transparentCorners: false,
-      padding: 6,
-      lockRotation: true,
-      lockScalingY: true,
+      padding: 0,
+      lockRotation: false,
+      lockScalingY: false,
       hasRotatingPoint: false,
     });
     obj.controls = createCanvaLineControls();
+
+    // Reset active dragging indicator on mouse:up
+    if (obj.canvas && !(obj.canvas as any).__hasCanvaLineMouseUpBound) {
+      (obj.canvas as any).__hasCanvaLineMouseUpBound = true;
+      obj.canvas.on('mouse:up', () => {
+        if (activeLineDraggingControlKey) {
+          activeLineDraggingControlKey = null;
+          obj.canvas?.requestRenderAll();
+        }
+      });
+    }
+
     return;
   }
 
@@ -636,12 +848,14 @@ export function initCanvaGlobals() {
       (ActiveSelection as any).createControls = () => ({
         controls: createCanvaControls(false),
       });
+      (ActiveSelection.prototype as any).subTargetCheck = true;
     }
 
     if (Group) {
       (Group as any).createControls = () => ({
         controls: createCanvaControls(false),
       });
+      (Group.prototype as any).subTargetCheck = true;
     }
   } catch (err) {
     console.warn('Could not initialize Canva globals on Fabric prototypes:', err);

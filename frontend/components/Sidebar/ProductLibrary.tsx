@@ -21,8 +21,8 @@ const ProductLibrary: React.FC = () => {
   const {
     products, categories, addElement, currentPageIndex, catalog,
     reorderProducts, removeProductFromCanvas, setDraggingItem,
-    uiTheme, setEditorTab, selectedCategoryId, setSelectedCategoryId,
-    updateProjectSettings
+    uiTheme, setEditorTab, setSidebarExpanded, selectedCategoryId, setSelectedCategoryId,
+    updateProjectSettings, setIsGridStudioOpen
   } = useStore();
 
   const [search, setSearch] = useState('');
@@ -665,6 +665,17 @@ const ProductLibrary: React.FC = () => {
           <div className="flex items-center justify-between mb-1">
             <h2 className="text-[10px] font-bold uppercase tracking-wider leading-none text-white">Products</h2>
             <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => {
+                  setEditorTab('grid-studio');
+                  setSidebarExpanded(true);
+                }}
+                className="px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 bg-[#0F3D3E] hover:bg-[#144f51] text-[#E2DCC8] border border-[#E2DCC8]/30 shadow-sm"
+                title="Design and auto-align 3-Product Grid on this page"
+              >
+                <Sparkles size={10} />
+                3-Product Grid
+              </button>
               <button
                 onClick={() => {
                   setIsMultiSelectMode(!isMultiSelectMode);

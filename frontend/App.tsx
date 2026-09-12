@@ -24,6 +24,7 @@ import ButtonsPanel from './components/Sidebar/ButtonsPanel';
 import HeaderFooterPanel from './components/Sidebar/HeaderFooterPanel';
 import TextPanel from './components/Sidebar/TextPanel';
 import ColorPanel from './components/Sidebar/ColorPanel';
+import GridStudioPanel from './components/Sidebar/GridStudioPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
 import '@fortawesome/fontawesome-free/css/all.min.css';
@@ -280,6 +281,24 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
+                    if (editorTab === 'grid-studio' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('grid-studio');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'grid-studio' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
+                  title="3-Product Grid Studio"
+                >
+                  <Sparkles size={20} />
+                </button>
+                <button
+                  onClick={() => {
                     if (editorTab === 'text' && isSidebarExpanded) {
                       setSidebarExpanded(false);
                     } else {
@@ -358,10 +377,11 @@ const App: React.FC = () => {
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
-                editorTab === 'products' ? 'w-[430px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
+                editorTab === 'grid-studio' ? 'w-[780px]' : editorTab === 'products' ? 'w-[460px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'products' && <ProductLibrary />}
+                {editorTab === 'grid-studio' && <GridStudioPanel />}
                 {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
                 {editorTab === 'templates' && <TemplatesPanel />}

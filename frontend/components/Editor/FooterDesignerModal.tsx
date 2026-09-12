@@ -159,12 +159,44 @@ const FOOTER_SHAPES: { type: ShapeType; label: string; icon: React.ReactNode }[]
         <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
       </svg>
     )
+  },
+  {
+    type: 'curved-line',
+    label: 'Curved Line',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+        <path d="M 3 17 C 8 7, 16 21, 21 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+        <circle cx="3" cy="17" r="2.5" fill="currentColor" />
+        <circle cx="21" cy="7" r="2.5" fill="currentColor" />
+      </svg>
+    )
+  },
+  {
+    type: 'elbow-line',
+    label: 'Elbow Line',
+    icon: (
+      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
+        <path d="M 3 18 H 12 V 6 H 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+        <circle cx="3" cy="18" r="2.5" fill="currentColor" />
+        <circle cx="21" cy="6" r="2.5" fill="currentColor" />
+      </svg>
+    )
   }
 ];
 
 function applyElementFill(obj: any, fill: string | undefined, w: number, h: number) {
+  const isLineType = obj.shapeType === 'line' || 
+    obj.shapeType === 'curved-line' || 
+    obj.shapeType === 'elbow-line' || 
+    obj.type === 'line' ||
+    obj.constructor?.name === 'HorizontalLineShape' ||
+    obj.constructor?.name === 'CurvedLineShape' ||
+    obj.constructor?.name === 'ElbowLineShape' ||
+    obj.isDivider === true;
+
   if (!fill) {
     obj.set('fill', '#ffffff');
+    if (isLineType) obj.set('stroke', '#cbd5e1');
     return;
   }
   const parsed = parseGradient(fill, w, h);
@@ -178,6 +210,11 @@ function applyElementFill(obj: any, fill: string | undefined, w: number, h: numb
     obj.set('fill', gradient);
   } else {
     obj.set('fill', fill);
+  }
+
+  if (isLineType) {
+    const strokeVal = fill && !fill.includes('gradient') ? fill : '#cbd5e1';
+    obj.set('stroke', strokeVal);
   }
 }
 
@@ -433,6 +470,7 @@ export const FooterDesignerModal: React.FC = () => {
     systemTemplates,
     deleteSystemTemplate,
     catalog,
+    saveCatalog,
     uiTheme
   } = useStore();
 
@@ -531,7 +569,19 @@ export const FooterDesignerModal: React.FC = () => {
 
   // Sync elements array updates helper
   const updateElementLocal = (id: string, updates: Partial<CanvasElement>) => {
-    setElements(prev => prev.map(el => el.id === id ? { ...el, ...updates } : el));
+    setElements(prev => prev.map(el => {
+      if (el.id !== id) return el;
+      const isLine = el.shapeType === 'line' || el.shapeType === 'curved-line' || el.shapeType === 'elbow-line' || (typeof el.id === 'string' && el.id.includes('line'));
+      const finalUpdates = { ...updates };
+      if (isLine) {
+        if ('fill' in updates && !('stroke' in updates)) {
+          finalUpdates.stroke = updates.fill;
+        } else if ('stroke' in updates && !('fill' in updates)) {
+          finalUpdates.fill = updates.stroke;
+        }
+      }
+      return { ...el, ...finalUpdates };
+    }));
   };
 
   // Remove element helper
@@ -683,22 +733,35 @@ export const FooterDesignerModal: React.FC = () => {
       const sx = Math.abs(obj.scaleX || 1);
       const sy = Math.abs(obj.scaleY || 1);
 
+      const elObj = elements.find(item => item.id === obj.id);
       const isDivider = (typeof obj.id === 'string' && (
         obj.id.startsWith('ftr-div') ||
-        obj.id.startsWith('ftr-line') ||
-        obj.id.includes('line') ||
-        obj.id.includes('accent')
-      )) || obj.isDivider || ((obj.height || 0) <= 4);
+        obj.id.startsWith('ftr-shape') && elObj?.shapeType === 'line'
+      )) || elObj?.shapeType === 'line' || obj.isDivider === true;
+
+      // For lines/dividers with center origin, calculate top-left element coordinate for standard rendering
+      let posX = Math.round((obj.left || 0) - CANVAS_PAD_X);
+      let posY = Math.round((obj.top || 0) - CANVAS_PAD_Y);
+
+      if (isDivider || obj.originX === 'center') {
+        const objW = Math.round((obj.width || 0) * sx);
+        const objH = Math.round((obj.height || 0) * sy);
+        posX = Math.round((obj.left || 0) - objW / 2 - CANVAS_PAD_X);
+        posY = Math.round((obj.top || 0) - objH / 2 - CANVAS_PAD_Y);
+      }
 
       const updates: Partial<CanvasElement> = {
-        x: Math.round((obj.left || 0) - CANVAS_PAD_X),
-        y: Math.round((obj.top || 0) - CANVAS_PAD_Y),
-        rotation: isDivider ? 0 : Math.round(obj.angle || 0)
+        x: posX,
+        y: posY,
+        rotation: Math.round(obj.angle || 0)
       };
 
       if (isDivider) {
-        updates.width = Math.round((obj.width || 0) * sx);
-        obj.set({ scaleX: 1, scaleY: 1, angle: 0 });
+        // Horizontal divider lines stretch horizontally, stay crisp and straight with no height distortion
+        const newW = Math.max(10, Math.round((obj.width || 0) * sx));
+        updates.width = newW;
+        updates.height = elObj?.height || 2;
+        obj.set({ width: newW, scaleX: 1, scaleY: 1 });
         obj.setCoords();
       } else if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text') {
         updates.width = Math.round((obj.width || 0) * sx);
@@ -756,34 +819,37 @@ export const FooterDesignerModal: React.FC = () => {
     canvas.requestRenderAll();
   }, [zoom, footerHeight]);
 
-  // Sync React elements state with Fabric Canvas Objects
+  // Sync Elements into Fabric Objects
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
     if (!canvas) return;
+    if ((canvas as any)._currentTransform) return;
 
     let isSubscribed = true;
 
     const syncFabricObjects = async () => {
-      const existingObjects = canvas.getObjects() as any[];
-      const existingMap = new Map(existingObjects.map(o => [o.id, o]));
-      const currentElementIds = new Set(elements.map(el => el.id));
+      const existing = canvas.getObjects() as any[];
+      const elIds = new Set(elements.map(el => el.id));
 
-      // Remove deleted elements
-      existingObjects.forEach(obj => {
-        if (obj.id && !currentElementIds.has(obj.id)) {
+      // Remove deleted objects
+      existing.forEach(obj => {
+        if (obj.id && !elIds.has(obj.id)) {
           canvas.remove(obj);
         }
       });
 
-      // Update or add elements
-      for (let i = 0; i < elements.length; i++) {
+      const existingMap = new Map<string, any>();
+      canvas.getObjects().forEach((o: any) => {
+        if (o.id) existingMap.set(o.id, o);
+      });
+
+      for (const el of elements) {
         if (!isSubscribed) return;
-        const el = elements[i];
         let fabricObj = existingMap.get(el.id);
 
         if (fabricObj) {
-          // Update properties if object is not actively transforming
-          const isActiveObj = canvas.getActiveObject() === fabricObj;
+          const isActiveObj = canvas.getActiveObjects().includes(fabricObj);
+
           if (!isActiveObj) {
             fabricObj.set({
               left: el.x + CANVAS_PAD_X,
@@ -825,15 +891,6 @@ export const FooterDesignerModal: React.FC = () => {
               stroke: el.stroke,
               strokeWidth: el.strokeWidth || 0
             });
-            const isDivider = el.shapeType === 'line' || (typeof el.id === 'string' && el.id.includes('line')) || ((el.height || 0) <= 4 && !el.shapeType);
-            if (isDivider) {
-              fabricObj.set({
-                lockRotation: true,
-                lockScalingY: true,
-                hasRotatingPoint: false,
-                padding: 6
-              });
-            }
           }
           fabricObj.setCoords();
         } else {
@@ -857,7 +914,6 @@ export const FooterDesignerModal: React.FC = () => {
             });
             applyElementFill(fabricObj, el.fill || '#475569', el.width, el.height);
           } else if (el.type === 'shape') {
-            const isDivider = el.shapeType === 'line' || (typeof el.id === 'string' && el.id.includes('line')) || ((el.height || 0) <= 4 && !el.shapeType);
             fabricObj = buildShape(
               el.shapeType || 'rect',
               el.width,
@@ -871,16 +927,13 @@ export const FooterDesignerModal: React.FC = () => {
               fabricObj.set({
                 left: el.x + CANVAS_PAD_X,
                 top: el.y + CANVAS_PAD_Y,
-                angle: isDivider ? 0 : (el.rotation || 0),
+                angle: el.rotation || 0,
                 opacity: el.opacity ?? 1,
                 originX: 'left',
                 originY: 'top',
-                lockRotation: isDivider,
-                lockScalingY: isDivider,
-                hasRotatingPoint: !isDivider,
-                padding: isDivider ? 6 : 0
               });
               applyElementFill(fabricObj, el.fill || '#0F3D3E', el.width, el.height);
+              applyCanvaSelectionStyle(fabricObj);
             }
           } else if (el.type === 'image' && el.src) {
             try {
@@ -973,12 +1026,15 @@ export const FooterDesignerModal: React.FC = () => {
 
   const addShapeElement = (shapeType: ShapeType) => {
     const newId = `ftr-shape-${Date.now()}`;
-    const isLine = shapeType === 'line';
+    const isStraightLine = shapeType === 'line';
+    const isCurvedLine = shapeType === 'curved-line';
+    const isElbowLine = shapeType === 'elbow-line';
+    const isLineAny = isStraightLine || isCurvedLine || isElbowLine;
     const isPill = shapeType === 'pill';
     const isArrow = shapeType === 'arrow' || shapeType === 'arrow4';
 
-    const w = isLine ? 300 : isPill ? 80 : isArrow ? 50 : 28;
-    const h = isLine ? 2 : isPill ? 20 : isArrow ? 18 : 28;
+    const w = isLineAny ? 260 : isPill ? 80 : isArrow ? 50 : 28;
+    const h = isStraightLine ? 2 : (isCurvedLine || isElbowLine) ? 26 : isPill ? 20 : isArrow ? 18 : 28;
     const initialY = Math.max(5, Math.round((footerHeight - h) / 2));
     const initialX = Math.round((PAGE_WIDTH - w) / 2);
 
@@ -990,9 +1046,9 @@ export const FooterDesignerModal: React.FC = () => {
       y: initialY,
       width: w,
       height: h,
-      fill: isLine ? '#cbd5e1' : '#0F3D3E',
-      stroke: isLine ? '#cbd5e1' : undefined,
-      strokeWidth: isLine ? 2 : 0,
+      fill: isLineAny ? '#cbd5e1' : '#0F3D3E',
+      stroke: isLineAny ? '#cbd5e1' : undefined,
+      strokeWidth: isLineAny ? 2.5 : 0,
       rotation: 0,
       opacity: 1,
       zIndex: elements.length + 1
@@ -1145,6 +1201,11 @@ export const FooterDesignerModal: React.FC = () => {
 
     setAppliedSuccess(true);
     setTimeout(() => setAppliedSuccess(false), 2500);
+
+    // Auto-save the catalog to backend so height and footer elements persist
+    setTimeout(() => {
+      saveCatalog().catch(err => console.warn('Auto-saving catalog after applying footer:', err));
+    }, 150);
   };
 
   const applyPreset = (preset: typeof PRESET_FOOTER_THEMES[0]) => {
@@ -1888,6 +1949,26 @@ export const FooterDesignerModal: React.FC = () => {
                       </div>
                     )}
                   </div>
+                )}
+
+                {/* Straighten / Reset Rotation Button */}
+                {(selectedElement.shapeType === 'line' || (selectedElement.rotation && selectedElement.rotation !== 0)) && (
+                  <button
+                    onClick={() => {
+                      updateElementLocal(selectedElement.id, { rotation: 0 });
+                      const activeObj = fabricCanvasRef.current?.getActiveObject();
+                      if (activeObj) {
+                        activeObj.set({ angle: 0 });
+                        activeObj.setCoords();
+                        fabricCanvasRef.current?.requestRenderAll();
+                      }
+                    }}
+                    className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a1c] hover:bg-[#252528] border border-[#38383c] hover:border-cyan-400 text-[11px] font-bold text-cyan-400 transition-all shadow-sm"
+                    title="Straighten line (Reset rotation to 0°)"
+                  >
+                    <RotateCcw size={12} />
+                    <span>Straighten (0°)</span>
+                  </button>
                 )}
 
                 <div className="h-4 w-px bg-[#333] mx-1" />

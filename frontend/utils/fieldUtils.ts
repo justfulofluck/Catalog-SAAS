@@ -29,7 +29,10 @@ export function resolveFieldLabel(
   if (categories && product?.categoryId) {
     const productCat = categories.find(c => String(c.id) === String(product.categoryId));
     if (productCat?.customSchema) {
-      const match = productCat.customSchema.find(f => f.id === key);
+      const match = productCat.customSchema.find(f => 
+        (f.id && f.id.toLowerCase() === lowerKey) ||
+        (f.key && f.key.toLowerCase() === lowerKey)
+      );
       if (match && match.label?.trim()) {
         return match.label.trim();
       }
@@ -40,7 +43,10 @@ export function resolveFieldLabel(
   if (categories && categories.length > 0) {
     for (const cat of categories) {
       if (cat.customSchema) {
-        const match = cat.customSchema.find(f => f.id === key);
+        const match = cat.customSchema.find(f => 
+          (f.id && f.id.toLowerCase() === lowerKey) ||
+          (f.key && f.key.toLowerCase() === lowerKey)
+        );
         if (match && match.label?.trim()) {
           return match.label.trim();
         }

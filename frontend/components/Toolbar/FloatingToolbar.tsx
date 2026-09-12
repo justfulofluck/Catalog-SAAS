@@ -228,13 +228,9 @@ const FloatingToolbar: React.FC<Props> = ({
       {isTableElement && (
         <button
           className="px-2.5 py-1.5 rounded-[4px] bg-[#0F3D3E] hover:bg-[#0F3D3E]/80 border border-[#E2DCC8]/30 text-white flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
-          title="Edit Table Columns & Rows"
+          title="Edit Table Columns & Rows in Sidebar"
           onClick={() => {
-            if (typeof setIsTableEditorOpen === 'function') {
-              setIsTableEditorOpen(true, element.id);
-            } else {
-              useStore.getState().setIsTableEditorOpen(true, element.id);
-            }
+            useStore.getState().setEditorTab('grid');
             window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: element.id, pageIndex: currentPageIndex } }));
           }}
         >
@@ -254,7 +250,11 @@ const FloatingToolbar: React.FC<Props> = ({
             title: 'Fill Color',
             onChange: (color) => {
               onFillChange?.(color);
-              selectedElementIds.forEach(id => internalUpdate(id, { fill: color }));
+              selectedElementIds.forEach(id => {
+                const el = selectedElements.find(item => item.id === id);
+                const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line';
+                internalUpdate(id, isLine ? { fill: color, stroke: color } : { fill: color });
+              });
             }
           });
         }}
@@ -273,7 +273,14 @@ const FloatingToolbar: React.FC<Props> = ({
             title: 'Border / Stroke Color',
             onChange: (color) => {
               onStrokeChange?.(color);
-              selectedElementIds.forEach(id => internalUpdate(id, { stroke: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) }));
+              selectedElementIds.forEach(id => {
+                const el = selectedElements.find(item => item.id === id);
+                const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line';
+                internalUpdate(id, isLine 
+                  ? { stroke: color, fill: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) } 
+                  : { stroke: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) }
+                );
+              });
             }
           });
         }}

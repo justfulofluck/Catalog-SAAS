@@ -7,7 +7,11 @@ import {
   Trash2,
   Lock,
   Unlock,
-  ChevronRight
+  Group,
+  Ungroup,
+  ChevronRight,
+  LayoutGrid,
+  Zap
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CanvasElement } from '../../types';
@@ -228,10 +232,17 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     reorderElements,
     copySelectedElements,
     pasteElements,
+    groupSelected,
+    ungroupSelected,
     addPage,
     duplicatePage,
     setPageBackground,
-    pushHistory
+    pushHistory,
+    setCurrentPageIndex,
+    setEditorTab,
+    setSidebarExpanded,
+    setIsGridStudioOpen,
+    reflowCatalogPages
   } = useStore();
 
   const currentPage = catalog.pages[pageIndex];
@@ -240,6 +251,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   );
 
   const isAllLocked = selectedElements.length > 0 && selectedElements.every(el => el.locked);
+  const canGroup = selectedElements.length >= 2;
+  const hasGrouped = selectedElements.some(el => !!el.groupId);
 
   // Position adjustment on mount or whenever x/y/type changes
   useEffect(() => {
@@ -273,7 +286,19 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
   const handlePaste = () => {
     execute(() => {
-      pasteElements();
+      let targetPos: { x: number; y: number } | undefined = undefined;
+      const pageEl = document.querySelector(`[data-page-index="${pageIndex}"] .bg-white`) as HTMLElement | null;
+      if (pageEl) {
+        const rect = pageEl.getBoundingClientRect();
+        const curZoom = useStore.getState().zoom || 1;
+        const pageX = (x - rect.left) / curZoom;
+        const pageY = (y - rect.top) / curZoom;
+        targetPos = {
+          x: Math.max(0, Math.min(792, Math.round(pageX))),
+          y: Math.max(0, Math.min(1120, Math.round(pageY)))
+        };
+      }
+      pasteElements(targetPos, pageIndex);
     });
   };
 
@@ -309,6 +334,18 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   const handleToggleLockElement = () => {
     execute(() => {
       selectedElementIds.forEach(id => toggleLock(pageIndex, id));
+    });
+  };
+
+  const handleGroup = () => {
+    execute(() => {
+      groupSelected(pageIndex);
+    });
+  };
+
+  const handleUngroup = () => {
+    execute(() => {
+      ungroupSelected(pageIndex);
     });
   };
 
@@ -512,6 +549,25 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
       {type === 'page' ? (
         /* PAGE CONTEXT MENU */
         <>
+          {(currentPage?.type === 'interior' || (currentPage?.type !== 'cover' && currentPage?.type !== 'index' && currentPage?.type !== 'closing')) && (
+            <>
+              <MenuItem
+                icon={LayoutGrid}
+                label="Design 3-Product Grid"
+                onClick={() => execute(() => {
+                  setCurrentPageIndex(pageIndex);
+                  setEditorTab('grid-studio');
+                  setSidebarExpanded(true);
+                })}
+              />
+              <MenuItem
+                icon={Zap}
+                label="Reflow & Pack Pages"
+                onClick={() => execute(() => reflowCatalogPages(pageIndex))}
+              />
+              <Divider />
+            </>
+          )}
           <MenuItem icon={Copy} label="Copy" shortcut="Ctrl+C" onClick={handleCopyPage} />
           <MenuItem icon={Clipboard} label="Paste" shortcut="Ctrl+V" onClick={handlePaste} />
           <MenuItem icon={FilePlus} label="Add page" shortcut="Ctrl+Enter" onClick={handleAddPage} />
@@ -528,6 +584,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           <MenuItem icon={Clipboard} label="Paste" shortcut="Ctrl+V" onClick={handlePaste} />
           <MenuItem icon={Copy} label="Duplicate" shortcut="Ctrl+D" onClick={handleDuplicateElement} />
           <MenuItem icon={Trash2} label="Delete" shortcut="DELETE" onClick={handleDeleteElement} />
+
+          {(canGroup || hasGrouped) && <Divider />}
+
+          {canGroup && (
+            <MenuItem icon={Group} label="Group" shortcut="Ctrl+G" onClick={handleGroup} />
+          )}
+
+          {hasGrouped && (
+            <MenuItem icon={Ungroup} label="Ungroup" shortcut="Ctrl+Shift+G" onClick={handleUngroup} />
+          )}
 
           <Divider />
 

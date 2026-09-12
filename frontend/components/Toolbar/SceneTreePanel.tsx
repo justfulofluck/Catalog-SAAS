@@ -168,8 +168,8 @@ const SceneTreePanel: React.FC = () => {
     if (!isSceneTreeOpen || !currentPage) return null;
 
     const displayElements = [...currentPage.elements].reverse();
-    const headerDisplayElements = [...(catalog.headerElements || [])].reverse();
-    const footerDisplayElements = [...(catalog.footerElements || [])].reverse();
+    const headerDisplayElements = [...(catalog.headerElements || [])].filter(el => !el.id?.startsWith('hdr-bg')).reverse();
+    const footerDisplayElements = [...(catalog.footerElements || [])].filter(el => !el.id?.startsWith('ftr-bg')).reverse();
 
     return (
         <div

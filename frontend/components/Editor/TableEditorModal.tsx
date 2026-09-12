@@ -199,9 +199,14 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
     const normKey = (paramKey || '').toLowerCase();
     const normLabel = (paramLabel || '').toLowerCase();
 
-    // SKU / Model
-    if (normKey === 'sku' || normLabel.includes('model') || normLabel.includes('sku') || normLabel.includes('code')) {
-      return variant?.sku || product.sku || product.customFields?.sku || product.customFields?.model || product.customFields?.model_no || '-';
+    // Model Number (Strictly Model No - never SKU fallback)
+    if (normKey.includes('model') || normLabel.includes('model')) {
+      return variant?.customAttributes?.model || variant?.customAttributes?.model_no || product.customFields?.model || product.customFields?.model_no || (product as any).modelNo || '-';
+    }
+
+    // SKU (Only if explicitly SKU)
+    if (normKey === 'sku' || normLabel === 'sku') {
+      return variant?.sku || product.sku || '-';
     }
 
     // Product Name / Specification
@@ -211,12 +216,12 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
 
     // Cut-out / Dimensions
     if (normKey.includes('cut') || normLabel.includes('cut') || normLabel.includes('dim')) {
-      return variant?.cutOut || product.customFields?.cutOut || product.customFields?.cut_out || product.customFields?.['cut-out'] || product.customFields?.cutout || '75MM';
+      return variant?.cutOut || product.customFields?.cutOut || product.customFields?.cut_out || product.customFields?.['cut-out'] || product.customFields?.cutout || '-';
     }
 
     // Color / CCT
     if (normKey.includes('color') || normKey.includes('cct') || normLabel.includes('color') || normLabel.includes('cct')) {
-      return variant?.color || product.customFields?.color || product.customFields?.cct || product.customFields?.['color/cct'] || 'White, Warm White, Neutral White';
+      return variant?.color || product.customFields?.color || product.customFields?.cct || product.customFields?.['color/cct'] || '-';
     }
 
     // Price
@@ -230,7 +235,7 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
 
     // Packing
     if (normKey.includes('pack') || normLabel.includes('pack') || normLabel.includes('box')) {
-      return variant?.packing || product.customFields?.packing || product.customFields?.packing_per_box || product.customFields?.['packing per box'] || '20 PCS';
+      return variant?.packing || product.customFields?.packing || product.customFields?.packing_per_box || product.customFields?.['packing per box'] || '-';
     }
 
     // Custom attributes on variant or product
@@ -380,7 +385,13 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
       return newRow;
     });
 
-    syncToCanvas({ ...tableData, headers: newHeaders, rows: newRows });
+    let newColWidths = tableData.colWidths ? [...tableData.colWidths] : undefined;
+    if (newColWidths && newColWidths.length === tableData.headers.length) {
+      const [movedWidth] = newColWidths.splice(colIdx, 1);
+      newColWidths.splice(targetIdx, 0, movedWidth);
+    }
+
+    syncToCanvas({ ...tableData, headers: newHeaders, rows: newRows, ...(newColWidths ? { colWidths: newColWidths } : {}) });
   };
 
   // ================= ROW ACTIONS =================
