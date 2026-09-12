@@ -1030,7 +1030,9 @@ async function _elementToFabricObject(
     const estimateLines = (text: string, colW: number, fontSize: number): number => {
       if (!text) return 1;
       const clean = text.toString().trim();
-      const avgCharWidth = fontSize * 0.58;
+      // Use more conservative char width — uppercase/bold fonts render wider
+      const hasUppercase = clean === clean.toUpperCase();
+      const avgCharWidth = fontSize * (hasUppercase ? 0.72 : 0.65);
       const usableWidth = Math.max(15, colW - cellPadding * 2);
       const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
       
@@ -1038,7 +1040,12 @@ async function _elementToFabricObject(
       let lines = 1;
       let curLineLen = 0;
       words.forEach(word => {
-        if (curLineLen + word.length > charsPerLine) {
+        // Handle long words that wrap mid-word (Fabric.js does this)
+        if (word.length > charsPerLine) {
+          if (curLineLen > 0) { lines++; }
+          lines += Math.ceil(word.length / charsPerLine) - 1;
+          curLineLen = word.length % charsPerLine || charsPerLine;
+        } else if (curLineLen + word.length > charsPerLine) {
           lines++;
           curLineLen = word.length;
         } else {
@@ -1064,7 +1071,7 @@ async function _elementToFabricObject(
         const l = estimateLines(cellText, colWidths[colIdx] || (el.width / numCols), dynamicBodyFontSize);
         if (l > maxLinesInRow) maxLinesInRow = l;
       });
-      const calcH = Math.max(26, maxLinesInRow * (dynamicBodyFontSize * 1.35) + cellPadding * 2);
+      const calcH = Math.max(26, maxLinesInRow * (dynamicBodyFontSize * 1.45) + cellPadding * 2 + 4);
       rowHeights.push(calcH);
     });
 

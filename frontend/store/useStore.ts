@@ -4305,9 +4305,24 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          // Right Column: Title
-          const rightX = leftMargin + 255;
-          const rightWidth = Math.max(200, contentWidth - 255);
+          // Right Column: Title — calculate dynamic height based on text wrapping
+          const titleFontSize = sec.titleFontSize || 22;
+          const titleText = sec.title || `SERIES ${idx + 1}`;
+          // Estimate title height based on text wrapping
+          const titleAvgCharWidth = titleFontSize * 0.72; // bold uppercase
+          const titleCharsPerLine = Math.max(5, Math.floor(rightWidth / titleAvgCharWidth));
+          const titleWords = titleText.split(/\s+/);
+          let titleLines = 1;
+          let titleLineLen = 0;
+          titleWords.forEach(word => {
+            if (titleLineLen + word.length > titleCharsPerLine) {
+              titleLines++;
+              titleLineLen = word.length;
+            } else {
+              titleLineLen += word.length + 1;
+            }
+          });
+          const titleHeight = Math.max(32, titleLines * (titleFontSize * 1.3) + 6);
 
           newElements.push({
             id: `${sectionId}-title`,
@@ -4315,9 +4330,9 @@ export const useStore = create<State>((set, get) => ({
             x: rightX,
             y: curY + 4,
             width: rightWidth,
-            height: 32,
-            text: sec.title || `SERIES ${idx + 1}`,
-            fontSize: sec.titleFontSize || 22,
+            height: titleHeight,
+            text: titleText,
+            fontSize: titleFontSize,
             fontFamily: 'Montserrat',
             fontWeight: '900',
             fill: sec.titleColor || '#00a651',
@@ -4328,15 +4343,15 @@ export const useStore = create<State>((set, get) => ({
             sectionTag: sectionId
           });
 
-          // Table
-          const tableY = curY + 40;
+          // Table — positioned dynamically below the title
+          const tableY = curY + titleHeight + 8;
           newElements.push({
             id: `${sectionId}-table`,
             type: 'table',
             x: rightX,
             y: tableY,
             width: rightWidth,
-            height: Math.max(60, sectionHeight - 45),
+            height: Math.max(60, sectionHeight - titleHeight - 12),
             tableData: sec.tableData,
             zIndex: idx * 10 + 4,
             rotation: 0,

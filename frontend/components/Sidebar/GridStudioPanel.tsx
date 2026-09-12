@@ -1342,7 +1342,7 @@ export const GridStudioPanel: React.FC = () => {
                               >
                                 <option value="" disabled>➔ Move to...</option>
                                 {catalog.pages.map((_, optIdx) => {
-                                  if (optIdx === pIdx) return null;
+                                  if (optIdx === 0 || optIdx === pIdx) return null; // Skip cover page & current page
                                   return (
                                     <option key={optIdx} value={optIdx}>
                                       Page {optIdx + 1}
@@ -1480,7 +1480,7 @@ export const GridStudioPanel: React.FC = () => {
                       >
                         <option value="" disabled>➔ Page...</option>
                         {catalog.pages.map((_, optIdx) => {
-                          if (optIdx === currentPageIndex) return null;
+                          if (optIdx === 0 || optIdx === currentPageIndex) return null; // Skip cover page & current page
                           return (
                             <option key={optIdx} value={optIdx}>
                               To P{optIdx + 1}
@@ -2104,17 +2104,8 @@ export const GridStudioPanel: React.FC = () => {
 
       {/* ================= PANEL FOOTER ================= */}
       <div className="p-3 border-t border-[#262626] bg-[#161616] space-y-2 shrink-0">
-        <div className="px-3 py-2 bg-[#0F3D3E]/30 border border-[#0F3D3E]/60 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-sm shadow-emerald-400" />
-            <span className="text-[10px] font-bold text-[#E2DCC8] tracking-wide">
-              Live Auto-Sync Active
-            </span>
-          </div>
-          <span className="text-[9px] text-slate-400 font-mono">
-            Directly editing Page {currentPageIndex + 1}
-          </span>
-        </div>
+
+
 
         <button
           type="button"

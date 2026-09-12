@@ -224,20 +224,6 @@ const FloatingToolbar: React.FC<Props> = ({
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
-      {/* If Table is selected: Add Edit Table Columns & Rows shortcut */}
-      {isTableElement && (
-        <button
-          className="px-2.5 py-1.5 rounded-[4px] bg-[#0F3D3E] hover:bg-[#0F3D3E]/80 border border-[#E2DCC8]/30 text-white flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider transition-all shadow-sm"
-          title="Edit Table Columns & Rows in Sidebar"
-          onClick={() => {
-            useStore.getState().setEditorTab('grid');
-            window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: element.id, pageIndex: currentPageIndex } }));
-          }}
-        >
-          <TableIcon size={14} />
-          <span>Edit Table</span>
-        </button>
-      )}
 
       {/* Fill color */}
       <button
