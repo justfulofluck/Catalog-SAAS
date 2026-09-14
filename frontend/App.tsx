@@ -14,7 +14,6 @@ import MediaLibraryView from './components/Inventory/MediaLibraryView';
 import CatalogSetup from './components/Setup/CatalogSetup';
 import EditorToolbar from './components/Toolbar/EditorToolbar';
 import EditorCanvas from './components/Editor/EditorCanvas';
-import ProductLibrary from './components/Sidebar/ProductLibrary';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
 import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import StockImagesPanel from './components/Sidebar/StockImagesPanel';
@@ -39,7 +38,6 @@ import {
   LogOut,
   ChevronDown,
   Menu,
-  Package,
   FolderOpen,
   BookOpen,
   Files,
@@ -263,29 +261,23 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
-                    if (editorTab === 'products' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('products');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'products' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Product Assets"
-                >
-                  <Package size={20} />
-                </button>
-                <button
-                  onClick={() => {
                     if (editorTab === 'grid-studio' && isSidebarExpanded) {
                       setSidebarExpanded(false);
                     } else {
                       setEditorTab('grid-studio');
                       setSidebarExpanded(true);
+
+                      // If currently on cover page, auto-focus on first product page so user is not stuck on cover
+                      const state = useStore.getState();
+                      const pages = state.catalog?.pages || [];
+                      const currIdx = state.currentPageIndex;
+                      if (pages[currIdx]?.type === 'cover' && pages.length > 1) {
+                        const firstProductPageIdx = pages.findIndex(p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing');
+                        if (firstProductPageIdx !== -1) {
+                          state.setCurrentPageIndex(firstProductPageIdx);
+                          window.dispatchEvent(new CustomEvent('catalog:scrollToPage', { detail: { pageIndex: firstProductPageIdx } }));
+                        }
+                      }
                     }
                   }}
                   className={`p-2.5 rounded-[4px] transition-all ${
@@ -377,10 +369,9 @@ const App: React.FC = () => {
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
-                editorTab === 'grid-studio' ? 'w-[780px]' : editorTab === 'products' ? 'w-[460px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
+                editorTab === 'grid-studio' ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
-                {editorTab === 'products' && <ProductLibrary />}
                 {editorTab === 'grid-studio' && <GridStudioPanel />}
                 {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}

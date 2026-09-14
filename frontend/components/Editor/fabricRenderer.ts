@@ -22,6 +22,17 @@ class CloudShape extends Rect {
     ctx.closePath();
     this._renderPaintInOrder(ctx);
   }
+
+  _toSVG(): string[] {
+    const w = this.width, h = this.height;
+    const fillColor = (this.fill as string) || '#e2e8f0';
+    const strokeColor = (this.stroke as string) || 'none';
+    const strokeWidth = this.strokeWidth || 0;
+    const path = `M ${w * 0.2} ${h * 0.75} C ${w * -0.05} ${h * 0.75} ${w * -0.05} ${h * 0.35} ${w * 0.2} ${h * 0.35} C ${w * 0.15} ${h * 0.05} ${w * 0.45} 0 ${w * 0.5} ${h * 0.2} C ${w * 0.55} 0 ${w * 0.85} ${h * 0.05} ${w * 0.8} ${h * 0.35} C ${w * 1.05} ${h * 0.35} ${w * 1.05} ${h * 0.75} ${w * 0.8} ${h * 0.75} Z`;
+    return [
+      `<path d="${path}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />\n`
+    ];
+  }
 }
 
 class WaveShape extends Rect {
@@ -34,6 +45,17 @@ class WaveShape extends Rect {
     ctx.bezierCurveTo(w * 0.75, h, w * 0.25, h * 0.6, 0, h * 0.8);
     ctx.closePath();
     this._renderPaintInOrder(ctx);
+  }
+
+  _toSVG(): string[] {
+    const w = this.width, h = this.height;
+    const fillColor = (this.fill as string) || '#e2e8f0';
+    const strokeColor = (this.stroke as string) || 'none';
+    const strokeWidth = this.strokeWidth || 0;
+    const path = `M 0 ${h * 0.2} C ${w * 0.25} 0 ${w * 0.75} ${h * 0.4} ${w} ${h * 0.2} L ${w} ${h * 0.8} C ${w * 0.75} ${h} ${w * 0.25} ${h * 0.6} 0 ${h * 0.8} Z`;
+    return [
+      `<path d="${path}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${strokeWidth}" />\n`
+    ];
   }
 }
 
@@ -54,6 +76,16 @@ export class HorizontalLineShape extends Rect {
     ctx.lineCap = 'round';
     ctx.stroke();
     ctx.restore();
+  }
+
+  _toSVG(): string[] {
+    const w = this.width;
+    const halfW = w / 2;
+    const strokeWidth = this.strokeWidth || 2;
+    const strokeColor = (this.stroke as string) || (this.fill as string) || '#cbd5e1';
+    return [
+      `<line x1="${-halfW}" y1="0" x2="${halfW}" y2="0" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" />\n`
+    ];
   }
 }
 
@@ -88,6 +120,20 @@ export class CurvedLineShape extends Rect {
     ctx.arc(w, halfH, endCircleRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  _toSVG(): string[] {
+    const w = this.width;
+    const h = Math.max(this.height, 20);
+    const halfH = h / 2;
+    const strokeWidth = this.strokeWidth || 2;
+    const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
+    const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
+    return [
+      `<path d="M 0 ${halfH} C ${w * 0.35} ${halfH - h * 0.45}, ${w * 0.65} ${halfH + h * 0.45}, ${w} ${halfH}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" />\n`,
+      `<circle cx="0" cy="${halfH}" r="${endCircleRadius}" fill="${strokeColor}" />\n`,
+      `<circle cx="${w}" cy="${halfH}" r="${endCircleRadius}" fill="${strokeColor}" />\n`
+    ];
   }
 }
 
@@ -129,6 +175,24 @@ export class ElbowLineShape extends Rect {
     ctx.arc(w, endY, endCircleRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+  }
+
+  _toSVG(): string[] {
+    const w = this.width;
+    const h = Math.max(this.height, 20);
+    const halfH = h / 2;
+    const strokeWidth = this.strokeWidth || 2;
+    const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
+    const cornerR = Math.min(8, Math.min(w * 0.15, h * 0.25));
+    const midX = w / 2;
+    const startY = halfH - h * 0.35;
+    const endY = halfH + h * 0.35;
+    const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
+    return [
+      `<path d="M 0 ${startY} L ${midX - cornerR} ${startY} Q ${midX} ${startY} ${midX} ${startY + (endY > startY ? cornerR : -cornerR)} L ${midX} ${endY - (endY > startY ? cornerR : -cornerR)} Q ${midX} ${endY} ${midX + cornerR} ${endY} L ${w} ${endY}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" />\n`,
+      `<circle cx="0" cy="${startY}" r="${endCircleRadius}" fill="${strokeColor}" />\n`,
+      `<circle cx="${w}" cy="${endY}" r="${endCircleRadius}" fill="${strokeColor}" />\n`
+    ];
   }
 }
 

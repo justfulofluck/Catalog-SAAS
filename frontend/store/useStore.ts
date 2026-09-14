@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { Product, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection } from '../types';
+import { Product, ProductVariant, TableData, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection } from '../types';
 import { authApi, systemTemplatesApi, adminAssetsApi } from '../client';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, FULL_CATALOG_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES, GRID_TEMPLATES } from '../constants';
 import { normalizeImageUrl, resolveProductImage, resolveProductTitle } from '../utils/imageUtils';
@@ -452,7 +452,7 @@ export const useStore = create<State>((set, get) => ({
   editingFooterTemplate: null,
   catalogSetupName: '',
   draggingItem: null,
-  editorTab: 'products',
+  editorTab: 'grid-studio',
   colorPickerTarget: null,
   clipboard: [],
 

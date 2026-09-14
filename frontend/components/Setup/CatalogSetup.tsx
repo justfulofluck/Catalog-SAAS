@@ -20,7 +20,12 @@ import {
   Sliders,
   Eye,
   Zap,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Check,
+  X,
+  ChevronDown,
+  ChevronUp,
+  Package
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { GRID_TEMPLATES } from '../../constants';
@@ -33,7 +38,13 @@ const CatalogSetup: React.FC = () => {
   const [name, setName] = useState('');
   const [categorySearch, setCategorySearch] = useState('');
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
   const selectedTemplateId = 'tpl-v-tac'; // Fixed V-TAC / VTEC theme
+
+  // Selected products count across all selected categories
+  const totalSelectedProducts = useMemo(() => {
+    return products.filter(p => selectedCategoryIds.includes(String(p.categoryId))).length;
+  }, [products, selectedCategoryIds]);
 
   // Table Schema State for Phase 3
   const [selectedHeaders, setSelectedHeaders] = useState<string[]>([
@@ -107,9 +118,27 @@ const CatalogSetup: React.FC = () => {
   const includeCategoryCovers = false;
 
   const toggleCategory = (id: string) => {
-    setSelectedCategoryIds(prev =>
-      prev.includes(id) ? prev.filter(cid => cid !== id) : [...prev, id]
-    );
+    const subcategoryIds = categories.filter(c => c.parent === id).map(c => c.id);
+    setSelectedCategoryIds(prev => {
+      const isSelected = prev.includes(id);
+      if (isSelected) {
+        // Deselect this category and all its subcategories
+        return prev.filter(cid => cid !== id && !subcategoryIds.includes(cid));
+      } else {
+        // Select this category and all its subcategories
+        return Array.from(new Set([...prev, id, ...subcategoryIds]));
+      }
+    });
+  };
+
+  const toggleSubcategory = (subId: string, parentId: string) => {
+    setSelectedCategoryIds(prev => {
+      if (prev.includes(subId)) {
+        return prev.filter(cid => cid !== subId);
+      } else {
+        return Array.from(new Set([...prev, subId, parentId]));
+      }
+    });
   };
 
   const handleSelectAll = () => {
@@ -196,8 +225,8 @@ const CatalogSetup: React.FC = () => {
   const previewProducts = products.filter(p => String(p.categoryId) === String(previewCategory?.id)).slice(0, 3);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#100F0F] text-white p-6 md:p-10 lg:p-12 custom-scrollbar flex flex-col items-center justify-start min-h-full animate-in fade-in duration-500">
-      <div className="w-full max-w-5xl space-y-8 my-auto">
+    <div className="flex-1 overflow-y-auto bg-[#100F0F] text-white p-4 sm:p-6 md:p-8 custom-scrollbar flex flex-col items-center justify-start min-h-full animate-in fade-in duration-500">
+      <div className={`w-full space-y-6 my-auto transition-all duration-300 ${step === 2 ? 'max-w-7xl' : step === 3 ? 'max-w-6xl' : 'max-w-5xl'}`}>
 
         {/* 3-Phase Progress Navigation */}
         <div className="flex items-center gap-4 md:gap-8 max-w-2xl mx-auto">
@@ -273,149 +302,193 @@ const CatalogSetup: React.FC = () => {
 
         {/* Phase 2: Category Selection */}
         {step === 2 && (
-          <div className="space-y-4 animate-in slide-in-from-right-8 duration-500 w-full pt-2">
-            {/* Compact Actions & Search Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="space-y-4 animate-in slide-in-from-right-8 duration-500 w-full pt-1">
+            {/* Top Toolbar: Search, Metrics & Quick Actions */}
+            <div className="bg-[#141414] border border-[#262626] rounded-xl p-3 sm:p-4 flex flex-col lg:flex-row items-center justify-between gap-3 shadow-lg">
+              {/* Back & Search */}
+              <div className="flex items-center gap-2.5 w-full lg:w-auto">
                 <button
                   type="button"
                   onClick={() => setStep(1)}
-                  className="px-3 py-2 bg-[#181818] hover:bg-[#222] border border-[#2a2a2a] text-[#888888] hover:text-[#E2DCC8] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0"
+                  className="px-3 py-2 bg-[#1c1c1c] hover:bg-[#252525] border border-[#333] text-[#888888] hover:text-[#E2DCC8] rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors shrink-0"
                   title="Return to Title"
                 >
                   <ArrowLeft size={14} />
                   <span>Back</span>
                 </button>
 
-                <div className="relative w-full sm:w-80">
-                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <div className="relative w-full sm:w-72 md:w-80">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#777]" />
                   <input
                     type="text"
                     placeholder="Search categories..."
                     value={categorySearch}
                     onChange={(e) => setCategorySearch(e.target.value)}
-                    className="w-full bg-[#141414] border border-[#2a2a2a] rounded-lg pl-9 pr-4 py-2 text-xs font-bold text-white placeholder-slate-500 focus:border-[#0F3D3E] outline-none"
+                    className="w-full bg-[#0c0c0c] border border-[#2a2a2a] rounded-lg pl-9 pr-8 py-2 text-xs font-bold text-white placeholder-[#666] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] outline-none transition-all"
                   />
+                  {categorySearch && (
+                    <button
+                      type="button"
+                      onClick={() => setCategorySearch('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-white transition-colors"
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  type="button"
-                  onClick={handleSelectAll}
-                  className="px-3 py-1.5 bg-[#181818] hover:bg-[#222] border border-[#2a2a2a] text-[#E2DCC8] rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors"
-                >
-                  Select All
-                </button>
-                <button
-                  type="button"
-                  onClick={handleDeselectAll}
-                  className="px-3 py-1.5 bg-[#181818] hover:bg-[#222] border border-[#2a2a2a] text-slate-400 hover:text-white rounded-md text-[10px] font-bold uppercase tracking-wider transition-colors"
-                >
-                  Deselect All
-                </button>
+              {/* Selection Metrics & Micro Actions */}
+              <div className="flex flex-wrap items-center justify-between lg:justify-end gap-2.5 w-full lg:w-auto">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#0e1717] border border-[#0F3D3E]/50 text-xs">
+                  <span className="w-2 h-2 rounded-full bg-[#00a651] animate-pulse" />
+                  <span className="text-[#888888] font-medium">
+                    <strong className="text-white font-mono">{selectedCategoryIds.length}</strong> of{' '}
+                    <span className="font-mono text-slate-400">{rootCategories.length}</span> selected
+                  </span>
+                  <span className="text-[#444]">•</span>
+                  <span className="text-[#00a651] font-mono font-bold">
+                    {totalSelectedProducts} products
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={handleSelectAll}
+                    className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#242424] border border-[#333] text-[#E2DCC8] hover:border-[#0F3D3E] rounded-lg text-[11px] font-bold tracking-wide transition-all flex items-center gap-1"
+                  >
+                    <Check size={12} className="text-[#00a651]" />
+                    Select All
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeselectAll}
+                    className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#242424] border border-[#333] text-slate-400 hover:text-white rounded-lg text-[11px] font-bold tracking-wide transition-all"
+                  >
+                    Deselect All
+                  </button>
+                </div>
               </div>
             </div>
 
-            {/* Responsive Category Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[52vh] overflow-y-auto pr-1 custom-scrollbar">
+            {/* Responsive Category Grid: 3 or 4 columns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto pr-1.5 custom-scrollbar pb-6">
               {filteredCategories.map((cat) => {
                 const isSelected = selectedCategoryIds.includes(cat.id);
                 const subcategories = categories.filter(c => c.parent === cat.id);
+                const isExpanded = expandedCategories.includes(cat.id);
                 const catProducts = products.filter(p => String(p.categoryId) === String(cat.id));
                 const catProductCount = catProducts.length;
                 const catImg = resolveProductImage(catProducts[0], cat, catProducts);
 
                 return (
-                  <div key={cat.id} className="space-y-2">
+                  <div
+                    key={cat.id}
+                    className={`group relative rounded-xl border transition-all duration-200 flex flex-col justify-between overflow-hidden ${
+                      isSelected
+                        ? 'bg-gradient-to-b from-[#132323] to-[#0f1717] border-[#00a651]/80 ring-1 ring-[#00a651]/40 shadow-lg shadow-[#0F3D3E]/20'
+                        : 'bg-[#151515] border-[#242424] hover:border-[#383838] hover:bg-[#1a1a1a]'
+                    }`}
+                  >
+                    {/* Clickable Card Body */}
                     <button
                       type="button"
                       onClick={() => toggleCategory(cat.id)}
-                      className={`
-                        w-full relative overflow-hidden rounded-xl p-3 sm:p-4 flex items-center gap-4 transition-all text-left border group
-                        ${isSelected
-                          ? 'bg-[#151c1d] border-[#0F3D3E] shadow-lg shadow-[#0F3D3E]/20 ring-1 ring-[#00a651]/50'
-                          : 'bg-[#161616] border-[#262626] hover:border-[#383838] hover:bg-[#1a1a1a]'
-                        }
-                      `}
+                      className="w-full text-left p-3.5 pb-2 flex flex-col flex-1 focus:outline-none"
                     >
-                      <div className={`shrink-0 transition-colors ${isSelected ? 'text-[#00a651]' : 'text-[#666666]'}`}>
-                        {isSelected ? <CheckSquare size={22} /> : <Square size={22} />}
+                      {/* Top Bar: Code Tag + Selection Indicator */}
+                      <div className="flex items-center justify-between gap-2 w-full mb-2.5">
+                        <span className="text-[10px] font-mono uppercase tracking-wider text-[#888888] truncate max-w-[140px]">
+                          {cat.code || 'Series'}
+                        </span>
+                        <div
+                          className={`w-5 h-5 rounded-md flex items-center justify-center transition-all ${
+                            isSelected
+                              ? 'bg-[#00a651] text-white shadow-sm shadow-[#00a651]/50'
+                              : 'border border-[#383838] bg-[#111] group-hover:border-[#555]'
+                          }`}
+                        >
+                          {isSelected && <Check size={13} strokeWidth={3} />}
+                        </div>
                       </div>
 
-                      {/* Prominent Category Photo Thumbnail */}
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl bg-[#0d0d0d] border border-[#2d2d2d] overflow-hidden flex items-center justify-center shrink-0 shadow-inner group-hover:scale-105 transition-transform p-1.5">
+                      {/* Photo Thumbnail Container */}
+                      <div className="w-full h-36 rounded-lg bg-[#0c0c0c] border border-[#222] overflow-hidden flex items-center justify-center p-2 group-hover:border-[#333] transition-colors relative mb-3">
                         {catImg ? (
                           <img
                             src={catImg}
                             alt={cat.name}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
                             onError={(e) => {
                               (e.target as HTMLElement).style.display = 'none';
                             }}
                           />
                         ) : (
-                          <FolderOpen size={28} className="text-[#E2DCC8]" />
+                          <FolderOpen size={32} className="text-[#E2DCC8]/40 group-hover:text-[#E2DCC8]/70 transition-colors" />
                         )}
                       </div>
 
-                      <div className="flex-1 min-w-0 pr-2 space-y-1">
-                        <h3 className="font-space font-bold text-white text-sm sm:text-base leading-snug group-hover:text-[#E2DCC8] transition-colors line-clamp-2">
-                          {cat.name}
-                        </h3>
-                        <p className="text-[10px] font-bold text-[#888888] uppercase tracking-wider flex items-center gap-1.5">
-                          <span className="text-[#00a651] font-mono font-black">{catProductCount}</span> Products {subcategories.length > 0 ? `• ${subcategories.length} Subcategories` : ''}
-                        </p>
-                      </div>
+                      {/* Title */}
+                      <h3 className="font-space font-bold text-white text-sm leading-snug group-hover:text-[#E2DCC8] transition-colors line-clamp-2 min-h-[2.5rem]">
+                        {cat.name}
+                      </h3>
                     </button>
 
-                    {/* Subcategories */}
-                    {subcategories.length > 0 && (
-                      <div className="pl-6 space-y-1.5 border-l border-[#262626] ml-5">
-                        {subcategories.map(sub => {
+                    {/* Card Footer: Product Count & Subcategory Button */}
+                    <div className="px-3.5 pb-3 pt-1 flex items-center justify-between gap-2 border-t border-white/[0.04]">
+                      <span className="inline-flex items-center gap-1.5 text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-[#0c0c0c] border border-[#222] text-[#888888]">
+                        <Package size={10} className={isSelected ? 'text-[#00a651]' : 'text-slate-500'} />
+                        <span className={isSelected ? 'text-[#00a651] font-black' : 'text-slate-300 font-bold'}>
+                          {catProductCount}
+                        </span>
+                        <span>{catProductCount === 1 ? 'Product' : 'Products'}</span>
+                      </span>
+
+                      {subcategories.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setExpandedCategories(prev =>
+                              prev.includes(cat.id) ? prev.filter(id => id !== cat.id) : [...prev, cat.id]
+                            );
+                          }}
+                          className="text-[10px] font-bold text-[#E2DCC8] hover:text-white flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/5 transition-colors"
+                        >
+                          <span>{subcategories.length} sub</span>
+                          {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Expandable Subcategories Drawer */}
+                    {subcategories.length > 0 && isExpanded && (
+                      <div className="p-2.5 bg-[#0e0e0e] border-t border-[#222] space-y-1.5 animate-in slide-in-from-top-2 duration-200">
+                        <p className="text-[9px] uppercase tracking-wider font-bold text-[#666] px-1">Subcategories</p>
+                        {subcategories.map((sub) => {
                           const isSubSelected = selectedCategoryIds.includes(sub.id);
                           const subProducts = products.filter(p => String(p.categoryId) === String(sub.id));
                           const subProductCount = subProducts.length;
-                          const subImg = resolveProductImage(subProducts[0], sub, subProducts);
 
                           return (
                             <button
                               key={sub.id}
                               type="button"
-                              onClick={() => toggleCategory(sub.id)}
-                              className={`
-                                w-full rounded-lg p-2.5 flex items-center gap-3 transition-all text-left border group
-                                ${isSubSelected
-                                  ? 'bg-[#151c1d] border-[#0F3D3E]'
-                                  : 'bg-[#141414] border-[#242424] hover:border-[#333]'
-                                }
-                              `}
+                              onClick={() => toggleSubcategory(sub.id, cat.id)}
+                              className={`w-full rounded-md px-2 py-1.5 flex items-center justify-between text-left text-xs transition-all border ${
+                                isSubSelected
+                                  ? 'bg-[#152424] border-[#00a651]/50 text-white'
+                                  : 'bg-[#141414] border-[#222] hover:border-[#333] text-slate-300'
+                              }`}
                             >
-                              <div className={`shrink-0 ${isSubSelected ? 'text-[#00a651]' : 'text-[#666666]'}`}>
-                                {isSubSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+                              <div className="flex items-center gap-2 truncate pr-2">
+                                <div className={`w-3.5 h-3.5 rounded flex items-center justify-center shrink-0 ${isSubSelected ? 'bg-[#00a651] text-white' : 'border border-[#444]'}`}>
+                                  {isSubSelected && <Check size={10} strokeWidth={3} />}
+                                </div>
+                                <span className="truncate text-[11px] font-medium">{sub.name}</span>
                               </div>
-
-                              <div className="w-12 h-12 rounded-lg bg-[#0d0d0d] border border-[#2a2a2a] overflow-hidden flex items-center justify-center shrink-0 p-1">
-                                {subImg ? (
-                                  <img
-                                    src={subImg}
-                                    alt={sub.name}
-                                    className="w-full h-full object-contain"
-                                    onError={(e) => {
-                                      (e.target as HTMLElement).style.display = 'none';
-                                    }}
-                                  />
-                                ) : (
-                                  <FolderOpen size={18} className="text-[#E2DCC8]" />
-                                )}
-                              </div>
-
-                              <div className="flex-1 min-w-0">
-                                <h4 className="font-bold text-white text-xs truncate group-hover:text-[#E2DCC8]">{sub.name}</h4>
-                                <p className="text-[9px] font-mono text-slate-400">
-                                  {subProductCount} products
-                                </p>
-                              </div>
+                              <span className="text-[9px] font-mono text-slate-500 shrink-0">{subProductCount} p</span>
                             </button>
                           );
                         })}
@@ -426,30 +499,53 @@ const CatalogSetup: React.FC = () => {
               })}
 
               {filteredCategories.length === 0 && (
-                <div className="col-span-full bg-[#161616] border border-[#262626] p-8 rounded-xl text-center space-y-3">
+                <div className="col-span-full bg-[#161616] border border-[#262626] p-12 rounded-xl text-center space-y-3">
                   <Box className="mx-auto text-slate-500" size={36} />
                   <p className="font-space text-sm font-bold text-white">No matching categories found</p>
-                  <p className="text-xs text-slate-400">Try searching for a different name or clear the filter.</p>
+                  <p className="text-xs text-slate-400">
+                    No categories match "{categorySearch}". Try another keyword or clear the search.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setCategorySearch('')}
+                    className="px-3 py-1.5 bg-[#202020] hover:bg-[#282828] border border-[#333] text-xs font-bold text-[#E2DCC8] rounded-md transition-colors"
+                  >
+                    Clear Filter
+                  </button>
                 </div>
               )}
             </div>
 
-            {/* Next Step Button */}
-            <div className="pt-2 flex items-center justify-between">
+            {/* Non-overlapping Sticky Bottom Action Bar */}
+            <div className="sticky bottom-0 z-20 bg-[#100F0F]/95 backdrop-blur-md border-t border-[#262626] pt-3 pb-2 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-2xl">
               <button
                 type="button"
                 onClick={() => setStep(1)}
-                className="px-4 py-2.5 bg-[#181818] hover:bg-[#222] border border-[#2a2a2a] text-[#888888] hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                className="px-4 py-2.5 bg-[#181818] hover:bg-[#222] border border-[#2a2a2a] text-[#888888] hover:text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors order-2 sm:order-1"
               >
                 <ArrowLeft size={14} />
-                <span>Back</span>
+                <span>Back to Identity</span>
               </button>
+
+              <div className="text-center order-1 sm:order-2">
+                <span className="text-xs text-[#888888] font-medium">
+                  {selectedCategoryIds.length === 0 ? (
+                    <span className="text-amber-400 font-semibold">Select at least one category to proceed</span>
+                  ) : (
+                    <span>
+                      Ready to build schema with{' '}
+                      <strong className="text-white font-mono">{selectedCategoryIds.length}</strong> {selectedCategoryIds.length === 1 ? 'category' : 'categories'} ({' '}
+                      <strong className="text-[#00a651] font-mono">{totalSelectedProducts}</strong> products)
+                    </span>
+                  )}
+                </span>
+              </div>
 
               <button
                 type="button"
                 onClick={() => setStep(3)}
                 disabled={selectedCategoryIds.length === 0}
-                className="px-8 py-3.5 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#175f61] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-lg font-black text-xs uppercase tracking-wider shadow-xl shadow-[#0F3D3E]/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#175f61] border border-[#E2DCC8]/40 text-[#E2DCC8] hover:text-white rounded-lg font-black text-xs uppercase tracking-wider shadow-xl shadow-[#0F3D3E]/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 order-3"
               >
                 <span>Next: Table Schema Builder (Phase 03)</span>
                 <ChevronRight size={16} />

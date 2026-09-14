@@ -5,6 +5,7 @@ import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import { elementToFabricObject } from '../Editor/fabricRenderer';
 import { jsPDF } from 'jspdf';
+import 'svg2pdf.js';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
 const PublicViewer: React.FC = () => {
@@ -23,30 +24,32 @@ const PublicViewer: React.FC = () => {
   const currentPage = catalog.pages[currentPageIndex];
   const { products } = useStore.getState();
   const isLandscape = currentPage?.orientation === 'landscape';
-  const pageW = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
-  const pageH = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+  const effectiveWidth = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+  const effectiveHeight = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
 
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasRef.current || !catalog) return;
     const canvas = new Canvas(canvasRef.current, {
-      width: pageW,
-      height: pageH,
+      width: effectiveWidth,
+      height: effectiveHeight,
       selection: false,
-      interactive: false,
+      renderOnAddRemove: true,
     });
     fabricRef.current = canvas;
 
     const render = async () => {
       canvas.clear();
-      canvas.backgroundColor = catalog.backgroundColor || '#ffffff';
-      const footerYOffset = pageH - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
+      canvas.backgroundColor = currentPage?.backgroundColor || theme.colors.background;
 
-      const pageCategory = getPageCategoryName(currentPage, [], products, catalog);
+      const pageHasHeader = currentPage.hasHeader !== undefined ? currentPage.hasHeader : (catalog.hasHeader && currentPage.type !== 'cover');
+      const pageHasFooter = currentPage.hasFooter !== undefined ? currentPage.hasFooter : (catalog.hasFooter && currentPage.type !== 'cover');
+      const footerYOffset = effectiveHeight - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
+
       const dynamicContext = {
         pageNumber: currentPageIndex + 1,
         totalPages: catalog.pages.length,
         catalogName: catalog.name || 'Catalog',
-        categoryName: pageCategory,
+        categoryName: getPageCategoryName(currentPage, [], products, catalog),
         companyName: (catalog as any).company || 'V-TAC',
         year: new Date().getFullYear(),
       };
@@ -57,30 +60,29 @@ const PublicViewer: React.FC = () => {
           zIndex: el.zIndex !== undefined ? el.zIndex : 0,
           text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
         })),
-        ...(catalog.hasHeader !== false ? (catalog.headerElements || []).map((el, idx) => ({
+        ...(pageHasHeader ? (catalog.headerElements || []).map((el: any, idx: number) => ({
           ...el,
           zIndex: 1000 + (el.zIndex !== undefined ? el.zIndex : idx),
           text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
         })) : []),
-        ...(catalog.hasFooter !== false ? (catalog.footerElements || []).map((el, idx) => ({
+        ...(pageHasFooter ? (catalog.footerElements || []).map((el: any, idx: number) => ({
           ...el,
           zIndex: 2000 + (el.zIndex !== undefined ? el.zIndex : idx),
-          y: (el.y || 0) + footerYOffset,
+          y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerYOffset),
           text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
         })) : []),
       ];
 
-      const objects = await Promise.all(
-        allElements
-          .filter(el => el.visible !== false)
-          .map(el => elementToFabricObject(el, products)),
-      );
-
-      objects.filter(Boolean).forEach((obj: any, i: number) => {
-        obj.set('zIndex', allElements[i]?.zIndex || 0);
-        obj.set({ selectable: false, evented: false });
-        canvas.add(obj);
-      });
+      for (const el of allElements) {
+        if (el.visible === false) continue;
+        const obj = await elementToFabricObject(el, products, catalog);
+        if (obj) {
+          obj.selectable = false;
+          obj.evented = false;
+          (obj as any).zIndex = el.zIndex;
+          canvas.add(obj);
+        }
+      }
 
       canvas._objects.sort((a: any, b: any) => (a.get('zIndex') || 0) - (b.get('zIndex') || 0));
       canvas.renderAll();
@@ -97,9 +99,50 @@ const PublicViewer: React.FC = () => {
     if (!canvas) { setIsDownloading(false); return; }
 
     if (format === 'pdf') {
-      const pdf = new jsPDF({ orientation: 'portrait', unit: 'pt', format: [PAGE_WIDTH, PAGE_HEIGHT] });
-      const dataUrl = canvas.toDataURL({ multiplier: 2, format: 'jpeg' });
-      pdf.addImage(dataUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+      const pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'pt',
+        format: [effectiveWidth, effectiveHeight]
+      });
+
+      let renderedVector = false;
+      let tempContainer: HTMLDivElement | null = null;
+      try {
+        const svgString = canvas.toSVG({
+          width: `${effectiveWidth}pt`,
+          height: `${effectiveHeight}pt`,
+          viewBox: { x: 0, y: 0, width: effectiveWidth, height: effectiveHeight }
+        });
+
+        if (svgString && svgString.includes('<svg')) {
+          tempContainer = document.createElement('div');
+          tempContainer.style.position = 'fixed';
+          tempContainer.style.left = '-99999px';
+          tempContainer.style.top = '-99999px';
+          tempContainer.style.opacity = '0';
+          tempContainer.style.pointerEvents = 'none';
+          tempContainer.innerHTML = svgString;
+          document.body.appendChild(tempContainer);
+
+          const svgEl = tempContainer.querySelector('svg');
+          if (svgEl) {
+            await pdf.svg(svgEl, { x: 0, y: 0, width: effectiveWidth, height: effectiveHeight });
+            renderedVector = true;
+          }
+        }
+      } catch (vectorErr) {
+        console.warn('Vector PDF export failed, falling back to raster:', vectorErr);
+      } finally {
+        if (tempContainer && document.body.contains(tempContainer)) {
+          document.body.removeChild(tempContainer);
+        }
+      }
+
+      if (!renderedVector) {
+        const dataUrl = canvas.toDataURL({ multiplier: 2, format: 'jpeg' });
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, effectiveWidth, effectiveHeight);
+      }
+
       pdf.save(`${catalog!.name}_Page_${currentPageIndex + 1}.pdf`);
     } else {
       const mimeType = format === 'png' ? 'image/png' : 'image/jpeg';

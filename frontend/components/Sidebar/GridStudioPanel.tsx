@@ -4,10 +4,11 @@ import {
   ArrowUp, ArrowDown, Check, Package, Palette,
   Upload, Layers, Zap, SlidersHorizontal, ChevronRight,
   ChevronLeft, ChevronDown, Grid, MoveRight, MoveLeft, ExternalLink,
-  FileText, Copy, ArrowRightLeft, Eye, CheckCircle2, Search
+  FileText, Copy, ArrowRightLeft, Eye, CheckCircle2, Search, Table
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category } from '../../types';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { normalizeImageUrl, resolveProductImage, resolveProductTitle } from '../../utils/imageUtils';
 import { resolveFieldLabel } from '../../utils/fieldUtils';
 
@@ -150,13 +151,14 @@ const PRESET_TITLE_COLORS = ['#00a651', '#0F3D3E', '#E2DCC8', '#38bdf8', '#f59e0
 
 export const extractSectionsFromPage = (page: CatalogPage | undefined): ProductGridSection[] => {
   if (!page || !page.elements) return [];
+  if (page.type === 'cover' || page.type === 'index' || page.type === 'closing') return [];
 
   const tables = page.elements.filter(el => el.type === 'table');
+  if (tables.length === 0) return [];
+
   const titles = page.elements.filter(el => el.type === 'text' && (el.fontSize || 14) >= 18);
   const images = page.elements.filter(el => el.type === 'image');
   const backgrounds = page.elements.filter(el => el.type === 'shape' && (el.width || 0) >= 500);
-
-  if (titles.length < 1 && tables.length < 1) return [];
 
   const sortedTitles = [...titles].sort((a, b) => a.y - b.y);
   if (sortedTitles.length > 0) {
@@ -429,13 +431,13 @@ const generateRowFromProduct = (
 export const GridStudioPanel: React.FC = () => {
   const {
     catalog, currentPageIndex, setCurrentPageIndex, products, categories,
-    mediaItems, adminAssets, addMedia, fetchMedia,
+    mediaItems, adminAssets, addMedia, fetchMedia, addElement,
     setEditorTab, applyProductGridToPage, reflowCatalogPages,
     swapPageSections, deletePageSection, addInteriorPageWithInheritedLayout,
     autoGenerateCatalogFromAllCategories
   } = useStore();
 
-  const [viewMode, setViewMode] = useState<'editor' | 'overview'>('editor');
+  const [viewMode, setViewMode] = useState<'editor' | 'overview' | 'single-items'>('editor');
   const [showPageSelector, setShowPageSelector] = useState(false);
   const pageSelectorRef = useRef<HTMLDivElement>(null);
 
@@ -469,6 +471,9 @@ export const GridStudioPanel: React.FC = () => {
 
   const [sections, setSections] = useState<ProductGridSection[]>(() => {
     const page = catalog?.pages?.[currentPageIndex];
+    if (page?.type === 'cover' || page?.type === 'index' || page?.type === 'closing') {
+      return [];
+    }
     const extracted = extractSectionsFromPage(page);
     if (extracted.length >= 1) return extracted;
     return generateSectionsFromRealProducts(page, currentPageIndex, products, categories);
@@ -478,10 +483,14 @@ export const GridStudioPanel: React.FC = () => {
   useEffect(() => {
     const page = catalog?.pages?.[currentPageIndex];
     if (page) {
+      if (page.type === 'cover' || page.type === 'index' || page.type === 'closing') {
+        setSections([]);
+        return;
+      }
       const extracted = extractSectionsFromPage(page);
       if (extracted.length >= 1) {
         setSections(extracted);
-      } else if (page.type !== 'cover' && page.type !== 'index' && page.type !== 'closing') {
+      } else {
         setSections(generateSectionsFromRealProducts(page, currentPageIndex, products, categories));
       }
     }
@@ -509,6 +518,308 @@ export const GridStudioPanel: React.FC = () => {
   const [linkRowSearch, setLinkRowSearch] = useState('');
   const [linkRowCategory, setLinkRowCategory] = useState<string>('all');
   const [highlightedSecIdx, setHighlightedSecIdx] = useState<number | null>(null);
+
+  // Single Items Placement State
+  const [singleCategoryFilter, setSingleCategoryFilter] = useState<string>('all');
+  const [singleSearch, setSingleSearch] = useState<string>('');
+  const [singleItemFeedback, setSingleItemFeedback] = useState<string | null>(null);
+
+  const showSingleFeedback = (msg: string) => {
+    setSingleItemFeedback(msg);
+    setTimeout(() => setSingleItemFeedback(null), 3000);
+  };
+
+  const calculateElementPlacement = (itemWidth: number, itemHeight: number) => {
+    const currentPage = catalog?.pages?.[currentPageIndex];
+    const elements = currentPage?.elements || [];
+    const marginX = catalog?.marginLeft ? Math.round(catalog.marginLeft) : 45;
+    const marginTop = catalog?.marginTop ? Math.round(catalog.marginTop) : 55;
+    const marginBottom = catalog?.marginBottom ? Math.round(catalog.marginBottom) : 55;
+    const marginRight = catalog?.marginRight ? Math.round(catalog.marginRight) : 45;
+    const pageWidth = PAGE_WIDTH || 794;
+    const pageHeight = PAGE_HEIGHT || 1123;
+
+    // Check if there is an unoccupied slot
+    const slots = elements.filter(el => el.id && el.id.includes('slot'));
+    const occupiedSlotIds = new Set(
+      elements
+        .filter(el => el.productId)
+        .map(el => {
+          const parts = (el.id || '').split('-');
+          const idx = parts.findIndex(p => p === 'slot');
+          return idx !== -1 && idx + 1 < parts.length ? `slot-${parts[idx + 1]}` : null;
+        })
+        .filter(Boolean)
+    );
+
+    const targetSlot = slots.find(s => {
+      const parts = (s.id || '').split('-');
+      const idx = parts.findIndex(p => p === 'slot');
+      if (idx !== -1 && idx + 1 < parts.length) {
+        return !occupiedSlotIds.has(`slot-${parts[idx + 1]}`);
+      }
+      return true;
+    });
+
+    if (targetSlot) {
+      return {
+        x: targetSlot.x,
+        y: targetSlot.y,
+        width: targetSlot.width,
+        height: targetSlot.height
+      };
+    }
+
+    // Place below existing elements if room available
+    const nonHeaderElements = elements.filter(el => (el.y || 0) >= marginTop);
+    if (nonHeaderElements.length > 0) {
+      const maxY = Math.max(...nonHeaderElements.map(el => (el.y || 0) + (el.height || 0)));
+      if (maxY + itemHeight + 20 <= pageHeight - marginBottom) {
+        return {
+          x: marginX,
+          y: maxY + 20,
+          width: itemWidth,
+          height: itemHeight
+        };
+      }
+    }
+
+    // Stagger fallback based on elements count
+    const count = elements.length % 6;
+    const staggerX = Math.min(marginX + count * 28, pageWidth - itemWidth - marginRight);
+    const staggerY = Math.min(marginTop + 20 + count * 28, pageHeight - itemHeight - marginBottom);
+
+    return {
+      x: Math.max(marginX, staggerX),
+      y: Math.max(marginTop, staggerY),
+      width: itemWidth,
+      height: itemHeight
+    };
+  };
+
+  const handleAddSingleCard = (product: Product) => {
+    const timestamp = Date.now();
+    const placement = calculateElementPlacement(260, 320);
+
+    addElement(currentPageIndex, {
+      id: `product-block-${product.id}-${timestamp}`,
+      type: 'product-block',
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height,
+      rotation: 0,
+      opacity: 1,
+      productId: product.id,
+      productData: product,
+      showPrice: true,
+      showSku: true,
+      showName: true,
+      zIndex: 20
+    });
+
+    showSingleFeedback(`Card for "${product.name}" added to Page ${currentPageIndex + 1}!`);
+  };
+
+  const handleAddSingleImage = (product: Product) => {
+    const timestamp = Date.now();
+    const imgUrl = normalizeImageUrl(
+      product.image ||
+      (product.customFields && Object.values(product.customFields).find(v => typeof v === 'string' && (v.startsWith('/media') || v.startsWith('http')))) as string ||
+      ''
+    );
+
+    if (!imgUrl) {
+      alert("This product does not have an image attached.");
+      return;
+    }
+
+    const placement = calculateElementPlacement(240, 200);
+
+    addElement(currentPageIndex, {
+      id: `product-img-${product.id}-${timestamp}`,
+      type: 'image',
+      x: placement.x,
+      y: placement.y,
+      width: 240,
+      height: 200,
+      rotation: 0,
+      opacity: 1,
+      src: imgUrl,
+      productId: product.id,
+      zIndex: 15
+    });
+
+    showSingleFeedback(`Image for "${product.name}" added to Page ${currentPageIndex + 1}!`);
+  };
+
+  const handleAddSingleTable = (product: Product) => {
+    const timestamp = Date.now();
+    const placement = calculateElementPlacement(480, 160);
+
+    let headers: string[] = [];
+    let rows: string[][] = [];
+
+    if (product.variants && product.variants.length > 0) {
+      headers = ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'PRICE', 'PACKING'];
+      rows = product.variants.map(v => [
+        v.sku || product.sku || '',
+        v.name || product.name || '',
+        v.cutOut || '75MM',
+        v.color || 'W, W.W, N.W',
+        typeof v.price === 'number' ? `${product.currency || '$'}${v.price}` : (v.price || `${product.currency || '$'}${product.price}`),
+        v.packing || '20 PCS'
+      ]);
+    } else {
+      headers = ['MODEL / SKU', 'PRODUCT NAME', 'PRICE'];
+      rows = [
+        [product.sku || '-', product.name || '-', `${product.currency || '$'}${product.price || '-'}`]
+      ];
+      if (product.customFields) {
+        Object.entries(product.customFields).forEach(([k, v]) => {
+          if (v && typeof v !== 'object') {
+            const label = resolveFieldLabel(k, categories, product) || k;
+            rows.push([label.toUpperCase(), String(v), '-']);
+          }
+        });
+      }
+    }
+
+    const calculatedHeight = Math.max(85, rows.length * 28 + 35);
+
+    addElement(currentPageIndex, {
+      id: `product-table-${product.id}-${timestamp}`,
+      type: 'table',
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: calculatedHeight,
+      rotation: 0,
+      opacity: 1,
+      productId: product.id,
+      zIndex: 20,
+      tableData: {
+        headers,
+        rows,
+        headerBg: '#002b36',
+        headerTextColor: '#ffffff',
+        alternateRowBg: '#f8fafc',
+        rowBg: '#ffffff',
+        borderColor: '#002b36',
+        fontSize: 8,
+        headerFontSize: 8.5,
+        cellPadding: 4
+      }
+    });
+
+    showSingleFeedback(`Specification table for "${product.name}" added to Page ${currentPageIndex + 1}!`);
+  };
+
+  const handleAddSingleFullSection = (product: Product) => {
+    const timestamp = Date.now();
+    const imgUrl = normalizeImageUrl(
+      product.image ||
+      (product.customFields && Object.values(product.customFields).find(v => typeof v === 'string' && (v.startsWith('/media') || v.startsWith('http')))) as string ||
+      ''
+    );
+
+    const placement = calculateElementPlacement(704, 180);
+    const startY = placement.y;
+
+    // Title
+    addElement(currentPageIndex, {
+      id: `sec-title-${product.id}-${timestamp}`,
+      type: 'text',
+      x: imgUrl ? 320 : 45,
+      y: startY,
+      width: imgUrl ? 429 : 704,
+      height: 30,
+      text: product.name.toUpperCase(),
+      fontSize: 20,
+      fontFamily: 'Montserrat',
+      fontWeight: '900',
+      fill: '#00a651',
+      letterSpacing: 0.5,
+      rotation: 0,
+      opacity: 1,
+      productId: product.id,
+      zIndex: 10
+    });
+
+    // Hero Image (if available)
+    if (imgUrl) {
+      addElement(currentPageIndex, {
+        id: `sec-img-${product.id}-${timestamp}`,
+        type: 'image',
+        x: 45,
+        y: startY,
+        width: 240,
+        height: 160,
+        src: imgUrl,
+        rotation: 0,
+        opacity: 1,
+        productId: product.id,
+        zIndex: 5
+      });
+    }
+
+    // Spec / Variant Table
+    let headers = ['MODEL NO', 'PRODUCTS', 'PRICE'];
+    let rows: string[][] = [];
+    if (product.variants && product.variants.length > 0) {
+      headers = ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'PRICE', 'PACKING'];
+      rows = product.variants.map(v => [
+        v.sku || product.sku || '',
+        v.name || product.name || '',
+        v.cutOut || '75MM',
+        v.color || 'W, W.W, N.W',
+        typeof v.price === 'number' ? `${product.currency || '$'}${v.price}` : (v.price || `${product.currency || '$'}${product.price}`),
+        v.packing || '20 PCS'
+      ]);
+    } else {
+      rows = [
+        [product.sku || '-', product.name || '-', `${product.currency || '$'}${product.price || '-'}`]
+      ];
+    }
+
+    addElement(currentPageIndex, {
+      id: `sec-table-${product.id}-${timestamp}`,
+      type: 'table',
+      x: imgUrl ? 320 : 45,
+      y: startY + 35,
+      width: imgUrl ? 429 : 704,
+      height: Math.max(80, rows.length * 26 + 32),
+      rotation: 0,
+      opacity: 1,
+      productId: product.id,
+      zIndex: 20,
+      tableData: {
+        headers,
+        rows,
+        headerBg: '#002b36',
+        headerTextColor: '#ffffff',
+        alternateRowBg: '#f8fafc',
+        rowBg: '#ffffff',
+        borderColor: '#002b36',
+        fontSize: 8,
+        headerFontSize: 8.5,
+        cellPadding: 4
+      }
+    });
+
+    showSingleFeedback(`Full showcase for "${product.name}" added to Page ${currentPageIndex + 1}!`);
+  };
+
+  const filteredSingleProducts = products.filter(p => {
+    const matchesCat = singleCategoryFilter === 'all' || String(p.categoryId) === String(singleCategoryFilter);
+    const q = singleSearch.trim().toLowerCase();
+    const matchesSearch = !q || (
+      p.name.toLowerCase().includes(q) ||
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q))
+    );
+    return matchesCat && matchesSearch;
+  });
 
   // Close popup menus on outside click
   useEffect(() => {
@@ -547,6 +858,19 @@ export const GridStudioPanel: React.FC = () => {
     setShowPageSelector(false);
     window.dispatchEvent(new CustomEvent('catalog:scrollToPage', { detail: { pageIndex: idx } }));
   };
+
+  // Auto-navigate to first interior/product grid page on mount if currently on cover
+  useEffect(() => {
+    const activeP = catalog?.pages?.[currentPageIndex];
+    if (activeP?.type === 'cover' && catalog?.pages && catalog.pages.length > 1) {
+      const firstProductPageIdx = catalog.pages.findIndex(
+        p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing'
+      );
+      if (firstProductPageIdx !== -1 && firstProductPageIdx !== currentPageIndex) {
+        navigateToPage(firstProductPageIdx);
+      }
+    }
+  }, []);
 
   // Helper to commit state updates and live-apply immediately to active catalog page
   const updateAndApplySections = (updater: (prev: ProductGridSection[]) => ProductGridSection[]) => {
@@ -1064,6 +1388,7 @@ export const GridStudioPanel: React.FC = () => {
 
   const activePage = catalog.pages[currentPageIndex];
   const isSpecialPage = activePage?.type === 'cover' || activePage?.type === 'index' || activePage?.type === 'closing';
+  const firstProductPageIdx = catalog.pages.findIndex(p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing');
 
   return (
     <div className="flex flex-col h-full w-full bg-[#141414] text-white border-r border-[#262626] font-sans overflow-hidden">
@@ -1086,14 +1411,6 @@ export const GridStudioPanel: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setEditorTab('products')}
-              className="px-2 py-0.5 rounded text-[9px] font-bold text-slate-400 hover:text-[#E2DCC8] hover:bg-[#222] transition-colors uppercase tracking-wider"
-              title="Switch to Product Library"
-            >
-              Products
-            </button>
             <button
               type="button"
               onClick={() => setEditorTab(null)}
@@ -1175,8 +1492,8 @@ export const GridStudioPanel: React.FC = () => {
             )}
           </div>
 
-          {/* Mode Tabs: [ ✏️ Editor ] | [ 🗂️ Grid Map ] */}
-          <div className="flex items-center bg-[#1e1e1e] border border-[#333] rounded-[4px] p-0.5">
+          {/* Mode Tabs: [ ✏️ 3-Grid Editor ] | [ 📦 Single Items ] | [ 🗂️ Grid Map ] */}
+          <div className="flex items-center bg-[#1e1e1e] border border-[#333] rounded-[4px] p-0.5 gap-0.5">
             <button
               type="button"
               onClick={() => setViewMode('editor')}
@@ -1185,8 +1502,21 @@ export const GridStudioPanel: React.FC = () => {
                   ? 'bg-[#0F3D3E] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
+              title="3-Product Section Grid Editor"
             >
-              <SlidersHorizontal size={10} /> Editor
+              <Grid size={10} /> 3-Grid Editor
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('single-items')}
+              className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+                viewMode === 'single-items'
+                  ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm border border-[#E2DCC8]/30'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+              title="Browse and place individual product cards, photos, or spec tables"
+            >
+              <Package size={10} /> Single Items
             </button>
             <button
               type="button"
@@ -1196,6 +1526,7 @@ export const GridStudioPanel: React.FC = () => {
                   ? 'bg-[#0F3D3E] text-white shadow-sm'
                   : 'text-slate-400 hover:text-white'
               }`}
+              title="Multi-page Grid Organizer"
             >
               <Layers size={10} /> Grid Map
             </button>
@@ -1413,19 +1744,290 @@ export const GridStudioPanel: React.FC = () => {
             );
           })}
         </div>
-      ) : (
-        /* ================= MODE 2: SINGLE PAGE DETAILED EDITOR ================= */
-        <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar bg-[#121212]">
-          {isSpecialPage && (
-            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-[6px] text-amber-200 text-[10px] space-y-1">
-              <p className="font-bold">⚠️ Current page is a {activePage?.type} page.</p>
-              <p className="text-[9px] text-amber-300/80">
-                Product Grids are optimized for interior/product pages. Use the page switcher above to select a product page.
+      ) : viewMode === 'single-items' ? (
+        /* ================= MODE 3: SINGLE PRODUCT & ITEM INSERTER ================= */
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#121212]">
+          {/* Header banner */}
+          <div className="flex items-center justify-between pb-3 border-b border-[#222]">
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[12px] font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                  <Package size={14} className="text-[#00a651]" /> Single Product Placement
+                </h3>
+                <span className="px-2 py-0.5 rounded bg-[#0F3D3E] text-[#E2DCC8] text-[9px] font-mono font-bold border border-[#E2DCC8]/20">
+                  Target: Page {currentPageIndex + 1}
+                </span>
+              </div>
+              <p className="text-[9px] text-slate-400 mt-0.5">
+                Drop individual cards, images, or spec tables onto Page {currentPageIndex + 1} without altering existing page layout.
               </p>
+            </div>
+
+            {/* Quick count badge */}
+            <div className="text-[10px] text-[#E2DCC8]/80 font-mono font-bold bg-[#181818] border border-[#2a2a2a] px-2.5 py-1 rounded">
+              {filteredSingleProducts.length} items
+            </div>
+          </div>
+
+          {/* Feedback Toast */}
+          {singleItemFeedback && (
+            <div className="p-2.5 rounded bg-[#0F3D3E] border border-[#00a651]/50 text-[#F1F1F1] text-xs font-semibold flex items-center justify-between shadow-lg animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={16} className="text-[#00a651] shrink-0" />
+                <span>{singleItemFeedback}</span>
+              </div>
+              <span className="text-[9px] text-[#E2DCC8] uppercase tracking-wider font-mono bg-black/30 px-2 py-0.5 rounded">Added</span>
             </div>
           )}
 
-          {sections.map((sec, secIdx) => {
+          {/* Search Bar & Category Chips */}
+          <div className="space-y-2.5">
+            {/* Search Input */}
+            <div className="relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={singleSearch}
+                onChange={(e) => setSingleSearch(e.target.value)}
+                placeholder="Search products by title, SKU, description..."
+                className="w-full bg-[#181818] border border-[#333] focus:border-[#0F3D3E] rounded-[4px] pl-9 pr-8 py-2 text-xs text-[#F1F1F1] placeholder:text-slate-500 outline-none transition-colors"
+              />
+              {singleSearch && (
+                <button
+                  type="button"
+                  onClick={() => setSingleSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSingleCategoryFilter('all')}
+                className={`px-2.5 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
+                  singleCategoryFilter === 'all'
+                    ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-sm'
+                    : 'bg-[#181818] text-slate-400 border border-[#2a2a2a] hover:text-white hover:bg-[#202020]'
+                }`}
+              >
+                All Categories ({products.length})
+              </button>
+
+              {categories.map((cat) => {
+                const catCount = products.filter(p => String(p.categoryId) === String(cat.id)).length;
+                const isSelected = singleCategoryFilter === String(cat.id);
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSingleCategoryFilter(String(cat.id))}
+                    className={`px-2.5 py-1 rounded-[3px] text-[10px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                      isSelected
+                        ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-sm'
+                        : 'bg-[#181818] text-slate-400 border border-[#2a2a2a] hover:text-white hover:bg-[#202020]'
+                    }`}
+                  >
+                    <span
+                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                      style={{ backgroundColor: cat.color || '#00a651' }}
+                    />
+                    <span>{cat.name}</span>
+                    <span className="text-[9px] opacity-60 font-mono">({catCount})</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Product Grid of Single Items */}
+          {filteredSingleProducts.length === 0 ? (
+            <div className="py-12 text-center border border-dashed border-[#262626] rounded-[6px] bg-[#161616]/40">
+              <Package size={28} className="mx-auto text-slate-600 mb-2" />
+              <p className="text-xs font-semibold text-slate-300">No products match your search</p>
+              <p className="text-[10px] text-slate-500 mt-0.5">Try searching with a different keyword or selecting 'All Categories'.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {filteredSingleProducts.map((product) => {
+                const cat = categories.find(c => String(c.id) === String(product.categoryId));
+                const imgUrl = normalizeImageUrl(
+                  product.image ||
+                  (product.customFields && Object.values(product.customFields).find(v => typeof v === 'string' && (v.startsWith('/media') || v.startsWith('http')))) as string ||
+                  ''
+                );
+                const hasVariants = product.variants && product.variants.length > 0;
+
+                return (
+                  <div
+                    key={product.id}
+                    draggable
+                    onDragStart={(e) => {
+                      const dragData = {
+                        type: 'product',
+                        url: imgUrl,
+                        name: product.name,
+                        productId: product.id
+                      };
+                      e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+                    }}
+                    className="group relative bg-[#181818] hover:bg-[#1c1c1c] border border-[#282828] hover:border-[#0F3D3E] rounded-[4px] p-3 transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing hover:shadow-lg"
+                  >
+                    <div>
+                      {/* Card Header: Category & Price */}
+                      <div className="flex items-center justify-between gap-1 mb-2">
+                        <span className="text-[9px] font-bold text-[#E2DCC8]/80 truncate bg-[#222] px-1.5 py-0.5 rounded border border-[#333]">
+                          {cat?.name || 'General'}
+                        </span>
+                        <span className="text-[10px] font-bold text-[#00a651] font-mono shrink-0">
+                          {product.currency || '$'}{product.price}
+                        </span>
+                      </div>
+
+                      {/* Product Thumbnail Preview */}
+                      <div className="w-full h-28 bg-[#121212] rounded-[3px] border border-[#222] mb-2.5 overflow-hidden flex items-center justify-center relative">
+                        {imgUrl ? (
+                          <img
+                            src={imgUrl}
+                            alt={product.name}
+                            className="w-full h-full object-contain p-1 group-hover:scale-105 transition-transform duration-200"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex flex-col items-center gap-1 text-slate-600">
+                            <Package size={24} />
+                            <span className="text-[8px] uppercase tracking-wider">No Image</span>
+                          </div>
+                        )}
+                        {hasVariants && (
+                          <span className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-[#0F3D3E]/90 border border-[#E2DCC8]/30 text-[#E2DCC8] text-[8px] font-mono font-bold shadow">
+                            {product.variants!.length} Variants
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Product Info */}
+                      <div className="space-y-0.5 mb-3">
+                        <h4 className="text-xs font-bold text-[#F1F1F1] line-clamp-2 leading-snug group-hover:text-[#E2DCC8] transition-colors" title={product.name}>
+                          {product.name}
+                        </h4>
+                        {product.sku && (
+                          <p className="text-[9px] text-slate-400 font-mono">
+                            SKU: <span className="text-slate-300 font-semibold">{product.sku}</span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Quick Action Buttons */}
+                    <div className="space-y-1.5 pt-2 border-t border-[#252525]">
+                      {/* Primary: Add Card Block */}
+                      <button
+                        type="button"
+                        onClick={() => handleAddSingleCard(product)}
+                        className="w-full py-1.5 px-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] hover:text-white rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm border border-[#E2DCC8]/25"
+                        title={`Add full product card to Page ${currentPageIndex + 1}`}
+                      >
+                        <Package size={11} /> + Add Card Block
+                      </button>
+
+                      {/* Secondary Actions Grid */}
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleAddSingleImage(product)}
+                          disabled={!imgUrl}
+                          className="py-1 px-1.5 bg-[#202020] hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-[#202020] text-[#E2DCC8] rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border border-[#333] transition-all"
+                          title="Drop high-res photo only"
+                        >
+                          <ImageIcon size={10} /> + Photo
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleAddSingleTable(product)}
+                          className="py-1 px-1.5 bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border border-[#333] transition-all"
+                          title="Drop specification / variant table"
+                        >
+                          <Table size={10} /> + Specs
+                        </button>
+                      </div>
+
+                      {/* Full Section Row */}
+                      <button
+                        type="button"
+                        onClick={() => handleAddSingleFullSection(product)}
+                        className="w-full py-1 px-2 bg-[#1c1c1c] hover:bg-[#242424] text-slate-300 hover:text-white rounded-[3px] text-[8.5px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-[#2e2e2e] transition-all"
+                        title="Add complete row with Photo + Title + Specs Table"
+                      >
+                        <Sparkles size={9} className="text-[#00a651]" /> Full Line Showcase
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ================= MODE 2: SINGLE PAGE DETAILED EDITOR ================= */
+        <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar bg-[#121212]">
+          {isSpecialPage ? (
+            <div className="py-12 px-6 text-center border border-[#2a2a2a] rounded-[8px] bg-[#161616] space-y-4">
+              <div className="w-12 h-12 rounded-full bg-[#0F3D3E]/40 border border-[#E2DCC8]/20 flex items-center justify-center mx-auto text-[#E2DCC8]">
+                <FileText size={22} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-[#F1F1F1] uppercase tracking-wider">
+                  Page {currentPageIndex + 1} is a {activePage?.type === 'cover' ? 'Cover' : activePage?.type} Page
+                </h3>
+                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Cover pages are reserved for branding, hero imagery, and titles. 3-Product Grids are designed for interior product catalog pages.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 pt-2">
+                {firstProductPageIdx !== -1 && (
+                  <button
+                    type="button"
+                    onClick={() => navigateToPage(firstProductPageIdx)}
+                    className="w-full sm:w-auto px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[4px] text-xs font-bold flex items-center justify-center gap-1.5 transition-all shadow border border-[#E2DCC8]/30"
+                  >
+                    <span>👉 Jump to Product Grid (Page {firstProductPageIdx + 1})</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => setViewMode('single-items')}
+                  className="w-full sm:w-auto px-4 py-2 bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] rounded-[4px] text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-[#333]"
+                >
+                  <Package size={13} />
+                  <span>Insert Single Item Instead</span>
+                </button>
+              </div>
+
+              <div className="pt-4 border-t border-[#222]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("Transform this cover page into a 3-product grid page? This will replace the current page layout with product series.")) {
+                      const newSecs = generateSectionsFromRealProducts(activePage, currentPageIndex, products, categories);
+                      applyProductGridToPage(currentPageIndex, newSecs);
+                      setSections(newSecs);
+                    }
+                  }}
+                  className="text-[10px] text-slate-500 hover:text-amber-400 underline transition-colors"
+                >
+                  Convert this page into a 3-Product Grid anyway
+                </button>
+              </div>
+            </div>
+          ) : (
+            sections.map((sec, secIdx) => {
             const sectionNumber = secIdx + 1;
             const posLabel = secIdx === 0 ? 'Top' : (secIdx === sections.length - 1 ? 'Bottom' : 'Middle');
             const isHighlighted = highlightedSecIdx === secIdx;
@@ -2098,25 +2700,24 @@ export const GridStudioPanel: React.FC = () => {
                 </div>
               </div>
             );
-          })}
+          }))}
         </div>
       )}
 
       {/* ================= PANEL FOOTER ================= */}
-      <div className="p-3 border-t border-[#262626] bg-[#161616] space-y-2 shrink-0">
-
-
-
-        <button
-          type="button"
-          onClick={handleApplyAndReflow}
-          className="w-full py-2 px-3 bg-[#1b2529] hover:bg-[#223136] text-[#E2DCC8] border border-[#0F3D3E]/60 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01] active:scale-[0.99]"
-          title="Reflow all pages across catalog"
-        >
-          <Zap size={12} className="text-[#00a651]" />
-          <span>Auto-Reflow Pages</span>
-        </button>
-      </div>
+      {!isSpecialPage && viewMode === 'editor' && (
+        <div className="p-3 border-t border-[#262626] bg-[#161616] space-y-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleApplyAndReflow}
+            className="w-full py-2 px-3 bg-[#1b2529] hover:bg-[#223136] text-[#E2DCC8] border border-[#0F3D3E]/60 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01] active:scale-[0.99]"
+            title="Reflow all pages across catalog"
+          >
+            <Zap size={12} className="text-[#00a651]" />
+            <span>Auto-Reflow Pages</span>
+          </button>
+        </div>
+      )}
 
       {/* ================= COMPLETE MEDIA GALLERY & UPLOADS MODAL ================= */}
       {imageGalleryPickerSectionIdx !== null && (

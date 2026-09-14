@@ -1,4 +1,5 @@
 import { jsPDF } from 'jspdf';
+import 'svg2pdf.js';
 import { Canvas } from 'fabric';
 import { Catalog, Product } from '../../types';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
@@ -148,23 +149,70 @@ export async function exportCatalogToPDF(
       // Brief wait to ensure image decoding & text rendering
       await new Promise(r => setTimeout(r, 80));
 
-      // Export canvas to high-quality JPEG
-      let dataUrl: string;
-      try {
-        dataUrl = offscreenCanvas.toDataURL({
-          multiplier: 2,
-          format: 'jpeg',
-          quality: 0.95
-        });
-      } catch (taintErr) {
-        console.warn('Offscreen canvas toDataURL tainted, falling back to 1x:', taintErr);
-        dataUrl = hiddenCanvasEl.toDataURL('image/jpeg', 0.92);
-      }
-
       if (i > 0) {
         pdf.addPage([PAGE_WIDTH, PAGE_HEIGHT], 'portrait');
       }
-      pdf.addImage(dataUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT, undefined, 'FAST');
+
+      let renderedVector = false;
+      let tempContainer: HTMLDivElement | null = null;
+      try {
+        // 1. Export canvas to crisp vector SVG markup
+        const svgString = offscreenCanvas.toSVG({
+          width: `${PAGE_WIDTH}pt`,
+          height: `${PAGE_HEIGHT}pt`,
+          viewBox: {
+            x: 0,
+            y: 0,
+            width: PAGE_WIDTH,
+            height: PAGE_HEIGHT
+          }
+        });
+
+        if (svgString && svgString.includes('<svg')) {
+          // Mount SVG temporarily in a hidden DOM element so browser native getBBox() & text measurements resolve accurately
+          tempContainer = document.createElement('div');
+          tempContainer.style.position = 'fixed';
+          tempContainer.style.left = '-99999px';
+          tempContainer.style.top = '-99999px';
+          tempContainer.style.opacity = '0';
+          tempContainer.style.pointerEvents = 'none';
+          tempContainer.innerHTML = svgString;
+          document.body.appendChild(tempContainer);
+
+          const svgEl = tempContainer.querySelector('svg');
+          if (svgEl) {
+            await pdf.svg(svgEl, {
+              x: 0,
+              y: 0,
+              width: PAGE_WIDTH,
+              height: PAGE_HEIGHT
+            });
+            renderedVector = true;
+          }
+        }
+      } catch (vectorErr) {
+        console.warn(`Vector SVG export failed on Page ${i + 1}, falling back to high-res raster:`, vectorErr);
+      } finally {
+        if (tempContainer && document.body.contains(tempContainer)) {
+          document.body.removeChild(tempContainer);
+        }
+      }
+
+      // 2. High-res raster fallback if vector conversion encountered an issue on this page
+      if (!renderedVector) {
+        let dataUrl: string;
+        try {
+          dataUrl = offscreenCanvas.toDataURL({
+            multiplier: 2,
+            format: 'jpeg',
+            quality: 0.95
+          });
+        } catch (taintErr) {
+          console.warn('Offscreen canvas toDataURL tainted, falling back to 1x:', taintErr);
+          dataUrl = hiddenCanvasEl.toDataURL('image/jpeg', 0.92);
+        }
+        pdf.addImage(dataUrl, 'JPEG', 0, 0, PAGE_WIDTH, PAGE_HEIGHT, undefined, 'FAST');
+      }
     }
 
     if (onProgress) {
