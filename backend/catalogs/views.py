@@ -53,10 +53,14 @@ class CatalogViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'], url_path='public/(?P<uuid>[^/.]+)', permission_classes=[permissions.AllowAny])
     def public(self, request, uuid=None):
         try:
-            catalog = Catalog.objects.get(uuid=uuid, status='published')
+            from django.db.models import Q
+            try:
+                catalog = Catalog.objects.get(Q(uuid=uuid) | Q(id=int(uuid)), status='published')
+            except ValueError:
+                catalog = Catalog.objects.get(uuid=uuid, status='published')
             serializer = CatalogSerializer(catalog)
             return Response(serializer.data)
-        except Catalog.DoesNotExist:
+        except Exception:
             return Response({'error': 'Catalog not found or not published'}, status=status.HTTP_404_NOT_FOUND)
 
     def _save_base64_src(self, src, catalog):

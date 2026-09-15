@@ -38,6 +38,8 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
     uiTheme
   } = useStore();
 
+  const isDark = uiTheme === 'dark';
+
   const activeElementId = elementId || editingTableElementId;
 
   // Find which page the element belongs to
@@ -487,30 +489,34 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
       onWheel={(e) => e.stopPropagation()}
     >
       <div
-        className="w-full max-w-5xl rounded-[4px] shadow-2xl border flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200 bg-[#161616] border-[#262626] text-white"
+        className={`w-full max-w-5xl rounded-[4px] shadow-2xl border flex flex-col max-h-[92vh] overflow-hidden animate-in zoom-in-95 duration-200 ${
+          isDark ? 'bg-[#161616] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-900'
+        }`}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
       >
         {/* ================= MODAL HEADER ================= */}
-        <div className="px-6 py-4 border-b flex items-center justify-between shrink-0 border-[#262626] bg-[#141414]">
+        <div className={`px-6 py-4 border-b flex items-center justify-between shrink-0 ${
+          isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+        }`}>
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-[4px] bg-[#0F3D3E] text-white flex items-center justify-center shadow-lg shadow-[#0F3D3E]/25">
               <TableIcon size={20} />
             </div>
             <div>
-              <h2 className="text-base font-bold tracking-tight text-white">Edit Table & Specifications</h2>
+              <h2 className={`text-base font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Edit Table & Specifications</h2>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             {/* View Tabs */}
-            <div className="flex p-1 rounded-[4px] border bg-[#101010] border-[#262626]">
+            <div className={`flex p-1 rounded-[4px] border ${isDark ? 'bg-[#101010] border-[#262626]' : 'bg-slate-100 border-slate-200'}`}>
               <button
                 onClick={() => setActiveTab('data')}
                 className={`px-3 py-1.5 rounded-[4px] text-xs font-bold flex items-center gap-1.5 transition-all ${
                   activeTab === 'data'
                     ? 'bg-[#0F3D3E] text-white shadow-sm'
-                    : 'text-[#888] hover:text-white'
+                    : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <TableIcon size={14} /> Spreadsheet Data
@@ -520,7 +526,7 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                 className={`px-3 py-1.5 rounded-[4px] text-xs font-bold flex items-center gap-1.5 transition-all ${
                   activeTab === 'design'
                     ? 'bg-[#0F3D3E] text-white shadow-sm'
-                    : 'text-[#888] hover:text-white'
+                    : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
                 <Palette size={14} /> Design & Styles
@@ -529,7 +535,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
 
             <button
               onClick={handleClose}
-              className="p-2 rounded-[4px] text-[#888] hover:text-white hover:bg-[#262626] transition-colors"
+              className={`p-2 rounded-[4px] transition-colors ${
+                isDark ? 'text-[#888] hover:text-white hover:bg-[#262626]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              }`}
               title="Close Table Editor"
             >
               <X size={18} />
@@ -538,23 +546,27 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
         </div>
 
         {/* ================= MODAL BODY ================= */}
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#161616]">
+        <div className={`flex-1 overflow-y-auto custom-scrollbar p-6 ${isDark ? 'bg-[#161616]' : 'bg-slate-50/50'}`}>
           {activeTab === 'data' ? (
             <div className="space-y-4">
               {/* Quick Actions Bar */}
-              <div className="flex items-center gap-2 flex-wrap pb-3 border-b border-[#262626]">
+              <div className={`flex items-center gap-2 flex-wrap pb-3 border-b ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
                   {/* Add Column Button with Dropdown for Parameter selection */}
                   <div className="relative" ref={addColMenuRef}>
                     <div className="inline-flex rounded-[4px] shadow-sm">
                       <button
                         onClick={handleAddColumn}
-                        className="px-3.5 py-2 bg-[#202020] hover:bg-[#282828] text-white rounded-l-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all border border-[#2e2e2e]"
+                        className={`px-3.5 py-2 rounded-l-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all border ${
+                          isDark ? 'bg-[#202020] hover:bg-[#282828] text-white border-[#2e2e2e]' : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-sm'
+                        }`}
                       >
-                        <Plus size={14} className="text-[#E2DCC8]" /> Add Column
+                        <Plus size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} /> Add Column
                       </button>
                       <button
                         onClick={() => setIsAddColMenuOpen(!isAddColMenuOpen)}
-                        className="px-2.5 py-2 bg-[#262626] hover:bg-[#303030] text-[#aaa] hover:text-white rounded-r-xl border-y border-r border-[#2e2e2e] flex items-center justify-center transition-all"
+                        className={`px-2.5 py-2 rounded-r-xl border-y border-r flex items-center justify-center transition-all ${
+                          isDark ? 'bg-[#262626] hover:bg-[#303030] text-[#aaa] hover:text-white border-[#2e2e2e]' : 'bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-300'
+                        }`}
                         title="Add column from product parameter"
                       >
                         <ChevronDown size={14} />
@@ -563,19 +575,27 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
 
                     {/* Dropdown Menu for Add Column */}
                     {isAddColMenuOpen && (
-                      <div className="absolute left-0 top-full mt-2 w-64 rounded-[4px] shadow-2xl border bg-[#1a1a1a] border-[#2e2e2e] z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150 text-white">
-                        <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-[#888] border-b border-[#262626]">
+                      <div className={`absolute left-0 top-full mt-2 w-64 rounded-[4px] shadow-2xl border z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150 ${
+                        isDark ? 'bg-[#1a1a1a] border-[#2e2e2e] text-white' : 'bg-white border-slate-200 text-slate-800 shadow-xl'
+                      }`}>
+                        <div className={`px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider border-b ${
+                          isDark ? 'text-[#888] border-[#262626]' : 'text-slate-500 border-slate-200'
+                        }`}>
                           Add Column With Parameter
                         </div>
                         <button
                           onClick={handleAddColumn}
-                          className="w-full text-left px-2.5 py-1.5 rounded-[4px] text-xs font-bold text-slate-200 hover:bg-[#262626] hover:text-white flex items-center justify-between"
+                          className={`w-full text-left px-2.5 py-1.5 rounded-[4px] text-xs font-bold flex items-center justify-between ${
+                            isDark ? 'text-slate-200 hover:bg-[#262626] hover:text-white' : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                          }`}
                         >
                           <span>Empty Blank Column</span>
-                          <span className="text-[10px] text-[#888]">Custom</span>
+                          <span className={`text-[10px] ${isDark ? 'text-[#888]' : 'text-slate-400'}`}>Custom</span>
                         </button>
                         <div className="pt-1 pb-1">
-                          <div className="px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1">
+                          <div className={`px-2 py-1 text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 ${
+                            isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
+                          }`}>
                             <Zap size={10} /> Auto-populate from Product
                           </div>
                           <div className="max-h-56 overflow-y-auto custom-scrollbar space-y-0.5">
@@ -583,10 +603,12 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                               <button
                                 key={idx}
                                 onClick={() => handleAddColumnWithParam(p.key, p.label)}
-                                className="w-full text-left px-2.5 py-1.5 rounded-[4px] text-xs font-medium text-slate-200 hover:bg-[#0F3D3E]/20 hover:text-[#E2DCC8] flex items-center justify-between transition-colors"
+                                className={`w-full text-left px-2.5 py-1.5 rounded-[4px] text-xs font-medium flex items-center justify-between transition-colors ${
+                                  isDark ? 'text-slate-200 hover:bg-[#0F3D3E]/20 hover:text-[#E2DCC8]' : 'text-slate-700 hover:bg-teal-50 hover:text-teal-900'
+                                }`}
                               >
                                 <span>{p.label}</span>
-                                <span className="text-[9px] text-[#888] uppercase">{p.group}</span>
+                                <span className={`text-[9px] uppercase ${isDark ? 'text-[#888]' : 'text-slate-400'}`}>{p.group}</span>
                               </button>
                             ))}
                           </div>
@@ -598,9 +620,11 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                   {/* Add Row Button */}
                   <button
                     onClick={handleAddRow}
-                    className="px-3.5 py-2 bg-[#202020] hover:bg-[#282828] text-white border border-[#2e2e2e] rounded-[4px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all"
+                    className={`px-3.5 py-2 border rounded-[4px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+                      isDark ? 'bg-[#202020] hover:bg-[#282828] text-white border-[#2e2e2e]' : 'bg-white hover:bg-slate-50 text-slate-800 border-slate-300 shadow-sm'
+                    }`}
                   >
-                    <Plus size={14} className="text-[#E2DCC8]" /> Add Blank Row
+                    <Plus size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} /> Add Blank Row
                   </button>
 
                   {/* Add Product Row Button */}
@@ -617,7 +641,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
               </div>
 
               {/* Spreadsheet Grid View */}
-              <div className="border border-[#262626] rounded-[4px] overflow-hidden shadow-sm bg-[#121212]">
+              <div className={`border rounded-[4px] overflow-hidden shadow-sm ${
+                isDark ? 'border-[#262626] bg-[#121212]' : 'border-slate-200 bg-white'
+              }`}>
                 <div className="overflow-x-auto max-h-[55vh] custom-scrollbar">
                   <table className="w-full border-collapse text-left text-xs min-w-[750px]">
                     {/* Table Headers */}
@@ -681,21 +707,25 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                     {activeColParamMenu === colIdx && (
                                       <div
                                         ref={colParamMenuRef}
-                                        className="absolute left-0 top-full mt-2 w-64 rounded-[4px] shadow-2xl border bg-[#1a1a1a] border-[#2e2e2e] text-white z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150"
+                                        className={`absolute left-0 top-full mt-2 w-64 rounded-[4px] shadow-2xl border z-50 p-2 space-y-1 animate-in fade-in zoom-in-95 duration-150 ${
+                                          isDark ? 'bg-[#1a1a1a] border-[#2e2e2e] text-white' : 'bg-white border-slate-200 text-slate-800 shadow-xl'
+                                        }`}
                                       >
-                                        <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-[#888] border-b border-[#262626] flex justify-between items-center">
+                                        <div className={`px-2 py-1 text-[10px] font-bold uppercase tracking-wider border-b flex justify-between items-center ${
+                                          isDark ? 'text-[#888] border-[#262626]' : 'text-slate-500 border-slate-200'
+                                        }`}>
                                           <span>Auto-fill &quot;{header}&quot;</span>
                                           <button
                                             onClick={(e) => {
                                               e.stopPropagation();
                                               setActiveColParamMenu(null);
                                             }}
-                                            className="text-[#888] hover:text-white"
+                                            className={isDark ? "text-[#888] hover:text-white" : "text-slate-400 hover:text-slate-800"}
                                           >
                                             <X size={12} />
                                           </button>
                                         </div>
-                                        <p className="px-2 py-1 text-[10px] text-[#888] leading-tight">
+                                        <p className={`px-2 py-1 text-[10px] leading-tight ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
                                           Select a parameter to populate all rows:
                                         </p>
                                         <div className="max-h-56 overflow-y-auto custom-scrollbar space-y-0.5">
@@ -704,10 +734,12 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                               key={idx}
                                               type="button"
                                               onClick={() => handleFillColumnFromParam(colIdx, p.key, p.label)}
-                                              className="w-full text-left px-2.5 py-1.5 rounded-[4px] text-xs font-medium text-slate-200 hover:bg-[#0F3D3E]/20 hover:text-[#E2DCC8] flex items-center justify-between transition-colors"
+                                              className={`w-full text-left px-2.5 py-1.5 rounded-[4px] text-xs font-medium flex items-center justify-between transition-colors ${
+                                                isDark ? 'text-slate-200 hover:bg-[#0F3D3E]/20 hover:text-[#E2DCC8]' : 'text-slate-700 hover:bg-teal-50 hover:text-teal-900'
+                                              }`}
                                             >
                                               <span>{p.label}</span>
-                                              <span className="text-[9px] text-[#888] uppercase">{p.group}</span>
+                                              <span className={`text-[9px] uppercase ${isDark ? 'text-[#888]' : 'text-slate-400'}`}>{p.group}</span>
                                             </button>
                                           ))}
                                         </div>
@@ -736,17 +768,23 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                     </thead>
 
                     {/* Table Body */}
-                    <tbody className="divide-y divide-[#262626]">
+                    <tbody className={`divide-y ${isDark ? 'divide-[#262626]' : 'divide-slate-200'}`}>
                       {tableData.rows.map((row, rIdx) => {
                         const matchedProd = matchRowToProduct(row);
 
                         return (
                           <tr
                             key={rIdx}
-                            className="group transition-colors hover:bg-[#1f1f1f]"
+                            className={`group transition-colors ${
+                              isDark
+                                ? `${rIdx % 2 === 1 ? 'bg-[#141414]' : 'bg-[#101010]'} hover:bg-[#1f1f1f]`
+                                : `${rIdx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'} hover:bg-teal-50/40`
+                            }`}
                           >
                             {/* Row Index Badge */}
-                            <td className="px-2 py-2 text-center text-[11px] font-bold text-[#666] select-none border-r border-[#262626]">
+                            <td className={`px-2 py-2 text-center text-[11px] font-bold select-none border-r ${
+                              isDark ? 'text-[#666] border-[#262626]' : 'text-slate-400 border-slate-200'
+                            }`}>
                               <div className="flex flex-col items-center">
                                 <span>{rIdx + 1}</span>
                                 {matchedProd && (
@@ -759,13 +797,19 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                             {tableData.headers.map((_, colIdx) => {
                               const cellValue = row[colIdx] ?? '';
                               return (
-                                <td key={colIdx} className="p-1 border-r border-[#262626] last:border-r-0">
+                                <td key={colIdx} className={`p-1 border-r last:border-r-0 ${
+                                  isDark ? 'border-[#262626]' : 'border-slate-200'
+                                }`}>
                                   <input
                                     type="text"
                                     value={cellValue}
                                     onChange={(e) => handleCellChange(rIdx, colIdx, e.target.value)}
                                     placeholder="-"
-                                    className="w-full px-2.5 py-1.5 rounded-[4px] text-xs font-medium outline-none transition-all border border-transparent focus:border-[#0F3D3E] bg-transparent text-slate-100 placeholder:text-[#555] hover:bg-[#1a1a1a]"
+                                    className={`w-full px-2.5 py-1.5 rounded-[4px] text-xs font-medium outline-none transition-all border border-transparent focus:border-[#0F3D3E] bg-transparent ${
+                                      isDark
+                                        ? 'text-slate-100 placeholder:text-[#555] hover:bg-[#1a1a1a]'
+                                        : 'text-slate-800 placeholder:text-slate-400 hover:bg-slate-50'
+                                    }`}
                                   />
                                 </td>
                               );
@@ -781,7 +825,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                     setRowToLinkIdx(rIdx);
                                     setIsProductPickerOpen(true);
                                   }}
-                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                                  className={`p-1 rounded ${
+                                    isDark ? 'text-slate-400 hover:text-teal-400 hover:bg-[#202020]' : 'text-slate-500 hover:text-[#0F3D3E] hover:bg-slate-100'
+                                  }`}
                                   title="Fill row from a catalog product"
                                 >
                                   <Package size={12} />
@@ -790,7 +836,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                   type="button"
                                   disabled={rIdx === 0}
                                   onClick={() => handleMoveRow(rIdx, 'up')}
-                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded disabled:opacity-20"
+                                  className={`p-1 rounded disabled:opacity-20 ${
+                                    isDark ? 'text-slate-400 hover:text-white hover:bg-[#202020]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                  }`}
                                   title="Move Row Up"
                                 >
                                   <ArrowUp size={12} />
@@ -799,7 +847,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                   type="button"
                                   disabled={rIdx === tableData.rows.length - 1}
                                   onClick={() => handleMoveRow(rIdx, 'down')}
-                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded disabled:opacity-20"
+                                  className={`p-1 rounded disabled:opacity-20 ${
+                                    isDark ? 'text-slate-400 hover:text-white hover:bg-[#202020]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                  }`}
                                   title="Move Row Down"
                                 >
                                   <ArrowDown size={12} />
@@ -807,7 +857,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                 <button
                                   type="button"
                                   onClick={() => handleDuplicateRow(rIdx)}
-                                  className="p-1 text-slate-400 hover:text-indigo-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded"
+                                  className={`p-1 rounded ${
+                                    isDark ? 'text-slate-400 hover:text-white hover:bg-[#202020]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                  }`}
                                   title="Duplicate Row"
                                 >
                                   <Copy size={12} />
@@ -816,7 +868,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                                   type="button"
                                   disabled={tableData.rows.length <= 1}
                                   onClick={() => handleDeleteRow(rIdx)}
-                                  className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded disabled:opacity-20"
+                                  className={`p-1 rounded disabled:opacity-20 ${
+                                    isDark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                                  }`}
                                   title="Delete Row"
                                 >
                                   <Trash2 size={12} />
@@ -848,13 +902,13 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                       onClick={() => handleApplyTheme(theme)}
                       className={`p-3 rounded-[4px] border text-left flex flex-col gap-2 transition-all hover:scale-[1.02] ${
                         tableData.headerBg === theme.headerBg
-                          ? 'border-indigo-600 ring-2 ring-indigo-600/20 bg-indigo-50/10'
-                          : 'border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          ? isDark ? 'border-teal-400 ring-2 ring-teal-400/20 bg-teal-950/20' : 'border-[#0F3D3E] ring-2 ring-teal-500/20 bg-teal-50'
+                          : isDark ? 'border-[#262626] bg-[#141414] hover:border-[#383838]' : 'border-slate-200 bg-white hover:border-slate-300 shadow-sm'
                       }`}
                     >
                       <div className="flex items-center gap-2">
                         <div className="w-5 h-5 rounded-[4px] border border-slate-300 shadow-sm shrink-0" style={{ backgroundColor: theme.headerBg }} />
-                        <span className="text-xs font-black truncate">{theme.name}</span>
+                        <span className={`text-xs font-black truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{theme.name}</span>
                       </div>
                       <div className="flex items-center gap-1 text-[9px] text-slate-400 font-mono">
                         <span>{theme.headerBg}</span>
@@ -865,7 +919,7 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
               </div>
 
               {/* Color Customization */}
-              <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className={`space-y-4 pt-4 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                   <Palette size={12} /> Color Palette
                 </label>
@@ -873,76 +927,84 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {/* Header Background */}
                   <div className="space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Header Background Color</span>
-                    <div className="flex items-center gap-2 p-2 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Header Background Color</span>
+                    <div className={`flex items-center gap-2 p-2 rounded-[4px] border ${
+                      isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                    }`}>
                       <input
                         type="color"
                         value={tableData.headerBg || '#002b36'}
                         onChange={(e) => handleStyleChange('headerBg', e.target.value)}
-                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0"
+                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0 bg-transparent"
                       />
                       <input
                         type="text"
                         value={tableData.headerBg || '#002b36'}
                         onChange={(e) => handleStyleChange('headerBg', e.target.value)}
-                        className="flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase"
+                        className={`flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase ${isDark ? 'text-white' : 'text-slate-800'}`}
                       />
                     </div>
                   </div>
 
                   {/* Header Text Color */}
                   <div className="space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Header Text Color</span>
-                    <div className="flex items-center gap-2 p-2 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Header Text Color</span>
+                    <div className={`flex items-center gap-2 p-2 rounded-[4px] border ${
+                      isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                    }`}>
                       <input
                         type="color"
                         value={tableData.headerTextColor || '#ffffff'}
                         onChange={(e) => handleStyleChange('headerTextColor', e.target.value)}
-                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0"
+                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0 bg-transparent"
                       />
                       <input
                         type="text"
                         value={tableData.headerTextColor || '#ffffff'}
                         onChange={(e) => handleStyleChange('headerTextColor', e.target.value)}
-                        className="flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase"
+                        className={`flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase ${isDark ? 'text-white' : 'text-slate-800'}`}
                       />
                     </div>
                   </div>
 
                   {/* Alternate Row Background (Zebra striping) */}
                   <div className="space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Alternate Row Color (Striping)</span>
-                    <div className="flex items-center gap-2 p-2 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Alternate Row Color (Striping)</span>
+                    <div className={`flex items-center gap-2 p-2 rounded-[4px] border ${
+                      isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                    }`}>
                       <input
                         type="color"
                         value={tableData.alternateRowBg || '#f8fafc'}
                         onChange={(e) => handleStyleChange('alternateRowBg', e.target.value)}
-                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0"
+                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0 bg-transparent"
                       />
                       <input
                         type="text"
                         value={tableData.alternateRowBg || '#f8fafc'}
                         onChange={(e) => handleStyleChange('alternateRowBg', e.target.value)}
-                        className="flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase"
+                        className={`flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase ${isDark ? 'text-white' : 'text-slate-800'}`}
                       />
                     </div>
                   </div>
 
                   {/* Border Color */}
                   <div className="space-y-1.5">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Border Color</span>
-                    <div className="flex items-center gap-2 p-2 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/50">
+                    <span className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>Border Color</span>
+                    <div className={`flex items-center gap-2 p-2 rounded-[4px] border ${
+                      isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                    }`}>
                       <input
                         type="color"
                         value={tableData.borderColor || '#334155'}
                         onChange={(e) => handleStyleChange('borderColor', e.target.value)}
-                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0"
+                        className="w-8 h-8 rounded-[4px] cursor-pointer border-0 bg-transparent"
                       />
                       <input
                         type="text"
                         value={tableData.borderColor || '#334155'}
                         onChange={(e) => handleStyleChange('borderColor', e.target.value)}
-                        className="flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase"
+                        className={`flex-1 bg-transparent font-mono text-xs font-bold outline-none uppercase ${isDark ? 'text-white' : 'text-slate-800'}`}
                       />
                     </div>
                   </div>
@@ -950,17 +1012,19 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
               </div>
 
               {/* Typography & Sizing */}
-              <div className="space-y-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+              <div className={`space-y-4 pt-4 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                   <Type size={12} /> Typography & Spacing
                 </label>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   {/* Header Font Size */}
-                  <div className="p-3 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 space-y-2">
+                  <div className={`p-3 rounded-[4px] border space-y-2 ${
+                    isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                  }`}>
                     <div className="flex justify-between items-center text-xs font-bold">
-                      <span>Header Font Size</span>
-                      <span className="font-mono text-indigo-600 dark:text-indigo-400">{tableData.headerFontSize || 9.5}px</span>
+                      <span className={isDark ? "text-slate-300" : "text-slate-700"}>Header Font Size</span>
+                      <span className="font-mono text-[#0F3D3E] font-black">{tableData.headerFontSize || 9.5}px</span>
                     </div>
                     <input
                       type="range"
@@ -969,15 +1033,17 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                       step={0.5}
                       value={tableData.headerFontSize || 9.5}
                       onChange={(e) => handleStyleChange('headerFontSize', parseFloat(e.target.value))}
-                      className="w-full accent-indigo-600 cursor-pointer"
+                      className="w-full accent-[#0F3D3E] cursor-pointer"
                     />
                   </div>
 
                   {/* Body Font Size */}
-                  <div className="p-3 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 space-y-2">
+                  <div className={`p-3 rounded-[4px] border space-y-2 ${
+                    isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                  }`}>
                     <div className="flex justify-between items-center text-xs font-bold">
-                      <span>Body Font Size</span>
-                      <span className="font-mono text-indigo-600 dark:text-indigo-400">{tableData.fontSize || 8.5}px</span>
+                      <span className={isDark ? "text-slate-300" : "text-slate-700"}>Body Font Size</span>
+                      <span className="font-mono text-[#0F3D3E] font-black">{tableData.fontSize || 8.5}px</span>
                     </div>
                     <input
                       type="range"
@@ -986,15 +1052,17 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                       step={0.5}
                       value={tableData.fontSize || 8.5}
                       onChange={(e) => handleStyleChange('fontSize', parseFloat(e.target.value))}
-                      className="w-full accent-indigo-600 cursor-pointer"
+                      className="w-full accent-[#0F3D3E] cursor-pointer"
                     />
                   </div>
 
                   {/* Cell Padding */}
-                  <div className="p-3 rounded-[4px] border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/30 space-y-2">
+                  <div className={`p-3 rounded-[4px] border space-y-2 ${
+                    isDark ? 'border-[#2e2e2e] bg-[#101010]' : 'border-slate-200 bg-slate-50'
+                  }`}>
                     <div className="flex justify-between items-center text-xs font-bold">
-                      <span>Cell Padding</span>
-                      <span className="font-mono text-indigo-600 dark:text-indigo-400">{tableData.cellPadding || 6}px</span>
+                      <span className={isDark ? "text-slate-300" : "text-slate-700"}>Cell Padding</span>
+                      <span className="font-mono text-[#0F3D3E] font-black">{tableData.cellPadding || 6}px</span>
                     </div>
                     <input
                       type="range"
@@ -1003,7 +1071,7 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                       step={1}
                       value={tableData.cellPadding || 6}
                       onChange={(e) => handleStyleChange('cellPadding', parseInt(e.target.value, 10))}
-                      className="w-full accent-indigo-600 cursor-pointer"
+                      className="w-full accent-[#0F3D3E] cursor-pointer"
                     />
                   </div>
                 </div>
@@ -1013,7 +1081,9 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
         </div>
 
         {/* ================= MODAL FOOTER ================= */}
-        <div className="px-6 py-4 border-t flex items-center justify-end shrink-0 border-[#262626] bg-[#141414]">
+        <div className={`px-6 py-4 border-t flex items-center justify-end shrink-0 ${
+          isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+        }`}>
           <div className="flex items-center gap-3">
             <button
               onClick={handleClose}
@@ -1035,20 +1105,24 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
           }}
         >
           <div
-            className="w-full max-w-lg rounded-[4px] shadow-2xl border flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-150 bg-[#161616] border-[#262626] text-white"
+            className={`w-full max-w-lg rounded-[4px] shadow-2xl border flex flex-col max-h-[80vh] overflow-hidden animate-in zoom-in-95 duration-150 ${
+              isDark ? 'bg-[#161616] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="px-6 py-4 border-b flex items-center justify-between border-[#262626] bg-[#141414]">
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+              isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+            }`}>
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-[4px] bg-[#0F3D3E] text-white flex items-center justify-center shadow-md shadow-[#0F3D3E]/25">
                   <Package size={18} />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold tracking-tight text-white">
+                  <h3 className={`text-sm font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     {rowToLinkIdx !== null ? `Fill Row #${rowToLinkIdx + 1} with Product` : 'Add Product to Table'}
                   </h3>
-                  <p className="text-[10px] text-slate-400 font-medium">
+                  <p className={`text-[10px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     Select a product to automatically map its specs into table columns
                   </p>
                 </div>
@@ -1058,38 +1132,50 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                   setIsProductPickerOpen(false);
                   setRowToLinkIdx(null);
                 }}
-                className="p-1.5 rounded-[4px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                className={`p-1.5 rounded-[4px] transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'
+                }`}
               >
                 <X size={16} />
               </button>
             </div>
 
             {/* Search Input */}
-            <div className="p-4 border-b border-[#262626] bg-[#141414]">
+            <div className={`p-4 border-b ${isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50/50'}`}>
               <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#666]" />
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={productSearchQuery}
                   onChange={(e) => setProductSearchQuery(e.target.value)}
                   placeholder="Search products by title, SKU, or model..."
-                  className="w-full pl-9 pr-4 py-2 rounded-[4px] text-xs font-medium outline-none border transition-all bg-[#1a1a1a] border-[#2e2e2e] focus:border-[#0F3D3E] text-white placeholder:text-[#666]"
+                  className={`w-full pl-9 pr-4 py-2 rounded-[4px] text-xs font-medium outline-none border transition-all ${
+                    isDark
+                      ? 'bg-[#1a1a1a] border-[#2e2e2e] focus:border-[#0F3D3E] text-white placeholder:text-[#666]'
+                      : 'bg-white border-slate-300 focus:border-[#0F3D3E] text-slate-900 placeholder:text-slate-400 shadow-sm'
+                  }`}
                   autoFocus
                 />
               </div>
             </div>
 
             {/* Product List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 bg-[#161616]">
+            <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 ${
+              isDark ? 'bg-[#161616]' : 'bg-slate-50/50'
+            }`}>
               {filteredProducts.length === 0 ? (
-                <div className="py-12 text-center text-[#888] text-xs font-medium">
+                <div className="py-12 text-center text-slate-400 text-xs font-medium">
                   No products found matching &quot;{productSearchQuery}&quot;
                 </div>
               ) : (
                 filteredProducts.map((prod) => (
                   <div
                     key={prod.id}
-                    className="p-3 rounded-[4px] border border-[#262626] bg-[#141414] hover:border-[#0F3D3E] hover:bg-[#1a1a1a] transition-all flex items-center justify-between gap-3 group cursor-pointer"
+                    className={`p-3 rounded-[4px] border transition-all flex items-center justify-between gap-3 group cursor-pointer ${
+                      isDark
+                        ? 'border-[#262626] bg-[#141414] hover:border-[#0F3D3E] hover:bg-[#1a1a1a]'
+                        : 'border-slate-200 bg-white hover:border-[#0F3D3E] hover:bg-teal-50/40 shadow-sm'
+                    }`}
                     onClick={() => {
                       if (rowToLinkIdx !== null) {
                         handleFillRowFromProduct(rowToLinkIdx, prod);
@@ -1100,19 +1186,25 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       {prod.image ? (
-                        <img src={prod.image} alt={prod.name} className="w-10 h-10 rounded-[4px] object-contain bg-[#101010] border border-[#262626] p-1 shrink-0" />
+                        <img src={prod.image} alt={prod.name} className={`w-10 h-10 rounded-[4px] object-contain p-1 border shrink-0 ${
+                          isDark ? 'bg-[#101010] border-[#262626]' : 'bg-slate-50 border-slate-200'
+                        }`} />
                       ) : (
-                        <div className="w-10 h-10 rounded-[4px] bg-[#101010] border border-[#262626] flex items-center justify-center text-[#666] shrink-0">
+                        <div className={`w-10 h-10 rounded-[4px] border flex items-center justify-center shrink-0 ${
+                          isDark ? 'bg-[#101010] border-[#262626] text-[#666]' : 'bg-slate-50 border-slate-200 text-slate-400'
+                        }`}>
                           <Package size={16} />
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-white truncate group-hover:text-[#E2DCC8] transition-colors">
+                        <p className={`text-xs font-bold truncate transition-colors ${
+                          isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
+                        }`}>
                           {prod.name}
                         </p>
-                        <div className="flex items-center gap-2 mt-0.5 text-[10px] text-[#888]">
+                        <div className={`flex items-center gap-2 mt-0.5 text-[10px] ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
                           {prod.sku && <span className="font-mono font-bold">{prod.sku}</span>}
-                          {prod.price !== undefined && <span className="text-[#E2DCC8] font-bold">• {prod.currency || '₹'}{prod.price}</span>}
+                          {prod.price !== undefined && <span className={`font-bold ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>• {prod.currency || '₹'}{prod.price}</span>}
                           {prod.customFields?.cutOut && <span>• {prod.customFields.cutOut}</span>}
                           {prod.customFields?.color && <span>• {prod.customFields.color}</span>}
                         </div>

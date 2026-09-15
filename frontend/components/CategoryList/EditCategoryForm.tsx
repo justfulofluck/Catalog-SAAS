@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, Info, FolderEdit, Package, Plus, X, Star } from 'lucide-react';
 import { useStore } from '../../store/useStore';
@@ -6,7 +5,8 @@ import { CustomFieldsEditor } from '../Settings/CustomFieldsEditor';
 import { FormField } from '../../types';
 
 const EditCategoryForm: React.FC = () => {
-  const { setView, categories, updateCategory, editingCategoryId, setEditingCategoryId } = useStore();
+  const { setView, categories, updateCategory, editingCategoryId, setEditingCategoryId, uiTheme, addMedia } = useStore();
+  const isDark = uiTheme === 'dark';
 
   const categoryToEdit = categories.find(c => c.id === editingCategoryId);
 
@@ -39,44 +39,70 @@ const EditCategoryForm: React.FC = () => {
     }
   }, [categoryToEdit]);
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
+      try {
+        const media = await addMedia(file);
+        const url = media.url;
         setFormData(prev => {
           const currentImages = prev.images || [];
           return {
             ...prev,
-            thumbnail: result,
-            images: currentImages.includes(result) ? currentImages : [result, ...currentImages]
+            thumbnail: url,
+            images: currentImages.includes(url) ? currentImages : [url, ...currentImages]
           };
         });
-      };
-      reader.readAsDataURL(file);
+      } catch (err) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          setFormData(prev => {
+            const currentImages = prev.images || [];
+            return {
+              ...prev,
+              thumbnail: result,
+              images: currentImages.includes(result) ? currentImages : [result, ...currentImages]
+            };
+          });
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
-  const handleMultipleImagesUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMultipleImagesUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    Array.from(files).forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
+    for (const file of Array.from(files)) {
+      try {
+        const media = await addMedia(file);
+        const url = media.url;
         setFormData(prev => {
           const currentImages = prev.images || [];
           return {
             ...prev,
-            thumbnail: prev.thumbnail || result,
-            images: [...currentImages, result]
+            thumbnail: prev.thumbnail || url,
+            images: [...currentImages, url]
           };
         });
-      };
-      reader.readAsDataURL(file);
-    });
+      } catch (err) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          setFormData(prev => {
+            const currentImages = prev.images || [];
+            return {
+              ...prev,
+              thumbnail: prev.thumbnail || result,
+              images: [...currentImages, result]
+            };
+          });
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const removeGalleryImage = (indexToRemove: number) => {
@@ -97,67 +123,70 @@ const EditCategoryForm: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingCategoryId) {
-      updateCategory(editingCategoryId, {
-        name: formData.name,
-        description: formData.description,
-        rank: formData.rank,
-        color: formData.color,
-        thumbnail: formData.thumbnail,
-        images: formData.images,
-        parent: formData.parent ? formData.parent : undefined,
-        customSchema: formData.customSchema
-      });
-      setEditingCategoryId(null);
-      setView('category-list');
-    }
-  };
+    if (!categoryToEdit) return;
 
-  const handleCancel = () => {
+    updateCategory(categoryToEdit.id, {
+      name: formData.name,
+      description: formData.description,
+      rank: formData.rank,
+      color: formData.color,
+      thumbnail: formData.thumbnail,
+      images: formData.images,
+      parent: formData.parent ? formData.parent : undefined,
+      customSchema: formData.customSchema
+    });
     setEditingCategoryId(null);
     setView('category-list');
   };
 
   if (!categoryToEdit) return null;
 
-  const isSubcategory = !!categoryToEdit.parent;
-
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-[#100F0F] text-white animate-in fade-in duration-500">
+    <div className={`flex-1 flex flex-col overflow-hidden animate-in fade-in duration-500 ${
+      isDark ? 'bg-[#100F0F] text-white' : 'bg-slate-50 text-slate-800'
+    }`}>
       {/* Single Line Header & Toolbar */}
-      <div className="px-6 py-4 bg-[#161616] border-b border-[#262626] flex flex-wrap items-center justify-between gap-4 shrink-0">
+      <div className={`px-6 py-4 border-b flex flex-wrap items-center justify-between gap-4 shrink-0 ${
+        isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'
+      }`}>
         <div className="flex flex-col min-w-[200px]">
           <div className="flex items-center gap-3">
             <button
-              onClick={handleCancel}
-              className="text-[#888888] hover:text-[#E2DCC8] transition-colors p-1 -ml-1 rounded-[3px] hover:bg-[#222222]"
-              title={`Back to ${isSubcategory ? 'Subcategory' : 'Category'}`}
+              onClick={() => { setEditingCategoryId(null); setView('category-list'); }}
+              className={`transition-colors p-1 -ml-1 rounded-[3px] ${
+                isDark ? 'text-[#888888] hover:text-[#E2DCC8] hover:bg-[#222222]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+              }`}
+              title="Back to Categories"
             >
               <ArrowLeft size={16} />
             </button>
-            <h1 className="text-xl font-semibold text-white tracking-tight leading-none font-heading">
-              {isSubcategory ? 'Refine Subcategory' : 'Refine Category'}
-            </h1>
+            <h1 className={`text-xl font-semibold tracking-tight leading-none font-heading ${
+              isDark ? 'text-white' : 'text-slate-900'
+            }`}>Edit Category: {categoryToEdit.name}</h1>
           </div>
-          <p className="text-xs text-[#888888] font-normal mt-1 ml-7">
-            Updating {isSubcategory ? 'subcategory' : 'category'} parameters for <span className="text-[#E2DCC8] font-semibold">{categoryToEdit.name}</span>.
+          <p className={`text-xs font-normal mt-1 ml-7 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+            Update classification rules, parent routing, and dynamic schema.
           </p>
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 ml-auto">
           <button 
             type="button"
-            onClick={handleCancel} 
-            className="px-3.5 py-2 text-xs font-semibold text-[#888888] uppercase tracking-wider hover:text-white hover:bg-[#222222] rounded-[4px] border border-transparent hover:border-[#262626] transition-all"
+            onClick={() => { setEditingCategoryId(null); setView('category-list'); }} 
+            className={`px-3.5 py-2 text-xs font-semibold uppercase tracking-wider rounded-[4px] border transition-all ${
+              isDark 
+                ? 'text-[#888888] hover:text-white hover:bg-[#222222] border-transparent hover:border-[#262626]' 
+                : 'text-slate-600 hover:text-slate-900 bg-white border-slate-200 hover:bg-slate-50'
+            }`}
           >
-            Discard
+            Cancel
           </button>
           <button 
             type="button"
             onClick={handleSubmit} 
             className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-bold text-xs uppercase tracking-wider shadow-md shadow-[#0F3D3E]/20 transition-all flex items-center gap-1.5 active:scale-95 whitespace-nowrap"
           >
-            <Save size={14} /> {isSubcategory ? 'Update Subcategory' : 'Update Category'}
+            <Save size={14} /> Update Category
           </button>
         </div>
       </div>
@@ -165,30 +194,41 @@ const EditCategoryForm: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-6 lg:p-10">
         <div className="max-w-[1600px] mx-auto space-y-8">
 
+          {/* Top Row: Category Profile (Left) & Branding Parameters (Right) */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column: Category Profile */}
-            <div className="lg:col-span-7 xl:col-span-8 bg-[#161616] rounded-[4px] border border-[#262626] p-8 md:p-10 space-y-8">
-              <div className="flex items-center gap-2 border-b border-[#262626] pb-4">
-                <FolderEdit className="text-[#E2DCC8]" size={20} />
-                <h3 className="font-space text-sm font-bold text-white uppercase tracking-widest">Metadata Profile</h3>
+            {/* Left Column: Category Profile & Description */}
+            <div className={`lg:col-span-7 xl:col-span-8 rounded-[4px] border p-7 md:p-8 space-y-6 ${
+              isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+              <div className={`flex items-center gap-2 border-b pb-4 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+                <FolderEdit className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} size={20} />
+                <h3 className={`font-space text-sm font-bold uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>Category Profile</h3>
               </div>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Label Name</label>
+                  <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Label Name</label>
                   <input
                     type="text"
                     required
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] px-5 py-3.5 text-base font-bold text-white focus:border-[#0F3D3E] outline-none transition-colors"
+                    className={`w-full border rounded-[4px] px-5 py-3.5 text-base font-bold outline-none transition-colors ${
+                      isDark 
+                        ? 'bg-[#1c1c1c] border-[#262626] text-white focus:border-[#0F3D3E]' 
+                        : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-[#0F3D3E]'
+                    }`}
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Contextual Description</label>
+                  <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Contextual Description</label>
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] p-5 text-sm font-medium text-white placeholder-[#666666] focus:border-[#0F3D3E] outline-none min-h-[160px] transition-colors"
+                    className={`w-full border rounded-[4px] p-5 text-sm font-medium outline-none min-h-[160px] transition-colors ${
+                      isDark 
+                        ? 'bg-[#1c1c1c] border-[#262626] text-white placeholder-[#666666] focus:border-[#0F3D3E]' 
+                        : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400 focus:border-[#0F3D3E]'
+                    }`}
                   />
                 </div>
               </div>
@@ -196,42 +236,52 @@ const EditCategoryForm: React.FC = () => {
 
             {/* Right Column: Hierarchy Placement & Branding Images */}
             <div className="lg:col-span-5 xl:col-span-4 space-y-6">
-              {isSubcategory && (
-                <div className="bg-[#161616] rounded-[4px] border border-[#262626] p-6 space-y-4">
-                  <div className="flex items-center gap-2 border-b border-[#262626] pb-3">
-                    <AlignLeft className="text-[#E2DCC8]" size={18} />
-                    <h3 className="font-space text-[10px] font-bold text-[#888888] uppercase tracking-widest">Hierarchy Placement</h3>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-[#888888] uppercase tracking-widest ml-1">Parent Category</label>
-                    <select
-                      value={formData.parent}
-                      onChange={(e) => setFormData({ ...formData, parent: e.target.value })}
-                      className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[4px] px-4 py-3 text-sm font-bold text-white focus:border-[#0F3D3E] outline-none appearance-none cursor-pointer"
-                    >
-                      <option value="" className="bg-[#161616]">-- No Parent (Root) --</option>
-                      {categories
-                        .filter(cat => cat.id !== editingCategoryId && !cat.parent)
-                        .map(cat => (
-                          <option key={cat.id} value={cat.id} className="bg-[#161616]">{cat.name}</option>
-                        ))}
-                    </select>
-                  </div>
+              <div className={`rounded-[4px] border p-6 space-y-4 ${
+                isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className={`flex items-center gap-2 border-b pb-3 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+                  <AlignLeft className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} size={18} />
+                  <h3 className={`font-space text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-[#888888]' : 'text-slate-600'}`}>Hierarchy Placement</h3>
                 </div>
-              )}
+                <div className="space-y-2">
+                  <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Parent Category</label>
+                  <select
+                    value={formData.parent}
+                    onChange={(e) => setFormData({ ...formData, parent: e.target.value })}
+                    className={`w-full border rounded-[4px] px-4 py-3 text-sm font-bold outline-none appearance-none cursor-pointer ${
+                      isDark 
+                        ? 'bg-[#1c1c1c] border-[#262626] text-white focus:border-[#0F3D3E]' 
+                        : 'bg-white border-slate-200 text-slate-800 focus:border-[#0F3D3E]'
+                    }`}
+                  >
+                    <option value="" className={isDark ? "bg-[#161616]" : "bg-white"}>-- No Parent (Root Category) --</option>
+                    {categories
+                      .filter(cat => cat.id !== categoryToEdit.id && !cat.parent)
+                      .map(cat => (
+                        <option key={cat.id} value={cat.id} className={isDark ? "bg-[#161616]" : "bg-white"}>{cat.name}</option>
+                      ))}
+                  </select>
+                </div>
+              </div>
 
-              <div className="bg-[#161616] rounded-[4px] border border-[#262626] p-6 space-y-5">
-                <div className="flex justify-between items-center border-b border-[#262626] pb-3">
-                  <h3 className="font-space text-[10px] font-bold text-[#888888] uppercase tracking-widest">
+              <div className={`rounded-[4px] border p-6 space-y-5 ${
+                isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+              }`}>
+                <div className={`flex justify-between items-center border-b pb-3 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+                  <h3 className={`font-space text-[10px] font-bold uppercase tracking-widest ${isDark ? 'text-[#888888]' : 'text-slate-600'}`}>
                     Category Images {formData.images?.length > 0 ? `(${formData.images.length})` : ''}
                   </h3>
-                  <label htmlFor="edit-cat-multi-img" className="text-[9px] font-bold text-[#E2DCC8] uppercase tracking-widest flex items-center gap-1 cursor-pointer hover:text-[#E2DCC8] transition-colors">
+                  <label htmlFor="cat-edit-multi-img" className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 cursor-pointer transition-colors ${
+                    isDark ? 'text-[#E2DCC8] hover:text-white' : 'text-[#0F3D3E] hover:underline'
+                  }`}>
                     <Plus size={12} /> Add More
                   </label>
                 </div>
 
                 <div className="space-y-3">
-                  <div className="aspect-video max-h-36 bg-[#1c1c1c] rounded-[4px] border-2 border-dashed border-[#262626] flex items-center justify-center overflow-hidden relative group">
+                  <div className={`aspect-video max-h-36 rounded-[4px] border-2 border-dashed flex items-center justify-center overflow-hidden relative group ${
+                    isDark ? 'bg-[#1c1c1c] border-[#262626]' : 'bg-slate-50 border-slate-300'
+                  }`}>
                     {formData.thumbnail ? (
                       <>
                         <img src={formData.thumbnail} className="w-full h-full object-cover" />
@@ -240,21 +290,25 @@ const EditCategoryForm: React.FC = () => {
                         </div>
                       </>
                     ) : (
-                      <div className="flex flex-col items-center gap-1 text-[#666666]">
+                      <div className={`flex flex-col items-center gap-1 ${isDark ? 'text-[#666666]' : 'text-slate-400'}`}>
                         <ImageIcon size={24} />
-                        <span className="text-[10px] font-bold text-[#888888]">No cover image</span>
+                        <span className={`text-[10px] font-bold ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>No cover image</span>
                       </div>
                     )}
                   </div>
 
                   <div className="flex gap-2.5">
-                    <input type="file" id="edit-cat-thumb-upload" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                    <label htmlFor="edit-cat-thumb-upload" className="flex-1 flex items-center justify-center gap-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm shadow-[#0F3D3E]/20 active:scale-95">
+                    <input type="file" id="cat-edit-thumb-upload" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                    <label htmlFor="cat-edit-thumb-upload" className="flex-1 flex items-center justify-center gap-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all shadow-sm shadow-[#0F3D3E]/20 active:scale-95">
                       <Upload size={13} /> Upload Cover
                     </label>
 
-                    <input type="file" id="edit-cat-multi-img" accept="image/*" multiple className="hidden" onChange={handleMultipleImagesUpload} />
-                    <label htmlFor="edit-cat-multi-img" className="flex-1 flex items-center justify-center gap-1.5 bg-[#1c1c1c] hover:bg-[#262626] text-[#999999] hover:text-white rounded-[4px] px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all border border-[#262626]">
+                    <input type="file" id="cat-edit-multi-img" accept="image/*" multiple className="hidden" onChange={handleMultipleImagesUpload} />
+                    <label htmlFor="cat-edit-multi-img" className={`flex-1 flex items-center justify-center gap-1.5 rounded-[4px] px-3 py-2.5 text-[11px] font-bold uppercase tracking-wider cursor-pointer transition-all border ${
+                      isDark 
+                        ? 'bg-[#1c1c1c] hover:bg-[#262626] text-[#999999] hover:text-white border-[#262626]' 
+                        : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+                    }`}>
                       <Plus size={13} /> Gallery (+N)
                     </label>
                   </div>
@@ -264,7 +318,7 @@ const EditCategoryForm: React.FC = () => {
                       {formData.images.map((img, idx) => {
                         const isPrimary = formData.thumbnail === img;
                         return (
-                          <div key={idx} className={`relative aspect-square rounded-[4px] overflow-hidden border-2 transition-all group ${isPrimary ? 'border-[#0F3D3E] ring-2 ring-[#0F3D3E]/40' : 'border-[#262626]'}`}>
+                          <div key={idx} className={`relative aspect-square rounded-[4px] overflow-hidden border-2 transition-all group ${isPrimary ? 'border-[#0F3D3E] ring-2 ring-[#0F3D3E]/40' : (isDark ? 'border-[#262626]' : 'border-slate-200')}`}>
                             <img src={img} className="w-full h-full object-cover cursor-pointer" onClick={() => setAsThumbnail(img)} title="Click to set as cover" />
                             <button
                               type="button"
@@ -288,15 +342,22 @@ const EditCategoryForm: React.FC = () => {
             </div>
           </div>
 
-          {/* Schema Configuration Section */}
-          <div className="bg-[#161616] rounded-[4px] border border-[#262626] p-8 md:p-10 space-y-6">
-            <div className="flex items-center gap-2 border-b border-[#262626] pb-4">
-              <Package className="text-[#E2DCC8]" size={20} />
-              <h3 className="font-space text-sm font-bold text-white uppercase tracking-widest">
-                Schema & Custom Fields
-              </h3>
+          {/* Bottom Row: Schema Configuration (Clean single-card layout) */}
+          <div className={`rounded-[4px] border p-7 md:p-8 space-y-6 ${
+            isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+          }`}>
+            <div className={`flex items-center gap-2 border-b pb-4 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+              <Package className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} size={20} />
+              <div>
+                <h3 className={`font-space text-sm font-bold uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                  Schema & Custom Fields
+                </h3>
+                <p className={`text-xs font-normal mt-0.5 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+                  Define product attributes ({formData.customSchema.length}/10 configured) for items in this category.
+                </p>
+              </div>
             </div>
-            
+
             <CustomFieldsEditor 
               fields={formData.customSchema} 
               onChange={(fields) => setFormData({ ...formData, customSchema: fields })} 
@@ -304,6 +365,7 @@ const EditCategoryForm: React.FC = () => {
               hideOuterWrapper={true}
             />
           </div>
+
         </div>
       </div>
     </div>

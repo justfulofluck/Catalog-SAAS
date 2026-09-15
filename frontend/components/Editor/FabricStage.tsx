@@ -323,11 +323,19 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           return;
         }
         const el = pageRef.current.elements.find(item => item.id === obj.id);
-        if (el && el.type === 'text') {
+        if (!el) return;
+
+        // If element belongs to a section (has sectionTag or is a table/grid element), open Grid Studio
+        if (el.sectionTag || el.id.startsWith('grid-sec-') || el.type === 'table' || el.tableData) {
+          const store = useStore.getState();
+          store.setEditorTab('grid-studio');
+          store.setSidebarExpanded(true);
+          return;
+        }
+
+        // Regular text elements — open inline text editor
+        if (el.type === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
-        } else if (el && (el.type === 'table' || el.tableData)) {
-          useStore.getState().setEditorTab('grid');
-          window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         }
       }
     });

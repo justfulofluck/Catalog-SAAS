@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Images, Search, X, Upload, Plus, FileImage, Image as ImageIcon, ExternalLink, Loader2 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { MediaItem, AdminAsset } from '../../types';
@@ -23,10 +23,16 @@ interface UnsplashImage {
 }
 
 const MediaAssetLibrary: React.FC = () => {
-  const { mediaItems, adminAssets, addElement, currentPageIndex, addMedia, setDraggingItem, uiTheme, setEditorTab } = useStore();
+  const { mediaItems, adminAssets, categories, products, fetchMedia, fetchCategories, fetchProducts, addElement, currentPageIndex, addMedia, setDraggingItem, uiTheme, setEditorTab } = useStore();
   const [search, setSearch] = useState('');
   const [activeTab, setActiveTab] = useState<'uploads' | 'stock' | 'system'>('uploads');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchMedia();
+    fetchCategories();
+    fetchProducts();
+  }, [fetchMedia, fetchCategories, fetchProducts]);
 
   // Unsplash Stock State
   const [stockSearch, setStockSearch] = useState('nature');
@@ -81,7 +87,58 @@ const MediaAssetLibrary: React.FC = () => {
     }
   }, [activeTab, apiKey]);
 
-  const activeSource = activeTab === 'uploads' ? mediaItems : adminAssets;
+  const userUploads = useMemo(() => {
+    const existingUrls = new Set<string>();
+    const combined: MediaItem[] = [];
+
+    // 1. Regular mediaItems
+    mediaItems.forEach(m => {
+      if (m.url && !existingUrls.has(m.url)) {
+        existingUrls.add(m.url);
+        combined.push(m);
+      }
+    });
+
+    // 2. Category images
+    categories.forEach(c => {
+      const catImages = [c.thumbnail, ...(c.images || [])].filter(Boolean) as string[];
+      catImages.forEach((url, idx) => {
+        if (url && !existingUrls.has(url)) {
+          existingUrls.add(url);
+          combined.push({
+            id: `cat-${c.id}-${idx}`,
+            name: `${c.name} (Category)`,
+            type: 'image',
+            url,
+            createdAt: new Date().toISOString(),
+            size: 'Media Asset'
+          });
+        }
+      });
+    });
+
+    // 3. Product images
+    products.forEach(p => {
+      const prodImages = [p.image, ...(p.images || [])].filter(Boolean) as string[];
+      prodImages.forEach((url, idx) => {
+        if (url && !existingUrls.has(url)) {
+          existingUrls.add(url);
+          combined.push({
+            id: `prod-${p.id}-${idx}`,
+            name: `${p.name} (Product)`,
+            type: 'image',
+            url,
+            createdAt: new Date().toISOString(),
+            size: 'Media Asset'
+          });
+        }
+      });
+    });
+
+    return combined;
+  }, [mediaItems, categories, products]);
+
+  const activeSource = activeTab === 'uploads' ? userUploads : adminAssets;
 
   const filteredMedia = activeSource.filter(m =>
     m.name.toLowerCase().includes(search.toLowerCase())
@@ -164,22 +221,26 @@ const MediaAssetLibrary: React.FC = () => {
   const isDark = uiTheme === 'dark';
 
   return (
-    <div className="flex flex-col h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-300 font-sans transition-colors bg-[#161616] text-white">
+    <div className={`flex flex-col h-full w-full shrink-0 z-10 animate-in slide-in-from-left-4 duration-300 font-sans transition-colors ${
+      isDark ? 'bg-[#161616] text-white' : 'bg-white text-slate-800'
+    }`}>
       {/* Top Header */}
-      <div className="h-14 px-3 py-2 border-b flex items-center justify-between transition-colors bg-[#161616] border-[#262626]">
+      <div className={`h-14 px-3 py-2 border-b flex items-center justify-between transition-colors ${
+        isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'
+      }`}>
         <div>
           <h3 className="text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 mb-0.5">
-            <Images size={13} className="text-[#E2DCC8]" />
-            <span className="text-white">Media & Images</span>
+            <Images size={13} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+            <span className={isDark ? "text-white" : "text-slate-900"}>Media & Images</span>
           </h3>
-          <p className="text-[8px] font-medium text-[#888]">Uploads & Free Stock Photos</p>
+          <p className={`text-[8px] font-medium ${isDark ? 'text-[#888]' : 'text-slate-400'}`}>Uploads & Free Stock Photos</p>
         </div>
 
         <div className="flex items-center gap-1.5">
           {activeTab === 'uploads' && (
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="px-2 py-1 flex items-center gap-1 bg-[#0F3D3E] text-white rounded-[4px] hover:bg-[#ff5722] text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
+              className="px-2 py-1 flex items-center gap-1 bg-[#0F3D3E] text-white rounded-[4px] hover:bg-[#155455] text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all"
               title="Upload Image"
             >
               <Upload size={11} />
@@ -188,7 +249,9 @@ const MediaAssetLibrary: React.FC = () => {
           )}
           <button
             onClick={() => setEditorTab(null)}
-            className="p-1 rounded-[4px] transition-colors hover:bg-[#262626] text-[#888] hover:text-white"
+            className={`p-1 rounded-[4px] transition-colors ${
+              isDark ? 'hover:bg-[#262626] text-[#888] hover:text-white' : 'hover:bg-slate-100 text-slate-400 hover:text-slate-700'
+            }`}
           >
             <X size={12} />
           </button>
@@ -204,14 +267,18 @@ const MediaAssetLibrary: React.FC = () => {
       </div>
 
       {/* 3-Way Segmented Tabs */}
-      <div className="p-2 border-b shrink-0 border-[#262626] bg-[#141414]">
-        <div className="flex rounded-[4px] p-0.5 bg-[#101010] border border-[#262626]">
+      <div className={`p-2 border-b shrink-0 transition-colors ${
+        isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-100 bg-slate-50'
+      }`}>
+        <div className={`flex rounded-[4px] p-0.5 border ${
+          isDark ? 'bg-[#101010] border-[#262626]' : 'bg-slate-100 border-slate-200'
+        }`}>
           <button
             onClick={() => setActiveTab('uploads')}
             className={`flex-1 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider transition-all ${
               activeTab === 'uploads'
                 ? 'bg-[#0F3D3E] text-white shadow-sm'
-                : 'text-[#888] hover:text-white'
+                : (isDark ? 'text-[#888] hover:text-white' : 'text-slate-500 hover:text-slate-900')
             }`}
           >
             Uploads
@@ -221,7 +288,7 @@ const MediaAssetLibrary: React.FC = () => {
             className={`flex-1 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider transition-all ${
               activeTab === 'stock'
                 ? 'bg-[#0F3D3E] text-white shadow-sm'
-                : 'text-[#888] hover:text-white'
+                : (isDark ? 'text-[#888] hover:text-white' : 'text-slate-500 hover:text-slate-900')
             }`}
           >
             Stock
@@ -231,7 +298,7 @@ const MediaAssetLibrary: React.FC = () => {
             className={`flex-1 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider transition-all ${
               activeTab === 'system'
                 ? 'bg-[#0F3D3E] text-white shadow-sm'
-                : 'text-[#888] hover:text-white'
+                : (isDark ? 'text-[#888] hover:text-white' : 'text-slate-500 hover:text-slate-900')
             }`}
           >
             Assets

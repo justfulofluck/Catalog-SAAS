@@ -434,8 +434,10 @@ export const GridStudioPanel: React.FC = () => {
     mediaItems, adminAssets, addMedia, fetchMedia, addElement,
     setEditorTab, applyProductGridToPage, reflowCatalogPages,
     swapPageSections, deletePageSection, addInteriorPageWithInheritedLayout,
-    autoGenerateCatalogFromAllCategories
+    autoGenerateCatalogFromAllCategories, uiTheme
   } = useStore();
+
+  const isDark = uiTheme === 'dark';
 
   const [viewMode, setViewMode] = useState<'editor' | 'overview' | 'single-items'>('editor');
   const [showPageSelector, setShowPageSelector] = useState(false);
@@ -1391,158 +1393,165 @@ export const GridStudioPanel: React.FC = () => {
   const firstProductPageIdx = catalog.pages.findIndex(p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing');
 
   return (
-    <div className="flex flex-col h-full w-full bg-[#141414] text-white border-r border-[#262626] font-sans overflow-hidden">
+    <div className={`flex flex-col h-full w-full font-sans overflow-hidden transition-colors ${
+      isDark ? 'bg-[#141414] text-white border-r border-[#262626]' : 'bg-white text-slate-800 border-r border-slate-200'
+    }`}>
       
-      {/* ================= PANEL HEADER ================= */}
-      <div className="px-3.5 py-2.5 border-b border-[#262626] bg-[#161616] flex flex-col gap-2 shrink-0">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-[#E2DCC8] shadow-md shadow-[#0F3D3E]/30 shrink-0">
-              <Sparkles size={13} />
-            </div>
-            <div>
-              <h2 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
-                Grid Studio
-                <span className="px-1.5 py-0.2 rounded bg-[#0F3D3E]/60 text-[#E2DCC8] text-[8px] font-mono font-bold">
-                  P{currentPageIndex + 1}
-                </span>
-              </h2>
-            </div>
-          </div>
+      {/* ================= PANEL TOOLBAR ================= */}
+      <div className={`px-2.5 py-1.5 border-b flex items-center justify-between gap-1.5 shrink-0 transition-colors ${
+        isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-200 bg-white'
+      }`}>
+        {/* Quick Page Prev / Selector / Next */}
+        <div className={`relative flex items-center gap-0.5 rounded-[4px] p-0.5 border transition-colors ${
+          isDark ? 'bg-[#1e1e1e] border-[#333]' : 'bg-slate-100 border-slate-200'
+        }`} ref={pageSelectorRef}>
+          <button
+            type="button"
+            disabled={currentPageIndex <= 0}
+            onClick={() => navigateToPage(currentPageIndex - 1)}
+            className={`p-1 rounded transition-all disabled:opacity-25 ${
+              isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-slate-900 hover:bg-white'
+            }`}
+            title="Previous Page"
+          >
+            <ChevronLeft size={13} />
+          </button>
 
-          <div className="flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setEditorTab(null)}
-              className="p-1 rounded text-[#888] hover:text-white hover:bg-[#222] transition-colors"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
+          <button
+            type="button"
+            onClick={() => setShowPageSelector(!showPageSelector)}
+            className={`flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold rounded transition-all ${
+              isDark ? 'text-[#E2DCC8] hover:bg-white/5' : 'text-slate-800 hover:bg-white shadow-xs'
+            }`}
+            title="Switch Page"
+          >
+            <span>Page {currentPageIndex + 1} / {catalog.pages.length}</span>
+            <ChevronDown size={11} className={isDark ? "text-slate-400" : "text-slate-500"} />
+          </button>
 
-        {/* Page Switcher & View Mode Toolbar */}
-        <div className="flex items-center justify-between gap-1.5 pt-1 border-t border-[#222]">
-          {/* Quick Page Prev / Selector / Next */}
-          <div className="relative flex items-center gap-0.5 bg-[#1e1e1e] border border-[#333] rounded-[4px] p-0.5" ref={pageSelectorRef}>
-            <button
-              type="button"
-              disabled={currentPageIndex <= 0}
-              onClick={() => navigateToPage(currentPageIndex - 1)}
-              className="p-1 text-slate-400 hover:text-white disabled:opacity-25 hover:bg-white/5 rounded transition-all"
-              title="Previous Page"
-            >
-              <ChevronLeft size={13} />
-            </button>
+          <button
+            type="button"
+            disabled={currentPageIndex >= catalog.pages.length - 1}
+            onClick={() => navigateToPage(currentPageIndex + 1)}
+            className={`p-1 rounded transition-all disabled:opacity-25 ${
+              isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-500 hover:text-slate-900 hover:bg-white'
+            }`}
+            title="Next Page"
+          >
+            <ChevronRight size={13} />
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setShowPageSelector(!showPageSelector)}
-              className="flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-bold text-[#E2DCC8] hover:bg-white/5 rounded transition-all"
-              title="Switch Page"
-            >
-              <span>Page {currentPageIndex + 1} / {catalog.pages.length}</span>
-              <ChevronDown size={11} className="text-slate-400" />
-            </button>
-
-            <button
-              type="button"
-              disabled={currentPageIndex >= catalog.pages.length - 1}
-              onClick={() => navigateToPage(currentPageIndex + 1)}
-              className="p-1 text-slate-400 hover:text-white disabled:opacity-25 hover:bg-white/5 rounded transition-all"
-              title="Next Page"
-            >
-              <ChevronRight size={13} />
-            </button>
-
-            {/* Page Selector Dropdown */}
-            {showPageSelector && (
-              <div className="absolute top-full left-0 mt-1 w-56 bg-[#181818] border border-[#333] rounded-[6px] shadow-2xl z-[100] max-h-64 overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
-                <div className="px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-500 border-b border-[#262626]">
-                  Catalog Pages & Grids
-                </div>
-                {catalog.pages.map((p, idx) => {
-                  const pSections = extractSectionsFromPage(p);
-                  const isCurrent = idx === currentPageIndex;
-                  const isCover = p.type === 'cover';
-                  return (
-                    <button
-                      key={p.id || idx}
-                      type="button"
-                      onClick={() => navigateToPage(idx)}
-                      className={`w-full px-2 py-1.5 rounded flex items-center justify-between text-left text-[10px] transition-all ${
-                        isCurrent
-                          ? 'bg-[#0F3D3E] text-white font-bold'
-                          : 'text-slate-300 hover:bg-[#242424]'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-mono text-[9px] text-[#E2DCC8] shrink-0">P{idx + 1}</span>
-                        <span className="truncate">
-                          {isCover ? 'Cover Page' : (p.type === 'index' ? 'Index Page' : (p.title || `Product Page`))}
-                        </span>
-                      </div>
-                      <span className="text-[8px] opacity-75 font-semibold shrink-0 ml-1">
-                        {isCover ? '📘' : `${pSections.length} Grids`}
-                      </span>
-                    </button>
-                  );
-                })}
+          {/* Page Selector Dropdown */}
+          {showPageSelector && (
+            <div className={`absolute top-full left-0 mt-1 w-56 border rounded-[6px] shadow-2xl z-[100] max-h-64 overflow-y-auto p-1 space-y-0.5 custom-scrollbar ${
+              isDark ? 'bg-[#181818] border-[#333]' : 'bg-white border-slate-200 shadow-xl'
+            }`}>
+              <div className={`px-2 py-1 text-[8px] font-black uppercase tracking-wider border-b ${
+                isDark ? 'text-slate-500 border-[#262626]' : 'text-slate-400 border-slate-100'
+              }`}>
+                Catalog Pages & Grids
               </div>
-            )}
-          </div>
-
-          {/* Mode Tabs: [ ✏️ 3-Grid Editor ] | [ 📦 Single Items ] | [ 🗂️ Grid Map ] */}
-          <div className="flex items-center bg-[#1e1e1e] border border-[#333] rounded-[4px] p-0.5 gap-0.5">
-            <button
-              type="button"
-              onClick={() => setViewMode('editor')}
-              className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
-                viewMode === 'editor'
-                  ? 'bg-[#0F3D3E] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="3-Product Section Grid Editor"
-            >
-              <Grid size={10} /> 3-Grid Editor
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('single-items')}
-              className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
-                viewMode === 'single-items'
-                  ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm border border-[#E2DCC8]/30'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Browse and place individual product cards, photos, or spec tables"
-            >
-              <Package size={10} /> Single Items
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode('overview')}
-              className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
-                viewMode === 'overview'
-                  ? 'bg-[#0F3D3E] text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
-              }`}
-              title="Multi-page Grid Organizer"
-            >
-              <Layers size={10} /> Grid Map
-            </button>
-          </div>
+              {catalog.pages.map((p, idx) => {
+                const pSections = extractSectionsFromPage(p);
+                const isCurrent = idx === currentPageIndex;
+                const isCover = p.type === 'cover';
+                return (
+                  <button
+                    key={p.id || idx}
+                    type="button"
+                    onClick={() => navigateToPage(idx)}
+                    className={`w-full px-2 py-1.5 rounded flex items-center justify-between text-left text-[10px] transition-all ${
+                      isCurrent
+                        ? 'bg-[#0F3D3E] text-white font-bold'
+                        : (isDark ? 'text-slate-300 hover:bg-[#242424]' : 'text-slate-700 hover:bg-slate-100')
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <span className={`font-mono text-[9px] shrink-0 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E] font-bold'}`}>P{idx + 1}</span>
+                      <span className="truncate">
+                        {isCover ? 'Cover Page' : (p.type === 'index' ? 'Index Page' : (p.title || `Product Page`))}
+                      </span>
+                    </div>
+                    <span className="text-[8px] opacity-75 font-semibold shrink-0 ml-1">
+                      {isCover ? '📘' : `${pSections.length} Grids`}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
+
+        {/* Mode Tabs: [ ✏️ 3-Grid Editor ] | [ 📦 Single Items ] | [ 🗂️ Grid Map ] */}
+        <div className={`flex items-center border rounded-[4px] p-0.5 gap-0.5 ${
+          isDark ? 'bg-[#1e1e1e] border-[#333]' : 'bg-slate-100 border-slate-200'
+        }`}>
+          <button
+            type="button"
+            onClick={() => setViewMode('editor')}
+            className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+              viewMode === 'editor'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
+            }`}
+            title="3-Product Section Grid Editor"
+          >
+            <Grid size={10} /> 3-Grid Editor
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('single-items')}
+            className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+              viewMode === 'single-items'
+                ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm border border-[#E2DCC8]/30'
+                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
+            }`}
+            title="Browse and place individual product cards, photos, or spec tables"
+          >
+            <Package size={10} /> Single Items
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode('overview')}
+            className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+              viewMode === 'overview'
+                ? 'bg-[#0F3D3E] text-white shadow-sm'
+                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
+            }`}
+            title="Multi-page Grid Organizer"
+          >
+            <Layers size={10} /> Grid Map
+          </button>
+        </div>
+
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={() => setEditorTab(null)}
+          className={`p-1 rounded transition-colors shrink-0 ${
+            isDark ? 'text-[#888] hover:text-white hover:bg-[#222]' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+          }`}
+          title="Close Grid Studio"
+        >
+          <X size={14} />
+        </button>
       </div>
 
       {/* ================= MODE 1: ALL PAGES GRID MAP (BIRDS-EYE ORGANIZER) ================= */}
       {viewMode === 'overview' ? (
-        <div className="flex-1 overflow-y-auto p-3 space-y-3.5 custom-scrollbar bg-[#121212]">
-          <div className="flex items-center justify-between pb-1 border-b border-[#222]">
+        <div className={`flex-1 overflow-y-auto p-3 space-y-3.5 custom-scrollbar transition-colors ${
+          isDark ? 'bg-[#121212]' : 'bg-slate-50'
+        }`}>
+          <div className={`flex items-center justify-between pb-1 border-b ${
+            isDark ? 'border-[#222]' : 'border-slate-200'
+          }`}>
             <div>
-              <h3 className="text-[11px] font-black uppercase tracking-wider text-[#E2DCC8]">
+              <h3 className={`text-[11px] font-black uppercase tracking-wider ${
+                isDark ? 'text-[#E2DCC8]' : 'text-slate-900'
+              }`}>
                 Multi-Page Grid Organizer
               </h3>
-              <p className="text-[8px] text-slate-400">
+              <p className={`text-[8px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 View & arrange grid sections across all catalog pages
               </p>
             </div>
@@ -1552,13 +1561,13 @@ export const GridStudioPanel: React.FC = () => {
                 addInteriorPageWithInheritedLayout();
                 navigateToPage(catalog.pages.length);
               }}
-              className="px-2 py-1 bg-[#202020] hover:bg-[#282828] border border-[#333] text-[#E2DCC8] rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-all"
+              className={`px-2 py-1 border rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-all ${
+                isDark ? 'bg-[#202020] hover:bg-[#282828] border-[#333] text-[#E2DCC8]' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm'
+              }`}
             >
               <Plus size={11} /> New Page
             </button>
           </div>
-
-
 
           {catalog.pages.map((p, pIdx) => {
             const isCurrent = pIdx === currentPageIndex;
@@ -1570,23 +1579,29 @@ export const GridStudioPanel: React.FC = () => {
                 key={p.id || pIdx}
                 className={`rounded-[6px] border transition-all ${
                   isCurrent
-                    ? 'border-[#0F3D3E] bg-[#161c1d] shadow-lg shadow-[#0F3D3E]/10'
-                    : 'border-[#262626] bg-[#161616] hover:border-[#333]'
+                    ? (isDark ? 'border-[#0F3D3E] bg-[#161c1d] shadow-lg shadow-[#0F3D3E]/10' : 'border-[#0F3D3E] bg-teal-50/50 shadow-md ring-1 ring-[#0F3D3E]')
+                    : (isDark ? 'border-[#262626] bg-[#161616] hover:border-[#333]' : 'border-slate-200 bg-white hover:border-slate-300 shadow-sm')
                 }`}
               >
                 {/* Page Card Header */}
-                <div className="px-3 py-2 border-b border-[#222] flex items-center justify-between bg-[#141414]">
+                <div className={`px-3 py-2 border-b flex items-center justify-between ${
+                  isDark ? 'border-[#222] bg-[#141414]' : 'border-slate-100 bg-slate-50'
+                }`}>
                   <div className="flex items-center gap-2">
                     <span className={`w-5 h-5 rounded-[3px] flex items-center justify-center text-[9px] font-black ${
-                      isCurrent ? 'bg-[#0F3D3E] text-[#E2DCC8]' : 'bg-[#252525] text-slate-300'
+                      isCurrent 
+                        ? (isDark ? 'bg-[#0F3D3E] text-[#E2DCC8]' : 'bg-[#0F3D3E] text-white') 
+                        : (isDark ? 'bg-[#252525] text-slate-300' : 'bg-slate-200 text-slate-700')
                     }`}>
                       #{pIdx + 1}
                     </span>
                     <div>
-                      <span className="text-[10px] font-bold text-white uppercase tracking-wider block leading-tight">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider block leading-tight ${
+                        isDark ? 'text-white' : 'text-slate-900'
+                      }`}>
                         {isCover ? `${p.type.toUpperCase()} PAGE` : `Page ${pIdx + 1}`}
                       </span>
-                      <span className="text-[8px] text-slate-400">
+                      <span className={`text-[8px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                         {isCover ? 'No product grid' : `${pSections.length} / 3 Sections (${pSections.length >= 3 ? 'Full' : `${3 - pSections.length} slots free`})`}
                       </span>
                     </div>
@@ -1599,7 +1614,9 @@ export const GridStudioPanel: React.FC = () => {
                         navigateToPage(pIdx);
                         setViewMode('editor');
                       }}
-                      className="px-2 py-0.5 bg-[#0F3D3E]/40 hover:bg-[#0F3D3E] border border-[#0F3D3E] text-[#E2DCC8] rounded text-[8px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all"
+                      className={`px-2 py-0.5 border rounded text-[8px] font-bold uppercase tracking-wider flex items-center gap-1 transition-all ${
+                        isDark ? 'bg-[#0F3D3E]/40 hover:bg-[#0F3D3E] border-[#0F3D3E] text-[#E2DCC8]' : 'bg-teal-50 hover:bg-[#0F3D3E] border-teal-200 text-[#0F3D3E] hover:text-white shadow-xs'
+                      }`}
                       title="Edit this page in Grid Studio"
                     >
                       <SlidersHorizontal size={9} /> Edit Page
@@ -1610,11 +1627,15 @@ export const GridStudioPanel: React.FC = () => {
                 {/* Page Card Body: Sections List */}
                 <div className="p-2.5 space-y-1.5">
                   {isCover ? (
-                    <div className="py-3 px-2 text-center text-[9px] text-slate-500 bg-[#111] rounded border border-[#222]">
+                    <div className={`py-3 px-2 text-center text-[9px] rounded border ${
+                      isDark ? 'text-slate-500 bg-[#111] border-[#222]' : 'text-slate-500 bg-slate-100/50 border-slate-200'
+                    }`}>
                       Cover & closing pages do not contain standard product grids.
                     </div>
                   ) : pSections.length === 0 ? (
-                    <div className="py-4 px-2 text-center text-[9px] text-slate-500 bg-[#111] rounded border border-[#222] space-y-1">
+                    <div className={`py-4 px-2 text-center text-[9px] rounded border space-y-1 ${
+                      isDark ? 'text-slate-500 bg-[#111] border-[#222]' : 'text-slate-500 bg-slate-100/50 border-slate-200'
+                    }`}>
                       <p>No grid sections on this page.</p>
                       <button
                         type="button"
@@ -1635,22 +1656,28 @@ export const GridStudioPanel: React.FC = () => {
                       return (
                         <div
                           key={sec.id || secIdx}
-                          className="px-2.5 py-1.5 bg-[#1a1a1a] border border-[#2a2a2a] rounded flex items-center justify-between gap-2 hover:border-[#3a3a3a] transition-all"
+                          className={`px-2.5 py-1.5 rounded flex items-center justify-between gap-2 border transition-all ${
+                            isDark ? 'bg-[#1a1a1a] border-[#2a2a2a] hover:border-[#3a3a3a]' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                          }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
-                            <span className="w-4 h-4 rounded-[2px] bg-[#222] border border-[#333] flex items-center justify-center text-[8px] font-bold text-[#E2DCC8] shrink-0">
+                            <span className={`w-4 h-4 rounded-[2px] border flex items-center justify-center text-[8px] font-bold shrink-0 ${
+                              isDark ? 'bg-[#222] border-[#333] text-[#E2DCC8]' : 'bg-white border-slate-300 text-slate-700 shadow-xs'
+                            }`}>
                               {secIdx + 1}
                             </span>
                             {sec.imageSrc ? (
-                              <img src={sec.imageSrc} alt="" className="w-6 h-6 rounded object-contain bg-[#111] border border-[#333] p-0.5 shrink-0" />
+                              <img src={sec.imageSrc} alt="" className={`w-6 h-6 rounded object-contain border p-0.5 shrink-0 ${
+                                isDark ? 'bg-[#111] border-[#333]' : 'bg-white border-slate-200'
+                              }`} />
                             ) : (
                               <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: sec.titleColor || '#00a651' }} />
                             )}
                             <div className="min-w-0">
-                              <p className="text-[9px] font-bold text-white truncate" style={{ color: sec.titleColor || '#00a651' }}>
+                              <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ color: sec.titleColor || '#00a651' }}>
                                 {sec.title || `Section #${secIdx + 1}`}
                               </p>
-                              <p className="text-[7.5px] text-slate-400">
+                              <p className={`text-[7.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                                 {sec.tableData?.rows?.length || 0} product rows {sec.hasBackground ? '• Stripe' : ''}
                               </p>
                             </div>
@@ -1668,7 +1695,9 @@ export const GridStudioPanel: React.FC = () => {
                                     handleMoveSectionToPage(pIdx, targetP, secIdx);
                                   }
                                 }}
-                                className="px-1.5 py-0.5 bg-[#242424] border border-[#383838] text-[8px] font-bold text-[#E2DCC8] rounded outline-none cursor-pointer hover:border-[#0F3D3E]"
+                                className={`px-1.5 py-0.5 border text-[8px] font-bold rounded outline-none cursor-pointer ${
+                                  isDark ? 'bg-[#242424] border-[#383838] text-[#E2DCC8] hover:border-[#0F3D3E]' : 'bg-white border-slate-200 text-slate-700 hover:border-[#0F3D3E]'
+                                }`}
                                 title="Move this section to another page"
                               >
                                 <option value="" disabled>➔ Move to...</option>
@@ -1694,7 +1723,9 @@ export const GridStudioPanel: React.FC = () => {
                                   swapPageSections(pIdx, secIdx, secIdx - 1);
                                 }
                               }}
-                              className="p-1 text-slate-400 hover:text-white disabled:opacity-20 transition-colors"
+                              className={`p-1 disabled:opacity-20 transition-colors ${
+                                isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'
+                              }`}
                               title="Move Section Up"
                             >
                               <ArrowUp size={11} />
@@ -1711,7 +1742,9 @@ export const GridStudioPanel: React.FC = () => {
                                   swapPageSections(pIdx, secIdx, secIdx + 1);
                                 }
                               }}
-                              className="p-1 text-slate-400 hover:text-white disabled:opacity-20 transition-colors"
+                              className={`p-1 disabled:opacity-20 transition-colors ${
+                                isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'
+                              }`}
                               title="Move Section Down"
                             >
                               <ArrowDown size={11} />
@@ -1728,7 +1761,7 @@ export const GridStudioPanel: React.FC = () => {
                                     deletePageSection(pIdx, secIdx);
                                   }
                                 }}
-                                className="p-1 text-slate-400 hover:text-red-400 transition-colors"
+                                className="p-1 text-slate-400 hover:text-red-500 transition-colors"
                                 title="Delete Section"
                               >
                                 <Trash2 size={11} />
@@ -1746,25 +1779,35 @@ export const GridStudioPanel: React.FC = () => {
         </div>
       ) : viewMode === 'single-items' ? (
         /* ================= MODE 3: SINGLE PRODUCT & ITEM INSERTER ================= */
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar bg-[#121212]">
+        <div className={`flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar transition-colors ${
+          isDark ? 'bg-[#121212]' : 'bg-slate-50'
+        }`}>
           {/* Header banner */}
-          <div className="flex items-center justify-between pb-3 border-b border-[#222]">
+          <div className={`flex items-center justify-between pb-3 border-b ${
+            isDark ? 'border-[#222]' : 'border-slate-200'
+          }`}>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-[12px] font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                <h3 className={`text-[12px] font-black uppercase tracking-wider flex items-center gap-1.5 ${
+                  isDark ? 'text-[#E2DCC8]' : 'text-slate-900'
+                }`}>
                   <Package size={14} className="text-[#00a651]" /> Single Product Placement
                 </h3>
-                <span className="px-2 py-0.5 rounded bg-[#0F3D3E] text-[#E2DCC8] text-[9px] font-mono font-bold border border-[#E2DCC8]/20">
+                <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold border ${
+                  isDark ? 'bg-[#0F3D3E] text-[#E2DCC8] border-[#E2DCC8]/20' : 'bg-teal-50 text-[#0F3D3E] border-teal-200'
+                }`}>
                   Target: Page {currentPageIndex + 1}
                 </span>
               </div>
-              <p className="text-[9px] text-slate-400 mt-0.5">
+              <p className={`text-[9px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                 Drop individual cards, images, or spec tables onto Page {currentPageIndex + 1} without altering existing page layout.
               </p>
             </div>
 
             {/* Quick count badge */}
-            <div className="text-[10px] text-[#E2DCC8]/80 font-mono font-bold bg-[#181818] border border-[#2a2a2a] px-2.5 py-1 rounded">
+            <div className={`text-[10px] font-mono font-bold px-2.5 py-1 rounded border ${
+              isDark ? 'text-[#E2DCC8]/80 bg-[#181818] border-[#2a2a2a]' : 'text-slate-700 bg-white border-slate-200 shadow-xs'
+            }`}>
               {filteredSingleProducts.length} items
             </div>
           </div>
@@ -1790,13 +1833,17 @@ export const GridStudioPanel: React.FC = () => {
                 value={singleSearch}
                 onChange={(e) => setSingleSearch(e.target.value)}
                 placeholder="Search products by title, SKU, description..."
-                className="w-full bg-[#181818] border border-[#333] focus:border-[#0F3D3E] rounded-[4px] pl-9 pr-8 py-2 text-xs text-[#F1F1F1] placeholder:text-slate-500 outline-none transition-colors"
+                className={`w-full border rounded-[4px] pl-9 pr-8 py-2 text-xs outline-none transition-colors ${
+                  isDark 
+                    ? 'bg-[#181818] border-[#333] focus:border-[#0F3D3E] text-[#F1F1F1] placeholder:text-slate-500' 
+                    : 'bg-white border-slate-200 focus:border-[#0F3D3E] text-slate-900 placeholder:text-slate-400 shadow-xs'
+                }`}
               />
               {singleSearch && (
                 <button
                   type="button"
                   onClick={() => setSingleSearch('')}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className={`absolute right-2.5 top-1/2 -translate-y-1/2 ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-700'}`}
                 >
                   <X size={13} />
                 </button>
@@ -1811,7 +1858,7 @@ export const GridStudioPanel: React.FC = () => {
                 className={`px-2.5 py-1 rounded-[3px] text-[10px] font-bold uppercase tracking-wider whitespace-nowrap transition-all ${
                   singleCategoryFilter === 'all'
                     ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-sm'
-                    : 'bg-[#181818] text-slate-400 border border-[#2a2a2a] hover:text-white hover:bg-[#202020]'
+                    : (isDark ? 'bg-[#181818] text-slate-400 border border-[#2a2a2a] hover:text-white hover:bg-[#202020]' : 'bg-white text-slate-600 border border-slate-200 hover:text-slate-900 hover:bg-slate-100 shadow-xs')
                 }`}
               >
                 All Categories ({products.length})
@@ -1828,7 +1875,7 @@ export const GridStudioPanel: React.FC = () => {
                     className={`px-2.5 py-1 rounded-[3px] text-[10px] font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
                       isSelected
                         ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-sm'
-                        : 'bg-[#181818] text-slate-400 border border-[#2a2a2a] hover:text-white hover:bg-[#202020]'
+                        : (isDark ? 'bg-[#181818] text-slate-400 border border-[#2a2a2a] hover:text-white hover:bg-[#202020]' : 'bg-white text-slate-600 border border-slate-200 hover:text-slate-900 hover:bg-slate-100 shadow-xs')
                     }`}
                   >
                     <span
@@ -1845,10 +1892,12 @@ export const GridStudioPanel: React.FC = () => {
 
           {/* Product Grid of Single Items */}
           {filteredSingleProducts.length === 0 ? (
-            <div className="py-12 text-center border border-dashed border-[#262626] rounded-[6px] bg-[#161616]/40">
-              <Package size={28} className="mx-auto text-slate-600 mb-2" />
-              <p className="text-xs font-semibold text-slate-300">No products match your search</p>
-              <p className="text-[10px] text-slate-500 mt-0.5">Try searching with a different keyword or selecting 'All Categories'.</p>
+            <div className={`py-12 text-center border border-dashed rounded-[6px] ${
+              isDark ? 'border-[#262626] bg-[#161616]/40' : 'border-slate-200 bg-white/60'
+            }`}>
+              <Package size={28} className={`mx-auto mb-2 ${isDark ? 'text-slate-600' : 'text-slate-300'}`} />
+              <p className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>No products match your search</p>
+              <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Try searching with a different keyword or selecting 'All Categories'.</p>
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3">
@@ -1874,12 +1923,18 @@ export const GridStudioPanel: React.FC = () => {
                       };
                       e.dataTransfer.setData('application/json', JSON.stringify(dragData));
                     }}
-                    className="group relative bg-[#181818] hover:bg-[#1c1c1c] border border-[#282828] hover:border-[#0F3D3E] rounded-[4px] p-3 transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing hover:shadow-lg"
+                    className={`group relative rounded-[4px] p-3 transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing border ${
+                      isDark 
+                        ? 'bg-[#181818] hover:bg-[#1c1c1c] border-[#282828] hover:border-[#0F3D3E] hover:shadow-lg' 
+                        : 'bg-white hover:bg-slate-50/80 border-slate-200 hover:border-[#0F3D3E] shadow-sm hover:shadow-md'
+                    }`}
                   >
                     <div>
                       {/* Card Header: Category & Price */}
                       <div className="flex items-center justify-between gap-1 mb-2">
-                        <span className="text-[9px] font-bold text-[#E2DCC8]/80 truncate bg-[#222] px-1.5 py-0.5 rounded border border-[#333]">
+                        <span className={`text-[9px] font-bold truncate px-1.5 py-0.5 rounded border ${
+                          isDark ? 'text-[#E2DCC8]/80 bg-[#222] border-[#333]' : 'text-slate-600 bg-slate-100 border-slate-200'
+                        }`}>
                           {cat?.name || 'General'}
                         </span>
                         <span className="text-[10px] font-bold text-[#00a651] font-mono shrink-0">
@@ -1888,7 +1943,9 @@ export const GridStudioPanel: React.FC = () => {
                       </div>
 
                       {/* Product Thumbnail Preview */}
-                      <div className="w-full h-28 bg-[#121212] rounded-[3px] border border-[#222] mb-2.5 overflow-hidden flex items-center justify-center relative">
+                      <div className={`w-full h-28 rounded-[3px] border mb-2.5 overflow-hidden flex items-center justify-center relative ${
+                        isDark ? 'bg-[#121212] border-[#222]' : 'bg-slate-50 border-slate-200'
+                      }`}>
                         {imgUrl ? (
                           <img
                             src={imgUrl}
@@ -1897,7 +1954,7 @@ export const GridStudioPanel: React.FC = () => {
                             loading="lazy"
                           />
                         ) : (
-                          <div className="flex flex-col items-center gap-1 text-slate-600">
+                          <div className={`flex flex-col items-center gap-1 ${isDark ? 'text-slate-600' : 'text-slate-400'}`}>
                             <Package size={24} />
                             <span className="text-[8px] uppercase tracking-wider">No Image</span>
                           </div>
@@ -1911,24 +1968,26 @@ export const GridStudioPanel: React.FC = () => {
 
                       {/* Product Info */}
                       <div className="space-y-0.5 mb-3">
-                        <h4 className="text-xs font-bold text-[#F1F1F1] line-clamp-2 leading-snug group-hover:text-[#E2DCC8] transition-colors" title={product.name}>
+                        <h4 className={`text-xs font-bold line-clamp-2 leading-snug transition-colors ${
+                          isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'
+                        }`} title={product.name}>
                           {product.name}
                         </h4>
                         {product.sku && (
-                          <p className="text-[9px] text-slate-400 font-mono">
-                            SKU: <span className="text-slate-300 font-semibold">{product.sku}</span>
+                          <p className={`text-[9px] font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            SKU: <span className={`font-semibold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>{product.sku}</span>
                           </p>
                         )}
                       </div>
                     </div>
 
                     {/* Quick Action Buttons */}
-                    <div className="space-y-1.5 pt-2 border-t border-[#252525]">
+                    <div className={`space-y-1.5 pt-2 border-t ${isDark ? 'border-[#252525]' : 'border-slate-100'}`}>
                       {/* Primary: Add Card Block */}
                       <button
                         type="button"
                         onClick={() => handleAddSingleCard(product)}
-                        className="w-full py-1.5 px-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] hover:text-white rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm border border-[#E2DCC8]/25"
+                        className="w-full py-1.5 px-2 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm border border-[#E2DCC8]/25"
                         title={`Add full product card to Page ${currentPageIndex + 1}`}
                       >
                         <Package size={11} /> + Add Card Block
@@ -1940,7 +1999,11 @@ export const GridStudioPanel: React.FC = () => {
                           type="button"
                           onClick={() => handleAddSingleImage(product)}
                           disabled={!imgUrl}
-                          className="py-1 px-1.5 bg-[#202020] hover:bg-[#282828] disabled:opacity-30 disabled:hover:bg-[#202020] text-[#E2DCC8] rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border border-[#333] transition-all"
+                          className={`py-1 px-1.5 disabled:opacity-30 rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border transition-all ${
+                            isDark 
+                              ? 'bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' 
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
                           title="Drop high-res photo only"
                         >
                           <ImageIcon size={10} /> + Photo
@@ -1949,7 +2012,11 @@ export const GridStudioPanel: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleAddSingleTable(product)}
-                          className="py-1 px-1.5 bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border border-[#333] transition-all"
+                          className={`py-1 px-1.5 rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border transition-all ${
+                            isDark 
+                              ? 'bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' 
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
                           title="Drop specification / variant table"
                         >
                           <Table size={10} /> + Specs
@@ -1960,7 +2027,11 @@ export const GridStudioPanel: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleAddSingleFullSection(product)}
-                        className="w-full py-1 px-2 bg-[#1c1c1c] hover:bg-[#242424] text-slate-300 hover:text-white rounded-[3px] text-[8.5px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border border-[#2e2e2e] transition-all"
+                        className={`w-full py-1 px-2 rounded-[3px] text-[8.5px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border transition-all ${
+                          isDark 
+                            ? 'bg-[#1c1c1c] hover:bg-[#242424] text-slate-300 hover:text-white border-[#2e2e2e]' 
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                        }`}
                         title="Add complete row with Photo + Title + Specs Table"
                       >
                         <Sparkles size={9} className="text-[#00a651]" /> Full Line Showcase
@@ -1974,17 +2045,23 @@ export const GridStudioPanel: React.FC = () => {
         </div>
       ) : (
         /* ================= MODE 2: SINGLE PAGE DETAILED EDITOR ================= */
-        <div className="flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar bg-[#121212]">
+        <div className={`flex-1 overflow-y-auto p-3 space-y-4 custom-scrollbar transition-colors ${
+          isDark ? 'bg-[#121212]' : 'bg-slate-50'
+        }`}>
           {isSpecialPage ? (
-            <div className="py-12 px-6 text-center border border-[#2a2a2a] rounded-[8px] bg-[#161616] space-y-4">
-              <div className="w-12 h-12 rounded-full bg-[#0F3D3E]/40 border border-[#E2DCC8]/20 flex items-center justify-center mx-auto text-[#E2DCC8]">
+            <div className={`py-12 px-6 text-center border rounded-[8px] space-y-4 ${
+              isDark ? 'border-[#2a2a2a] bg-[#161616]' : 'border-slate-200 bg-white shadow-sm'
+            }`}>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto ${
+                isDark ? 'bg-[#0F3D3E]/40 border border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-teal-50 border border-teal-200 text-[#0F3D3E]'
+              }`}>
                 <FileText size={22} />
               </div>
               <div className="space-y-1">
-                <h3 className="text-sm font-bold text-[#F1F1F1] uppercase tracking-wider">
+                <h3 className={`text-sm font-bold uppercase tracking-wider ${isDark ? 'text-[#F1F1F1]' : 'text-slate-900'}`}>
                   Page {currentPageIndex + 1} is a {activePage?.type === 'cover' ? 'Cover' : activePage?.type} Page
                 </h3>
-                <p className="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+                <p className={`text-xs max-w-md mx-auto leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                   Cover pages are reserved for branding, hero imagery, and titles. 3-Product Grids are designed for interior product catalog pages.
                 </p>
               </div>
@@ -2003,14 +2080,16 @@ export const GridStudioPanel: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setViewMode('single-items')}
-                  className="w-full sm:w-auto px-4 py-2 bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] rounded-[4px] text-xs font-bold flex items-center justify-center gap-1.5 transition-all border border-[#333]"
+                  className={`w-full sm:w-auto px-4 py-2 rounded-[4px] text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
+                    isDark ? 'bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-200 shadow-sm'
+                  }`}
                 >
                   <Package size={13} />
                   <span>Insert Single Item Instead</span>
                 </button>
               </div>
 
-              <div className="pt-4 border-t border-[#222]">
+              <div className={`pt-4 border-t ${isDark ? 'border-[#222]' : 'border-slate-100'}`}>
                 <button
                   type="button"
                   onClick={() => {
@@ -2020,7 +2099,7 @@ export const GridStudioPanel: React.FC = () => {
                       setSections(newSecs);
                     }
                   }}
-                  className="text-[10px] text-slate-500 hover:text-amber-400 underline transition-colors"
+                  className={`text-[10px] underline transition-colors ${isDark ? 'text-slate-500 hover:text-amber-400' : 'text-slate-400 hover:text-amber-600'}`}
                 >
                   Convert this page into a 3-Product Grid anyway
                 </button>
@@ -2038,20 +2117,22 @@ export const GridStudioPanel: React.FC = () => {
                 key={sec.id || secIdx}
                 className={`rounded-xl border transition-all shadow-md overflow-hidden ${
                   isHighlighted
-                    ? 'border-emerald-400 ring-2 ring-emerald-400/50 bg-[#162728]'
+                    ? isDark ? 'border-emerald-400 ring-2 ring-emerald-400/50 bg-[#162728]' : 'border-emerald-500 ring-2 ring-emerald-400/40 bg-emerald-50/50'
                     : sec.hasBackground
-                    ? 'border-[#0F3D3E]/70 bg-[#151b1c]'
-                    : 'border-[#262626] bg-[#161616] hover:border-[#383838]'
+                    ? isDark ? 'border-[#0F3D3E]/70 bg-[#151b1c]' : 'border-teal-300/80 bg-teal-50/30'
+                    : isDark ? 'border-[#262626] bg-[#161616] hover:border-[#383838]' : 'border-slate-200 bg-white hover:border-slate-300 shadow-sm'
                 }`}
               >
                 {/* Section Header Bar */}
-                <div className="px-3.5 py-2.5 border-b border-[#242424] flex items-center justify-between bg-[#191919]">
+                <div className={`px-3.5 py-2.5 border-b flex items-center justify-between transition-colors ${
+                  isDark ? 'border-[#242424] bg-[#191919]' : 'border-slate-200 bg-slate-50'
+                }`}>
                   <div className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-md bg-[#0F3D3E] text-[#E2DCC8] flex items-center justify-center text-[10px] font-black shadow-sm shadow-[#0F3D3E]/40">
                       {sectionNumber}
                     </span>
-                    <span className="text-[11px] font-black text-[#E2DCC8] uppercase tracking-wider">
-                      Section #{sectionNumber} <span className="text-slate-400 font-medium text-[9.5px]">({posLabel})</span>
+                    <span className={`text-[11px] font-black uppercase tracking-wider ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                      Section #{sectionNumber} <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'} font-medium text-[9.5px]`}>({posLabel})</span>
                     </span>
                   </div>
 
@@ -2060,10 +2141,14 @@ export const GridStudioPanel: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setProductPickerSectionIdx(secIdx)}
-                      className="px-2.5 py-1 bg-[#0F3D3E]/40 hover:bg-[#0F3D3E] border border-[#0F3D3E] text-[#E2DCC8] rounded-md text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm active:scale-95"
+                      className={`px-2.5 py-1 border rounded-md text-[9px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm active:scale-95 ${
+                        isDark
+                          ? 'bg-[#0F3D3E]/40 hover:bg-[#0F3D3E] border-[#0F3D3E] text-[#E2DCC8]'
+                          : 'bg-[#0F3D3E] hover:bg-[#155455] border-[#0F3D3E] text-white'
+                      }`}
                       title="Autofill from catalog product"
                     >
-                      <Package size={11} className="text-[#E2DCC8]" />
+                      <Package size={11} className={isDark ? "text-[#E2DCC8]" : "text-white"} />
                       <span>Fill</span>
                     </button>
 
@@ -2077,7 +2162,9 @@ export const GridStudioPanel: React.FC = () => {
                             handleMoveSectionToPage(currentPageIndex, targetP, secIdx);
                           }
                         }}
-                        className="px-2 py-1 bg-[#1f1f1f] hover:bg-[#262626] border border-[#333] text-[8.5px] font-bold text-[#E2DCC8] rounded-md outline-none cursor-pointer transition-colors"
+                        className={`px-2 py-1 border text-[8.5px] font-bold rounded-md outline-none cursor-pointer transition-colors ${
+                          isDark ? 'bg-[#1f1f1f] hover:bg-[#262626] border-[#333] text-[#E2DCC8]' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
+                        }`}
                         title="Move this section to another page"
                       >
                         <option value="" disabled>➔ Page...</option>
@@ -2092,12 +2179,16 @@ export const GridStudioPanel: React.FC = () => {
                       </select>
                     )}
 
-                    <div className="flex items-center bg-[#1f1f1f] border border-[#2a2a2a] rounded-md p-0.5">
+                    <div className={`flex items-center border rounded-md p-0.5 ${
+                      isDark ? 'bg-[#1f1f1f] border-[#2a2a2a]' : 'bg-slate-100 border-slate-200'
+                    }`}>
                       <button
                         type="button"
                         disabled={secIdx === 0}
                         onClick={() => handleMoveSection(secIdx, 'up')}
-                        className="p-1 text-slate-400 hover:text-white rounded disabled:opacity-20 transition-all hover:bg-white/5"
+                        className={`p-1 rounded disabled:opacity-20 transition-all ${
+                          isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                        }`}
                         title="Move Section Up"
                       >
                         <ArrowUp size={11} />
@@ -2107,7 +2198,9 @@ export const GridStudioPanel: React.FC = () => {
                         type="button"
                         disabled={secIdx === sections.length - 1}
                         onClick={() => handleMoveSection(secIdx, 'down')}
-                        className="p-1 text-slate-400 hover:text-white rounded disabled:opacity-20 transition-all hover:bg-white/5"
+                        className={`p-1 rounded disabled:opacity-20 transition-all ${
+                          isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                        }`}
                         title="Move Section Down"
                       >
                         <ArrowDown size={11} />
@@ -2118,7 +2211,9 @@ export const GridStudioPanel: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => handleDeleteSection(secIdx)}
-                        className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-md border border-transparent hover:border-red-500/20 transition-all"
+                        className={`p-1.5 rounded-md border border-transparent transition-all ${
+                          isDark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10 hover:border-red-500/20' : 'text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200'
+                        }`}
                         title="Delete Section"
                       >
                         <Trash2 size={12} />
@@ -2134,20 +2229,24 @@ export const GridStudioPanel: React.FC = () => {
                     {/* Left: Image thumbnail / upload / category image picker */}
                     <div className="w-28 shrink-0 space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                        <label className={`text-[9px] font-black uppercase tracking-wider flex items-center gap-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           <ImageIcon size={11} className="text-[#0F3D3E]" /> Image
                         </label>
                         <button
                           type="button"
                           onClick={() => setImageGalleryPickerSectionIdx(secIdx)}
-                          className="text-[8.5px] text-[#E2DCC8] hover:text-white font-bold bg-[#0F3D3E] hover:bg-[#155355] px-2 py-0.5 rounded-full transition-colors shadow-sm"
+                          className={`text-[8.5px] font-bold px-2 py-0.5 rounded-full transition-colors shadow-sm ${
+                            isDark ? 'text-[#E2DCC8] hover:text-white bg-[#0F3D3E] hover:bg-[#155355]' : 'text-white bg-[#0F3D3E] hover:bg-[#155355]'
+                          }`}
                           title="Pick from Category Images & Photos"
                         >
                           Gallery
                         </button>
                       </div>
 
-                      <div className="relative w-28 h-28 bg-[#0c0c0c] border border-[#2d2d2d] rounded-lg overflow-hidden flex items-center justify-center group shadow-inner">
+                      <div className={`relative w-28 h-28 border rounded-lg overflow-hidden flex items-center justify-center group shadow-inner ${
+                        isDark ? 'bg-[#0c0c0c] border-[#2d2d2d]' : 'bg-slate-50 border-slate-200'
+                      }`}>
                         {sec.imageSrc ? (
                           <img
                             src={normalizeImageUrl(sec.imageSrc)}
@@ -2156,8 +2255,8 @@ export const GridStudioPanel: React.FC = () => {
                           />
                         ) : (
                           <div className="text-center p-1 text-[#666]">
-                            <Upload size={16} className="mx-auto mb-1 text-slate-500" />
-                            <span className="text-[9px] block leading-none font-medium text-slate-400">No Image</span>
+                            <Upload size={16} className={`mx-auto mb-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`} />
+                            <span className={`text-[9px] block leading-none font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>No Image</span>
                           </div>
                         )}
                         <div className="absolute inset-0 bg-black/85 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center gap-1.5 transition-all duration-200 p-2">
@@ -2190,7 +2289,7 @@ export const GridStudioPanel: React.FC = () => {
                     {/* Right: Title + Color + Stripe */}
                     <div className="flex-1 min-w-0 space-y-2">
                       <div>
-                        <label className="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-1">
+                        <label className={`text-[9px] font-black uppercase tracking-wider block mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                           Series / Section Title
                         </label>
                         <input
@@ -2198,14 +2297,16 @@ export const GridStudioPanel: React.FC = () => {
                           value={sec.title}
                           onChange={(e) => handleUpdateSection(secIdx, { title: e.target.value })}
                           placeholder="SERIES TITLE..."
-                          className="w-full px-3 py-1.5 bg-[#0f0f0f] border border-[#2d2d2d] rounded-lg text-xs font-black outline-none focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] shadow-inner transition-all"
+                          className={`w-full px-3 py-1.5 border rounded-lg text-xs font-black outline-none focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] shadow-inner transition-all ${
+                            isDark ? 'bg-[#0f0f0f] border-[#2d2d2d]' : 'bg-white border-slate-300'
+                          }`}
                           style={{ color: sec.titleColor || '#00a651' }}
                         />
                       </div>
 
                       <div className="flex items-center justify-between gap-2 flex-wrap pt-0.5">
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[8.5px] font-bold text-slate-400 uppercase">Color:</span>
+                          <span className={`text-[8.5px] font-bold uppercase ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Color:</span>
                           <div className="flex items-center gap-1">
                             {PRESET_TITLE_COLORS.map(c => (
                               <button
@@ -2213,7 +2314,7 @@ export const GridStudioPanel: React.FC = () => {
                                 type="button"
                                 onClick={() => handleUpdateSection(secIdx, { titleColor: c })}
                                 className={`w-4 h-4 rounded-full border transition-transform ${
-                                  sec.titleColor === c ? 'scale-125 ring-2 ring-[#00a651] border-white' : 'border-[#333] hover:scale-110'
+                                  sec.titleColor === c ? 'scale-125 ring-2 ring-[#00a651] border-white' : isDark ? 'border-[#333] hover:scale-110' : 'border-slate-300 hover:scale-110'
                                 }`}
                                 style={{ backgroundColor: c }}
                                 title={c}
@@ -2232,8 +2333,8 @@ export const GridStudioPanel: React.FC = () => {
                         {/* Highlight Stripe Toggle */}
                         <label className={`flex items-center gap-1.5 text-[9px] font-bold cursor-pointer select-none px-2.5 py-1 rounded-md border transition-all ${
                           sec.hasBackground
-                            ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]'
-                            : 'bg-[#141414] text-slate-400 border-[#262626] hover:text-white'
+                            ? isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]' : 'bg-teal-50 text-teal-800 border-teal-300'
+                            : isDark ? 'bg-[#141414] text-slate-400 border-[#262626] hover:text-white' : 'bg-slate-100 text-slate-600 border-slate-200 hover:text-slate-900'
                         }`}>
                           <input
                             type="checkbox"
@@ -2257,11 +2358,11 @@ export const GridStudioPanel: React.FC = () => {
                   </div>
 
                   {/* 2. Specifications Table */}
-                  <div className="space-y-2 pt-2.5 border-t border-[#242424]">
+                  <div className={`space-y-2 pt-2.5 border-t ${isDark ? 'border-[#242424]' : 'border-slate-200'}`}>
                     <div className="flex items-center justify-between flex-wrap gap-1.5">
-                      <span className="text-[9.5px] font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                      <span className={`text-[9.5px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
                         <Palette size={12} className="text-[#00a651]" />
-                        Specs Table <span className="text-slate-400 font-normal font-mono text-[8.5px]">({sec.tableData.rows.length} rows)</span>
+                        Specs Table <span className={`${isDark ? 'text-slate-400' : 'text-slate-500'} font-normal font-mono text-[8.5px]`}>({sec.tableData.rows.length} rows)</span>
                       </span>
 
                       <div className="flex items-center gap-1.5 flex-wrap">
@@ -2271,8 +2372,8 @@ export const GridStudioPanel: React.FC = () => {
                           onClick={() => setOpenStyleSecIdx(openStyleSecIdx === secIdx ? null : secIdx)}
                           className={`px-2 py-1 rounded-md text-[9px] font-bold flex items-center gap-1 transition-all border ${
                             openStyleSecIdx === secIdx
-                              ? 'bg-[#0F3D3E] text-[#E2DCC8] border-[#0F3D3E] shadow-sm'
-                              : 'bg-[#181818] hover:bg-[#222] border-[#333] text-slate-300 hover:text-white'
+                              ? isDark ? 'bg-[#0F3D3E] text-[#E2DCC8] border-[#0F3D3E] shadow-sm' : 'bg-[#0F3D3E] text-white border-[#0F3D3E] shadow-sm'
+                              : isDark ? 'bg-[#181818] hover:bg-[#222] border-[#333] text-slate-300 hover:text-white' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-sm'
                           }`}
                           title="Customize Table Style, Colors & Sizing"
                         >
@@ -2315,7 +2416,9 @@ export const GridStudioPanel: React.FC = () => {
                               }
                             }
                           }}
-                          className="px-2.5 py-1 bg-[#102728] hover:bg-[#153436] border border-[#0F3D3E] text-[#E2DCC8] rounded-md text-[9px] font-bold outline-none cursor-pointer transition-colors shadow-sm"
+                          className={`px-2.5 py-1 border rounded-md text-[9px] font-bold outline-none cursor-pointer transition-colors shadow-sm ${
+                            isDark ? 'bg-[#102728] hover:bg-[#153436] border-[#0F3D3E] text-[#E2DCC8]' : 'bg-teal-50 hover:bg-teal-100 border-teal-300 text-teal-900'
+                          }`}
                         >
                           <option value="" disabled>+ Insert Product Rows...</option>
                           {categories.map(cat => {
@@ -2343,7 +2446,9 @@ export const GridStudioPanel: React.FC = () => {
                               handleAddTableColumn(secIdx, val);
                             }
                           }}
-                          className="px-2 py-1 bg-[#122827] hover:bg-[#183433] border border-[#0F3D3E] text-[#E2DCC8] rounded-md text-[9px] font-bold outline-none cursor-pointer transition-colors shadow-sm"
+                          className={`px-2 py-1 border rounded-md text-[9px] font-bold outline-none cursor-pointer transition-colors shadow-sm ${
+                            isDark ? 'bg-[#122827] hover:bg-[#183433] border-[#0F3D3E] text-[#E2DCC8]' : 'bg-teal-50 hover:bg-teal-100 border-teal-300 text-teal-900'
+                          }`}
                           title="Add field / column from product data"
                         >
                           <option value="" disabled>+ Add Column...</option>
@@ -2359,10 +2464,12 @@ export const GridStudioPanel: React.FC = () => {
                         <button
                           type="button"
                           onClick={() => handleAddTableRow(secIdx)}
-                          className="px-2 py-1 bg-[#1c1c1c] hover:bg-[#252525] border border-[#333] text-[#E2DCC8] hover:text-white rounded-md text-[9px] font-bold flex items-center gap-1 transition-all shadow-sm"
+                          className={`px-2 py-1 border rounded-md text-[9px] font-bold flex items-center gap-1 transition-all shadow-sm ${
+                            isDark ? 'bg-[#1c1c1c] hover:bg-[#252525] border-[#333] text-[#E2DCC8] hover:text-white' : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700'
+                          }`}
                           title="Add Blank Row"
                         >
-                          <Plus size={11} className="text-[#E2DCC8]" />
+                          <Plus size={11} className={isDark ? "text-[#E2DCC8]" : "text-slate-700"} />
                           <span>Row</span>
                         </button>
                       </div>
@@ -2370,15 +2477,17 @@ export const GridStudioPanel: React.FC = () => {
 
                     {/* Table Style Customization Drawer */}
                     {openStyleSecIdx === secIdx && (
-                      <div className="p-2.5 bg-[#101010] border border-[#2a2a2a] rounded-lg mb-2 space-y-2 text-[9px] animate-in fade-in duration-150">
-                        <div className="flex items-center justify-between pb-1 border-b border-[#222]">
-                          <span className="font-bold text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1">
-                            <Palette size={10} className="text-emerald-400" /> Table Styles & Dimensions
+                      <div className={`p-2.5 border rounded-lg mb-2 space-y-2 text-[9px] animate-in fade-in duration-150 ${
+                        isDark ? 'bg-[#101010] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200 shadow-sm'
+                      }`}>
+                        <div className={`flex items-center justify-between pb-1 border-b ${isDark ? 'border-[#222]' : 'border-slate-200'}`}>
+                          <span className={`font-bold uppercase tracking-wider flex items-center gap-1 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                            <Palette size={10} className="text-emerald-500" /> Table Styles & Dimensions
                           </span>
                           <button
                             type="button"
                             onClick={() => setOpenStyleSecIdx(null)}
-                            className="text-slate-400 hover:text-white"
+                            className={`transition-colors ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-800'}`}
                           >
                             <X size={11} />
                           </button>
@@ -2386,7 +2495,7 @@ export const GridStudioPanel: React.FC = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
                           {/* Header BG */}
                           <div>
-                            <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Header Background</label>
+                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Background</label>
                             <div className="flex items-center gap-1">
                               {['#002b36', '#0F3D3E', '#0f172a', '#4c0519', '#18181b'].map(c => (
                                 <button
@@ -2409,7 +2518,7 @@ export const GridStudioPanel: React.FC = () => {
 
                           {/* Header Text Color */}
                           <div>
-                            <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Header Text</label>
+                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Text</label>
                             <div className="flex items-center gap-1">
                               {['#ffffff', '#E2DCC8', '#000000'].map(c => (
                                 <button
@@ -2425,7 +2534,7 @@ export const GridStudioPanel: React.FC = () => {
 
                           {/* Font Size */}
                           <div>
-                            <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Font Size</label>
+                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Font Size</label>
                             <div className="flex items-center gap-1">
                               {[7, 8, 9, 10].map(sz => (
                                 <button
@@ -2435,7 +2544,7 @@ export const GridStudioPanel: React.FC = () => {
                                   className={`px-1.5 py-0.5 rounded font-bold transition-all ${
                                     Math.round(sec.tableData.fontSize || 8) === sz
                                       ? 'bg-[#0F3D3E] text-white ring-1 ring-emerald-400'
-                                      : 'bg-[#1f1f1f] text-slate-400 hover:text-white'
+                                      : isDark ? 'bg-[#1f1f1f] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
                                   }`}
                                 >
                                   {sz}px
@@ -2446,7 +2555,7 @@ export const GridStudioPanel: React.FC = () => {
 
                           {/* Cell Padding */}
                           <div>
-                            <label className="block text-[8px] font-bold text-slate-400 uppercase mb-1">Cell Padding</label>
+                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cell Padding</label>
                             <div className="flex items-center gap-1">
                               {[3, 4, 6, 8].map(pad => (
                                 <button
@@ -2456,7 +2565,7 @@ export const GridStudioPanel: React.FC = () => {
                                   className={`px-1.5 py-0.5 rounded font-bold transition-all ${
                                     (sec.tableData.cellPadding || 4) === pad
                                       ? 'bg-[#0F3D3E] text-white ring-1 ring-emerald-400'
-                                      : 'bg-[#1f1f1f] text-slate-400 hover:text-white'
+                                      : isDark ? 'bg-[#1f1f1f] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
                                   }`}
                                 >
                                   {pad}px
@@ -2469,7 +2578,9 @@ export const GridStudioPanel: React.FC = () => {
                     )}
 
                     {/* Table Editor Grid */}
-                    <div className="overflow-x-auto border border-[#2d2d2d] rounded-lg custom-scrollbar shadow-inner bg-[#0e0e0e]">
+                    <div className={`overflow-x-auto border rounded-lg custom-scrollbar shadow-inner ${
+                      isDark ? 'border-[#2d2d2d] bg-[#0e0e0e]' : 'border-slate-200 bg-white'
+                    }`}>
                       <table className="w-full text-left border-collapse text-[10px]">
                         <thead>
                           <tr
@@ -2539,14 +2650,18 @@ export const GridStudioPanel: React.FC = () => {
                                         {/* Fill Dropdown Popover */}
                                         {activeFillMenu?.secIdx === secIdx && activeFillMenu?.colIdx === cIdx && (
                                           <div
-                                            className="absolute left-0 top-full mt-1.5 w-48 rounded-md shadow-2xl border bg-[#161616] border-[#2e2e2e] text-white z-50 p-1.5 space-y-0.5 animate-in fade-in duration-100"
+                                            className={`absolute left-0 top-full mt-1.5 w-48 rounded-md shadow-2xl border z-50 p-1.5 space-y-0.5 animate-in fade-in duration-100 ${
+                                              isDark ? 'bg-[#161616] border-[#2e2e2e] text-white' : 'bg-white border-slate-200 text-slate-800 shadow-xl'
+                                            }`}
                                             onClick={(e) => e.stopPropagation()}
                                           >
-                                            <div className="px-1.5 py-1 text-[8.5px] font-bold uppercase tracking-wider text-[#888] border-b border-[#262626] flex justify-between items-center">
+                                            <div className={`px-1.5 py-1 text-[8.5px] font-bold uppercase tracking-wider border-b flex justify-between items-center ${
+                                              isDark ? 'text-[#888] border-[#262626]' : 'text-slate-500 border-slate-200'
+                                            }`}>
                                               <span>Auto-fill &quot;{hdr}&quot;</span>
                                               <button
                                                 onClick={() => setActiveFillMenu(null)}
-                                                className="text-[#888] hover:text-white"
+                                                className={isDark ? 'text-[#888] hover:text-white' : 'text-slate-400 hover:text-slate-800'}
                                               >
                                                 <X size={10} />
                                               </button>
@@ -2554,14 +2669,16 @@ export const GridStudioPanel: React.FC = () => {
                                             <button
                                               type="button"
                                               onClick={() => handleFillColumnFromParam(secIdx, cIdx, hdr)}
-                                              className="w-full text-left px-2 py-1 rounded text-[9px] font-bold text-amber-300 hover:bg-amber-400/10 flex items-center gap-1"
+                                              className={`w-full text-left px-2 py-1 rounded text-[9px] font-bold flex items-center gap-1 ${
+                                                isDark ? 'text-amber-300 hover:bg-amber-400/10' : 'text-amber-700 hover:bg-amber-50'
+                                              }`}
                                             >
                                               <Zap size={9} /> Match Header Name ({hdr})
                                             </button>
                                             {availableProductFields.length > 0 && (
                                               <>
-                                                <div className="border-t border-[#222] my-0.5" />
-                                                <div className="px-1.5 py-0.5 text-[7.5px] font-bold uppercase tracking-wider text-slate-500">
+                                                <div className={`border-t my-0.5 ${isDark ? 'border-[#222]' : 'border-slate-200'}`} />
+                                                <div className={`px-1.5 py-0.5 text-[7.5px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                                                   Your Product Fields
                                                 </div>
                                                 {availableProductFields.map(fKey => (
@@ -2569,7 +2686,9 @@ export const GridStudioPanel: React.FC = () => {
                                                     key={fKey}
                                                     type="button"
                                                     onClick={() => handleFillColumnFromParam(secIdx, cIdx, fKey)}
-                                                    className="w-full text-left px-2 py-1 rounded text-[9px] text-slate-200 hover:bg-[#0F3D3E] hover:text-[#E2DCC8] flex items-center gap-1"
+                                                    className={`w-full text-left px-2 py-1 rounded text-[9px] flex items-center gap-1 transition-colors ${
+                                                      isDark ? 'text-slate-200 hover:bg-[#0F3D3E] hover:text-[#E2DCC8]' : 'text-slate-700 hover:bg-teal-50 hover:text-teal-900'
+                                                    }`}
                                                   >
                                                     <span>✨</span> {fKey}
                                                   </button>
@@ -2604,11 +2723,15 @@ export const GridStudioPanel: React.FC = () => {
                             return (
                               <tr
                                 key={rIdx}
-                                className={`border-b border-[#1e1e1e] group transition-colors ${
-                                  rIdx % 2 === 1 ? 'bg-[#141414]' : 'bg-[#101010]'
-                                } hover:bg-[#162526]`}
+                                className={`border-b group transition-colors ${
+                                  isDark
+                                    ? `${rIdx % 2 === 1 ? 'bg-[#141414]' : 'bg-[#101010]'} border-[#1e1e1e] hover:bg-[#162526]`
+                                    : `${rIdx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'} border-slate-200 hover:bg-teal-50/40`
+                                }`}
                               >
-                                <td className="p-1.5 text-center font-mono text-slate-500 text-[9px] w-9 border-r border-[#1e1e1e]">
+                                <td className={`p-1.5 text-center font-mono text-[9px] w-9 border-r ${
+                                  isDark ? 'text-slate-500 border-[#1e1e1e]' : 'text-slate-400 border-slate-200'
+                                }`}>
                                   <div className="flex flex-col items-center justify-center">
                                     <span>{rIdx + 1}</span>
                                     {isMatched && (
@@ -2619,16 +2742,18 @@ export const GridStudioPanel: React.FC = () => {
                                 {row.map((cell, cIdx) => (
                                   <td
                                     key={cIdx}
-                                    className={`p-1 border-r border-[#1e1e1e] last:border-r-0 ${
-                                      cIdx === 0 ? 'w-[130px]' : cIdx === 1 ? 'min-w-[200px]' : 'w-[120px]'
-                                    }`}
+                                    className={`p-1 border-r last:border-r-0 ${
+                                      isDark ? 'border-[#1e1e1e]' : 'border-slate-200'
+                                    } ${cIdx === 0 ? 'w-[130px]' : cIdx === 1 ? 'min-w-[200px]' : 'w-[120px]'}`}
                                   >
                                     <input
                                       type="text"
                                       value={cell}
                                       onChange={(e) => handleCellChange(secIdx, rIdx, cIdx, e.target.value)}
-                                      className={`w-full px-2.5 py-1.5 bg-transparent border border-transparent focus:border-[#0F3D3E] outline-none focus:bg-[#172324] rounded-md text-[10.5px] font-mono transition-all ${
-                                        cIdx === 3 ? 'text-[#E2DCC8] font-black' : cIdx === 0 ? 'text-white font-bold' : 'text-slate-100'
+                                      className={`w-full px-2.5 py-1.5 bg-transparent border border-transparent focus:border-[#0F3D3E] outline-none rounded-md text-[10.5px] font-mono transition-all ${
+                                        isDark
+                                          ? `focus:bg-[#172324] ${cIdx === 3 ? 'text-[#E2DCC8] font-black' : cIdx === 0 ? 'text-white font-bold' : 'text-slate-100'}`
+                                          : `focus:bg-teal-50/50 ${cIdx === 3 ? 'text-slate-900 font-black' : cIdx === 0 ? 'text-slate-900 font-bold' : 'text-slate-800'}`
                                       }`}
                                     />
                                   </td>
@@ -2643,7 +2768,9 @@ export const GridStudioPanel: React.FC = () => {
                                         setLinkRowSearch('');
                                         setLinkRowCategory('all');
                                       }}
-                                      className="p-1 text-slate-400 hover:text-[#E2DCC8] hover:bg-[#0F3D3E]/50 rounded transition-colors"
+                                      className={`p-1 rounded transition-colors ${
+                                        isDark ? 'text-slate-400 hover:text-[#E2DCC8] hover:bg-[#0F3D3E]/50' : 'text-slate-500 hover:text-[#0F3D3E] hover:bg-teal-50'
+                                      }`}
                                       title="Fill row from catalog product"
                                     >
                                       <Package size={11} />
@@ -2653,7 +2780,9 @@ export const GridStudioPanel: React.FC = () => {
                                       type="button"
                                       disabled={rIdx === 0}
                                       onClick={() => handleMoveTableRow(secIdx, rIdx, 'up')}
-                                      className="p-1 text-slate-400 hover:text-white hover:bg-[#252525] rounded disabled:opacity-20 transition-colors"
+                                      className={`p-1 rounded disabled:opacity-20 transition-colors ${
+                                        isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                      }`}
                                       title="Move Row Up"
                                     >
                                       <ArrowUp size={11} />
@@ -2663,7 +2792,9 @@ export const GridStudioPanel: React.FC = () => {
                                       type="button"
                                       disabled={rIdx === sec.tableData.rows.length - 1}
                                       onClick={() => handleMoveTableRow(secIdx, rIdx, 'down')}
-                                      className="p-1 text-slate-400 hover:text-white hover:bg-[#252525] rounded disabled:opacity-20 transition-colors"
+                                      className={`p-1 rounded disabled:opacity-20 transition-colors ${
+                                        isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                      }`}
                                       title="Move Row Down"
                                     >
                                       <ArrowDown size={11} />
@@ -2672,7 +2803,9 @@ export const GridStudioPanel: React.FC = () => {
                                     <button
                                       type="button"
                                       onClick={() => handleDuplicateTableRow(secIdx, rIdx)}
-                                      className="p-1 text-slate-400 hover:text-white hover:bg-[#252525] rounded transition-colors"
+                                      className={`p-1 rounded transition-colors ${
+                                        isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                      }`}
                                       title="Duplicate Row"
                                     >
                                       <Copy size={11} />
@@ -2682,7 +2815,9 @@ export const GridStudioPanel: React.FC = () => {
                                       <button
                                         type="button"
                                         onClick={() => handleDeleteTableRow(secIdx, rIdx)}
-                                        className="p-1 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded transition-colors"
+                                        className={`p-1 rounded transition-colors ${
+                                          isDark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                                        }`}
                                         title="Delete Row"
                                       >
                                         <Trash2 size={11} />
@@ -2706,14 +2841,20 @@ export const GridStudioPanel: React.FC = () => {
 
       {/* ================= PANEL FOOTER ================= */}
       {!isSpecialPage && viewMode === 'editor' && (
-        <div className="p-3 border-t border-[#262626] bg-[#161616] space-y-2 shrink-0">
+        <div className={`p-3 border-t space-y-2 shrink-0 transition-colors ${
+          isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-200 bg-white shadow-sm'
+        }`}>
           <button
             type="button"
             onClick={handleApplyAndReflow}
-            className="w-full py-2 px-3 bg-[#1b2529] hover:bg-[#223136] text-[#E2DCC8] border border-[#0F3D3E]/60 rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01] active:scale-[0.99]"
+            className={`w-full py-2 px-3 border rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01] active:scale-[0.99] ${
+              isDark
+                ? 'bg-[#1b2529] hover:bg-[#223136] text-[#E2DCC8] border-[#0F3D3E]/60'
+                : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border-teal-300'
+            }`}
             title="Reflow all pages across catalog"
           >
-            <Zap size={12} className="text-[#00a651]" />
+            <Zap size={12} className={isDark ? "text-[#00a651]" : "text-teal-600"} />
             <span>Auto-Reflow Pages</span>
           </button>
         </div>
@@ -2726,20 +2867,24 @@ export const GridStudioPanel: React.FC = () => {
           onClick={() => setImageGalleryPickerSectionIdx(null)}
         >
           <div
-            className="w-full max-w-2xl bg-[#161616] border border-[#262626] rounded-xl shadow-2xl flex flex-col max-h-[82vh] overflow-hidden text-white"
+            className={`w-full max-w-2xl border rounded-xl shadow-2xl flex flex-col max-h-[82vh] overflow-hidden ${
+              isDark ? 'bg-[#161616] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="px-5 py-3.5 border-b border-[#262626] flex items-center justify-between bg-[#141414]">
+            <div className={`px-5 py-3.5 border-b flex items-center justify-between ${
+              isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+            }`}>
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-md bg-[#0F3D3E] flex items-center justify-center text-[#E2DCC8] shadow-sm">
                   <ImageIcon size={15} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-black text-white uppercase tracking-wider">
+                  <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     Select Picture for Section #{imageGalleryPickerSectionIdx + 1}
                   </h4>
-                  <p className="text-[9px] text-slate-400">
+                  <p className={`text-[9px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     Pick from your uploads, category thumbnails, product catalog, or upload a new photo
                   </p>
                 </div>
@@ -2747,27 +2892,33 @@ export const GridStudioPanel: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setImageGalleryPickerSectionIdx(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 <X size={16} />
               </button>
             </div>
 
             {/* Search & Upload Action Bar */}
-            <div className="p-3 border-b border-[#242424] bg-[#181818] flex flex-col sm:flex-row items-center gap-2.5 justify-between">
+            <div className={`p-3 border-b flex flex-col sm:flex-row items-center gap-2.5 justify-between ${
+              isDark ? 'border-[#242424] bg-[#181818]' : 'border-slate-200 bg-white'
+            }`}>
               <div className="relative w-full sm:w-72">
                 <input
                   type="text"
                   value={gallerySearch}
                   onChange={(e) => setGallerySearch(e.target.value)}
                   placeholder="Search media, categories, products..."
-                  className="w-full pl-3 pr-8 py-1.5 bg-[#101010] border border-[#2d2d2d] rounded-lg text-xs text-white placeholder-slate-500 outline-none focus:border-[#0F3D3E]"
+                  className={`w-full pl-3 pr-8 py-1.5 border rounded-lg text-xs placeholder-slate-400 outline-none focus:border-[#0F3D3E] ${
+                    isDark ? 'bg-[#101010] border-[#2d2d2d] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 />
                 {gallerySearch && (
                   <button
                     type="button"
                     onClick={() => setGallerySearch('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                    className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'}`}
                   >
                     ×
                   </button>
@@ -2803,7 +2954,9 @@ export const GridStudioPanel: React.FC = () => {
             </div>
 
             {/* Filter Tabs */}
-            <div className="px-4 py-2 border-b border-[#242424] bg-[#141414] flex items-center gap-1.5 overflow-x-auto custom-scrollbar">
+            <div className={`px-4 py-2 border-b flex items-center gap-1.5 overflow-x-auto custom-scrollbar ${
+              isDark ? 'border-[#242424] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+            }`}>
               {[
                 { id: 'uploads', label: '📸 My Uploads', count: mediaItems?.length || 0 },
                 { id: 'categories', label: '📂 Categories', count: categories?.length || 0 },
@@ -2818,8 +2971,8 @@ export const GridStudioPanel: React.FC = () => {
                   onClick={() => setGalleryTab(tab.id as any)}
                   className={`px-3 py-1 rounded-md text-[9.5px] font-black uppercase tracking-wider shrink-0 transition-all ${
                     galleryTab === tab.id
-                      ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm'
-                      : 'bg-[#1c1c1c] text-slate-400 hover:text-white hover:bg-[#252525]'
+                      ? isDark ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm' : 'bg-[#0F3D3E] text-white shadow-sm'
+                      : isDark ? 'bg-[#1c1c1c] text-slate-400 hover:text-white hover:bg-[#252525]' : 'bg-white text-slate-600 hover:text-slate-900 hover:bg-slate-100 border border-slate-200'
                   }`}
                 >
                   {tab.label} <span className="opacity-70 font-mono text-[8.5px]">({tab.count})</span>
@@ -2828,12 +2981,14 @@ export const GridStudioPanel: React.FC = () => {
             </div>
 
             {/* Modal Body / Media Grid */}
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar bg-[#111111] space-y-5">
+            <div className={`flex-1 overflow-y-auto p-4 custom-scrollbar space-y-5 ${
+              isDark ? 'bg-[#111111]' : 'bg-slate-50/50'
+            }`}>
               {/* 1. USER UPLOADS */}
               {(galleryTab === 'all' || galleryTab === 'uploads') && (
                 <div>
-                  <div className="flex items-center justify-between mb-2.5 pb-1 border-b border-[#222]">
-                    <h5 className="text-[10.5px] font-black text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1.5">
+                  <div className={`flex items-center justify-between mb-2.5 pb-1 border-b ${isDark ? 'border-[#222]' : 'border-slate-200'}`}>
+                    <h5 className={`text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
                       <Upload size={12} className="text-[#00a651]" /> My Uploaded Pictures ({mediaItems?.length || 0})
                     </h5>
                     <button
@@ -2846,9 +3001,11 @@ export const GridStudioPanel: React.FC = () => {
                   </div>
 
                   {!mediaItems || mediaItems.length === 0 ? (
-                    <div className="p-6 rounded-xl border border-dashed border-[#333] bg-[#161616] text-center space-y-2">
+                    <div className={`p-6 rounded-xl border border-dashed text-center space-y-2 ${
+                      isDark ? 'border-[#333] bg-[#161616]' : 'border-slate-300 bg-white shadow-sm'
+                    }`}>
                       <Upload size={22} className="mx-auto text-slate-500" />
-                      <p className="text-xs text-slate-300 font-bold">No uploaded pictures yet</p>
+                      <p className={`text-xs font-bold ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>No uploaded pictures yet</p>
                       <p className="text-[9px] text-slate-500">Upload your product photos, logos, or catalog assets here.</p>
                       <button
                         type="button"
@@ -2874,11 +3031,13 @@ export const GridStudioPanel: React.FC = () => {
                               }}
                               className={`relative rounded-lg border p-1.5 cursor-pointer flex flex-col items-center gap-1.5 transition-all group ${
                                 isSelected
-                                  ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]'
-                                  : 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1d1d1d]'
+                                  ? isDark ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]' : 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400'
+                                  : isDark ? 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1d1d1d]' : 'border-slate-200 bg-white hover:border-[#0F3D3E] hover:bg-slate-50 shadow-sm'
                               }`}
                             >
-                              <div className="w-full h-24 bg-[#0d0d0d] rounded-md flex items-center justify-center overflow-hidden p-1">
+                              <div className={`w-full h-24 rounded-md flex items-center justify-center overflow-hidden p-1 ${
+                                isDark ? 'bg-[#0d0d0d]' : 'bg-slate-100'
+                              }`}>
                                 <img
                                   src={imgUrl}
                                   alt={item.name}
@@ -2886,7 +3045,7 @@ export const GridStudioPanel: React.FC = () => {
                                 />
                               </div>
                               <div className="w-full text-center px-0.5">
-                                <p className="text-[9px] font-bold text-white truncate">{item.name || 'Uploaded Image'}</p>
+                                <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{item.name || 'Uploaded Image'}</p>
                                 <p className="text-[8px] text-slate-400 font-mono">{item.size || 'Upload'}</p>
                               </div>
                               {isSelected && (
@@ -2905,8 +3064,8 @@ export const GridStudioPanel: React.FC = () => {
               {/* 2. CATEGORY THUMBNAILS */}
               {(galleryTab === 'all' || galleryTab === 'categories') && (
                 <div>
-                  <div className="flex items-center justify-between mb-2.5 pb-1 border-b border-[#222]">
-                    <h5 className="text-[10.5px] font-black text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1.5">
+                  <div className={`flex items-center justify-between mb-2.5 pb-1 border-b ${isDark ? 'border-[#222]' : 'border-slate-200'}`}>
+                    <h5 className={`text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
                       <Layers size={12} className="text-[#0F3D3E]" /> Category Thumbnails ({categories?.length || 0})
                     </h5>
                   </div>
@@ -2926,11 +3085,13 @@ export const GridStudioPanel: React.FC = () => {
                             }}
                             className={`relative rounded-lg border p-1.5 cursor-pointer flex flex-col items-center gap-1.5 transition-all group ${
                               isSelected
-                                ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]'
-                                : 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1d1d1d]'
+                                ? isDark ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]' : 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400'
+                                : isDark ? 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1d1d1d]' : 'border-slate-200 bg-white hover:border-[#0F3D3E] hover:bg-slate-50 shadow-sm'
                             }`}
                           >
-                            <div className="w-full h-24 bg-[#0d0d0d] rounded-md flex items-center justify-center overflow-hidden p-1">
+                            <div className={`w-full h-24 rounded-md flex items-center justify-center overflow-hidden p-1 ${
+                              isDark ? 'bg-[#0d0d0d]' : 'bg-slate-100'
+                            }`}>
                               <img
                                 src={imgUrl}
                                 alt={cat.name}
@@ -2938,7 +3099,7 @@ export const GridStudioPanel: React.FC = () => {
                               />
                             </div>
                             <div className="w-full text-center px-0.5">
-                              <p className="text-[9px] font-bold text-white truncate">{cat.name}</p>
+                              <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{cat.name}</p>
                               <p className="text-[8px] text-[#00a651] font-bold">Category</p>
                             </div>
                             {isSelected && (
@@ -2956,8 +3117,8 @@ export const GridStudioPanel: React.FC = () => {
               {/* 3. PRODUCT CATALOG PHOTOS */}
               {(galleryTab === 'all' || galleryTab === 'products') && (
                 <div>
-                  <div className="flex items-center justify-between mb-2.5 pb-1 border-b border-[#222]">
-                    <h5 className="text-[10.5px] font-black text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1.5">
+                  <div className={`flex items-center justify-between mb-2.5 pb-1 border-b ${isDark ? 'border-[#222]' : 'border-slate-200'}`}>
+                    <h5 className={`text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
                       <Package size={12} className="text-[#38bdf8]" /> Product Catalog Photos ({products?.length || 0})
                     </h5>
                   </div>
@@ -2980,11 +3141,13 @@ export const GridStudioPanel: React.FC = () => {
                               }}
                               className={`relative rounded-lg border p-1.5 cursor-pointer flex flex-col items-center gap-1.5 transition-all group ${
                                 isSelected
-                                  ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]'
-                                  : 'border-[#262626] bg-[#161616] hover:border-[#38bdf8]/60 hover:bg-[#1d1d1d]'
+                                  ? isDark ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]' : 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400'
+                                  : isDark ? 'border-[#262626] bg-[#161616] hover:border-[#38bdf8]/60 hover:bg-[#1d1d1d]' : 'border-slate-200 bg-white hover:border-[#38bdf8]/60 hover:bg-slate-50 shadow-sm'
                               }`}
                             >
-                              <div className="w-full h-24 bg-[#0d0d0d] rounded-md flex items-center justify-center overflow-hidden p-1">
+                              <div className={`w-full h-24 rounded-md flex items-center justify-center overflow-hidden p-1 ${
+                                isDark ? 'bg-[#0d0d0d]' : 'bg-slate-100'
+                              }`}>
                                 <img
                                   src={imgUrl}
                                   alt={p.name}
@@ -2992,7 +3155,7 @@ export const GridStudioPanel: React.FC = () => {
                                 />
                               </div>
                               <div className="w-full text-center px-0.5">
-                                <p className="text-[9px] font-bold text-white truncate">{p.name || 'Product'}</p>
+                                <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{p.name || 'Product'}</p>
                                 <p className="text-[8px] text-slate-400 font-mono">{p.sku || ''}</p>
                               </div>
                               {isSelected && (
@@ -3011,8 +3174,8 @@ export const GridStudioPanel: React.FC = () => {
               {/* 4. STUDIO PRESETS */}
               {(galleryTab === 'all' || galleryTab === 'presets') && (
                 <div>
-                  <div className="flex items-center justify-between mb-2.5 pb-1 border-b border-[#222]">
-                    <h5 className="text-[10.5px] font-black text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1.5">
+                  <div className={`flex items-center justify-between mb-2.5 pb-1 border-b ${isDark ? 'border-[#222]' : 'border-slate-200'}`}>
+                    <h5 className={`text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
                       <Sparkles size={12} className="text-amber-400" /> Studio Light Presets (6)
                     </h5>
                   </div>
@@ -3037,11 +3200,13 @@ export const GridStudioPanel: React.FC = () => {
                             }}
                             className={`relative rounded-lg border p-1.5 cursor-pointer flex flex-col items-center gap-1.5 transition-all group ${
                               isSelected
-                                ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]'
-                                : 'border-[#262626] bg-[#161616] hover:border-amber-400/60 hover:bg-[#1d1d1d]'
+                                ? isDark ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]' : 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400'
+                                : isDark ? 'border-[#262626] bg-[#161616] hover:border-amber-400/60 hover:bg-[#1d1d1d]' : 'border-slate-200 bg-white hover:border-amber-400/60 hover:bg-slate-50 shadow-sm'
                             }`}
                           >
-                            <div className="w-full h-24 bg-[#0d0d0d] rounded-md flex items-center justify-center overflow-hidden">
+                            <div className={`w-full h-24 rounded-md flex items-center justify-center overflow-hidden ${
+                              isDark ? 'bg-[#0d0d0d]' : 'bg-slate-100'
+                            }`}>
                               <img
                                 src={preset.url}
                                 alt={preset.name}
@@ -3049,7 +3214,7 @@ export const GridStudioPanel: React.FC = () => {
                               />
                             </div>
                             <div className="w-full text-center px-0.5">
-                              <p className="text-[9px] font-bold text-white truncate">{preset.name}</p>
+                              <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{preset.name}</p>
                               <p className="text-[8px] text-slate-400">Studio</p>
                             </div>
                             {isSelected && (
@@ -3067,8 +3232,8 @@ export const GridStudioPanel: React.FC = () => {
               {/* 5. SYSTEM / ADMIN ASSETS */}
               {(galleryTab === 'all' || galleryTab === 'admin') && adminAssets && adminAssets.length > 0 && (
                 <div>
-                  <div className="flex items-center justify-between mb-2.5 pb-1 border-b border-[#222]">
-                    <h5 className="text-[10.5px] font-black text-[#E2DCC8] uppercase tracking-wider flex items-center gap-1.5">
+                  <div className={`flex items-center justify-between mb-2.5 pb-1 border-b ${isDark ? 'border-[#222]' : 'border-slate-200'}`}>
+                    <h5 className={`text-[10.5px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
                       <Sparkles size={12} className="text-[#0F3D3E]" /> System Assets ({adminAssets.length})
                     </h5>
                   </div>
@@ -3087,11 +3252,13 @@ export const GridStudioPanel: React.FC = () => {
                             }}
                             className={`relative rounded-lg border p-1.5 cursor-pointer flex flex-col items-center gap-1.5 transition-all group ${
                               isSelected
-                                ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]'
-                                : 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1d1d1d]'
+                                ? isDark ? 'border-[#00a651] bg-[#0F3D3E]/30 ring-2 ring-[#00a651]' : 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-400'
+                                : isDark ? 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1d1d1d]' : 'border-slate-200 bg-white hover:border-[#0F3D3E] hover:bg-slate-50 shadow-sm'
                             }`}
                           >
-                            <div className="w-full h-24 bg-[#0d0d0d] rounded-md flex items-center justify-center overflow-hidden p-1">
+                            <div className={`w-full h-24 rounded-md flex items-center justify-center overflow-hidden p-1 ${
+                              isDark ? 'bg-[#0d0d0d]' : 'bg-slate-100'
+                            }`}>
                               <img
                                 src={imgUrl}
                                 alt={a.name}
@@ -3099,7 +3266,7 @@ export const GridStudioPanel: React.FC = () => {
                               />
                             </div>
                             <div className="w-full text-center px-0.5">
-                              <p className="text-[9px] font-bold text-white truncate">{a.name}</p>
+                              <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-800'}`}>{a.name}</p>
                               <p className="text-[8px] text-slate-400 font-mono">System</p>
                             </div>
                             {isSelected && (
@@ -3125,32 +3292,40 @@ export const GridStudioPanel: React.FC = () => {
           onClick={() => setProductPickerSectionIdx(null)}
         >
           <div
-            className="w-full max-w-md bg-[#161616] border border-[#262626] rounded-[6px] shadow-2xl flex flex-col max-h-[75vh] overflow-hidden text-white"
+            className={`w-full max-w-md border rounded-[6px] shadow-2xl flex flex-col max-h-[75vh] overflow-hidden ${
+              isDark ? 'bg-[#161616] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-4 py-3 border-b border-[#262626] flex items-center justify-between bg-[#141414]">
+            <div className={`px-4 py-3 border-b flex items-center justify-between ${
+              isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+            }`}>
               <div className="flex items-center gap-2">
-                <Package size={14} className="text-[#E2DCC8]" />
-                <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                <Package size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+                <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   Fill Section #{productPickerSectionIdx + 1}
                 </h4>
               </div>
               <button
                 type="button"
                 onClick={() => setProductPickerSectionIdx(null)}
-                className="p-1 rounded text-slate-400 hover:text-white"
+                className={`p-1 rounded transition-colors ${isDark ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900'}`}
               >
                 <X size={14} />
               </button>
             </div>
 
-            <div className="p-2.5 border-b border-[#262626] bg-[#141414] space-y-1.5">
+            <div className={`p-2.5 border-b space-y-1.5 ${
+              isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50/50'
+            }`}>
               <input
                 type="text"
                 value={pickerSearch}
                 onChange={(e) => setPickerSearch(e.target.value)}
                 placeholder="Search products by name or SKU..."
-                className="w-full px-2.5 py-1 bg-[#1a1a1a] border border-[#333] rounded text-xs text-white placeholder-[#666] outline-none focus:border-[#0F3D3E]"
+                className={`w-full px-2.5 py-1 border rounded text-xs outline-none focus:border-[#0F3D3E] ${
+                  isDark ? 'bg-[#1a1a1a] border-[#333] text-white placeholder-[#666]' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400'
+                }`}
               />
 
               {categories.length > 0 && (
@@ -3161,7 +3336,7 @@ export const GridStudioPanel: React.FC = () => {
                     className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 transition-all ${
                       pickerCategoryFilter === null
                         ? 'bg-[#0F3D3E] text-white'
-                        : 'bg-[#202020] text-slate-400 hover:text-white'
+                        : isDark ? 'bg-[#202020] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
                     }`}
                   >
                     All ({products.length})
@@ -3176,7 +3351,7 @@ export const GridStudioPanel: React.FC = () => {
                         className={`px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider shrink-0 transition-all ${
                           pickerCategoryFilter === cat.id
                             ? 'bg-[#0F3D3E] text-white'
-                            : 'bg-[#202020] text-slate-400 hover:text-white'
+                            : isDark ? 'bg-[#202020] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
                         }`}
                       >
                         {cat.name} ({count})
@@ -3187,7 +3362,9 @@ export const GridStudioPanel: React.FC = () => {
               )}
             </div>
 
-            <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar bg-[#121212]">
+            <div className={`flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar ${
+              isDark ? 'bg-[#121212]' : 'bg-white'
+            }`}>
               {(() => {
                 const filtered = products.filter(p => {
                   const matchCat = pickerCategoryFilter ? p.categoryId === pickerCategoryFilter : true;
@@ -3199,7 +3376,7 @@ export const GridStudioPanel: React.FC = () => {
 
                 if (filtered.length === 0) {
                   return (
-                    <div className="py-8 text-center text-[#777] text-xs">
+                    <div className="py-8 text-center text-slate-400 text-xs">
                       No products found.
                     </div>
                   );
@@ -3209,27 +3386,37 @@ export const GridStudioPanel: React.FC = () => {
                   <div
                     key={p.id}
                     onClick={() => handleSelectProductForSection(productPickerSectionIdx, p)}
-                    className="p-2.5 rounded border border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1a1a1a] flex items-center justify-between gap-2.5 cursor-pointer transition-all group"
+                    className={`p-2.5 rounded border flex items-center justify-between gap-2.5 cursor-pointer transition-all group ${
+                      isDark
+                        ? 'border-[#262626] bg-[#161616] hover:border-[#0F3D3E] hover:bg-[#1a1a1a]'
+                        : 'border-slate-200 bg-slate-50 hover:border-[#0F3D3E] hover:bg-teal-50/40 shadow-sm'
+                    }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       {p.image ? (
                         <img
                           src={p.image}
                           alt={p.name}
-                          className="w-8 h-8 rounded object-contain bg-[#101010] border border-[#262626] p-0.5 shrink-0"
+                          className={`w-8 h-8 rounded object-contain border p-0.5 shrink-0 ${
+                            isDark ? 'bg-[#101010] border-[#262626]' : 'bg-white border-slate-200'
+                          }`}
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded bg-[#101010] border border-[#262626] flex items-center justify-center text-[#666] shrink-0">
+                        <div className={`w-8 h-8 rounded border flex items-center justify-center shrink-0 ${
+                          isDark ? 'bg-[#101010] border-[#262626] text-[#666]' : 'bg-white border-slate-200 text-slate-400'
+                        }`}>
                           <Package size={14} />
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="text-[11px] font-bold text-white truncate group-hover:text-[#E2DCC8]">
+                        <p className={`text-[11px] font-bold truncate ${
+                          isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
+                        }`}>
                           {p.name}
                         </p>
-                        <div className="flex items-center gap-1.5 text-[9px] text-[#888]">
+                        <div className={`flex items-center gap-1.5 text-[9px] ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
                           {p.sku && <span className="font-mono">{p.sku}</span>}
-                          {p.price !== undefined && <span className="text-[#E2DCC8]">• ₹{p.price}</span>}
+                          {p.price !== undefined && <span className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E] font-bold"}>• ₹{p.price}</span>}
                         </div>
                       </div>
                     </div>
@@ -3255,20 +3442,24 @@ export const GridStudioPanel: React.FC = () => {
           onClick={() => setLinkRowModal(null)}
         >
           <div
-            className="w-full max-w-xl bg-[#141414] border border-[#2a2a2a] rounded-xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden text-white animate-in fade-in zoom-in-95 duration-150"
+            className={`w-full max-w-xl border rounded-xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150 ${
+              isDark ? 'bg-[#141414] border-[#2a2a2a] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="px-4 py-3.5 border-b border-[#242424] flex items-center justify-between bg-[#181818]">
+            <div className={`px-4 py-3.5 border-b flex items-center justify-between ${
+              isDark ? 'border-[#242424] bg-[#181818]' : 'border-slate-200 bg-slate-50'
+            }`}>
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded-lg bg-[#0F3D3E] text-[#E2DCC8] flex items-center justify-center shadow-sm">
                   <Package size={15} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                  <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
                     Fill Row #{linkRowModal.rIdx + 1} with Product
                   </h4>
-                  <p className="text-[10px] text-slate-400">
+                  <p className={`text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                     Section #{linkRowModal.secIdx + 1} Specs Table
                   </p>
                 </div>
@@ -3276,22 +3467,28 @@ export const GridStudioPanel: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLinkRowModal(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
               >
                 <X size={15} />
               </button>
             </div>
 
             {/* Search & Category Filter */}
-            <div className="p-3 border-b border-[#242424] bg-[#161616] flex items-center gap-2">
+            <div className={`p-3 border-b flex items-center gap-2 ${
+              isDark ? 'border-[#242424] bg-[#161616]' : 'border-slate-200 bg-white'
+            }`}>
               <div className="relative flex-1">
-                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
                   value={linkRowSearch}
                   onChange={(e) => setLinkRowSearch(e.target.value)}
                   placeholder="Search products by title or model no / SKU..."
-                  className="w-full pl-8 pr-3 py-1.5 bg-[#0f0f0f] border border-[#333] rounded-lg text-xs text-white placeholder-slate-500 outline-none focus:border-[#0F3D3E]"
+                  className={`w-full pl-8 pr-3 py-1.5 border rounded-lg text-xs placeholder-slate-400 outline-none focus:border-[#0F3D3E] ${
+                    isDark ? 'bg-[#0f0f0f] border-[#333] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                   autoFocus
                 />
               </div>
@@ -3299,7 +3496,9 @@ export const GridStudioPanel: React.FC = () => {
                 <select
                   value={linkRowCategory}
                   onChange={(e) => setLinkRowCategory(e.target.value)}
-                  className="px-2.5 py-1.5 bg-[#0f0f0f] border border-[#333] rounded-lg text-xs text-slate-300 outline-none cursor-pointer"
+                  className={`px-2.5 py-1.5 border rounded-lg text-xs outline-none cursor-pointer ${
+                    isDark ? 'bg-[#0f0f0f] border-[#333] text-slate-300' : 'bg-white border-slate-300 text-slate-700'
+                  }`}
                 >
                   <option value="all">All Categories</option>
                   {categories.map(c => (
@@ -3310,7 +3509,9 @@ export const GridStudioPanel: React.FC = () => {
             </div>
 
             {/* Products List */}
-            <div className="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar bg-[#111111]">
+            <div className={`flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar ${
+              isDark ? 'bg-[#111111]' : 'bg-slate-50/50'
+            }`}>
               {(() => {
                 const filtered = products.filter(p => {
                   const matchCat = linkRowCategory === 'all' || String(p.categoryId) === String(linkRowCategory);
@@ -3321,7 +3522,7 @@ export const GridStudioPanel: React.FC = () => {
 
                 if (filtered.length === 0) {
                   return (
-                    <div className="py-12 text-center text-slate-500 text-xs">
+                    <div className="py-12 text-center text-slate-400 text-xs">
                       No matching products found.
                     </div>
                   );
@@ -3334,29 +3535,39 @@ export const GridStudioPanel: React.FC = () => {
                   return (
                     <div
                       key={p.id}
-                      className="p-2.5 bg-[#181818] hover:bg-[#202020] border border-[#2a2a2a] rounded-lg transition-all flex items-center justify-between gap-3 group"
+                      className={`p-2.5 border rounded-lg transition-all flex items-center justify-between gap-3 group ${
+                        isDark
+                          ? 'bg-[#181818] hover:bg-[#202020] border-[#2a2a2a]'
+                          : 'bg-white hover:bg-teal-50/40 border-slate-200 shadow-sm'
+                      }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         {pImg ? (
                           <img
                             src={normalizeImageUrl(pImg)}
                             alt={p.name}
-                            className="w-10 h-10 object-contain rounded bg-[#0d0d0d] p-0.5 border border-[#333] shrink-0"
+                            className={`w-10 h-10 object-contain rounded p-0.5 border shrink-0 ${
+                              isDark ? 'bg-[#0d0d0d] border-[#333]' : 'bg-slate-50 border-slate-200'
+                            }`}
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded bg-[#0d0d0d] border border-[#333] flex items-center justify-center text-slate-500 shrink-0">
+                          <div className={`w-10 h-10 rounded border flex items-center justify-center shrink-0 ${
+                            isDark ? 'bg-[#0d0d0d] border-[#333] text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
+                          }`}>
                             <Package size={16} />
                           </div>
                         )}
                         <div className="min-w-0">
-                          <p className="text-xs font-bold text-white truncate group-hover:text-[#E2DCC8]">
+                          <p className={`text-xs font-bold truncate ${
+                            isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
+                          }`}>
                             {p.name}
                           </p>
-                          <div className="flex items-center gap-2 text-[10px] text-slate-400">
+                          <div className={`flex items-center gap-2 text-[10px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                             {p.sku && <span className="font-mono">{p.sku}</span>}
-                            {p.price !== undefined && <span className="text-[#E2DCC8] font-bold">• ₹{p.price}</span>}
+                            {p.price !== undefined && <span className={`font-bold ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>• ₹{p.price}</span>}
                             {p.variants && p.variants.length > 0 && (
-                              <span className="text-amber-300 font-mono text-[9px]">[{p.variants.length} vars]</span>
+                              <span className="text-amber-500 font-mono text-[9px]">[{p.variants.length} vars]</span>
                             )}
                           </div>
                         </div>
@@ -3378,7 +3589,11 @@ export const GridStudioPanel: React.FC = () => {
                                   key={v.id || vIdx}
                                   type="button"
                                   onClick={() => handleLinkRowToProduct(linkRowModal.secIdx, linkRowModal.rIdx, p, v)}
-                                  className="px-2 py-0.5 bg-[#262626] hover:bg-[#333] text-slate-300 hover:text-white rounded text-[9px] font-mono transition-all border border-[#3a3a3a]"
+                                  className={`px-2 py-0.5 rounded text-[9px] font-mono transition-all border ${
+                                    isDark
+                                      ? 'bg-[#262626] hover:bg-[#333] text-slate-300 hover:text-white border-[#3a3a3a]'
+                                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                                  }`}
                                   title={`Use variant: ${v.sku} - ${v.name}`}
                                 >
                                   {v.sku || v.name}

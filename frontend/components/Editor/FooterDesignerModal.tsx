@@ -1220,22 +1220,30 @@ export const FooterDesignerModal: React.FC = () => {
   if (!isFooterDesignerOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#0b0b0c] text-white font-sans select-none animate-in fade-in duration-200">
+    <div className={`fixed inset-0 z-[9999] flex flex-col font-sans select-none animate-in fade-in duration-200 transition-colors ${
+      isDark ? 'bg-[#0b0b0c] text-white' : 'bg-slate-100 text-slate-800'
+    }`}>
       
       {/* ── Top Footer Navigation Bar ────────────────────────────── */}
-      <div className="h-16 px-5 bg-[#121214] border-b border-[#262626] flex items-center justify-between shrink-0 shadow-lg">
+      <div className={`h-16 px-5 border-b flex items-center justify-between shrink-0 shadow-lg transition-colors ${
+        isDark ? 'bg-[#121214] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+      }`}>
         <div className="flex items-center gap-3.5">
           {/* Back to Project Button */}
           <button
             onClick={() => setIsFooterDesignerOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 rounded-[6px] bg-[#1a1a1c] hover:bg-[#252528] text-white border border-[#38383c] hover:border-[#E2DCC8]/50 transition-all shadow-sm group"
+            className={`flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-all shadow-sm group ${
+              isDark
+                ? 'bg-[#1a1a1c] hover:bg-[#252528] text-white border-[#38383c] hover:border-[#E2DCC8]/50'
+                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 hover:border-[#0F3D3E]/50'
+            }`}
             title="Back to Catalog Project"
           >
-            <ArrowLeft size={16} className="text-[#E2DCC8] group-hover:-translate-x-0.5 transition-transform" />
-            <span className="text-xs font-bold text-[#E2DCC8]">Back to Project</span>
+            <ArrowLeft size={16} className={`${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} group-hover:-translate-x-0.5 transition-transform`} />
+            <span className={`text-xs font-bold ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Back to Project</span>
           </button>
 
-          <div className="h-6 w-px bg-[#28282c]" />
+          <div className={`h-6 w-px ${isDark ? 'bg-[#28282c]' : 'bg-slate-200'}`} />
 
           <div className="w-10 h-10 rounded-[6px] bg-gradient-to-br from-[#0F3D3E] to-[#100F0F] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-md shrink-0">
             <Layout size={20} />
@@ -1247,17 +1255,25 @@ export const FooterDesignerModal: React.FC = () => {
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                className="bg-transparent border-b border-transparent hover:border-[#E2DCC8]/40 focus:border-[#E2DCC8] text-base font-black text-white px-1 py-0.5 outline-none transition-all w-64 md:w-80"
+                className={`bg-transparent border-b border-transparent text-base font-black px-1 py-0.5 outline-none transition-all w-64 md:w-80 ${
+                  isDark
+                    ? 'text-white hover:border-[#E2DCC8]/40 focus:border-[#E2DCC8] placeholder:text-gray-500'
+                    : 'text-slate-900 hover:border-[#0F3D3E]/40 focus:border-[#0F3D3E] placeholder:text-slate-400'
+                }`}
                 placeholder="Footer Theme Name..."
               />
-              <span className="text-[10px] font-bold uppercase tracking-wider bg-[#0F3D3E]/30 text-[#E2DCC8] border border-[#E2DCC8]/20 px-2 py-0.5 rounded-full">
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                isDark
+                  ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
+                  : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
+              }`}>
                 Footer Studio
               </span>
             </div>
-            <div className="flex items-center gap-3 text-xs text-[#888888] mt-0.5 pl-1">
-              <span>Width: <strong className="text-slate-300">794px</strong> (Catalog Width)</span>
+            <div className={`flex items-center gap-3 text-xs mt-0.5 pl-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+              <span>Width: <strong className={isDark ? 'text-slate-300' : 'text-slate-700'}>794px</strong> (Catalog Width)</span>
               <span>•</span>
-              <span>Height: <strong className="text-slate-300">{Math.round(footerHeight)}px</strong> ({toMm(footerHeight)}mm)</span>
+              <span>Height: <strong className={isDark ? 'text-slate-300' : 'text-slate-700'}>{Math.round(footerHeight)}px</strong> ({toMm(footerHeight)}mm)</span>
             </div>
           </div>
         </div>
@@ -1265,8 +1281,10 @@ export const FooterDesignerModal: React.FC = () => {
         {/* Action Controls in Top Bar */}
         <div className="flex items-center gap-2.5">
           {/* Height Adjuster Pill */}
-          <div className="flex items-center gap-2 bg-[#18181b] border border-[#2a2a2e] px-3 py-1.5 rounded-[6px]">
-            <span className="text-[11px] font-bold text-[#888888] uppercase tracking-wider">Height</span>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] border ${
+            isDark ? 'bg-[#18181b] border-[#2a2a2e]' : 'bg-slate-50 border-slate-300'
+          }`}>
+            <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Height</span>
             <input
               type="range"
               min={15}
@@ -1274,9 +1292,11 @@ export const FooterDesignerModal: React.FC = () => {
               step={1}
               value={Math.max(15, Math.min(60, toMm(footerHeight) >= 15 ? toMm(footerHeight) : 20))}
               onChange={(e) => setFooterHeight(toPx(Number(e.target.value)))}
-              className="w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-[#0F3D3E] bg-[#333333]"
+              className={`w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-[#0F3D3E] ${
+                isDark ? 'bg-[#333333]' : 'bg-slate-300'
+              }`}
             />
-            <span className="text-xs font-bold text-[#E2DCC8] w-10 text-right font-mono">
+            <span className={`text-xs font-bold w-10 text-right font-mono ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
               {Math.max(15, Math.min(60, toMm(footerHeight) >= 15 ? toMm(footerHeight) : 20))}mm
             </span>
           </div>
@@ -1284,17 +1304,21 @@ export const FooterDesignerModal: React.FC = () => {
           {/* Apply to Catalog Button */}
           <button
             onClick={handleApplyToCatalog}
-            className="flex items-center gap-2 px-3.5 py-2 bg-[#1c1c1f] hover:bg-[#252528] border border-[#38383c] hover:border-[#E2DCC8]/50 text-white rounded-[6px] text-xs font-bold transition-all shadow-sm"
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-[6px] text-xs font-bold transition-all shadow-sm border ${
+              isDark
+                ? 'bg-[#1c1c1f] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/50 text-white'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/50 text-slate-800'
+            }`}
             title="Apply this designed footer directly to the currently opened catalog"
           >
             {appliedSuccess ? (
               <>
-                <CheckCircle2 size={15} className="text-emerald-400" />
-                <span className="text-emerald-400">Applied!</span>
+                <CheckCircle2 size={15} className="text-emerald-500" />
+                <span className="text-emerald-500">Applied!</span>
               </>
             ) : (
               <>
-                <Sparkles size={15} className="text-[#E2DCC8]" />
+                <Sparkles size={15} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
                 <span>Apply to Catalog</span>
               </>
             )}
@@ -1324,7 +1348,11 @@ export const FooterDesignerModal: React.FC = () => {
           {/* Close Studio Button */}
           <button
             onClick={() => setIsFooterDesignerOpen(false)}
-            className="p-2 rounded-[6px] bg-[#18181b] hover:bg-[#26262a] border border-[#2a2a2e] text-[#888888] hover:text-white transition-colors ml-1"
+            className={`p-2 rounded-[6px] border transition-colors ml-1 ${
+              isDark
+                ? 'bg-[#18181b] hover:bg-[#26262a] border-[#2a2a2e] text-[#888888] hover:text-white'
+                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900'
+            }`}
             title="Close Footer Designer"
           >
             <X size={18} />
@@ -1336,10 +1364,14 @@ export const FooterDesignerModal: React.FC = () => {
       <div className="flex-1 flex overflow-hidden">
         
         {/* Left Sidebar Tools */}
-        <div className="w-80 bg-[#141416] border-r border-[#262626] flex flex-col shrink-0">
+        <div className={`w-80 border-r flex flex-col shrink-0 transition-colors ${
+          isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
+        }`}>
           
           {/* Sidebar Tab Selector */}
-          <div className="grid grid-cols-5 p-2 gap-1 border-b border-[#262626] bg-[#101012]">
+          <div className={`grid grid-cols-5 p-2 gap-1 border-b transition-colors ${
+            isDark ? 'border-[#262626] bg-[#101012]' : 'border-slate-200 bg-slate-50'
+          }`}>
             {[
               { id: 'text', label: 'Text', icon: Type },
               { id: 'shapes', label: 'Shapes', icon: Square },
@@ -1355,8 +1387,12 @@ export const FooterDesignerModal: React.FC = () => {
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`flex flex-col items-center justify-center py-2 px-1 rounded-[4px] transition-all ${
                     isActive
-                      ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm font-bold border border-[#E2DCC8]/30'
-                      : 'text-[#888888] hover:text-white hover:bg-[#1a1a1c]'
+                      ? isDark
+                        ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm font-bold border border-[#E2DCC8]/30'
+                        : 'bg-[#0F3D3E] text-white shadow-sm font-bold border border-[#0F3D3E]'
+                      : isDark
+                        ? 'text-[#888888] hover:text-white hover:bg-[#1a1a1c]'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
                   }`}
                   title={tab.label}
                 >
@@ -1374,58 +1410,70 @@ export const FooterDesignerModal: React.FC = () => {
             {activeTab === 'text' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] mb-1">
+                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                     Standard Text
                   </h4>
-                  <p className="text-[11px] text-[#888888] mb-3">
+                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     Add customizable text blocks with one click.
                   </p>
 
                   <div className="space-y-2">
                     <button
                       onClick={() => addTextElement('PAGE {{page_number}}', 12, 'bold')}
-                      className="w-full p-2.5 bg-[#1a1a1c] hover:bg-[#252528] border border-[#2a2a2e] hover:border-[#E2DCC8]/40 rounded-[6px] flex items-center justify-between text-left transition-all group"
+                      className={`w-full p-2.5 rounded-[6px] border flex items-center justify-between text-left transition-all group ${
+                        isDark
+                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                      }`}
                     >
                       <div>
-                        <div className="text-xs font-black text-white group-hover:text-[#E2DCC8]">Page Counter</div>
-                        <div className="text-[10px] text-[#888]">e.g. PAGE 1</div>
+                        <div className={`text-xs font-black ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Page Counter</div>
+                        <div className={`text-[10px] ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>e.g. PAGE 1</div>
                       </div>
-                      <Plus size={14} className="text-[#888] group-hover:text-white" />
+                      <Plus size={14} className={isDark ? 'text-[#888] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-800'} />
                     </button>
 
                     <button
                       onClick={() => addTextElement('{{company_name}} • Confidential', 10, 'normal')}
-                      className="w-full p-2.5 bg-[#1a1a1c] hover:bg-[#252528] border border-[#2a2a2e] hover:border-[#E2DCC8]/40 rounded-[6px] flex items-center justify-between text-left transition-all group"
+                      className={`w-full p-2.5 rounded-[6px] border flex items-center justify-between text-left transition-all group ${
+                        isDark
+                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                      }`}
                     >
                       <div>
-                        <div className="text-xs font-bold text-white group-hover:text-[#E2DCC8]">Confidentiality Notice</div>
-                        <div className="text-[10px] text-[#888]">Company & Legal notice</div>
+                        <div className={`text-xs font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Confidentiality Notice</div>
+                        <div className={`text-[10px] ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Company & Legal notice</div>
                       </div>
-                      <Plus size={14} className="text-[#888] group-hover:text-white" />
+                      <Plus size={14} className={isDark ? 'text-[#888] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-800'} />
                     </button>
 
                     <button
                       onClick={() => addTextElement('www.company.com  |  info@company.com', 9.5, '500')}
-                      className="w-full p-2.5 bg-[#1a1a1c] hover:bg-[#252528] border border-[#2a2a2e] hover:border-[#E2DCC8]/40 rounded-[6px] flex items-center justify-between text-left transition-all group"
+                      className={`w-full p-2.5 rounded-[6px] border flex items-center justify-between text-left transition-all group ${
+                        isDark
+                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                      }`}
                     >
                       <div>
-                        <div className="text-xs font-medium text-white group-hover:text-[#E2DCC8]">Contact / Website URL</div>
-                        <div className="text-[10px] text-[#888]">Email & Web address strip</div>
+                        <div className={`text-xs font-medium ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Contact / Website URL</div>
+                        <div className={`text-[10px] ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Email & Web address strip</div>
                       </div>
-                      <Plus size={14} className="text-[#888] group-hover:text-white" />
+                      <Plus size={14} className={isDark ? 'text-[#888] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-800'} />
                     </button>
                   </div>
                 </div>
 
                 {/* Smart Dynamic Tags Group */}
-                <div className="pt-2 border-t border-[#262626]">
+                <div className={`pt-2 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Tag size={13} className="text-[#E2DCC8]" />
-                    <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8]">
+                    <Tag size={13} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
+                    <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                       Smart Dynamic Tags
                     </h4>
                   </div>
-                  <p className="text-[11px] text-[#888888] mb-3">
+                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     These tags auto-replace with each catalog's name, current page, and category!
                   </p>
 
@@ -1441,18 +1489,26 @@ export const FooterDesignerModal: React.FC = () => {
                       <button
                         key={item.tag}
                         onClick={() => addTextElement(item.tag, 10, '600', true)}
-                        className="w-full p-2.5 bg-[#1a1a1c] hover:bg-[#222226] border border-[#2a2a2e] hover:border-[#E2DCC8]/40 rounded-[6px] flex items-center justify-between transition-all group text-left"
+                        className={`w-full p-2.5 rounded-[6px] border flex items-center justify-between transition-all group text-left ${
+                          isDark
+                            ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                        }`}
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-white group-hover:text-[#E2DCC8]">{item.label}</span>
-                            <span className="font-mono text-[9px] bg-[#0F3D3E]/30 text-[#E2DCC8] px-1.5 py-0.5 rounded border border-[#E2DCC8]/20">
+                            <span className={`text-xs font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>{item.label}</span>
+                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
+                              isDark
+                                ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
+                                : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/20'
+                            }`}>
                               {item.tag}
                             </span>
                           </div>
-                          <p className="text-[10px] text-[#777] mt-0.5">{item.desc}</p>
+                          <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>{item.desc}</p>
                         </div>
-                        <Plus size={14} className="text-[#888] group-hover:text-white" />
+                        <Plus size={14} className={isDark ? 'text-[#888] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-800'} />
                       </button>
                     ))}
                   </div>
@@ -1464,10 +1520,10 @@ export const FooterDesignerModal: React.FC = () => {
             {activeTab === 'shapes' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] mb-1">
+                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                     Geometric Shapes
                   </h4>
-                  <p className="text-[11px] text-[#888888] mb-3">
+                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     Click to add shapes, badges, icons, and dividers to your footer.
                   </p>
 
@@ -1476,13 +1532,23 @@ export const FooterDesignerModal: React.FC = () => {
                       <button
                         key={shape.type}
                         onClick={() => addShapeElement(shape.type)}
-                        className="p-3 bg-[#1a1a1c] hover:bg-[#252528] border border-[#2a2a2e] hover:border-[#E2DCC8]/40 rounded-[6px] flex flex-col items-center justify-center gap-2 transition-all group shadow-sm hover:shadow-cyan-950/20"
+                        className={`p-3 rounded-[6px] border flex flex-col items-center justify-center gap-2 transition-all group shadow-sm ${
+                          isDark
+                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40 hover:shadow-cyan-950/20'
+                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-slate-300'
+                        }`}
                         title={`Add ${shape.label} shape`}
                       >
-                        <div className="w-9 h-9 rounded bg-[#121214] border border-[#2e2e32] group-hover:border-[#E2DCC8]/50 flex items-center justify-center text-[#E2DCC8] transition-colors">
+                        <div className={`w-9 h-9 rounded border flex items-center justify-center transition-colors ${
+                          isDark
+                            ? 'bg-[#121214] border-[#2e2e32] group-hover:border-[#E2DCC8]/50 text-[#E2DCC8]'
+                            : 'bg-white border-slate-300 group-hover:border-[#0F3D3E]/50 text-[#0F3D3E]'
+                        }`}>
                           {shape.icon}
                         </div>
-                        <span className="text-[10px] font-bold text-slate-300 group-hover:text-white transition-colors">
+                        <span className={`text-[10px] font-bold transition-colors ${
+                          isDark ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
+                        }`}>
                           {shape.label}
                         </span>
                       </button>
@@ -1496,10 +1562,10 @@ export const FooterDesignerModal: React.FC = () => {
             {activeTab === 'media' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] mb-1">
+                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                     Logos & Brand Graphics
                   </h4>
-                  <p className="text-[11px] text-[#888888] mb-3">
+                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     Upload your company logo, certification emblems, or QR codes into the footer.
                   </p>
 
@@ -1513,17 +1579,21 @@ export const FooterDesignerModal: React.FC = () => {
                   />
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full py-3 px-4 bg-[#1a1a1c] hover:bg-[#242428] border border-dashed border-[#38383c] hover:border-[#E2DCC8] rounded-[6px] flex flex-col items-center justify-center gap-1.5 transition-all text-[#E2DCC8] group mb-4"
+                    className={`w-full py-3 px-4 border border-dashed rounded-[6px] flex flex-col items-center justify-center gap-1.5 transition-all group mb-4 ${
+                      isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#242428] border-[#38383c] hover:border-[#E2DCC8] text-[#E2DCC8]'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-300 hover:border-[#0F3D3E] text-[#0F3D3E]'
+                    }`}
                   >
-                    <Upload size={18} className="text-[#E2DCC8] group-hover:scale-110 transition-transform" />
+                    <Upload size={18} className="group-hover:scale-110 transition-transform" />
                     <span className="text-xs font-bold">Upload Custom Logo / Image</span>
-                    <span className="text-[10px] text-[#888]">PNG, SVG, or JPG supported</span>
+                    <span className={`text-[10px] ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>PNG, SVG, or JPG supported</span>
                   </button>
 
                   {/* Existing Media Assets */}
                   {mediaItems && mediaItems.length > 0 && (
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#888] mb-2 block">
+                      <span className={`text-[10px] font-bold uppercase tracking-wider mb-2 block ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
                         Media Library Assets
                       </span>
                       <div className="grid grid-cols-3 gap-2">
@@ -1531,7 +1601,11 @@ export const FooterDesignerModal: React.FC = () => {
                           <div
                             key={item.id}
                             onClick={() => addImageLogo(item.url)}
-                            className="aspect-video bg-[#121214] border border-[#28282c] hover:border-[#E2DCC8] rounded p-1 cursor-pointer flex items-center justify-center group overflow-hidden transition-all"
+                            className={`aspect-video border rounded p-1 cursor-pointer flex items-center justify-center group overflow-hidden transition-all ${
+                              isDark
+                                ? 'bg-[#121214] border-[#28282c] hover:border-[#E2DCC8]'
+                                : 'bg-slate-50 border-slate-200 hover:border-[#0F3D3E]'
+                            }`}
                             title="Add to Footer"
                           >
                             <img
@@ -1552,10 +1626,10 @@ export const FooterDesignerModal: React.FC = () => {
             {activeTab === 'background' && (
               <div className="space-y-4">
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] mb-1">
+                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                     Footer Strip Background
                   </h4>
-                  <p className="text-[11px] text-[#888888] mb-3">
+                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     Choose a solid color, rich gradient, or transparent overlay for the footer strip.
                   </p>
 
@@ -1565,7 +1639,9 @@ export const FooterDesignerModal: React.FC = () => {
                       setColorPickerTarget('bg');
                       setShowColorPicker(!showColorPicker);
                     }}
-                    className="p-3 rounded-[6px] border border-[#38383c] hover:border-[#E2DCC8] cursor-pointer transition-all flex items-center justify-between mb-3"
+                    className={`p-3 rounded-[6px] border cursor-pointer transition-all flex items-center justify-between mb-3 ${
+                      isDark ? 'border-[#38383c] hover:border-[#E2DCC8]' : 'border-slate-300 hover:border-[#0F3D3E]'
+                    }`}
                     style={{ background: footerBg }}
                   >
                     <span className="text-xs font-black px-2 py-1 bg-black/60 rounded text-white shadow">
@@ -1587,7 +1663,7 @@ export const FooterDesignerModal: React.FC = () => {
                       <button
                         key={idx}
                         onClick={() => setFooterBg(bg)}
-                        className="h-7 rounded-[4px] border border-white/20 hover:scale-105 transition-all shadow-sm"
+                        className="h-7 rounded-[4px] border border-black/10 dark:border-white/20 hover:scale-105 transition-all shadow-sm"
                         style={{ background: bg }}
                         title={bg}
                       />
@@ -1600,14 +1676,20 @@ export const FooterDesignerModal: React.FC = () => {
                       setColorPickerTarget('bg');
                       setShowColorPicker(!showColorPicker);
                     }}
-                    className="w-full py-2 bg-[#1a1a1c] hover:bg-[#242428] border border-[#333] rounded-[6px] text-xs font-bold text-[#E2DCC8] flex items-center justify-center gap-2"
+                    className={`w-full py-2 border rounded-[6px] text-xs font-bold flex items-center justify-center gap-2 ${
+                      isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#242428] border-[#333] text-[#E2DCC8]'
+                        : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
+                    }`}
                   >
                     <Palette size={14} />
                     <span>{showColorPicker ? 'Hide Color Studio' : 'Open Color & Gradient Studio'}</span>
                   </button>
 
                   {showColorPicker && colorPickerTarget === 'bg' && (
-                    <div className="p-3 bg-[#18181a] border border-[#333] rounded-[6px] mt-2 animate-in fade-in">
+                    <div className={`p-3 border rounded-[6px] mt-2 animate-in fade-in ${
+                      isDark ? 'bg-[#18181a] border-[#333]' : 'bg-slate-50 border-slate-200 shadow-sm'
+                    }`}>
                       <AdvancedColorPicker
                         color={footerBg}
                         onChange={(newColor) => setFooterBg(newColor)}
@@ -1616,15 +1698,19 @@ export const FooterDesignerModal: React.FC = () => {
                   )}
                 </div>
 
-                <div className="pt-2 border-t border-[#262626]">
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] mb-1">
+                <div className={`pt-2 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
+                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                     Category Tag
                   </h4>
                   <input
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="w-full bg-[#18181a] border border-[#2a2a2e] focus:border-[#E2DCC8] text-xs text-white p-2 rounded-[4px] outline-none"
+                    className={`w-full text-xs p-2 rounded-[4px] outline-none border ${
+                      isDark
+                        ? 'bg-[#18181a] border-[#2a2a2e] focus:border-[#E2DCC8] text-white'
+                        : 'bg-white border-slate-300 focus:border-[#0F3D3E] text-slate-800'
+                    }`}
                     placeholder="e.g. Corporate, Luxury, Industrial"
                   />
                 </div>
@@ -1640,20 +1726,24 @@ export const FooterDesignerModal: React.FC = () => {
                   if (savedFooters.length === 0) return null;
 
                   return (
-                    <div className="space-y-2.5 pb-3 border-b border-[#28282c]">
+                    <div className={`space-y-2.5 pb-3 border-b ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                        <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                           <Sparkles size={12} className="text-cyan-400" />
                           <span>My Saved Footer Themes</span>
                         </h4>
-                        <span className="text-[10px] font-bold text-[#888]">{savedFooters.length}</span>
+                        <span className={`text-[10px] font-bold ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>{savedFooters.length}</span>
                       </div>
 
                       <div className="space-y-2">
                         {savedFooters.map((tmpl) => (
                           <div
                             key={tmpl.id}
-                            className="p-2.5 bg-[#18181a] hover:bg-[#202024] border border-[#2a2a2e] hover:border-[#E2DCC8]/50 rounded-[6px] transition-all flex items-center justify-between group"
+                            className={`p-2.5 rounded-[6px] border transition-all flex items-center justify-between group ${
+                              isDark
+                                ? 'bg-[#18181a] hover:bg-[#202024] border-[#2a2a2e] hover:border-[#E2DCC8]/50'
+                                : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/50'
+                            }`}
                           >
                             <div
                               onClick={() => {
@@ -1667,10 +1757,10 @@ export const FooterDesignerModal: React.FC = () => {
                               }}
                               className="cursor-pointer flex-1 min-w-0 pr-2"
                             >
-                              <div className="text-xs font-bold text-white group-hover:text-[#E2DCC8] truncate">
+                              <div className={`text-xs font-bold truncate ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>
                                 {tmpl.name}
                               </div>
-                              <div className="text-[10px] text-[#888] flex items-center gap-2 mt-0.5">
+                              <div className={`text-[10px] flex items-center gap-2 mt-0.5 ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
                                 <span>{tmpl.category}</span>
                                 <span>•</span>
                                 <span>{Math.round((tmpl.pages_data?.[0]?.height || 75.6) / 3.78)}mm</span>
@@ -1683,7 +1773,7 @@ export const FooterDesignerModal: React.FC = () => {
                                   await deleteSystemTemplate(tmpl.id);
                                 }
                               }}
-                              className="p-1 text-[#666] hover:text-rose-400 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-rose-950/40"
+                              className="p-1 text-slate-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-rose-50 dark:hover:bg-rose-950/40"
                               title="Delete saved footer"
                             >
                               <Trash2 size={13} />
@@ -1697,10 +1787,10 @@ export const FooterDesignerModal: React.FC = () => {
 
                 {/* Built-in Preset Starters */}
                 <div>
-                  <h4 className="text-xs font-black uppercase tracking-wider text-[#E2DCC8] mb-1">
+                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                     Design Starters
                   </h4>
-                  <p className="text-[11px] text-[#888888] mb-3">
+                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     Click any curated footer template to load it as your starter design.
                   </p>
 
@@ -1709,20 +1799,28 @@ export const FooterDesignerModal: React.FC = () => {
                       <div
                         key={preset.id}
                         onClick={() => applyPreset(preset)}
-                        className="p-3 bg-[#18181a] hover:bg-[#202024] border border-[#2a2a2e] hover:border-[#E2DCC8] rounded-[6px] cursor-pointer transition-all group shadow-sm"
+                        className={`p-3 rounded-[6px] border cursor-pointer transition-all group shadow-sm ${
+                          isDark
+                            ? 'bg-[#18181a] hover:bg-[#202024] border-[#2a2a2e] hover:border-[#E2DCC8]'
+                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]'
+                        }`}
                       >
                         <div className="flex items-center justify-between mb-1.5">
-                          <span className="text-xs font-black text-white group-hover:text-[#E2DCC8]">
+                          <span className={`text-xs font-black ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>
                             {preset.name}
                           </span>
-                          <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#0F3D3E]/30 text-[#E2DCC8] border border-[#E2DCC8]/20">
+                          <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                            isDark
+                              ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
+                              : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/20'
+                          }`}>
                             {preset.category}
                           </span>
                         </div>
 
                         {/* Visual miniature stripe */}
                         <div
-                          className="h-7 w-full rounded border border-white/10 flex items-center px-2 justify-between text-[9px] font-mono overflow-hidden"
+                          className="h-7 w-full rounded border border-black/10 dark:border-white/10 flex items-center px-2 justify-between text-[9px] font-mono overflow-hidden shadow-inner"
                           style={{ background: preset.backgroundColor }}
                         >
                           <span className="truncate opacity-75 text-slate-700 dark:text-slate-200">
@@ -1742,19 +1840,23 @@ export const FooterDesignerModal: React.FC = () => {
         </div>
 
         {/* Center Canvas Area */}
-        <div className="flex-1 flex flex-col bg-[#0f0f11] overflow-hidden">
+        <div className={`flex-1 flex flex-col overflow-hidden transition-colors ${
+          isDark ? 'bg-[#0f0f11]' : 'bg-slate-100'
+        }`}>
           
           {/* Canvas Sub-Header: Active Element Context Bar & Zoom */}
-          <div className="h-11 px-4 bg-[#141416] border-b border-[#262626] flex items-center justify-between shrink-0">
+          <div className={`h-11 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${
+            isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
+          }`}>
             {/* Active Element Properties */}
             {selectedElement ? (
               <div className="flex items-center gap-2 text-xs">
-                <span className="font-bold text-[#E2DCC8] flex items-center gap-1">
+                <span className={`font-bold flex items-center gap-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                   <span className="w-2 h-2 rounded-full bg-cyan-400" />
                   {selectedElement.type === 'text' ? 'Text' : selectedElement.type === 'shape' ? 'Shape' : 'Image'}
                 </span>
 
-                <div className="h-4 w-px bg-[#333] mx-1" />
+                <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-300'}`} />
 
                 {selectedElement.type === 'text' && (
                   <>
@@ -1765,7 +1867,9 @@ export const FooterDesignerModal: React.FC = () => {
                         className={`h-7 px-2.5 rounded-[4px] border flex items-center justify-between gap-1.5 min-w-[110px] max-w-[150px] transition-all ${
                           isFontMenuOpen
                             ? 'bg-[#0F3D3E] border-[#E2DCC8]/60 text-white shadow'
-                            : 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
+                            : isDark
+                              ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
+                              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
                         }`}
                         title="Change Font Family"
                       >
@@ -1775,23 +1879,31 @@ export const FooterDesignerModal: React.FC = () => {
                         >
                           {selectedElement.fontFamily || 'Inter'}
                         </span>
-                        <ChevronDown size={11} className={`text-[#888] shrink-0 transition-transform ${isFontMenuOpen ? 'rotate-180' : ''}`} />
+                        <ChevronDown size={11} className={`${isDark ? 'text-[#888]' : 'text-slate-500'} shrink-0 transition-transform ${isFontMenuOpen ? 'rotate-180' : ''}`} />
                       </button>
 
                       {isFontMenuOpen && (
-                        <div className="absolute top-full left-0 mt-1.5 w-64 bg-[#18181b] border border-[#38383c] rounded-[8px] shadow-2xl overflow-hidden z-[110] animate-in fade-in zoom-in-95 flex flex-col text-[#EDEDED]">
-                          <div className="p-2 border-b border-[#28282c] bg-[#121214] flex items-center gap-2 sticky top-0 z-10">
-                            <Search size={13} className="text-[#888]" />
+                        <div className={`absolute top-full left-0 mt-1.5 w-64 border rounded-[8px] shadow-2xl overflow-hidden z-[110] animate-in fade-in zoom-in-95 flex flex-col ${
+                          isDark
+                            ? 'bg-[#18181b] border-[#38383c] text-[#EDEDED]'
+                            : 'bg-white border-slate-300 text-slate-800'
+                        }`}>
+                          <div className={`p-2 border-b flex items-center gap-2 sticky top-0 z-10 ${
+                            isDark ? 'border-[#28282c] bg-[#121214]' : 'border-slate-200 bg-slate-50'
+                          }`}>
+                            <Search size={13} className={isDark ? 'text-[#888]' : 'text-slate-400'} />
                             <input
                               autoFocus
                               type="text"
                               placeholder="Search fonts..."
                               value={fontSearch}
                               onChange={e => setFontSearch(e.target.value)}
-                              className="w-full bg-transparent border-none outline-none text-xs font-bold text-[#F1F1F1] placeholder:text-[#666]"
+                              className={`w-full bg-transparent border-none outline-none text-xs font-bold ${
+                                isDark ? 'text-[#F1F1F1] placeholder:text-[#666]' : 'text-slate-900 placeholder:text-slate-400'
+                              }`}
                             />
                             {fontSearch && (
-                              <button onClick={() => setFontSearch('')} className="text-[#666] hover:text-white text-[10px]">
+                              <button onClick={() => setFontSearch('')} className="text-slate-400 hover:text-slate-700 text-[10px]">
                                 <X size={11} />
                               </button>
                             )}
@@ -1800,7 +1912,9 @@ export const FooterDesignerModal: React.FC = () => {
                           <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-1 overscroll-contain">
                             {filteredFonts.map(group => (
                               <div key={group.label} className="flex flex-col mb-1 last:mb-0">
-                                <div className="px-2 py-1 text-[9px] font-black text-[#E2DCC8]/60 uppercase tracking-widest bg-white/[0.03] rounded mb-0.5">
+                                <div className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded mb-0.5 ${
+                                  isDark ? 'text-[#E2DCC8]/60 bg-white/[0.03]' : 'text-[#0F3D3E] bg-slate-100'
+                                }`}>
                                   {group.label}
                                 </div>
                                 <div className="flex flex-col">
@@ -1821,12 +1935,14 @@ export const FooterDesignerModal: React.FC = () => {
                                         className={`flex items-center justify-between px-2.5 py-1.5 rounded text-xs transition-colors text-left ${
                                           isCurrent
                                             ? 'bg-[#0F3D3E] text-white font-bold'
-                                            : 'hover:bg-white/[0.06] text-[#BBB] hover:text-white'
+                                            : isDark
+                                              ? 'hover:bg-white/[0.06] text-[#BBB] hover:text-white'
+                                              : 'hover:bg-slate-100 text-slate-700 hover:text-slate-900'
                                         }`}
                                         style={{ fontFamily: f }}
                                       >
                                         <span className="truncate">{f}</span>
-                                        {isCurrent && <Check size={12} className="text-[#E2DCC8] shrink-0 ml-1.5" />}
+                                        {isCurrent && <Check size={12} className={isDark ? 'text-[#E2DCC8] shrink-0 ml-1.5' : 'text-white shrink-0 ml-1.5'} />}
                                       </button>
                                     );
                                   })}
@@ -1839,19 +1955,21 @@ export const FooterDesignerModal: React.FC = () => {
                     </div>
 
                     {/* Font Size */}
-                    <div className="flex items-center bg-[#1a1a1c] border border-[#333] rounded px-1.5 py-0.5">
+                    <div className={`flex items-center border rounded px-1.5 py-0.5 ${
+                      isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
+                    }`}>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { fontSize: Math.max(8, (selectedElement.fontSize || 12) - 1) })}
-                        className="text-[#888] hover:text-white px-1"
+                        className={`${isDark ? 'text-[#888] hover:text-white' : 'text-slate-500 hover:text-slate-900'} px-1`}
                       >
                         <Minus size={11} />
                       </button>
-                      <span className="text-xs font-mono font-bold w-6 text-center text-[#E2DCC8]">
+                      <span className={`text-xs font-mono font-bold w-6 text-center ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                         {selectedElement.fontSize || 12}
                       </span>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { fontSize: Math.min(48, (selectedElement.fontSize || 12) + 1) })}
-                        className="text-[#888] hover:text-white px-1"
+                        className={`${isDark ? 'text-[#888] hover:text-white' : 'text-slate-500 hover:text-slate-900'} px-1`}
                       >
                         <Plus size={11} />
                       </button>
@@ -1860,38 +1978,64 @@ export const FooterDesignerModal: React.FC = () => {
                     {/* Bold / Italic */}
                     <button
                       onClick={() => updateElementLocal(selectedElement.id, { fontWeight: selectedElement.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                      className={`p-1.5 rounded border ${selectedElement.fontWeight === 'bold' ? 'bg-[#0F3D3E] border-[#E2DCC8] text-white' : 'border-[#333] text-[#888] hover:text-white'}`}
+                      className={`p-1.5 rounded border transition-colors ${
+                        selectedElement.fontWeight === 'bold'
+                          ? 'bg-[#0F3D3E] border-[#E2DCC8] text-white'
+                          : isDark
+                            ? 'border-[#333] text-[#888] hover:text-white bg-[#1a1a1c]'
+                            : 'border-slate-300 text-slate-600 hover:text-slate-900 bg-slate-100'
+                      }`}
                       title="Bold"
                     >
                       <Bold size={12} />
                     </button>
                     <button
                       onClick={() => updateElementLocal(selectedElement.id, { fontStyle: selectedElement.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                      className={`p-1.5 rounded border ${selectedElement.fontStyle === 'italic' ? 'bg-[#0F3D3E] border-[#E2DCC8] text-white' : 'border-[#333] text-[#888] hover:text-white'}`}
+                      className={`p-1.5 rounded border transition-colors ${
+                        selectedElement.fontStyle === 'italic'
+                          ? 'bg-[#0F3D3E] border-[#E2DCC8] text-white'
+                          : isDark
+                            ? 'border-[#333] text-[#888] hover:text-white bg-[#1a1a1c]'
+                            : 'border-slate-300 text-slate-600 hover:text-slate-900 bg-slate-100'
+                      }`}
                       title="Italic"
                     >
                       <Italic size={12} />
                     </button>
 
                     {/* Text Alignment */}
-                    <div className="flex items-center bg-[#1a1a1c] border border-[#333] rounded overflow-hidden">
+                    <div className={`flex items-center border rounded overflow-hidden ${
+                      isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
+                    }`}>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'left' })}
-                        className={`p-1.5 ${selectedElement.textAlign === 'left' || !selectedElement.textAlign ? 'bg-[#0F3D3E] text-white' : 'text-[#888] hover:text-white'}`}
+                        className={`p-1.5 ${
+                          selectedElement.textAlign === 'left' || !selectedElement.textAlign
+                            ? 'bg-[#0F3D3E] text-white'
+                            : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
                         title="Align Left"
                       >
                         <AlignLeft size={12} />
                       </button>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'center' })}
-                        className={`p-1.5 ${selectedElement.textAlign === 'center' ? 'bg-[#0F3D3E] text-white' : 'text-[#888] hover:text-white'}`}
+                        className={`p-1.5 ${
+                          selectedElement.textAlign === 'center'
+                            ? 'bg-[#0F3D3E] text-white'
+                            : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
                         title="Align Center"
                       >
                         <AlignCenter size={12} />
                       </button>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'right' })}
-                        className={`p-1.5 ${selectedElement.textAlign === 'right' ? 'bg-[#0F3D3E] text-white' : 'text-[#888] hover:text-white'}`}
+                        className={`p-1.5 ${
+                          selectedElement.textAlign === 'right'
+                            ? 'bg-[#0F3D3E] text-white'
+                            : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                        }`}
                         title="Align Right"
                       >
                         <AlignRight size={12} />
@@ -1905,20 +2049,26 @@ export const FooterDesignerModal: React.FC = () => {
                   <div className="relative" ref={colorMenuRef}>
                     <button
                       onClick={() => setActiveColorMenu(activeColorMenu === 'text' ? null : 'text')}
-                      className="flex items-center gap-1.5 bg-[#1a1a1c] border border-[#333] hover:border-[#E2DCC8] rounded px-2 py-1 transition-all"
+                      className={`flex items-center gap-1.5 border rounded px-2 py-1 transition-all ${
+                        isDark
+                          ? 'bg-[#1a1a1c] border-[#333] hover:border-[#E2DCC8]'
+                          : 'bg-slate-100 border-slate-300 hover:border-[#0F3D3E]'
+                      }`}
                       title="Element Color"
                     >
                       <div
-                        className="w-4 h-4 rounded-full border border-white/20 shadow-sm shrink-0"
+                        className="w-4 h-4 rounded-full border border-black/10 dark:border-white/20 shadow-sm shrink-0"
                         style={{ background: selectedElement.fill || '#ffffff' }}
                       />
-                      <span className="text-[10px] font-mono text-[#E2DCC8]">
+                      <span className={`text-[10px] font-mono ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                         {selectedElement.fill?.startsWith('linear') ? 'Gradient' : (selectedElement.fill || '#fff')}
                       </span>
                     </button>
 
                     {activeColorMenu && (
-                      <div className="absolute top-full left-0 mt-1.5 w-60 bg-[#18181a] border border-[#333] rounded-[6px] shadow-2xl p-2.5 z-50 animate-in fade-in">
+                      <div className={`absolute top-full left-0 mt-1.5 w-60 border rounded-[6px] shadow-2xl p-2.5 z-50 animate-in fade-in ${
+                        isDark ? 'bg-[#18181a] border-[#333]' : 'bg-white border-slate-300'
+                      }`}>
                         <div className="grid grid-cols-5 gap-1.5 mb-2">
                           {[
                             '#ffffff', '#0f172a', '#64748b', '#0F3D3E', '#cbd5e1',
@@ -1930,7 +2080,7 @@ export const FooterDesignerModal: React.FC = () => {
                                 updateElementLocal(selectedElement.id, { fill: c });
                                 setActiveColorMenu(null);
                               }}
-                              className="h-6 rounded border border-white/20 hover:scale-105 transition-all shadow-sm"
+                              className="h-6 rounded border border-black/10 dark:border-white/20 hover:scale-105 transition-all shadow-sm"
                               style={{ background: c }}
                             />
                           ))}
@@ -1942,7 +2092,9 @@ export const FooterDesignerModal: React.FC = () => {
                             setActiveColorMenu(null);
                             setActiveTab('background');
                           }}
-                          className="w-full py-1 text-[10px] font-bold text-[#E2DCC8] bg-[#222] hover:bg-[#2a2a2a] rounded"
+                          className={`w-full py-1 text-[10px] font-bold rounded ${
+                            isDark ? 'text-[#E2DCC8] bg-[#222] hover:bg-[#2a2a2a]' : 'text-[#0F3D3E] bg-slate-100 hover:bg-slate-200'
+                          }`}
                         >
                           Open Gradient & Advanced Studio
                         </button>
@@ -1963,7 +2115,11 @@ export const FooterDesignerModal: React.FC = () => {
                         fabricCanvasRef.current?.requestRenderAll();
                       }
                     }}
-                    className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a1c] hover:bg-[#252528] border border-[#38383c] hover:border-cyan-400 text-[11px] font-bold text-cyan-400 transition-all shadow-sm"
+                    className={`flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-bold transition-all shadow-sm ${
+                      isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-cyan-400 text-cyan-400'
+                        : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-cyan-600 text-cyan-700'
+                    }`}
                     title="Straighten line (Reset rotation to 0°)"
                   >
                     <RotateCcw size={12} />
@@ -1971,46 +2127,48 @@ export const FooterDesignerModal: React.FC = () => {
                   </button>
                 )}
 
-                <div className="h-4 w-px bg-[#333] mx-1" />
+                <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-300'}`} />
 
                 {/* Layer Arrangement Controls */}
-                <div className="flex items-center bg-[#1a1a1c] border border-[#333] rounded overflow-hidden" title="Layer Stacking Order">
+                <div className={`flex items-center border rounded overflow-hidden ${
+                  isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
+                }`} title="Layer Stacking Order">
                   <button
                     onClick={() => bringToFront(selectedElement.id)}
-                    className="p-1.5 hover:bg-[#28282c] text-[#888] hover:text-white transition-all"
+                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'}`}
                     title="Bring to Front (Top Layer)"
                   >
                     <ChevronsUp size={13} />
                   </button>
                   <button
                     onClick={() => moveForward(selectedElement.id)}
-                    className="p-1.5 hover:bg-[#28282c] text-[#888] hover:text-white transition-all"
+                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'}`}
                     title="Bring Forward (Move Up 1 Step)"
                   >
                     <ArrowUp size={13} />
                   </button>
                   <button
                     onClick={() => moveBackward(selectedElement.id)}
-                    className="p-1.5 hover:bg-[#28282c] text-[#888] hover:text-white transition-all"
+                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'}`}
                     title="Send Backward (Move Down 1 Step)"
                   >
                     <ArrowDown size={13} />
                   </button>
                   <button
                     onClick={() => sendToBack(selectedElement.id)}
-                    className="p-1.5 hover:bg-[#28282c] text-[#888] hover:text-white transition-all"
+                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'}`}
                     title="Send to Back (Bottom Layer)"
                   >
                     <ChevronsDown size={13} />
                   </button>
                 </div>
 
-                <div className="h-4 w-px bg-[#333] mx-1" />
+                <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-300'}`} />
 
                 {/* Duplicate */}
                 <button
                   onClick={() => duplicateElementLocal(selectedElement.id)}
-                  className="p-1.5 rounded hover:bg-[#222] text-[#888] hover:text-white"
+                  className={`p-1.5 rounded ${isDark ? 'hover:bg-[#222] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'}`}
                   title="Duplicate Element"
                 >
                   <Copy size={14} />
@@ -2019,42 +2177,44 @@ export const FooterDesignerModal: React.FC = () => {
                 {/* Delete */}
                 <button
                   onClick={() => deleteElementLocal(selectedElement.id)}
-                  className="p-1.5 rounded hover:bg-rose-950/60 text-rose-400 hover:text-rose-300"
+                  className="p-1.5 rounded hover:bg-rose-100 dark:hover:bg-rose-950/60 text-rose-500 dark:text-rose-400"
                   title="Delete Element"
                 >
                   <Trash2 size={14} />
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 text-xs text-[#888]">
-                <Sparkles size={14} className="text-[#E2DCC8]" />
+              <div className={`flex items-center gap-2 text-xs ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
+                <Sparkles size={14} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
                 <span>Click any element on the footer strip to move, resize, or edit</span>
               </div>
             )}
 
             {/* Zoom Controls */}
             <div className="flex items-center gap-2">
-              <span className="text-[11px] font-bold text-[#888]">Zoom</span>
+              <span className={`text-[11px] font-bold ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Zoom</span>
               <button
                 onClick={() => setZoom(prev => Math.max(0.75, Math.round((prev - 0.15) * 100) / 100))}
-                className="p-1 rounded bg-[#1c1c1f] hover:bg-[#242428] text-white"
+                className={`p-1 rounded ${isDark ? 'bg-[#1c1c1f] hover:bg-[#242428] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}
                 title="Zoom Out"
               >
                 <ZoomOut size={13} />
               </button>
-              <span className="text-xs font-mono font-bold text-[#E2DCC8] w-12 text-center">
+              <span className={`text-xs font-mono font-bold w-12 text-center ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                 {Math.round(zoom * 100)}%
               </span>
               <button
                 onClick={() => setZoom(prev => Math.min(2.0, Math.round((prev + 0.15) * 100) / 100))}
-                className="p-1 rounded bg-[#1c1c1f] hover:bg-[#242428] text-white"
+                className={`p-1 rounded ${isDark ? 'bg-[#1c1c1f] hover:bg-[#242428] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-800'}`}
                 title="Zoom In"
               >
                 <ZoomIn size={13} />
               </button>
               <button
                 onClick={() => setZoom(1)}
-                className="text-[10px] font-bold text-[#888] hover:text-white px-1.5 py-0.5 rounded hover:bg-[#222]"
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                  isDark ? 'text-[#888] hover:text-white hover:bg-[#222]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                }`}
               >
                 100%
               </button>
@@ -2065,7 +2225,9 @@ export const FooterDesignerModal: React.FC = () => {
           <div className="flex-1 overflow-auto flex flex-col items-center justify-center p-8 relative">
             
             {/* Dimension Indicator Pill */}
-            <div className="mb-3 flex items-center gap-2 text-[11px] font-bold text-[#888] bg-[#161618] border border-[#262626] px-3 py-1 rounded-full shadow">
+            <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold px-3 py-1 rounded-full shadow ${
+              isDark ? 'text-[#888] bg-[#161618] border border-[#262626]' : 'text-slate-600 bg-white border border-slate-200'
+            }`}>
               <span>Catalog Width: <strong>794px</strong></span>
               <span>•</span>
               <span>Footer Height: <strong>{Math.round(footerHeight)}px</strong> ({toMm(footerHeight)}mm)</span>
@@ -2086,7 +2248,9 @@ export const FooterDesignerModal: React.FC = () => {
                   width: PAGE_WIDTH * zoom,
                   height: footerHeight * zoom,
                   background: footerBg,
-                  boxShadow: '0 25px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(226,220,200,0.25)',
+                  boxShadow: isDark
+                    ? '0 25px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(226,220,200,0.25)'
+                    : '0 20px 45px rgba(0,0,0,0.15), 0 0 0 1px rgba(15,61,62,0.25)',
                   pointerEvents: 'none'
                 }}
               >
@@ -2110,59 +2274,83 @@ export const FooterDesignerModal: React.FC = () => {
             </div>
 
             {/* Bottom Help note */}
-            <div className="mt-4 text-center text-xs text-[#666]">
+            <div className={`mt-4 text-center text-xs ${isDark ? 'text-[#666]' : 'text-slate-500'}`}>
               <p>💡 Tip: Double-click text to edit inline. Drag corners or pills to resize. Use Backspace to delete.</p>
-              <p className="text-[10px] text-[#555] mt-0.5">The full page is hidden — only this master footer section will be saved and applied across pages.</p>
+              <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#555]' : 'text-slate-400'}`}>The full page is hidden — only this master footer section will be saved and applied across pages.</p>
             </div>
           </div>
         </div>
 
         {/* ── Right Sidebar: Layer Elements List ───────────────────── */}
-        <div className="w-72 bg-[#141416] border-l border-[#262626] flex flex-col shrink-0">
-          <div className="h-12 px-4 border-b border-[#262626] flex items-center justify-between shrink-0 bg-[#121214]">
+        <div className={`w-72 border-l flex flex-col shrink-0 transition-colors ${
+          isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
+        }`}>
+          <div className={`h-12 px-4 border-b flex items-center justify-between shrink-0 ${
+            isDark ? 'border-[#262626] bg-[#121214]' : 'border-slate-200 bg-slate-50'
+          }`}>
             <div className="flex items-center gap-2">
-              <Layers size={14} className="text-[#E2DCC8]" />
-              <h4 className="text-xs font-black uppercase tracking-wider text-white">Footer Layers</h4>
+              <Layers size={14} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
+              <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>Footer Layers</h4>
             </div>
-            <span className="text-[10px] font-bold text-[#888] bg-[#1c1c1f] px-2 py-0.5 rounded-full border border-[#2a2a2e]">
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              isDark ? 'text-[#888] bg-[#1c1c1f] border-[#2a2a2e]' : 'text-slate-600 bg-slate-100 border-slate-200'
+            }`}>
               {elements.length}
             </span>
           </div>
 
           {/* Quick Arrange Controls for Selected Layer */}
           {selectedElement && (
-            <div className="px-3 py-2 bg-[#18181c] border-b border-[#26262a] flex items-center justify-between gap-1 animate-in fade-in">
-              <span className="text-[10px] font-bold text-[#888] uppercase tracking-wider flex items-center gap-1 min-w-0">
+            <div className={`px-3 py-2 border-b flex items-center justify-between gap-1 animate-in fade-in ${
+              isDark ? 'bg-[#18181c] border-[#26262a]' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 min-w-0 ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
                 <span>Arrange:</span>
-                <span className="text-[#E2DCC8] truncate max-w-[85px]">
+                <span className={`truncate max-w-[85px] ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                   {selectedElement.type === 'text' ? (selectedElement.text || 'Text') : (selectedElement.shapeType || 'Shape')}
                 </span>
               </span>
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => bringToFront(selectedElement.id)}
-                  className="p-1 rounded bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border border-[#333] transition-all"
+                  className={`p-1 rounded border transition-all ${
+                    isDark
+                      ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
+                  }`}
                   title="Bring to Top / Front"
                 >
                   <ChevronsUp size={13} />
                 </button>
                 <button
                   onClick={() => moveForward(selectedElement.id)}
-                  className="p-1 rounded bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border border-[#333] transition-all"
+                  className={`p-1 rounded border transition-all ${
+                    isDark
+                      ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
+                  }`}
                   title="Move Up / Forward (1 step)"
                 >
                   <ArrowUp size={13} />
                 </button>
                 <button
                   onClick={() => moveBackward(selectedElement.id)}
-                  className="p-1 rounded bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border border-[#333] transition-all"
+                  className={`p-1 rounded border transition-all ${
+                    isDark
+                      ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
+                  }`}
                   title="Move Down / Backward (1 step)"
                 >
                   <ArrowDown size={13} />
                 </button>
                 <button
                   onClick={() => sendToBack(selectedElement.id)}
-                  className="p-1 rounded bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border border-[#333] transition-all"
+                  className={`p-1 rounded border transition-all ${
+                    isDark
+                      ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]'
+                      : 'bg-white hover:bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
+                  }`}
                   title="Send to Bottom / Back"
                 >
                   <ChevronsDown size={13} />
@@ -2173,10 +2361,10 @@ export const FooterDesignerModal: React.FC = () => {
 
           <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
             {elements.length === 0 ? (
-              <div className="text-center py-10 text-xs text-[#666]">
-                <Layers size={24} className="mx-auto mb-2 text-[#444]" />
+              <div className={`text-center py-10 text-xs ${isDark ? 'text-[#666]' : 'text-slate-400'}`}>
+                <Layers size={24} className={`mx-auto mb-2 ${isDark ? 'text-[#444]' : 'text-slate-300'}`} />
                 <p>No elements on footer yet.</p>
-                <p className="text-[10px] text-[#555] mt-1">Add text, logos, or presets from the left panel.</p>
+                <p className={`text-[10px] mt-1 ${isDark ? 'text-[#555]' : 'text-slate-400'}`}>Add text, logos, or presets from the left panel.</p>
               </div>
             ) : (
               elements
@@ -2209,18 +2397,22 @@ export const FooterDesignerModal: React.FC = () => {
                         draggedLayerId === el.id ? 'opacity-40 border-dashed border-cyan-400' : ''
                       } ${
                         isSelected
-                          ? 'bg-[#0F3D3E]/40 border-[#E2DCC8]/60 text-white shadow-sm ring-1 ring-[#E2DCC8]/20'
-                          : 'bg-[#18181a] border-[#26262a] text-[#aaa] hover:text-white hover:bg-[#202024]'
+                          ? isDark
+                            ? 'bg-[#0F3D3E]/40 border-[#E2DCC8]/60 text-white shadow-sm ring-1 ring-[#E2DCC8]/20'
+                            : 'bg-[#0F3D3E]/15 border-[#0F3D3E] text-slate-900 shadow-sm ring-1 ring-[#0F3D3E]/30'
+                          : isDark
+                            ? 'bg-[#18181a] border-[#26262a] text-[#aaa] hover:text-white hover:bg-[#202024]'
+                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                       }`}
                     >
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <GripVertical size={13} className="text-[#555] group-hover:text-[#999] cursor-grab shrink-0" />
+                        <GripVertical size={13} className={`cursor-grab shrink-0 ${isDark ? 'text-[#555] group-hover:text-[#999]' : 'text-slate-400 group-hover:text-slate-600'}`} />
                         {el.type === 'text' ? (
-                          <Type size={13} className={isSelected ? 'text-[#E2DCC8]' : 'text-[#777]'} />
+                          <Type size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
                         ) : el.type === 'shape' ? (
-                          <Square size={13} className={isSelected ? 'text-[#E2DCC8]' : 'text-[#777]'} />
+                          <Square size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
                         ) : (
-                          <ImageIcon size={13} className={isSelected ? 'text-[#E2DCC8]' : 'text-[#777]'} />
+                          <ImageIcon size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
                         )}
                         <span className="text-xs font-bold truncate">
                           {el.type === 'text' ? (el.text || 'Text') : (el.shapeType || 'Shape')}
@@ -2236,8 +2428,8 @@ export const FooterDesignerModal: React.FC = () => {
                           disabled={isTop}
                           className={`p-1 rounded transition-all ${
                             isTop
-                              ? 'text-[#383838] cursor-not-allowed'
-                              : 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
+                              ? isDark ? 'text-[#383838] cursor-not-allowed' : 'text-slate-300 cursor-not-allowed'
+                              : isDark ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-200'
                           }`}
                           title={isTop ? 'Already at Top' : 'Move Up (Bring Forward)'}
                         >
@@ -2252,8 +2444,8 @@ export const FooterDesignerModal: React.FC = () => {
                           disabled={isBottom}
                           className={`p-1 rounded transition-all ${
                             isBottom
-                              ? 'text-[#383838] cursor-not-allowed'
-                              : 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
+                              ? isDark ? 'text-[#383838] cursor-not-allowed' : 'text-slate-300 cursor-not-allowed'
+                              : isDark ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-200'
                           }`}
                           title={isBottom ? 'Already at Bottom' : 'Move Down (Send Backward)'}
                         >
@@ -2265,7 +2457,9 @@ export const FooterDesignerModal: React.FC = () => {
                             e.stopPropagation();
                             duplicateElementLocal(el.id);
                           }}
-                          className="p-1 hover:bg-[#333] rounded text-[#888] hover:text-white"
+                          className={`p-1 rounded transition-colors ${
+                            isDark ? 'hover:bg-[#333] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-400 hover:text-slate-900'
+                          }`}
                           title="Duplicate"
                         >
                           <Copy size={12} />
@@ -2275,7 +2469,7 @@ export const FooterDesignerModal: React.FC = () => {
                             e.stopPropagation();
                             deleteElementLocal(el.id);
                           }}
-                          className="p-1 hover:bg-rose-950/50 rounded text-rose-400 hover:text-rose-300"
+                          className="p-1 hover:bg-rose-100 dark:hover:bg-rose-950/50 rounded text-rose-500 dark:text-rose-400"
                           title="Delete"
                         >
                           <Trash2 size={12} />
@@ -2289,7 +2483,7 @@ export const FooterDesignerModal: React.FC = () => {
 
           {/* Quick Clear Button */}
           {elements.length > 0 && (
-            <div className="p-3 border-t border-[#262626]">
+            <div className={`p-3 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
               <button
                 onClick={() => {
                   if (window.confirm('Clear all elements from this footer?')) {
@@ -2297,7 +2491,11 @@ export const FooterDesignerModal: React.FC = () => {
                     setSelectedId(null);
                   }
                 }}
-                className="w-full py-2 bg-[#1a1a1c] hover:bg-rose-950/40 border border-[#333] hover:border-rose-800 text-[11px] font-bold text-[#888] hover:text-rose-300 rounded transition-all"
+                className={`w-full py-2 border text-[11px] font-bold rounded transition-all ${
+                  isDark
+                    ? 'bg-[#1a1a1c] hover:bg-rose-950/40 border-[#333] hover:border-rose-800 text-[#888] hover:text-rose-300'
+                    : 'bg-slate-100 hover:bg-rose-50 border-slate-300 hover:border-rose-300 text-slate-600 hover:text-rose-600'
+                }`}
               >
                 Clear All Elements
               </button>

@@ -1,274 +1,583 @@
-
-import React from 'react';
+import React, { useEffect, useMemo } from 'react';
 import {
   Package,
   Box,
-  Layout,
+  Layers,
   BookOpen,
   FolderPlus,
   ArrowUpRight,
   Clock,
   LayoutGrid,
   Zap,
-  LayoutTemplate,
   ChevronRight,
   Settings,
-  Briefcase
+  Briefcase,
+  Images,
+  Plus,
+  FileText,
+  Sparkles,
+  Sliders,
+  Eye,
+  FolderOpen
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { GRID_TEMPLATES } from '../../constants';
+import { resolveProductImage } from '../../utils/imageUtils';
 
 const Dashboard: React.FC = () => {
-  const { setView, user, products, categories, setActiveCategoryId, savedCatalogs, uiTheme } = useStore();
+  const {
+    setView,
+    user,
+    products,
+    categories,
+    setActiveCategoryId,
+    savedCatalogs,
+    mediaItems,
+    fetchProducts,
+    fetchCategories,
+    fetchCatalogs,
+    fetchMedia,
+    loadCatalog,
+    uiTheme
+  } = useStore();
+
   const isDark = uiTheme === 'dark';
+
+  useEffect(() => {
+    fetchProducts();
+    fetchCategories();
+    fetchCatalogs();
+    fetchMedia();
+  }, [fetchProducts, fetchCategories, fetchCatalogs, fetchMedia]);
+
+  // Compute metrics
+  const totalVariants = useMemo(() => {
+    return products.reduce((acc, p) => acc + (p.variants?.length || 1), 0);
+  }, [products]);
+
+  const totalCatalogPages = useMemo(() => {
+    return savedCatalogs.reduce((acc, c) => acc + (c.pages?.length || 0), 0);
+  }, [savedCatalogs]);
+
+  // Top categories
+  const topCategories = useMemo(() => {
+    return categories
+      .map(cat => ({
+        ...cat,
+        productCount: products.filter(p => String(p.categoryId) === String(cat.id)).length
+      }))
+      .sort((a, b) => b.productCount - a.productCount)
+      .slice(0, 5);
+  }, [categories, products]);
 
   const stats = [
     {
       label: 'Total Inventory',
       value: products.length,
-      icon: <Package size={20} />,
-      color: isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border border-[#0F3D3E]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border border-[#0F3D3E]/20',
+      unit: 'Products',
+      icon: <Package size={16} />,
+      color: isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border border-[#0F3D3E]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border border-[#0F3D3E]/20',
       action: () => { setActiveCategoryId(null); setView('products-list'); }
     },
     {
-      label: 'Product Categories',
+      label: 'Categories',
       value: categories.length,
-      icon: <Layout size={20} />,
-      color: isDark ? 'bg-[#171616] text-[#F1F1F1] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      unit: 'Collections',
+      icon: <Layers size={16} />,
+      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
       action: () => setView('category-list')
     },
     {
-      label: 'Pending Drafts',
+      label: 'Saved Catalogs',
       value: savedCatalogs.length,
-      icon: <BookOpen size={20} />,
-      color: isDark ? 'bg-[#171616] text-[#E2DCC8]/70 border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      unit: 'Projects',
+      icon: <BookOpen size={16} />,
+      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      action: () => setView('your-work')
+    },
+    {
+      label: 'Media Assets',
+      value: mediaItems.length,
+      unit: 'Files',
+      icon: <Images size={16} />,
+      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      action: () => setView('media-library')
+    },
+    {
+      label: 'Total SKUs',
+      value: totalVariants,
+      unit: 'Variants',
+      icon: <Sliders size={16} />,
+      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      action: () => { setActiveCategoryId(null); setView('products-list'); }
+    },
+    {
+      label: 'Compiled Pages',
+      value: totalCatalogPages,
+      unit: 'Pages Built',
+      icon: <FileText size={16} />,
+      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
       action: () => setView('your-work')
     }
   ];
 
   return (
-    <div className={`flex-1 overflow-y-auto p-8 lg:p-12 animate-in fade-in duration-500 ${
+    <div className={`flex-1 overflow-y-auto p-6 md:p-8 w-full animate-in fade-in duration-300 custom-scrollbar ${
       isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-slate-50 text-slate-900'
     }`}>
-      <div className="max-w-7xl mx-auto space-y-8">
+      <div className="w-full space-y-6">
+        
         {/* Header Section */}
-        <div className={`flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b ${
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b ${
           isDark ? 'border-[#E2DCC8]/15' : 'border-slate-200'
         }`}>
           <div>
-            <p className={`text-[10px] font-bold uppercase tracking-[0.25em] mb-2 font-heading ${
-              isDark ? 'text-[#E2DCC8]/60' : 'text-[#0F3D3E]'
-            }`}>Workspace Overview</p>
-            <h1 className={`text-3xl md:text-5xl font-medium tracking-tight leading-none font-heading ${
+            <div className="flex items-center gap-2 mb-1">
+              <span className={`px-2 py-0.5 rounded-[3px] text-[9px] font-bold uppercase tracking-widest border ${
+                isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
+              }`}>
+                WORKSPACE OVERVIEW
+              </span>
+            </div>
+            <h1 className={`text-2xl md:text-3xl font-bold tracking-tight font-heading leading-tight ${
               isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
             }`}>
               Welcome, <span className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"}>{user?.name ? user.name.split(' ')[0] : 'Creator'}</span>.
             </h1>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Quick Action Buttons */}
+          <div className="flex items-center gap-2.5 shrink-0">
+            <button
+              onClick={() => setView('create-product')}
+              className={`px-3.5 py-2 rounded-[4px] border text-xs font-heading font-semibold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                isDark 
+                  ? 'bg-[#171616] hover:bg-[#202020] border-[#E2DCC8]/20 text-[#E2DCC8]' 
+                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+              }`}
+            >
+              <Plus size={13} /> Add Product
+            </button>
+
+            <button
+              onClick={() => setView('create-category')}
+              className={`px-3.5 py-2 rounded-[4px] border text-xs font-heading font-semibold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                isDark 
+                  ? 'bg-[#171616] hover:bg-[#202020] border-[#E2DCC8]/20 text-[#E2DCC8]' 
+                  : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700'
+              }`}
+            >
+              <FolderPlus size={13} /> Add Category
+            </button>
+
             <button
               onClick={() => setView('catalog-setup')}
-              className="px-6 py-3 bg-[#0F3D3E] hover:bg-[#155455] text-white border border-[#E2DCC8]/30 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2.5 active:scale-95"
+              className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-white border border-[#E2DCC8]/30 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-md shadow-[#0F3D3E]/20 transition-all flex items-center gap-1.5 active:scale-95"
             >
-              <LayoutGrid size={15} className="text-[#E2DCC8]" /> Build Catalog
+              <LayoutGrid size={14} className="text-[#E2DCC8]" /> Build Catalog
             </button>
           </div>
         </div>
 
-        {/* Top Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {/* 6-Card KPI Parameter Row */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
           {stats.map((stat, i) => (
             <div
               key={i}
               onClick={stat.action}
-              className={`p-6 rounded-[4px] flex items-center justify-between group transition-all cursor-pointer shadow-sm ${
+              className={`p-3.5 rounded-[4px] flex items-center justify-between group transition-all cursor-pointer shadow-sm ${
                 isDark 
-                  ? 'bg-[#141414] border border-[#E2DCC8]/15 hover:border-[#E2DCC8]/30 hover:bg-[#171616]' 
-                  : 'bg-white border border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-md'
+                  ? 'bg-[#141414] border border-[#E2DCC8]/15 hover:border-[#E2DCC8]/35 hover:bg-[#171616]' 
+                  : 'bg-white border border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-sm'
               }`}
             >
-              <div className="flex items-center gap-4">
-                <div className={`w-12 h-12 ${stat.color} rounded-[4px] flex items-center justify-center shrink-0`}>
+              <div className="flex items-center gap-3 min-w-0">
+                <div className={`w-9 h-9 ${stat.color} rounded-[3px] flex items-center justify-center shrink-0`}>
                   {stat.icon}
                 </div>
-                <div>
-                  <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 font-heading ${
+                <div className="min-w-0">
+                  <p className={`text-[9px] font-bold uppercase tracking-wider font-heading truncate ${
                     isDark ? 'text-[#E2DCC8]/70' : 'text-slate-500'
-                  }`}>{stat.label}</p>
-                  <p className={`text-3xl font-medium tracking-tight font-heading leading-none ${
-                    isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
-                  }`}>{stat.value}</p>
+                  }`}>
+                    {stat.label}
+                  </p>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className={`text-xl font-bold font-space leading-tight ${
+                      isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
+                    }`}>
+                      {stat.value}
+                    </span>
+                    <span className={`text-[9px] font-mono truncate ${isDark ? 'text-[#E2DCC8]/40' : 'text-slate-400'}`}>
+                      {stat.unit}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <ChevronRight size={16} className={`${
+
+              <ChevronRight size={13} className={`${
                 isDark ? 'text-[#555555] group-hover:text-[#E2DCC8]' : 'text-slate-400 group-hover:text-[#0F3D3E]'
-              } group-hover:translate-x-1 transition-all shrink-0`} />
+              } group-hover:translate-x-0.5 transition-all shrink-0 ml-1`} />
             </div>
           ))}
         </div>
 
-        {/* Lower Two-Column Section */}
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 items-start">
-          {/* Global Product Library Preview (Span 2) */}
-          <div className="xl:col-span-2">
-            <div className={`rounded-[4px] overflow-hidden shadow-sm border ${
+        {/* Main Content: Left (Catalogs + Products) & Right (Categories + Quick Actions) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          
+          {/* Left Column (Col Span 8) */}
+          <div className="lg:col-span-8 space-y-5">
+            
+            {/* Recent Catalogs & Publications */}
+            <div className={`rounded-[4px] border overflow-hidden shadow-sm ${
               isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
             }`}>
-              <div className={`px-6 py-5 border-b flex items-center justify-between ${
-                isDark ? 'border-[#E2DCC8]/15' : 'border-slate-100'
+              <div className={`px-5 py-3.5 border-b flex items-center justify-between ${
+                isDark ? 'bg-[#171616] border-[#E2DCC8]/15' : 'bg-slate-50 border-slate-200'
               }`}>
-                <div>
-                  <h3 className={`text-lg font-medium tracking-tight font-heading ${
+                <div className="flex items-center gap-2">
+                  <BookOpen size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+                  <span className={`font-space text-xs font-bold uppercase tracking-wider ${
                     isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
-                  }`}>Global Product Library</h3>
-                  <p className={`text-[11px] font-medium tracking-wide mt-0.5 ${
-                    isDark ? 'text-[#E2DCC8]/70' : 'text-slate-500'
-                  }`}>Synced inventory ready for catalogue generation</p>
+                  }`}>
+                    Recent Catalogs & Publications ({savedCatalogs.length})
+                  </span>
                 </div>
+                
                 <button
-                  onClick={() => { setActiveCategoryId(null); setView('products-list'); }}
-                  className={`p-2 rounded-[4px] border transition-colors ${
-                    isDark 
-                      ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30 border-[#E2DCC8]/15' 
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 border-slate-200'
+                  onClick={() => setView('your-work')}
+                  className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors ${
+                    isDark ? 'text-[#E2DCC8]/80 hover:text-white' : 'text-[#0F3D3E] hover:text-[#155455]'
                   }`}
-                  title="View All Products"
                 >
-                  <ArrowUpRight size={18} />
+                  <span>View All</span>
+                  <ArrowUpRight size={12} />
                 </button>
               </div>
 
-              <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {products.slice(0, 4).map(product => (
-                  <div
-                    key={product.id}
-                    onClick={() => { setActiveCategoryId(product.categoryId || null); setView('products-list'); }}
-                    className={`p-3.5 rounded-[4px] border flex items-center justify-between cursor-pointer transition-all group ${
-                      isDark 
-                        ? 'bg-[#171616] hover:bg-[#1a1919] border-[#E2DCC8]/15 hover:border-[#E2DCC8]/30' 
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      <div className={`w-14 h-14 border flex items-center justify-center shrink-0 overflow-hidden rounded-[2px] ${
-                        isDark ? 'bg-[#100F0F] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
-                      }`}>
-                        {product.image ? (
-                          <img
-                            src={product.image}
-                            className="w-full h-full object-contain p-1 rounded-none"
-                            alt={product.name}
-                          />
-                        ) : (
-                          <Package size={20} className={isDark ? "text-[#555555]" : "text-slate-400"} />
-                        )}
+              <div className="p-4">
+                {savedCatalogs.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                    {savedCatalogs.slice(0, 3).map((cat) => (
+                      <div
+                        key={cat.id}
+                        onClick={async () => {
+                          await loadCatalog(cat.id);
+                          setView('editor');
+                        }}
+                        className={`p-3.5 rounded-[4px] border transition-all cursor-pointer group flex flex-col justify-between ${
+                          isDark 
+                            ? 'bg-[#100F0F] border-[#E2DCC8]/15 hover:border-[#0F3D3E] hover:bg-[#161616]' 
+                            : 'bg-slate-50 border-slate-200 hover:border-[#0F3D3E] hover:bg-white hover:shadow-sm'
+                        }`}
+                      >
+                        <div>
+                          <div className="flex items-center justify-between gap-1 mb-2">
+                            <span className={`px-2 py-0.5 rounded text-[9px] font-mono font-bold uppercase border ${
+                              isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]/50' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/20'
+                            }`}>
+                              {cat.pages?.length || 1} Pages
+                            </span>
+                            <span className={`text-[9px] font-mono truncate ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                              {cat.updatedAt ? new Date(cat.updatedAt).toLocaleDateString() : 'Active Draft'}
+                            </span>
+                          </div>
+
+                          <h3 className={`font-heading text-xs font-semibold truncate transition-colors mb-0.5 ${
+                            isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'
+                          }`}>
+                            {cat.name || 'Untitled Catalog'}
+                          </h3>
+                          <p className={`text-[10px] font-mono truncate ${isDark ? 'text-[#E2DCC8]/50' : 'text-slate-500'}`}>
+                            Template: {cat.templateId || 'Classic Catalog'}
+                          </p>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t flex items-center justify-between border-white/5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F3D3E] group-hover:text-[#E2DCC8] flex items-center gap-1">
+                            Open in Editor <ChevronRight size={11} />
+                          </span>
+                        </div>
                       </div>
-                      <div className="truncate min-w-0 pr-2">
-                        <p className={`text-xs font-semibold truncate font-heading transition-colors ${
-                          isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
-                        }`}>
-                          {product.name}
-                        </p>
-                        <p className={`text-[10px] font-mono uppercase mt-0.5 truncate ${
-                          isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'
-                        }`}>
-                          SKU: {product.sku || 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                    <p className={`text-xs font-semibold font-heading shrink-0 ml-2 whitespace-nowrap ${
-                      isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
-                    }`}>
-                      {product.currency || '₹'}{Number(product.price || 0).toFixed(2)}
-                    </p>
+                    ))}
                   </div>
-                ))}
-                {products.length === 0 && (
-                  <div className={`col-span-2 py-12 text-center font-heading text-sm ${
-                    isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'
-                  }`}>
-                    No products yet. Click 'Add Product' to start building inventory.
+                ) : (
+                  <div className="w-full text-center flex items-center justify-center gap-4 py-4">
+                    <BookOpen size={24} className={isDark ? 'text-[#E2DCC8]/30' : 'text-slate-300'} />
+                    <div className="text-left">
+                      <p className={`text-xs font-semibold ${isDark ? 'text-[#F1F1F1]' : 'text-slate-800'}`}>No catalogs created yet</p>
+                      <p className={`text-[10px] ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Build your first multi-page catalog in seconds.</p>
+                    </div>
+                    <button
+                      onClick={() => setView('catalog-setup')}
+                      className="px-3.5 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[3px] text-xs font-bold uppercase tracking-wider transition-colors ml-auto"
+                    >
+                      + Create Catalog
+                    </button>
                   </div>
                 )}
               </div>
             </div>
+
+            {/* Global Product Library */}
+            <div className={`rounded-[4px] border overflow-hidden shadow-sm ${
+              isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`px-5 py-3.5 border-b flex items-center justify-between ${
+                isDark ? 'bg-[#171616] border-[#E2DCC8]/15' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <Package size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+                  <span className={`text-xs font-bold tracking-tight font-space uppercase ${
+                    isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
+                  }`}>
+                    Global Product Library ({products.length})
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => { setActiveCategoryId(null); setView('products-list'); }}
+                  className={`text-[11px] font-bold uppercase tracking-wider flex items-center gap-1 transition-colors ${
+                    isDark ? 'text-[#E2DCC8]/80 hover:text-white' : 'text-[#0F3D3E] hover:text-[#155455]'
+                  }`}
+                  title="View All Products"
+                >
+                  <span>View All Inventory</span>
+                  <ArrowUpRight size={12} />
+                </button>
+              </div>
+
+              <div className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {products.slice(0, 6).map(product => {
+                    const prodImg = resolveProductImage(product);
+                    const prodCat = categories.find(c => String(c.id) === String(product.categoryId));
+
+                    return (
+                      <div
+                        key={product.id}
+                        onClick={() => { setActiveCategoryId(product.categoryId || null); setView('products-list'); }}
+                        className={`p-3 rounded-[4px] border flex flex-col justify-between cursor-pointer transition-all group ${
+                          isDark 
+                            ? 'bg-[#100F0F] hover:bg-[#181818] border-[#E2DCC8]/15 hover:border-[#E2DCC8]/35' 
+                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className={`w-12 h-12 border flex items-center justify-center shrink-0 overflow-hidden rounded-[3px] p-1 ${
+                            isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
+                          }`}>
+                            {prodImg ? (
+                              <img
+                                src={prodImg}
+                                className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                                alt={product.name}
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                              />
+                            ) : (
+                              <Package size={18} className={isDark ? "text-[#555555]" : "text-slate-400"} />
+                            )}
+                          </div>
+
+                          <div className="truncate min-w-0 flex-1">
+                            <p className={`text-xs font-semibold truncate font-heading transition-colors ${
+                              isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
+                            }`}>
+                              {product.name}
+                            </p>
+                            <p className={`text-[9px] font-mono uppercase truncate ${
+                              isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'
+                            }`}>
+                              SKU: {product.sku || 'N/A'}
+                            </p>
+                            {prodCat && (
+                              <span className={`inline-block mt-0.5 text-[8px] font-mono font-bold uppercase px-1.5 py-0.2 rounded border ${
+                                isDark ? 'bg-white/5 border-white/10 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                              }`}>
+                                {prodCat.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5 pt-2 border-t border-white/5 flex items-center justify-between">
+                          <span className={`text-[9px] font-mono ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                            Price
+                          </span>
+                          <span className={`text-xs font-bold font-heading ${
+                            isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
+                          }`}>
+                            {product.currency || '₹'}{Number(product.price || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {products.length === 0 && (
+                    <div className={`col-span-full py-8 text-center font-heading text-xs ${
+                      isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'
+                    }`}>
+                      No products yet. Click 'Add Product' to start building inventory.
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
           </div>
 
-          {/* Quick Actions Panel (Span 1) */}
-          <div className="space-y-6">
+          {/* Right Column (Col Span 4) */}
+          <div className="lg:col-span-4 space-y-5">
+            
+            {/* Top Categories Breakdown Panel */}
+            <div className={`rounded-[4px] border overflow-hidden shadow-sm ${
+              isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`px-5 py-3.5 border-b flex items-center justify-between ${
+                isDark ? 'bg-[#171616] border-[#E2DCC8]/15' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <span className={`text-xs font-bold uppercase tracking-wider font-space ${
+                  isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
+                }`}>
+                  Top Categories ({categories.length})
+                </span>
+                <button
+                  onClick={() => setView('category-list')}
+                  className={`text-[11px] font-bold uppercase tracking-wider ${
+                    isDark ? 'text-[#E2DCC8]/70 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  View All
+                </button>
+              </div>
+
+              <div className="p-4 space-y-2.5">
+                {topCategories.map(cat => (
+                  <div
+                    key={cat.id}
+                    onClick={() => { setActiveCategoryId(cat.id); setView('products-list'); }}
+                    className={`p-2.5 rounded-[3px] border transition-colors cursor-pointer flex items-center justify-between ${
+                      isDark ? 'bg-[#100F0F] border-[#E2DCC8]/10 hover:border-[#E2DCC8]/25' : 'bg-slate-50 border-slate-100 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5 truncate pr-2">
+                      <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: cat.color || '#0F3D3E' }} />
+                      <span className={`text-xs font-semibold truncate ${
+                        isDark ? 'text-[#F1F1F1]' : 'text-slate-800'
+                      }`}>
+                        {cat.name}
+                      </span>
+                    </div>
+
+                    <span className={`text-[10px] font-mono font-bold shrink-0 px-2 py-0.5 rounded border ${
+                      isDark ? 'bg-white/5 border-white/10 text-[#E2DCC8]' : 'bg-white border-slate-200 text-[#0F3D3E]'
+                    }`}>
+                      {cat.productCount} {cat.productCount === 1 ? 'Item' : 'Items'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Quick Actions Shortcuts */}
             <div className={`border rounded-[4px] p-3.5 space-y-2 shadow-sm ${
               isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
             }`}>
               <button
                 onClick={() => setView('create-category')}
-                className={`w-full flex items-center gap-4 p-3.5 rounded-[4px] transition-all group text-left border ${
+                className={`w-full flex items-center gap-3.5 p-2.5 rounded-[4px] transition-all group text-left border ${
                   isDark 
                     ? 'hover:bg-[#0F3D3E]/20 border-transparent hover:border-[#0F3D3E]/40' 
                     : 'hover:bg-slate-50 border-slate-100 hover:border-slate-200'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-[4px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
                     ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border border-[#0F3D3E]' 
                     : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border border-[#0F3D3E]/20'
                 }`}>
-                  <FolderPlus size={18} />
+                  <FolderPlus size={15} />
                 </div>
-                <div>
-                  <p className={`text-xs font-semibold font-heading transition-colors ${
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold font-heading truncate transition-colors ${
                     isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
                   }`}>Add Category</p>
-                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Structure your catalog hierarchy</p>
+                  <p className={`text-[9px] truncate ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Structure your catalog hierarchy</p>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setView('media-library')}
+                className={`w-full flex items-center gap-3.5 p-2.5 rounded-[4px] transition-all group text-left border ${
+                  isDark 
+                    ? 'hover:bg-[#0F3D3E]/20 border-transparent hover:border-[#0F3D3E]/40' 
+                    : 'hover:bg-slate-50 border-slate-100 hover:border-slate-200'
+                }`}
+              >
+                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                  isDark 
+                    ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/15' 
+                    : 'bg-slate-100 text-[#0F3D3E] border border-slate-200'
+                }`}>
+                  <Images size={15} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold font-heading truncate transition-colors ${
+                    isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
+                  }`}>Media Library</p>
+                  <p className={`text-[9px] truncate ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Manage images, assets & logos</p>
                 </div>
               </button>
 
               <button
                 onClick={() => setView('your-work')}
-                className={`w-full flex items-center gap-4 p-3.5 rounded-[4px] transition-all group text-left border ${
+                className={`w-full flex items-center gap-3.5 p-2.5 rounded-[4px] transition-all group text-left border ${
                   isDark 
                     ? 'hover:bg-[#0F3D3E]/20 border-transparent hover:border-[#0F3D3E]/40' 
                     : 'hover:bg-slate-50 border-slate-100 hover:border-slate-200'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-[4px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
                     ? 'bg-[#171616] text-[#F1F1F1] border border-[#E2DCC8]/15' 
                     : 'bg-slate-100 text-slate-700 border border-slate-200'
                 }`}>
-                  <Briefcase size={18} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+                  <Briefcase size={15} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
                 </div>
-                <div>
-                  <p className={`text-xs font-semibold font-heading transition-colors ${
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold font-heading truncate transition-colors ${
                     isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
                   }`}>Your Work</p>
-                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Manage and compile catalogs</p>
+                  <p className={`text-[9px] truncate ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Manage and compile catalogs</p>
                 </div>
               </button>
 
               <button
                 onClick={() => setView('settings')}
-                className={`w-full flex items-center gap-4 p-3.5 rounded-[4px] transition-all group text-left border ${
+                className={`w-full flex items-center gap-3.5 p-2.5 rounded-[4px] transition-all group text-left border ${
                   isDark 
                     ? 'hover:bg-[#0F3D3E]/20 border-transparent hover:border-[#0F3D3E]/40' 
                     : 'hover:bg-slate-50 border-slate-100 hover:border-slate-200'
                 }`}
               >
-                <div className={`w-10 h-10 rounded-[4px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
+                <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
                     ? 'bg-[#171616] text-[#E2DCC8]/70 border border-[#E2DCC8]/15' 
                     : 'bg-slate-100 text-slate-700 border border-slate-200'
                 }`}>
-                  <Settings size={18} />
+                  <Settings size={15} />
                 </div>
-                <div>
-                  <p className={`text-xs font-semibold font-heading transition-colors ${
+                <div className="min-w-0 flex-1">
+                  <p className={`text-xs font-semibold font-heading truncate transition-colors ${
                     isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-800 group-hover:text-[#0F3D3E]'
                   }`}>Workspace Settings</p>
-                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Company profile & schemas</p>
+                  <p className={`text-[9px] truncate ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Company profile & schemas</p>
                 </div>
               </button>
             </div>
           </div>
+
         </div>
 
       </div>
@@ -277,4 +586,3 @@ const Dashboard: React.FC = () => {
 };
 
 export default Dashboard;
-

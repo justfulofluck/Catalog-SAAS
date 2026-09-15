@@ -376,3 +376,22 @@ export interface EditorState {
   activeTool: 'select' | 'hand' | 'text' | 'shape';
   shouldRenderOutlines: boolean;
 }
+
+export interface ToastNotification {
+  id: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+  title?: string;
+  message: string;
+  duration?: number;
+}
+
+export interface ConfirmDialogState {
+  isOpen: boolean;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  type?: 'danger' | 'warning' | 'info';
+  onConfirm: () => void | Promise<void>;
+  onCancel?: () => void;
+}

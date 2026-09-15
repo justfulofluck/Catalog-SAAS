@@ -31,6 +31,8 @@ import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
 import PublicViewer from './components/Publish/PublicViewer';
 import PricingView from './components/Pricing/PricingView';
+import ToastContainer from './components/Common/ToastContainer';
+import ConfirmModal from './components/Common/ConfirmModal';
 import { useStore, View } from './store/useStore';
 import {
   LayoutDashboard,
@@ -387,11 +389,8 @@ const App: React.FC = () => {
           <div className="flex-1 flex overflow-hidden relative">
             <EditorCanvas />
 
-            <div ref={rightPanelRef} className="absolute top-0 right-0 h-full z-40 flex pointer-events-none">
-              <div className="flex h-full pointer-events-auto shadow-[-20px_0_50px_rgba(0,0,0,0.02)]">
-                {isProjectSettingsOpen && <ProjectSettingsPanel />}
-              </div>
-            </div>
+
+
           </div>
         </div>
 
@@ -399,6 +398,8 @@ const App: React.FC = () => {
         {isHeaderDesignerOpen && <HeaderDesignerModal />}
         {/* Master Footer Designer / Studio Modal */}
         {isFooterDesignerOpen && <FooterDesignerModal />}
+        <ToastContainer />
+        <ConfirmModal />
       </div>
     );
   }
@@ -501,28 +502,6 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {/* Quick Theme Switcher Button */}
-          <button
-            onClick={toggleUiTheme}
-            className={`w-full flex items-center justify-between p-2 rounded-[4px] border transition-all text-xs font-medium ${
-              isDark 
-                ? 'bg-[#161616] border-[#262626] text-[#E2DCC8] hover:bg-[#1c1b1b] hover:border-[#E2DCC8]/30' 
-                : 'bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100 hover:border-slate-300'
-            }`}
-            title={`Switch to ${isDark ? 'Light' : 'Dark'} Mode`}
-          >
-            <div className="flex items-center gap-2.5 min-w-0">
-              {isDark ? <Sun size={15} className="text-amber-400 shrink-0" /> : <Moon size={15} className="text-indigo-600 shrink-0" />}
-              {isSidebarExpanded && <span className="truncate">{isDark ? 'Light Mode' : 'Dark Mode'}</span>}
-            </div>
-            {isSidebarExpanded && (
-              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-[2px] uppercase tracking-wider ${
-                isDark ? 'bg-[#222] text-[#888]' : 'bg-white text-slate-500 border border-slate-200'
-              }`}>
-                {isDark ? 'DARK' : 'LIGHT'}
-              </span>
-            )}
-          </button>
 
           {/* User & Settings Dropdown Trigger */}
           <div className="relative" ref={userMenuRef}>
@@ -656,6 +635,8 @@ const App: React.FC = () => {
       <div className={`flex flex-1 flex-col overflow-hidden transition-colors duration-200 ${isDark ? 'bg-[#100F0F]' : 'bg-[#f8fafc]'}`}>{renderContent()}</div>
       {isHeaderDesignerOpen && <HeaderDesignerModal />}
       {isFooterDesignerOpen && <FooterDesignerModal />}
+      <ToastContainer />
+      <ConfirmModal />
     </div>
   );
 };

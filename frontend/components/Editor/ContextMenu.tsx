@@ -412,21 +412,21 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     onClick,
     submenuContent
   }) => {
-    const isHovered = activeSubmenu === submenuId;
+    const isOpen = activeSubmenu === submenuId;
 
     return (
       <div
         className="relative"
-        onMouseEnter={() => {
-          if (hasSubmenu && submenuId) setActiveSubmenu(submenuId);
-        }}
-        onMouseLeave={() => {
-          if (hasSubmenu && submenuId) setActiveSubmenu(null);
-        }}
       >
         <div
-          onClick={onClick}
-          className="flex items-center justify-between px-3 py-1.5 rounded-[6px] hover:bg-[#32363e] active:bg-[#3d424c] cursor-pointer text-[13px] text-white select-none transition-colors group"
+          onClick={() => {
+            if (hasSubmenu && submenuId) {
+              setActiveSubmenu(isOpen ? null : submenuId);
+            } else if (onClick) {
+              onClick();
+            }
+          }}
+          className={`flex items-center justify-between px-3 py-1.5 rounded-[6px] hover:bg-[#32363e] active:bg-[#3d424c] cursor-pointer text-[13px] text-white select-none transition-colors group ${isOpen ? 'bg-[#32363e]' : ''}`}
         >
           <div className="flex items-center gap-3">
             <Icon size={16} strokeWidth={1.8} className="text-[#cbd5e1] group-hover:text-white shrink-0" />
@@ -440,13 +440,13 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
               </span>
             )}
             {hasSubmenu && (
-              <ChevronRight size={14} className="text-[#a0a6b5] group-hover:text-white shrink-0" />
+              <ChevronRight size={14} className={`shrink-0 transition-transform ${isOpen ? 'text-white rotate-90' : 'text-[#a0a6b5] group-hover:text-white'}`} />
             )}
           </div>
         </div>
 
         {/* Submenu Floating Panel */}
-        {hasSubmenu && isHovered && submenuContent && (
+        {hasSubmenu && isOpen && submenuContent && (
           <div
             className={`absolute top-0 bg-[#22252a] border border-[#343842] shadow-[0_20px_50px_rgba(0,0,0,0.75),0_6px_20px_rgba(0,0,0,0.5)] rounded-[10px] py-1.5 px-1 z-[1001] animate-in fade-in zoom-in-95 duration-100 ${
               isSubmenuLeft ? 'right-[calc(100%+6px)]' : 'left-[calc(100%+6px)]'

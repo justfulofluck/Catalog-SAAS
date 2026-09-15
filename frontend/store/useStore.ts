@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { Product, ProductVariant, TableData, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection } from '../types';
+import { Product, ProductVariant, TableData, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection, ToastNotification, ConfirmDialogState } from '../types';
 import { authApi, systemTemplatesApi, adminAssetsApi } from '../client';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, FULL_CATALOG_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES, GRID_TEMPLATES } from '../constants';
 import { normalizeImageUrl, resolveProductImage, resolveProductTitle } from '../utils/imageUtils';
@@ -71,6 +71,7 @@ interface State {
   catalogSetupName: string;
 
   viewingCatalogId: string | null;
+  publicCatalog: Catalog | null;
 
   draggingItem: { url: string; productId?: string; name: string } | null;
   clipboard: CanvasElement[];
@@ -206,6 +207,13 @@ interface State {
   publishCatalog: (id: string) => Promise<{ id: string; uuid: string } | undefined>;
   fetchPublicCatalog: (uuid: string) => Promise<Catalog | undefined>;
   openPublicViewer: (id: string) => void;
+
+  toasts: ToastNotification[];
+  confirmModal: ConfirmDialogState | null;
+  showToast: (message: string, type?: 'success' | 'error' | 'info' | 'warning', title?: string, duration?: number) => void;
+  dismissToast: (id: string) => void;
+  showConfirm: (options: { title: string; message: string; confirmText?: string; cancelText?: string; type?: 'danger' | 'warning' | 'info'; onConfirm: () => void | Promise<void>; onCancel?: () => void }) => void;
+  closeConfirm: () => void;
 
   addElement: (pageIndex: number, element: CanvasElement) => void;
   updateElement: (pageIndex: number, elementId: string, updates: Partial<CanvasElement>) => void;
@@ -457,6 +465,44 @@ export const useStore = create<State>((set, get) => ({
   clipboard: [],
 
   viewingCatalogId: null,
+  publicCatalog: null,
+
+  toasts: [],
+  confirmModal: null,
+  showToast: (message, type = 'success', title, duration = 5000) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    const newToast: ToastNotification = {
+      id,
+      message,
+      type,
+      title,
+      duration
+    };
+    set(state => ({
+      toasts: [...state.toasts, newToast]
+    }));
+    setTimeout(() => {
+      set(state => ({
+        toasts: state.toasts.filter(t => t.id !== id)
+      }));
+    }, duration);
+  },
+  dismissToast: (id) => set(state => ({
+    toasts: state.toasts.filter(t => t.id !== id)
+  })),
+  showConfirm: (options) => set({
+    confirmModal: {
+      isOpen: true,
+      title: options.title,
+      message: options.message,
+      confirmText: options.confirmText || 'Confirm',
+      cancelText: options.cancelText || 'Cancel',
+      type: options.type || 'danger',
+      onConfirm: options.onConfirm,
+      onCancel: options.onCancel
+    }
+  }),
+  closeConfirm: () => set({ confirmModal: null }),
 
   undoStack: [],
   redoStack: [],
@@ -1953,32 +1999,62 @@ export const useStore = create<State>((set, get) => ({
 
   fetchPublicCatalog: async (uuid) => {
     const { catalogsApi } = await import('../client');
-    set({ isLoading: true });
+    set({ isLoading: true, error: null });
     try {
       const response = await catalogsApi.getPublic(uuid);
       const data = (response as any).data || response;
-      // Map the backend data to our frontend format if needed
-      const mappedPages = data.pages.map((p: any) => ({
+      let settings = data.settings || {};
+      if (typeof settings === 'string') {
+        try {
+          settings = JSON.parse(settings);
+        } catch (e) {
+          settings = {};
+        }
+      }
+      const mappedPages = (data.pages || []).map((p: any, idx: number) => ({
         ...p,
-        elements: p.layout_data || [],
-        categoryId: p.category
+        id: String(p.id || `p-${idx + 1}`),
+        pageNumber: p.pageNumber || p.page_number || (idx + 1),
+        type: p.type || 'interior',
+        elements: p.layout_data || p.elements || [],
+        categoryId: p.category || p.categoryId
       }));
       const mappedCatalog = {
         ...data,
+        ...settings,
+        id: String(data.id),
+        headerElements: data.headerElements || settings.headerElements || [],
+        footerElements: data.footerElements || settings.footerElements || [],
         pages: mappedPages
       };
-      set({ catalog: mappedCatalog, viewingCatalogId: data.id, isLoading: false });
+      set({ publicCatalog: mappedCatalog, viewingCatalogId: uuid, isLoading: false, error: null });
       return mappedCatalog;
     } catch (error) {
       console.error("Failed to fetch public catalog", error);
-      set({ error: "Catalog not found or not published", isLoading: false });
+      set({ publicCatalog: null, error: "Catalog not found or not published", isLoading: false });
     }
   },
 
-  openPublicViewer: (id) => set({
-    currentView: 'public-viewer',
-    viewingCatalogId: id
-  }),
+  openPublicViewer: (id) => {
+    const state = get();
+    const stringId = String(id);
+    const existing = state.savedCatalogs.find(c => String(c.id) === stringId || (c.uuid && String(c.uuid) === stringId));
+    const targetUuidOrId = existing?.uuid || stringId;
+    if (typeof window !== 'undefined') {
+      const targetPath = `/viewer/${targetUuidOrId}`;
+      if (window.location.pathname !== targetPath) {
+        window.history.pushState({ view: 'public-viewer' }, '', targetPath);
+      }
+    }
+    set({
+      currentView: 'public-viewer',
+      viewingCatalogId: targetUuidOrId,
+      publicCatalog: existing ? JSON.parse(JSON.stringify(existing)) : null
+    });
+    if (!existing) {
+      get().fetchPublicCatalog(stringId);
+    }
+  },
 
   applyFullCatalogTemplate: (templateId) => {
     get().pushHistory();

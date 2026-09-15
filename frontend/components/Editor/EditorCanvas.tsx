@@ -155,6 +155,38 @@ const EditorCanvas: React.FC = () => {
     return () => window.removeEventListener('mousemove', handleMouseMove);
   }, []);
 
+  // Auto-save every 3 minutes
+  const autoSaveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    autoSaveRef.current = setInterval(async () => {
+      const store = useStore.getState();
+      // Only auto-save if catalog exists and has been saved before (has a real backend ID)
+      const catalogId = String(store.catalog.id);
+      if (!catalogId || catalogId.startsWith('cat-')) return; // Not yet saved to backend
+      if (store.isLoading) return; // Already saving
+
+      try {
+        await store.saveCatalog();
+        // Show subtle auto-save indicator
+        const toast = document.createElement('div');
+        toast.className = 'fixed bottom-3 right-3 bg-[#1a1a1a] text-[#888] px-3 py-1.5 rounded-lg text-[9px] font-medium z-50 border border-[#333] opacity-0 transition-opacity duration-300';
+        toast.innerText = '✓ Auto-saved';
+        document.body.appendChild(toast);
+        requestAnimationFrame(() => { toast.style.opacity = '1'; });
+        setTimeout(() => {
+          toast.style.opacity = '0';
+          setTimeout(() => toast.remove(), 300);
+        }, 1500);
+      } catch (err) {
+        console.warn('Auto-save failed:', err);
+      }
+    }, 3 * 60 * 1000); // 3 minutes
+
+    return () => {
+      if (autoSaveRef.current) clearInterval(autoSaveRef.current);
+    };
+  }, []);
+
   // Constraint helper (Defined early so all hooks can access it)
   const getClampedPan = useCallback((nextX: number, nextY: number) => {
     if (!containerRef.current || !panContentRef.current) return { x: nextX, y: nextY };
@@ -1186,36 +1218,6 @@ const EditorCanvas: React.FC = () => {
                       </span>
                     </button>
 
-                    {/* 3-Product Grid Studio & Reflow Buttons (Interior/Product Pages Only) */}
-                    {(page.type === 'interior' || (page.type !== 'cover' && page.type !== 'index' && page.type !== 'closing')) && (
-                      <>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setCurrentPageIndex(pageIdx);
-                            setEditorTab('grid-studio');
-                            setSidebarExpanded(true);
-                          }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] text-[#E2DCC8] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold shadow-md shadow-[#0F3D3E]/20 transition-all hover:scale-105 active:scale-95"
-                          title="Design and auto-align 3-Product Grid on this page"
-                        >
-                          <Sparkles size={11} className="text-[#E2DCC8]" />
-                          <span>3-Product Grid</span>
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            reflowCatalogPages();
-                          }}
-                          className="flex items-center gap-1.5 px-2.5 py-1 bg-[#1e293b] hover:bg-[#334155] text-sky-300 border border-sky-500/30 rounded-[4px] text-[10px] font-bold shadow-sm transition-all hover:scale-105 active:scale-95"
-                          title="Auto-reflow and pack product grids across all pages (underflow/overflow)"
-                        >
-                          <Zap size={11} className="text-sky-400" />
-                          <span>Reflow Pages</span>
-                        </button>
-                      </>
-                    )}
 
                     <div className="w-px h-3.5 bg-white/15 mx-0.5" />
 
@@ -1757,15 +1759,6 @@ const EditorCanvas: React.FC = () => {
       {/* Editor Footer Bar */}
       <div className="h-11 border-t flex items-center justify-between px-5 shrink-0 z-40 bg-[#141414] border-[#262626]">
         <div className="flex items-center gap-6">
-          <button
-            onClick={() => setIsProjectSettingsOpen(!isProjectSettingsOpen)}
-            className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider transition-colors ${isProjectSettingsOpen ? 'text-[#E2DCC8]' : 'text-[#888888] hover:text-white'}`}
-          >
-            <div className={`w-5 h-5 rounded-[4px] flex items-center justify-center ${isProjectSettingsOpen ? 'bg-[#0F3D3E] text-white' : 'bg-[#222] text-[#888]'}`}>
-              <Settings size={12} />
-            </div>
-            Page Settings
-          </button>
         </div>
 
         <div className="flex items-center gap-4">
