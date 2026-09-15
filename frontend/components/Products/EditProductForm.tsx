@@ -71,6 +71,11 @@ const EditProductForm: React.FC = () => {
     }
   }, [formData.categoryId, categories]);
 
+  const isProductNameField = (f: FormField) => {
+    const l = (f.label || '').toLowerCase().trim();
+    return f.id === 'prod_name' || l === 'product' || l === 'product name' || l === 'name' || l === 'title' || l === 'item' || l === 'item name' || l.includes('product name');
+  };
+
   // Load custom fields into formData once schema is resolved
   useEffect(() => {
     if (productToEdit && combinedSchema.length > 0) {
@@ -80,7 +85,7 @@ const EditProductForm: React.FC = () => {
       combinedSchema.forEach(field => {
         const lowerLabel = (field.label || '').toLowerCase();
 
-        if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
+        if (isProductNameField(field)) {
           if (initialData[field.id] !== productToEdit.name) {
             initialData[field.id] = productToEdit.name;
             updated = true;
@@ -122,7 +127,14 @@ const EditProductForm: React.FC = () => {
   }, [combinedSchema, productToEdit]);
 
   const handleInputChange = (key: string, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [key]: value };
+      const matchedField = combinedSchema.find(f => f.id === key);
+      if (matchedField && isProductNameField(matchedField)) {
+        updated.name = value;
+      }
+      return updated;
+    });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string = 'image') => {
@@ -269,8 +281,9 @@ const EditProductForm: React.FC = () => {
         const value = formData[field.id];
         const lowerLabel = (field.label || '').toLowerCase();
 
-        if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
+        if (isProductNameField(field)) {
           if (value) finalProduct.name = value;
+          customFields[field.id] = value;
         }
         else if (field.id === 'price' || lowerLabel.includes('price')) {
           if (value !== undefined && value !== '') finalProduct.price = parseFloat(value) || 0;

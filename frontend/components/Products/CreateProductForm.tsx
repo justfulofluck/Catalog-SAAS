@@ -66,8 +66,20 @@ const CreateProductForm: React.FC = () => {
     }
   }, [formData.name, formData.categoryId, isAutoSku, categories]);
 
+  const isProductNameField = (f: FormField) => {
+    const l = (f.label || '').toLowerCase().trim();
+    return f.id === 'prod_name' || l === 'product' || l === 'product name' || l === 'name' || l === 'title' || l === 'item' || l === 'item name' || l.includes('product name');
+  };
+
   const handleInputChange = (key: string, value: any) => {
-    setFormData(prev => ({ ...prev, [key]: value }));
+    setFormData(prev => {
+      const updated = { ...prev, [key]: value };
+      const matchedField = combinedSchema.find(f => f.id === key);
+      if (matchedField && isProductNameField(matchedField)) {
+        updated.name = value;
+      }
+      return updated;
+    });
   };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldKey: string = 'image') => {
@@ -214,8 +226,9 @@ const CreateProductForm: React.FC = () => {
         const value = formData[field.id];
         const lowerLabel = (field.label || '').toLowerCase();
 
-        if (field.id === 'prod_name' || lowerLabel.includes('product name') || lowerLabel === 'name') {
+        if (isProductNameField(field)) {
           if (value) finalProduct.name = value;
+          customFields[field.id] = value;
         }
         else if (field.id === 'price' || lowerLabel.includes('price')) {
           if (value !== undefined && value !== '') finalProduct.price = parseFloat(value) || 0;
@@ -392,7 +405,7 @@ const CreateProductForm: React.FC = () => {
               </div>
               <div className="space-y-4">
                 {/* Standard Name Field if not in schema */}
-                {!combinedSchema.some(f => f.id === 'prod_name' || (f.label || '').toLowerCase().includes('name')) && (
+                {!combinedSchema.some(isProductNameField) && (
                   <div className="space-y-1.5">
                     <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${
                       isDark ? 'text-[#888888]' : 'text-slate-500'
