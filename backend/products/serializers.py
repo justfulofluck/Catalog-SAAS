@@ -16,10 +16,16 @@ class CategorySerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         if instance.thumbnail:
-            if getattr(instance.thumbnail, 'name', '').startswith(('http://', 'https://')):
-                ret['thumbnail'] = instance.thumbnail.name
+            name = getattr(instance.thumbnail, 'name', '') or ''
+            if name.startswith(('http://', 'https://')):
+                ret['thumbnail'] = name
+            elif name.startswith('/media/'):
+                ret['thumbnail'] = name
             elif hasattr(instance.thumbnail, 'url'):
-                ret['thumbnail'] = instance.thumbnail.url
+                url = instance.thumbnail.url
+                while url.startswith('/media/media/'):
+                    url = url.replace('/media/media/', '/media/')
+                ret['thumbnail'] = url
         return ret
 
     def get_subcategories(self, obj):
@@ -170,15 +176,24 @@ class ProductSerializer(serializers.ModelSerializer):
 
         ret = super().to_internal_value(data)
         if external_image_url:
-            ret['image'] = external_image_url
+            clean_url = external_image_url
+            if clean_url.startswith('/media/'):
+                clean_url = clean_url[len('/media/'):]
+            ret['image'] = clean_url
 
         return ret
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)
         if instance.image:
-            if getattr(instance.image, 'name', '').startswith(('http://', 'https://')):
-                ret['image'] = instance.image.name
+            name = getattr(instance.image, 'name', '') or ''
+            if name.startswith(('http://', 'https://')):
+                ret['image'] = name
+            elif name.startswith('/media/'):
+                ret['image'] = name
             elif hasattr(instance.image, 'url'):
-                ret['image'] = instance.image.url
+                url = instance.image.url
+                while url.startswith('/media/media/'):
+                    url = url.replace('/media/media/', '/media/')
+                ret['image'] = url
         return ret

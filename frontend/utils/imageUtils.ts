@@ -9,7 +9,7 @@ import { Product, Category } from '../types';
  */
 export function normalizeImageUrl(url?: string | null): string {
   if (!url) return '';
-  const trimmed = url.trim();
+  let trimmed = url.trim();
   if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
 
   // Handle broken / deprecated Unsplash image from old demo data
@@ -20,7 +20,15 @@ export function normalizeImageUrl(url?: string | null): string {
   // If URL points to backend media on localhost/127.0.0.1 or LAN IP, strip host to make it relative
   const mediaIdx = trimmed.indexOf('/media/');
   if (mediaIdx !== -1) {
-    return trimmed.substring(mediaIdx);
+    let path = trimmed.substring(mediaIdx);
+    while (path.startsWith('/media/media/')) {
+      path = path.replace('/media/media/', '/media/');
+    }
+    return path;
+  }
+
+  while (trimmed.startsWith('/media/media/')) {
+    trimmed = trimmed.replace('/media/media/', '/media/');
   }
 
   return trimmed;
