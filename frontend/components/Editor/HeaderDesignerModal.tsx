@@ -2722,9 +2722,6 @@ export const HeaderDesignerModal: React.FC = () => {
         </div>
       </div>
     </div>
-        </div>
-      </div>
-    </div>
   );
 };
 
