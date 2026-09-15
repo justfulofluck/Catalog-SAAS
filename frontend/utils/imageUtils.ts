@@ -132,4 +132,24 @@ export function getProductThumbnailUrl(product?: Partial<Product> | any | null):
   return '';
 }
 
+/**
+ * Resolves product / section title so it never displays raw "UNTITLED PRODUCT".
+ */
+export function resolveProductTitle(
+  product?: Partial<Product> | null,
+  categoryName?: string,
+  index: number = 0
+): string {
+  const name = product?.name?.trim();
+  const catName = categoryName?.trim() || 'PRODUCT';
+
+  if (!name || name.toLowerCase() === 'untitled product' || name.toLowerCase() === 'untitled' || name === '-') {
+    if (product?.sku && product.sku !== '-' && product.sku.trim()) {
+      return `${catName.toUpperCase()} (${product.sku.toUpperCase()})`;
+    }
+    return `${catName.toUpperCase()} SERIES ${index + 1}`;
+  }
+  return name.toUpperCase();
+}
+
 
