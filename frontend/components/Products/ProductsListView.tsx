@@ -19,20 +19,27 @@ import {
   MinusSquare
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { getProductThumbnailUrl, normalizeImageUrl } from '../../utils/imageUtils';
 
-const ProductThumbnail: React.FC<{ src?: string; alt?: string; isDark?: boolean; className?: string }> = ({ src, alt, isDark = true, className = 'w-11 h-11' }) => {
+const ProductThumbnail: React.FC<{ product?: any; src?: string; alt?: string; isDark?: boolean; className?: string }> = ({ product, src, alt, isDark = true, className = 'w-11 h-11' }) => {
   const [hasError, setHasError] = useState(false);
+  const resolvedSrc = getProductThumbnailUrl(product) || normalizeImageUrl(src) || '';
+
+  useEffect(() => {
+    setHasError(false);
+  }, [resolvedSrc]);
 
   return (
     <div className={`relative shrink-0 ${className} rounded-[2px] overflow-hidden border flex items-center justify-center ${
       isDark ? 'bg-[#100F0F] border-[#E2DCC8]/15' : 'bg-slate-100 border-slate-200'
     }`}>
-      {src && !hasError ? (
+      {resolvedSrc && !hasError ? (
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt || ''}
           onError={() => setHasError(true)}
           className="w-full h-full object-cover"
+          loading="lazy"
         />
       ) : (
         <Package size={18} className={isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'} />
@@ -406,7 +413,7 @@ const ProductsListView: React.FC = () => {
 
                       <td className="px-8 py-3">
                         <div className="flex items-center gap-4">
-                          <ProductThumbnail src={product.image} alt={product.name} isDark={isDark} />
+                          <ProductThumbnail product={product} src={product.image} alt={product.name} isDark={isDark} />
                           <div className="flex flex-col min-w-0">
                             <span className={`text-xs font-semibold truncate font-heading transition-colors ${
                               isDark ? 'text-[#F1F1F1] group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'

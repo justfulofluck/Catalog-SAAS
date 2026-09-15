@@ -1160,8 +1160,10 @@ export const useStore = create<State>((set, get) => ({
       const mappedProducts = Array.isArray(data) ? data.map((p: any) => {
         const cf = p.custom_fields || {};
         const imagesList = Array.isArray(cf.gallery) ? cf.gallery : (p.images || []);
+        const directImg = p.image || (imagesList.length > 0 ? imagesList[0] : '') || cf.image || cf.main_image || cf.photo || '';
         return {
           ...p,
+          image: directImg,
           images: imagesList,
           price: Number(p.price) || 0,
           categoryId: p.category ? String(p.category) : undefined,
@@ -1237,9 +1239,12 @@ export const useStore = create<State>((set, get) => ({
       const response = await productsApi.create(payload);
       const data = (response as any).data || response;
       const respCf = data.custom_fields || {};
+      const imgList = Array.isArray(respCf.gallery) ? respCf.gallery : (images || []);
+      const directImg = data.image || (imgList.length > 0 ? imgList[0] : '') || product.image || respCf.image || respCf.main_image || '';
       const mappedProduct = {
         ...data,
-        images: Array.isArray(respCf.gallery) ? respCf.gallery : (images || []),
+        image: directImg,
+        images: imgList,
         price: Number(data.price) || 0,
         categoryId: data.category ? String(data.category) : undefined,
         customFields: respCf
@@ -1277,9 +1282,12 @@ export const useStore = create<State>((set, get) => ({
       const response = await productsApi.update(id, payload);
       const data = (response as any).data || response;
       const respCf = data.custom_fields || {};
+      const imgList = Array.isArray(respCf.gallery) ? respCf.gallery : (updates.images || []);
+      const directImg = data.image || (imgList.length > 0 ? imgList[0] : '') || updates.image || respCf.image || respCf.main_image || '';
       const mappedProduct = {
         ...data,
-        images: Array.isArray(respCf.gallery) ? respCf.gallery : (updates.images || []),
+        image: directImg,
+        images: imgList,
         price: Number(data.price) || 0,
         categoryId: data.category ? String(data.category) : undefined,
         customFields: respCf

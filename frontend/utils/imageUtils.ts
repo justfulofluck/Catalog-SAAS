@@ -101,22 +101,35 @@ export function resolveProductImage(
 }
 
 /**
- * Resolves product / section title so it never displays raw "UNTITLED PRODUCT".
+ * Returns the exact real thumbnail URL for a product without fallback placeholders.
+ * Checks product.image, product.images array, customFields image keys, and variant images.
  */
-export function resolveProductTitle(
-  product?: Partial<Product> | null,
-  categoryName?: string,
-  index: number = 0
-): string {
-  const name = product?.name?.trim();
-  const catName = categoryName?.trim() || 'PRODUCT';
-
-  if (!name || name.toLowerCase() === 'untitled product' || name.toLowerCase() === 'untitled' || name === '-') {
-    if (product?.sku && product.sku !== '-' && product.sku.trim()) {
-      return `${catName.toUpperCase()} (${product.sku.toUpperCase()})`;
-    }
-    return `${catName.toUpperCase()} SERIES ${index + 1}`;
+export function getProductThumbnailUrl(product?: Partial<Product> | any | null): string {
+  if (!product) return '';
+  if (product.image && typeof product.image === 'string' && product.image.trim()) {
+    return normalizeImageUrl(product.image);
   }
-  return name.toUpperCase();
+  if (product.images && Array.isArray(product.images) && product.images.length > 0 && product.images[0]) {
+    return normalizeImageUrl(product.images[0]);
+  }
+  if (product.customFields && typeof product.customFields === 'object') {
+    const cfValues = Object.values(product.customFields);
+    const foundImg = cfValues.find(
+      (val: any) => typeof val === 'string' && (
+        val.startsWith('/media') ||
+        val.startsWith('http') ||
+        val.startsWith('data:') ||
+        val.startsWith('blob:') ||
+        /\.(jpg|jpeg|png|webp|svg|gif|avif)/i.test(val)
+      )
+    );
+    if (foundImg) return normalizeImageUrl(foundImg as string);
+  }
+  if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
+    const varWithImg = product.variants.find((v: any) => v.image && typeof v.image === 'string' && v.image.trim());
+    if (varWithImg) return normalizeImageUrl(varWithImg.image);
+  }
+  return '';
 }
+
 

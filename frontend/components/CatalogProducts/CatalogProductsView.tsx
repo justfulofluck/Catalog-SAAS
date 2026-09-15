@@ -1,20 +1,27 @@
 import React, { useState } from 'react';
 import { Package, Plus, Info, Search } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { getProductThumbnailUrl, normalizeImageUrl } from '../../utils/imageUtils';
 
-const ProductThumbnail: React.FC<{ src?: string; alt?: string; isDark?: boolean; className?: string; iconSize?: number }> = ({ src, alt, isDark = true, className = 'w-16 h-16', iconSize = 22 }) => {
+const ProductThumbnail: React.FC<{ product?: any; src?: string; alt?: string; isDark?: boolean; className?: string; iconSize?: number }> = ({ product, src, alt, isDark = true, className = 'w-16 h-16', iconSize = 22 }) => {
   const [hasError, setHasError] = useState(false);
+  const resolvedSrc = getProductThumbnailUrl(product) || normalizeImageUrl(src) || '';
+
+  useEffect(() => {
+    setHasError(false);
+  }, [resolvedSrc]);
 
   return (
     <div className={`relative shrink-0 ${className} rounded-[4px] overflow-hidden border flex items-center justify-center ${
       isDark ? 'bg-[#121212] border-[#262626]' : 'bg-slate-100 border-slate-200'
     }`}>
-      {src && !hasError ? (
+      {resolvedSrc && !hasError ? (
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt || ''}
           onError={() => setHasError(true)}
           className="w-full h-full object-cover"
+          loading="lazy"
         />
       ) : (
         <Package size={iconSize} className={isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'} />
@@ -78,7 +85,7 @@ const CatalogProductsView: React.FC = () => {
                 <div key={product.id} className={`p-4 rounded-[4px] border shadow-sm flex items-center gap-4 group transition-colors ${
                   isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'
                 }`}>
-                  <ProductThumbnail src={product.image} alt={product.name} isDark={isDark} className="w-16 h-16" iconSize={24} />
+                  <ProductThumbnail product={product} src={product.image} alt={product.name} isDark={isDark} className="w-16 h-16" iconSize={24} />
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-bold leading-tight truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{product.name}</p>
                     <p className={`text-xs font-medium mt-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>{product.sku}</p>
@@ -138,7 +145,7 @@ const CatalogProductsView: React.FC = () => {
                       : 'border-slate-200 bg-slate-50/70 hover:border-[#0F3D3E]/40 hover:bg-slate-50'
                   }`}
                 >
-                  <ProductThumbnail src={product.image} alt={product.name} isDark={isDark} className="w-12 h-12" iconSize={18} />
+                  <ProductThumbnail product={product} src={product.image} alt={product.name} isDark={isDark} className="w-12 h-12" iconSize={18} />
                   <div className="flex-1 truncate">
                     <p className={`text-xs font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`}>{product.name}</p>
                     <p className={`text-[10px] font-medium ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>{product.sku}</p>

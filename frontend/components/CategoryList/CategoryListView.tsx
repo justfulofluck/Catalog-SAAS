@@ -20,20 +20,27 @@ import {
   MinusSquare
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { getProductThumbnailUrl, normalizeImageUrl } from '../../utils/imageUtils';
 
-const ProductThumbnail: React.FC<{ src?: string; alt?: string; isDark?: boolean; className?: string }> = ({ src, alt, isDark = true, className = 'w-11 h-11' }) => {
+const ProductThumbnail: React.FC<{ product?: any; src?: string; alt?: string; isDark?: boolean; className?: string }> = ({ product, src, alt, isDark = true, className = 'w-11 h-11' }) => {
   const [hasError, setHasError] = useState(false);
+  const resolvedSrc = getProductThumbnailUrl(product) || normalizeImageUrl(src) || '';
+
+  useEffect(() => {
+    setHasError(false);
+  }, [resolvedSrc]);
 
   return (
     <div className={`relative shrink-0 ${className} rounded-[2px] overflow-hidden border flex items-center justify-center ${
       isDark ? 'bg-[#100F0F] border-[#E2DCC8]/15' : 'bg-slate-100 border-slate-200'
     }`}>
-      {src && !hasError ? (
+      {resolvedSrc && !hasError ? (
         <img
-          src={src}
+          src={resolvedSrc}
           alt={alt || ''}
           onError={() => setHasError(true)}
           className="w-full h-full object-cover"
+          loading="lazy"
         />
       ) : (
         <Package size={17} className={isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'} />
@@ -638,7 +645,7 @@ const CategoryListView: React.FC = () => {
                       : 'bg-white border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-sm'
                   }`}
                 >
-                  <ProductThumbnail src={product.image} alt={product.name} isDark={isDark} />
+                  <ProductThumbnail product={product} src={product.image} alt={product.name} isDark={isDark} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
                       <p className={`text-xs font-bold truncate transition-colors ${
