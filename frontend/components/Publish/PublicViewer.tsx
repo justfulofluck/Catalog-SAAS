@@ -333,7 +333,8 @@ const PublicViewer: React.FC = () => {
       {/* Main Canvas Area */}
       <div className="flex-1 overflow-auto flex justify-center p-8 relative bg-[#100F0F]">
         <div
-          className="relative shadow-2xl shadow-black/80 transition-transform duration-200 ease-out origin-top border border-[#262626]"
+          key={safePageIndex}
+          className="relative shadow-2xl shadow-black/80 transition-all duration-300 ease-out origin-center border border-[#262626] animate-in fade-in zoom-in-[0.98]"
           style={{ width: effectiveWidth * zoom, height: effectiveHeight * zoom }}
         >
           <canvas

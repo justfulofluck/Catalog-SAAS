@@ -50,6 +50,15 @@ const PageNavigator: React.FC = () => {
     return () => el.removeEventListener('wheel', handleWheel);
   }, []);
 
+  // Smoothly scroll active thumbnail into view when currentPageIndex changes
+  useEffect(() => {
+    if (!sortableRef.current || !catalog.pages[currentPageIndex]) return;
+    const activeThumb = sortableRef.current.children[currentPageIndex] as HTMLElement;
+    if (activeThumb) {
+      activeThumb.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    }
+  }, [currentPageIndex, catalog.pages]);
+
   // Handle Drag and Drop for Pages
   useEffect(() => {
     if (sortableRef.current && catalog.pages.length > 0) {

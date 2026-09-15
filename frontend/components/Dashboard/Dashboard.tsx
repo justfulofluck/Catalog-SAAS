@@ -75,7 +75,7 @@ const Dashboard: React.FC = () => {
       value: products.length,
       unit: 'Products',
       icon: <Package size={16} />,
-      color: isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border border-[#0F3D3E]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border border-[#0F3D3E]/20',
+      color: isDark ? 'bg-teal-950/40 text-teal-300 border border-teal-500/30' : 'bg-teal-50 text-teal-700 border border-teal-200',
       action: () => { setActiveCategoryId(null); setView('products-list'); }
     },
     {
@@ -83,7 +83,7 @@ const Dashboard: React.FC = () => {
       value: categories.length,
       unit: 'Collections',
       icon: <Layers size={16} />,
-      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      color: isDark ? 'bg-indigo-950/40 text-indigo-300 border border-indigo-500/30' : 'bg-indigo-50 text-indigo-700 border border-indigo-200',
       action: () => setView('category-list')
     },
     {
@@ -91,7 +91,7 @@ const Dashboard: React.FC = () => {
       value: savedCatalogs.length,
       unit: 'Projects',
       icon: <BookOpen size={16} />,
-      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      color: isDark ? 'bg-amber-950/40 text-amber-300 border border-amber-500/30' : 'bg-amber-50 text-amber-700 border border-amber-200',
       action: () => setView('your-work')
     },
     {
@@ -99,7 +99,7 @@ const Dashboard: React.FC = () => {
       value: mediaItems.length,
       unit: 'Files',
       icon: <Images size={16} />,
-      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      color: isDark ? 'bg-sky-950/40 text-sky-300 border border-sky-500/30' : 'bg-sky-50 text-sky-700 border border-sky-200',
       action: () => setView('media-library')
     },
     {
@@ -107,7 +107,7 @@ const Dashboard: React.FC = () => {
       value: totalVariants,
       unit: 'Variants',
       icon: <Sliders size={16} />,
-      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      color: isDark ? 'bg-purple-950/40 text-purple-300 border border-purple-500/30' : 'bg-purple-50 text-purple-700 border border-purple-200',
       action: () => { setActiveCategoryId(null); setView('products-list'); }
     },
     {
@@ -115,7 +115,7 @@ const Dashboard: React.FC = () => {
       value: totalCatalogPages,
       unit: 'Pages Built',
       icon: <FileText size={16} />,
-      color: isDark ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/20' : 'bg-slate-50 text-slate-700 border border-slate-200',
+      color: isDark ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/30' : 'bg-emerald-50 text-emerald-700 border border-emerald-200',
       action: () => setView('your-work')
     }
   ];
@@ -494,8 +494,8 @@ const Dashboard: React.FC = () => {
               >
                 <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
-                    ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border border-[#0F3D3E]' 
-                    : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border border-[#0F3D3E]/20'
+                    ? 'bg-indigo-950/40 text-indigo-300 border border-indigo-500/30' 
+                    : 'bg-indigo-50 text-indigo-700 border border-indigo-200'
                 }`}>
                   <FolderPlus size={15} />
                 </div>
@@ -517,8 +517,8 @@ const Dashboard: React.FC = () => {
               >
                 <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
-                    ? 'bg-[#171616] text-[#E2DCC8] border border-[#E2DCC8]/15' 
-                    : 'bg-slate-100 text-[#0F3D3E] border border-slate-200'
+                    ? 'bg-sky-950/40 text-sky-300 border border-sky-500/30' 
+                    : 'bg-sky-50 text-sky-700 border border-sky-200'
                 }`}>
                   <Images size={15} />
                 </div>
@@ -540,10 +540,10 @@ const Dashboard: React.FC = () => {
               >
                 <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
-                    ? 'bg-[#171616] text-[#F1F1F1] border border-[#E2DCC8]/15' 
-                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                    ? 'bg-amber-950/40 text-amber-300 border border-amber-500/30' 
+                    : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
-                  <Briefcase size={15} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+                  <Briefcase size={15} />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className={`text-xs font-semibold font-heading truncate transition-colors ${
@@ -563,8 +563,8 @@ const Dashboard: React.FC = () => {
               >
                 <div className={`w-8 h-8 rounded-[3px] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform ${
                   isDark 
-                    ? 'bg-[#171616] text-[#E2DCC8]/70 border border-[#E2DCC8]/15' 
-                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                    ? 'bg-teal-950/40 text-teal-300 border border-teal-500/30' 
+                    : 'bg-teal-50 text-teal-700 border border-teal-200'
                 }`}>
                   <Settings size={15} />
                 </div>

@@ -241,6 +241,11 @@ const EditorCanvas: React.FC = () => {
     return () => window.removeEventListener('catalog:scrollToPage', handler);
   }, [scrollToPageIndex]);
 
+  // Automatically smoothly pan to currentPageIndex whenever it changes (e.g. from page navigator / sidebar)
+  useEffect(() => {
+    scrollToPageIndex(currentPageIndex);
+  }, [currentPageIndex, scrollToPageIndex]);
+
   const saveContent = useCallback((shouldClose = false) => {
     if (textDebounceTimerRef.current) {
       clearTimeout(textDebounceTimerRef.current);
@@ -1122,7 +1127,7 @@ const EditorCanvas: React.FC = () => {
       >
         <div
           ref={panContentRef}
-          className="flex flex-col items-center py-12 pl-12 pr-6 gap-10"
+          className={`flex flex-col items-center py-12 pl-12 pr-6 gap-10 ${isPanActive ? '' : 'transition-transform duration-300 ease-out'}`}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px)`,
             width: 'fit-content',
