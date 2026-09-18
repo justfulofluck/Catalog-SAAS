@@ -37,7 +37,8 @@ const Dashboard: React.FC = () => {
     fetchCatalogs,
     fetchMedia,
     loadCatalog,
-    uiTheme
+    uiTheme,
+    openCreateProductModal
   } = useStore();
 
   const isDark = uiTheme === 'dark';
@@ -148,7 +149,7 @@ const Dashboard: React.FC = () => {
           {/* Quick Action Buttons */}
           <div className="flex items-center gap-2.5 shrink-0">
             <button
-              onClick={() => setView('create-product')}
+              onClick={() => openCreateProductModal()}
               className={`px-3.5 py-2 rounded-[4px] border text-xs font-heading font-semibold uppercase tracking-wider transition-all flex items-center gap-1.5 ${
                 isDark 
                   ? 'bg-[#171616] hover:bg-[#202020] border-[#E2DCC8]/20 text-[#E2DCC8]' 

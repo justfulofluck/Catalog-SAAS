@@ -26,6 +26,7 @@ import ColorPanel from './components/Sidebar/ColorPanel';
 import GridStudioPanel from './components/Sidebar/GridStudioPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
+import { CreateProductModal } from './components/Products/CreateProductModal';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
 import PublishView from './components/Publish/PublishView';
@@ -78,7 +79,8 @@ const App: React.FC = () => {
     businessTemplates,
     checkAuth,
     isHeaderDesignerOpen,
-    isFooterDesignerOpen
+    isFooterDesignerOpen,
+    isCreateProductModalOpen
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -635,6 +637,7 @@ const App: React.FC = () => {
       <div className={`flex flex-1 flex-col overflow-hidden transition-colors duration-200 ${isDark ? 'bg-[#100F0F]' : 'bg-[#f8fafc]'}`}>{renderContent()}</div>
       {isHeaderDesignerOpen && <HeaderDesignerModal />}
       {isFooterDesignerOpen && <FooterDesignerModal />}
+      {isCreateProductModalOpen && <CreateProductModal />}
       <ToastContainer />
       <ConfirmModal />
     </div>

@@ -1,31 +1,46 @@
 # General
 .DS_Store
 *.log
+Thumbs.db
 .vscode/
 .idea/
+.kilo/
 
 # Environment Variables
 .env
-.venv
-env/
-venv/
-ENV/
+.env.*
+!.env.example
 
 # Python
+venv/
+venv_django/
+env/
+ENV/
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.sqlite3
+backend/db.sqlite3
+backend/db.sqlite3-journal
+
+# Media / User uploads (dev runtime data)
+backend/media/
 
 # Node
 node_modules/
-npm-debug.log
+npm-debug.log*
 yarn-error.log
 pnpm-debug.log
 dist/
 build/
+*.local
 
-# Project Specific
-catalogstudio-backend/media/
-catalogstudio-backend/staticfiles/
-catalogstudio-backend/catalog/
+# Frontend build artifacts
+frontend/dist/
+
+# Test / temp
+coverage/
+.pytest_cache/
+.tmp/
+*.pyc

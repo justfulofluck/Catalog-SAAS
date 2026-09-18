@@ -52,7 +52,7 @@ const ProductThumbnail: React.FC<{ product?: any; src?: string; alt?: string; is
 };
 
 const ProductsListView: React.FC = () => {
-  const { products, categories, setView, removeProduct, activeCategoryId, setActiveCategoryId, setEditingProductId, uiTheme, showConfirm, showToast } = useStore();
+  const { products, categories, setView, removeProduct, activeCategoryId, setActiveCategoryId, setEditingProductId, uiTheme, showConfirm, showToast, openCreateProductModal } = useStore();
   const isDark = uiTheme === 'dark';
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -336,7 +336,7 @@ const ProductsListView: React.FC = () => {
           </div>
 
           <button
-            onClick={() => setView('create-product')}
+            onClick={() => openCreateProductModal(activeCategoryId ? String(activeCategoryId) : undefined)}
             className="px-5 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-white border border-[#E2DCC8]/30 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-md flex items-center gap-1.5 transition-all active:scale-95 whitespace-nowrap"
           >
             <Plus size={15} className="text-[#E2DCC8]" /> Add Product

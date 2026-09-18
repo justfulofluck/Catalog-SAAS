@@ -6,7 +6,7 @@ import { CURRENCIES } from '../../constants';
 import { FormField, ProductVariant } from '../../types';
 
 const CreateProductForm: React.FC = () => {
-  const { setView, addProduct, categories, defaultCurrency, uiTheme, addMedia } = useStore();
+  const { setView, addProduct, categories, defaultCurrency, uiTheme, addMedia, activeCategoryId } = useStore();
   const isDark = uiTheme === 'dark';
 
   const [formData, setFormData] = useState<Record<string, any>>({
@@ -17,8 +17,18 @@ const CreateProductForm: React.FC = () => {
     description: '',
     image: '',
     images: [],
-    categoryId: ''
+    categoryId: activeCategoryId ? String(activeCategoryId) : ''
   });
+
+  // Automatically sync categoryId when activeCategoryId changes or is loaded
+  useEffect(() => {
+    if (activeCategoryId) {
+      setFormData(prev => ({
+        ...prev,
+        categoryId: String(activeCategoryId)
+      }));
+    }
+  }, [activeCategoryId]);
 
   const [variants, setVariants] = useState<ProductVariant[]>([
     {
@@ -38,7 +48,7 @@ const CreateProductForm: React.FC = () => {
   // Update schema when category changes
   useEffect(() => {
     if (formData.categoryId) {
-      const selectedCategory = categories.find(c => c.id === formData.categoryId);
+      const selectedCategory = categories.find(c => String(c.id) === String(formData.categoryId));
       if (selectedCategory) {
         setCombinedSchema([...(selectedCategory.customSchema || [])]);
       } else {
@@ -52,7 +62,7 @@ const CreateProductForm: React.FC = () => {
   // Automatic SKU Generation Logic
   useEffect(() => {
     if (isAutoSku && formData.name?.trim()) {
-      const category = categories.find(c => c.id === formData.categoryId);
+      const category = categories.find(c => String(c.id) === String(formData.categoryId));
       const prefix = category ? category.name.substring(0, 3).toUpperCase() : 'GEN';
       const namePart = formData.name
         .split(' ')
@@ -459,14 +469,14 @@ const CreateProductForm: React.FC = () => {
                       isDark ? 'text-[#666666]' : 'text-slate-400'
                     }`} size={15} />
                     <select
-                      value={formData.categoryId}
+                      value={String(formData.categoryId || '')}
                       onChange={(e) => handleInputChange('categoryId', e.target.value)}
                       className={`w-full border rounded-[4px] pl-10 pr-8 py-2.5 text-xs font-semibold focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E]/30 outline-none appearance-none transition-all ${
                         isDark ? 'bg-[#1c1c1c] border-[#262626] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
                       }`}
                     >
                       <option value="" className={isDark ? "bg-[#161616]" : "bg-white"}>Select Category...</option>
-                      {categories.map(cat => (<option key={cat.id} value={cat.id} className={isDark ? "bg-[#161616]" : "bg-white"}>{cat.name}</option>))}
+                      {categories.map(cat => (<option key={cat.id} value={String(cat.id)} className={isDark ? "bg-[#161616]" : "bg-white"}>{cat.name}</option>))}
                     </select>
                     <ChevronDown size={14} className={`absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none ${
                       isDark ? 'text-[#666666]' : 'text-slate-400'

@@ -68,6 +68,8 @@ interface State {
   editingHeaderTemplate: any | null;
   isFooterDesignerOpen: boolean;
   editingFooterTemplate: any | null;
+  isCreateProductModalOpen: boolean;
+  createProductInitialCategoryId: string | null;
   catalogSetupName: string;
 
   viewingCatalogId: string | null;
@@ -158,6 +160,8 @@ interface State {
   autoGenerateCatalogFromAllCategories: () => void;
   setIsHeaderDesignerOpen: (isOpen: boolean, template?: any | null) => void;
   setIsFooterDesignerOpen: (isOpen: boolean, template?: any | null) => void;
+  openCreateProductModal: (categoryId?: string | null) => void;
+  closeCreateProductModal: () => void;
   setCurrentPageIndex: (index: number) => void;
   setZoom: (zoom: number) => void;
   setCatalogSetupName: (name: string) => void;
@@ -1592,6 +1596,17 @@ export const useStore = create<State>((set, get) => ({
   setIsFooterDesignerOpen: (isOpen, template = null) => set({
     isFooterDesignerOpen: isOpen,
     editingFooterTemplate: isOpen ? (template || null) : null
+  }),
+  isCreateProductModalOpen: false,
+  createProductInitialCategoryId: null,
+  openCreateProductModal: (categoryId = null) => set((state) => ({
+    isCreateProductModalOpen: true,
+    createProductInitialCategoryId: categoryId || null,
+    activeCategoryId: categoryId || state.activeCategoryId
+  })),
+  closeCreateProductModal: () => set({
+    isCreateProductModalOpen: false,
+    createProductInitialCategoryId: null
   }),
   setCurrentPageIndex: (index) => set({ currentPageIndex: index, selectedPageIndex: index }),
   setZoom: (zoom: number) => set({ zoom }),

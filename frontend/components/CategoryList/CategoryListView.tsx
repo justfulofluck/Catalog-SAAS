@@ -53,7 +53,7 @@ const CategoryListView: React.FC = () => {
   const {
     categories, products, setView, activeCategoryId, setActiveCategoryId,
     setEditingCategoryId, removeCategory, setEditingProductId, setCreatingSubcategoryParentId,
-    uiTheme, showConfirm, showToast
+    uiTheme, showConfirm, showToast, openCreateProductModal
   } = useStore();
 
   const isDark = uiTheme === 'dark';
@@ -573,14 +573,34 @@ const CategoryListView: React.FC = () => {
                 <Package size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
                 Category Products
               </h3>
-              <button
-                onClick={() => setView('products-list')}
-                className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 hover:gap-1.5 transition-all ${
-                  isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
-                }`}
-              >
-                Full Library <ExternalLink size={10} />
-              </button>
+              <div className="flex items-center gap-2.5">
+                <button
+                  onClick={() => {
+                    if (activeCategory) {
+                      setActiveCategoryId(String(activeCategory.id));
+                      setView('create-product');
+                    } else {
+                      openCreateProductModal();
+                    }
+                  }}
+                  className={`text-[9px] font-bold uppercase tracking-wider flex items-center gap-1 px-2.5 py-1 rounded-[3px] border transition-all ${
+                    isDark 
+                      ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E] hover:bg-[#0F3D3E]' 
+                      : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30 hover:bg-[#0F3D3E] hover:text-white'
+                  }`}
+                  title="Add product to this category"
+                >
+                  <Plus size={11} /> Add Product
+                </button>
+                <button
+                  onClick={() => setView('products-list')}
+                  className={`text-[9px] font-bold uppercase tracking-widest flex items-center gap-1 hover:gap-1.5 transition-all ${
+                    isDark ? 'text-[#E2DCC8]/70 hover:text-white' : 'text-slate-600 hover:text-[#0F3D3E]'
+                  }`}
+                >
+                  Full Library <ExternalLink size={10} />
+                </button>
+              </div>
             </div>
 
             {activeCategory ? (
@@ -628,7 +648,14 @@ const CategoryListView: React.FC = () => {
                 <h5 className={`font-space text-sm font-bold ${isDark ? 'text-[#F1F1F1]' : 'text-slate-800'}`}>No products in category</h5>
                 <p className={`text-xs font-medium mt-1.5 leading-relaxed ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Add products to assign them to this category.</p>
                 <button
-                  onClick={() => setView('create-product')}
+                  onClick={() => {
+                    if (activeCategory) {
+                      setActiveCategoryId(String(activeCategory.id));
+                      setView('create-product');
+                    } else {
+                      openCreateProductModal();
+                    }
+                  }}
                   className="mt-5 px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-widest transition-all"
                 >
                   Add Product
