@@ -481,6 +481,9 @@ export const GridStudioPanel: React.FC = () => {
     return generateSectionsFromRealProducts(page, currentPageIndex, products, categories);
   });
 
+  const sectionsRef = useRef(sections);
+  useEffect(() => { sectionsRef.current = sections; }, [sections]);
+
   // Re-sync local sections state whenever active page or products change
   useEffect(() => {
     const page = catalog?.pages?.[currentPageIndex];
@@ -876,14 +879,13 @@ export const GridStudioPanel: React.FC = () => {
 
   // Helper to commit state updates and live-apply immediately to active catalog page
   const updateAndApplySections = (updater: (prev: ProductGridSection[]) => ProductGridSection[]) => {
-    setSections(prev => {
-      const next = updater(prev);
-      const activeP = catalog?.pages?.[currentPageIndex];
-      if (activeP && activeP.type !== 'cover' && activeP.type !== 'index' && activeP.type !== 'closing') {
-        applyProductGridToPage(currentPageIndex, next);
-      }
-      return next;
-    });
+    const next = updater(sectionsRef.current);
+    sectionsRef.current = next;
+    const activeP = catalog?.pages?.[currentPageIndex];
+    if (activeP && activeP.type !== 'cover' && activeP.type !== 'index' && activeP.type !== 'closing') {
+      applyProductGridToPage(currentPageIndex, next);
+    }
+    setSections(next);
   };
 
   // Update sections helper
