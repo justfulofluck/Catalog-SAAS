@@ -305,15 +305,8 @@ const TECHNOVA_SCHEMA: FormField[] = [
 
   // Technical Specs
   { id: 'model_num', label: 'Model Number', type: 'text', section: 'technical' },
-  { id: 'power', label: 'Power Consumption (Watts)', type: 'number', section: 'technical' },
-  { id: 'warranty', label: 'Warranty', type: 'select', options: ['1 Year', '2 Year', '3 Year'], section: 'technical' },
-  { id: 'voltage', label: 'Voltage', type: 'text', section: 'technical' },
-  { id: 'connectivity', label: 'Connectivity (WiFi/BT/HDMI)', type: 'text', section: 'technical' },
-  { id: 'dims', label: 'Dimensions (L x W x H)', type: 'text', section: 'technical' },
-  { id: 'weight', label: 'Weight (kg)', type: 'number', section: 'technical' },
 
   // Commercial Fields
-  { id: 'in_stock', label: 'In Stock', type: 'boolean', section: 'commercial' },
   { id: 'emi', label: 'EMI Available', type: 'boolean', section: 'commercial' }
 ];
 

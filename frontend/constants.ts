@@ -1,5 +1,5 @@
 
-import { FullCatalogTemplate, GridTemplate, PageTemplate, Theme, HeaderFooterTemplate } from './types';
+import { FullCatalogTemplate, GridTemplate, PageTemplate, Theme, HeaderFooterTemplate, FormField } from './types';
 
 // A4 proportions at 96 DPI
 export const PAGE_WIDTH = 794;
@@ -7,6 +7,17 @@ export const PAGE_HEIGHT = 1123;
 
 export const HEADER_FOOTER_HEIGHT = 38;
 export const PX_PER_MM = 3.78; // Standard 96 DPI conversion (25.4 mm = 96 px)
+
+export const DEFAULT_CATEGORY_SCHEMA: FormField[] = [
+  // Basic Fields
+  { id: 'prod_name', label: 'Product Name', type: 'text', section: 'basic', required: true },
+
+  // Technical Specs
+  { id: 'model_no', label: 'Model Number', type: 'text', section: 'technical', required: false },
+  
+  // Commercial Info
+  { id: 'mrp', label: 'MRP', type: 'number', section: 'commercial', required: false },
+];
 
 export const CURRENCIES = [
   { code: 'USD', symbol: '$', name: 'US Dollar' },

@@ -72,8 +72,11 @@ const EditProductForm: React.FC = () => {
   }, [formData.categoryId, categories]);
 
   const isProductNameField = (f: FormField) => {
+    const id = (f.id || '').toLowerCase().trim();
     const l = (f.label || '').toLowerCase().trim();
-    return f.id === 'prod_name' || l === 'product' || l === 'product name' || l === 'name' || l === 'title' || l === 'item' || l === 'item name' || l.includes('product name');
+    return id === 'prod_name' || id === 'name' || id === 'product_name' || id === 'product' || id === 'products' || id === 'title' ||
+      l === 'product' || l === 'products' || l === 'product name' || l === 'products name' || l === 'name' || l === 'title' || 
+      l === 'item' || l === 'items' || l === 'item name' || l.includes('product') || l.includes('item name') || l.includes('title');
   };
 
   // Load custom fields into formData once schema is resolved
@@ -466,6 +469,25 @@ const EditProductForm: React.FC = () => {
                 }`}>Basic Information</h3>
               </div>
               <div className="space-y-4">
+                {/* Standard Name Field if not in schema */}
+                {!combinedSchema.some(isProductNameField) && (
+                  <div className="space-y-1.5">
+                    <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${
+                      isDark ? 'text-[#888888]' : 'text-slate-500'
+                    }`}>Product Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Premium Executive Desk"
+                      value={formData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className={`w-full border rounded-[4px] px-3.5 py-2.5 text-xs font-semibold focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E]/30 outline-none transition-all ${
+                        isDark ? 'bg-[#1c1c1c] border-[#262626] text-white placeholder-[#666666]' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
+                      }`}
+                    />
+                  </div>
+                )}
+
                 {combinedSchema.filter(f => f.section === 'basic').map(field => (
                   <div key={field.id} className="space-y-1.5">
                     <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${

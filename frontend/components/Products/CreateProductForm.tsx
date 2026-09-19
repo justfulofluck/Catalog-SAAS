@@ -77,8 +77,11 @@ const CreateProductForm: React.FC = () => {
   }, [formData.name, formData.categoryId, isAutoSku, categories]);
 
   const isProductNameField = (f: FormField) => {
+    const id = (f.id || '').toLowerCase().trim();
     const l = (f.label || '').toLowerCase().trim();
-    return f.id === 'prod_name' || l === 'product' || l === 'product name' || l === 'name' || l === 'title' || l === 'item' || l === 'item name' || l.includes('product name');
+    return id === 'prod_name' || id === 'name' || id === 'product_name' || id === 'product' || id === 'products' || id === 'title' ||
+      l === 'product' || l === 'products' || l === 'product name' || l === 'products name' || l === 'name' || l === 'title' || 
+      l === 'item' || l === 'items' || l === 'item name' || l.includes('product') || l.includes('item name') || l.includes('title');
   };
 
   const handleInputChange = (key: string, value: any) => {

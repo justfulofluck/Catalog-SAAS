@@ -3,6 +3,7 @@ import { ArrowLeft, Save, Palette, Hash, AlignLeft, Image as ImageIcon, Upload, 
 import { useStore } from '../../store/useStore';
 import { CustomFieldsEditor } from '../Settings/CustomFieldsEditor';
 import { FormField } from '../../types';
+import { DEFAULT_CATEGORY_SCHEMA } from '../../constants';
 
 const CreateCategoryForm: React.FC = () => {
   const { setView, addCategory, categories, creatingSubcategoryParentId, setCreatingSubcategoryParentId, uiTheme, addMedia } = useStore();
@@ -16,7 +17,7 @@ const CreateCategoryForm: React.FC = () => {
     thumbnail: '',
     images: [] as string[],
     parent: creatingSubcategoryParentId || '',
-    customSchema: [] as FormField[]
+    customSchema: [...DEFAULT_CATEGORY_SCHEMA] as FormField[]
   });
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -334,15 +335,45 @@ const CreateCategoryForm: React.FC = () => {
           <div className={`rounded-[4px] border p-7 md:p-8 space-y-6 ${
             isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
           }`}>
-            <div className={`flex items-center gap-2 border-b pb-4 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
-              <Package className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} size={20} />
-              <div>
-                <h3 className={`font-space text-sm font-bold uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                  Schema & Custom Fields
-                </h3>
-                <p className={`text-xs font-normal mt-0.5 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                  Define product attributes ({formData.customSchema.length}/10 configured) for items in this category.
-                </p>
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+              <div className="flex items-center gap-2">
+                <Package className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} size={20} />
+                <div>
+                  <h3 className={`font-space text-sm font-bold uppercase tracking-widest ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    Schema & Custom Fields
+                  </h3>
+                  <p className={`text-xs font-normal mt-0.5 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
+                    Define product attributes ({formData.customSchema.length}/10 configured) for items in this category.
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 self-end sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, customSchema: [...DEFAULT_CATEGORY_SCHEMA] }))}
+                  className={`text-[11px] font-semibold px-2.5 py-1 rounded-[4px] border transition-all ${
+                    isDark 
+                      ? 'border-[#333333] hover:border-[#0F3D3E] text-[#cccccc] hover:text-white bg-[#1c1c1c]' 
+                      : 'border-slate-200 hover:border-[#0F3D3E] text-slate-600 hover:text-slate-900 bg-slate-50'
+                  }`}
+                  title="Reset to default preset schema"
+                >
+                  Load Preset
+                </button>
+                {formData.customSchema.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, customSchema: [] }))}
+                    className={`text-[11px] font-semibold px-2.5 py-1 rounded-[4px] border transition-all ${
+                      isDark 
+                        ? 'border-[#333333] hover:border-red-900/50 text-[#888888] hover:text-red-400 bg-[#1c1c1c]' 
+                        : 'border-slate-200 hover:border-red-200 text-slate-500 hover:text-red-600 bg-slate-50'
+                    }`}
+                    title="Clear all fields"
+                  >
+                    Clear All
+                  </button>
+                )}
               </div>
             </div>
 
