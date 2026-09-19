@@ -19,37 +19,7 @@ import {
   MinusSquare
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { getProductThumbnailUrl, normalizeImageUrl } from '../../utils/imageUtils';
-
-const ProductThumbnail: React.FC<{ product?: any; src?: string; alt?: string; isDark?: boolean; className?: string }> = ({ product, src, alt, isDark = true, className = 'w-11 h-11' }) => {
-  const [hasError, setHasError] = useState(false);
-  const resolvedSrc = getProductThumbnailUrl(product) || normalizeImageUrl(src) || '';
-
-  useEffect(() => {
-    setHasError(false);
-  }, [resolvedSrc]);
-
-  return (
-    <div className={`relative shrink-0 ${className} rounded-[2px] overflow-hidden border flex items-center justify-center ${
-      isDark ? 'bg-[#100F0F] border-[#E2DCC8]/15' : 'bg-slate-100 border-slate-200'
-    }`}>
-      {resolvedSrc && !hasError ? (
-        <img
-          src={resolvedSrc}
-          alt={alt || ''}
-          onError={() => setHasError(true)}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <Package size={18} className={isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'} />
-      )}
-      <div className={`absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-500 border rounded-full ${
-        isDark ? 'border-[#121212]' : 'border-white'
-      }`}></div>
-    </div>
-  );
-};
+import { ProductThumbnail } from '../Common/ProductThumbnail';
 
 const ProductsListView: React.FC = () => {
   const { products, categories, setView, removeProduct, activeCategoryId, setActiveCategoryId, setEditingProductId, uiTheme, showConfirm, showToast, openCreateProductModal } = useStore();

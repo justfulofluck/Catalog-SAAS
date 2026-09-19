@@ -21,7 +21,7 @@ import {
   FolderOpen
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { resolveProductImage } from '../../utils/imageUtils';
+import { ProductThumbnail } from '../Common/ProductThumbnail';
 
 const Dashboard: React.FC = () => {
   const {
@@ -349,7 +349,6 @@ const Dashboard: React.FC = () => {
               <div className="p-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {products.slice(0, 6).map(product => {
-                    const prodImg = resolveProductImage(product);
                     const prodCat = categories.find(c => String(c.id) === String(product.categoryId));
 
                     return (
@@ -363,22 +362,14 @@ const Dashboard: React.FC = () => {
                         }`}
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className={`w-12 h-12 border flex items-center justify-center shrink-0 overflow-hidden rounded-[3px] p-1 ${
-                            isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
-                          }`}>
-                            {prodImg ? (
-                              <img
-                                src={prodImg}
-                                className="w-full h-full object-contain group-hover:scale-105 transition-transform"
-                                alt={product.name}
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = 'none';
-                                }}
-                              />
-                            ) : (
-                              <Package size={18} className={isDark ? "text-[#555555]" : "text-slate-400"} />
-                            )}
-                          </div>
+                          <ProductThumbnail
+                            product={product}
+                            src={product.image}
+                            alt={product.name}
+                            isDark={isDark}
+                            className="w-12 h-12"
+                            iconSize={20}
+                          />
 
                           <div className="truncate min-w-0 flex-1">
                             <p className={`text-xs font-semibold truncate font-heading transition-colors ${

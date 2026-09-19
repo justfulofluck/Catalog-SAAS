@@ -185,9 +185,9 @@ const HEADER_SHAPES: { type: ShapeType; label: string; icon: React.ReactNode }[]
 ];
 
 function applyElementFill(obj: any, fill: string | undefined, w: number, h: number) {
-  const isLineType = obj.shapeType === 'line' || 
-    obj.shapeType === 'curved-line' || 
-    obj.shapeType === 'elbow-line' || 
+  const isLineType = obj.shapeType === 'line' ||
+    obj.shapeType === 'curved-line' ||
+    obj.shapeType === 'elbow-line' ||
     obj.type === 'line' ||
     obj.constructor?.name === 'HorizontalLineShape' ||
     obj.constructor?.name === 'CurvedLineShape' ||
@@ -1218,23 +1218,20 @@ export const HeaderDesignerModal: React.FC = () => {
   if (!isHeaderDesignerOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex flex-col font-sans select-none animate-in fade-in duration-200 transition-colors ${
-      isDark ? 'bg-[#0b0b0c] text-white' : 'bg-slate-100 text-slate-800'
-    }`}>
-      
-      {/* ── Top Header Navigation Bar ────────────────────────────── */}
-      <div className={`h-16 px-5 border-b flex items-center justify-between shrink-0 shadow-lg transition-colors ${
-        isDark ? 'bg-[#121214] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+    <div className={`fixed inset-0 z-[9999] flex flex-col font-sans select-none animate-in fade-in duration-200 transition-colors ${isDark ? 'bg-[#0b0b0c] text-white' : 'bg-slate-100 text-slate-800'
       }`}>
+
+      {/* ── Top Header Navigation Bar ────────────────────────────── */}
+      <div className={`h-16 px-5 border-b flex items-center justify-between shrink-0 shadow-lg transition-colors ${isDark ? 'bg-[#121214] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+        }`}>
         <div className="flex items-center gap-3.5">
           {/* Back to Project Button */}
           <button
             onClick={() => setIsHeaderDesignerOpen(false)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-all shadow-sm group ${
-              isDark
-                ? 'bg-[#1a1a1c] hover:bg-[#252528] text-white border-[#38383c] hover:border-[#E2DCC8]/50'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 hover:border-[#0F3D3E]/50'
-            }`}
+            className={`flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-all shadow-sm group ${isDark
+              ? 'bg-[#1a1a1c] hover:bg-[#252528] text-white border-[#38383c] hover:border-[#E2DCC8]/50'
+              : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 hover:border-[#0F3D3E]/50'
+              }`}
             title="Back to Catalog Project"
           >
             <ArrowLeft size={16} className={`${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} group-hover:-translate-x-0.5 transition-transform`} />
@@ -1253,18 +1250,16 @@ export const HeaderDesignerModal: React.FC = () => {
                 type="text"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
-                className={`bg-transparent border-b border-transparent text-base font-black px-1 py-0.5 outline-none transition-all w-64 md:w-80 ${
-                  isDark
-                    ? 'text-white hover:border-[#E2DCC8]/40 focus:border-[#E2DCC8] placeholder:text-gray-500'
-                    : 'text-slate-900 hover:border-[#0F3D3E]/40 focus:border-[#0F3D3E] placeholder:text-slate-400'
-                }`}
+                className={`bg-transparent border-b border-transparent text-base font-black px-1 py-0.5 outline-none transition-all w-64 md:w-80 ${isDark
+                  ? 'text-white hover:border-[#E2DCC8]/40 focus:border-[#E2DCC8] placeholder:text-gray-500'
+                  : 'text-slate-900 hover:border-[#0F3D3E]/40 focus:border-[#0F3D3E] placeholder:text-slate-400'
+                  }`}
                 placeholder="Header Theme Name..."
               />
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                isDark
-                  ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
-                  : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
-              }`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${isDark
+                ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
+                : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
+                }`}>
                 Header Studio
               </span>
             </div>
@@ -1279,9 +1274,8 @@ export const HeaderDesignerModal: React.FC = () => {
         {/* Action Controls in Top Bar */}
         <div className="flex items-center gap-2.5">
           {/* Height Adjuster Pill */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] border ${
-            isDark ? 'bg-[#18181b] border-[#2a2a2e]' : 'bg-slate-50 border-slate-300'
-          }`}>
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] border ${isDark ? 'bg-[#18181b] border-[#2a2a2e]' : 'bg-slate-50 border-slate-300'
+            }`}>
             <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Height</span>
             <input
               type="range"
@@ -1290,9 +1284,8 @@ export const HeaderDesignerModal: React.FC = () => {
               step={1}
               value={Math.max(15, Math.min(60, toMm(headerHeight) >= 15 ? toMm(headerHeight) : 30))}
               onChange={(e) => setHeaderHeight(toPx(Number(e.target.value)))}
-              className={`w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-[#0F3D3E] ${
-                isDark ? 'bg-[#333333]' : 'bg-slate-300'
-              }`}
+              className={`w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-[#0F3D3E] ${isDark ? 'bg-[#333333]' : 'bg-slate-300'
+                }`}
             />
             <span className={`text-xs font-bold w-10 text-right font-mono ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
               {Math.max(15, Math.min(60, toMm(headerHeight) >= 15 ? toMm(headerHeight) : 30))}mm
@@ -1302,11 +1295,10 @@ export const HeaderDesignerModal: React.FC = () => {
           {/* Apply to Catalog Button */}
           <button
             onClick={handleApplyToCatalog}
-            className={`flex items-center gap-2 px-3.5 py-2 border rounded-[6px] text-xs font-bold transition-all shadow-sm ${
-              isDark
-                ? 'bg-[#1c1c1f] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/50 text-white'
-                : 'bg-white hover:bg-slate-50 border-slate-300 hover:border-[#0F3D3E]/50 text-slate-800'
-            }`}
+            className={`flex items-center gap-2 px-3.5 py-2 border rounded-[6px] text-xs font-bold transition-all shadow-sm ${isDark
+              ? 'bg-[#1c1c1f] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/50 text-white'
+              : 'bg-white hover:bg-slate-50 border-slate-300 hover:border-[#0F3D3E]/50 text-slate-800'
+              }`}
             title="Apply this designed header directly to the currently opened catalog"
           >
             {appliedSuccess ? (
@@ -1346,11 +1338,10 @@ export const HeaderDesignerModal: React.FC = () => {
           {/* Close Studio Button */}
           <button
             onClick={() => setIsHeaderDesignerOpen(false)}
-            className={`p-2 rounded-[6px] border transition-colors ml-1 ${
-              isDark
-                ? 'bg-[#18181b] hover:bg-[#26262a] border-[#2a2a2e] text-[#888888] hover:text-white'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900'
-            }`}
+            className={`p-2 rounded-[6px] border transition-colors ml-1 ${isDark
+              ? 'bg-[#18181b] hover:bg-[#26262a] border-[#2a2a2e] text-[#888888] hover:text-white'
+              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900'
+              }`}
             title="Close Header Designer"
           >
             <X size={18} />
@@ -1360,16 +1351,14 @@ export const HeaderDesignerModal: React.FC = () => {
 
       {/* ── Main Workspace Body ───────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">
-        
+
         {/* Left Sidebar Tools */}
-        <div className={`w-80 border-r flex flex-col shrink-0 transition-colors ${
-          isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
-        }`}>
-          
-          {/* Sidebar Tab Selector */}
-          <div className={`grid grid-cols-5 p-2 gap-1 border-b transition-colors ${
-            isDark ? 'border-[#262626] bg-[#101012]' : 'border-slate-200 bg-slate-50'
+        <div className={`w-80 border-r flex flex-col shrink-0 transition-colors ${isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
           }`}>
+
+          {/* Sidebar Tab Selector */}
+          <div className={`grid grid-cols-5 p-2 gap-1 border-b transition-colors ${isDark ? 'border-[#262626] bg-[#101012]' : 'border-slate-200 bg-slate-50'
+            }`}>
             {[
               { id: 'text', label: 'Text', icon: Type },
               { id: 'shapes', label: 'Shapes', icon: Square },
@@ -1383,13 +1372,12 @@ export const HeaderDesignerModal: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex flex-col items-center justify-center py-2 rounded-[4px] text-[10px] font-bold transition-all ${
-                    isActive
-                      ? 'bg-[#0F3D3E] text-white shadow'
-                      : isDark
-                        ? 'text-[#888888] hover:text-white hover:bg-[#1a1a1c]'
-                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                  }`}
+                  className={`flex flex-col items-center justify-center py-2 rounded-[4px] text-[10px] font-bold transition-all ${isActive
+                    ? 'bg-[#0F3D3E] text-white shadow'
+                    : isDark
+                      ? 'text-[#888888] hover:text-white hover:bg-[#1a1a1c]'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
+                    }`}
                 >
                   <Icon size={14} className="mb-1" />
                   <span>{tab.label}</span>
@@ -1400,7 +1388,7 @@ export const HeaderDesignerModal: React.FC = () => {
 
           {/* Tab Content Area */}
           <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-            
+
             {/* TAB 1: TEXT & SMART DYNAMIC TAGS */}
             {activeTab === 'text' && (
               <div className="space-y-4">
@@ -1411,15 +1399,14 @@ export const HeaderDesignerModal: React.FC = () => {
                   <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
                     Add standard typography to your header.
                   </p>
-                  
+
                   <div className="grid grid-cols-2 gap-2">
                     <button
                       onClick={() => addTextElement('CATALOG HEADER', 18, 'bold')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${
-                        isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                      }`}
+                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                        }`}
                     >
                       <span className={`block text-sm font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Headline</span>
                       <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Bold title (18px)</span>
@@ -1427,11 +1414,10 @@ export const HeaderDesignerModal: React.FC = () => {
 
                     <button
                       onClick={() => addTextElement('Subheading Text', 12, '600')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${
-                        isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                      }`}
+                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                        }`}
                     >
                       <span className={`block text-sm font-semibold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Subtitle</span>
                       <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Medium (12px)</span>
@@ -1439,11 +1425,10 @@ export const HeaderDesignerModal: React.FC = () => {
 
                     <button
                       onClick={() => addTextElement('www.company.com', 10, 'normal')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${
-                        isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                      }`}
+                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                        }`}
                     >
                       <span className={`block text-sm ${isDark ? 'text-slate-300 group-hover:text-[#E2DCC8]' : 'text-slate-700 group-hover:text-[#0F3D3E]'}`}>Caption / URL</span>
                       <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Light spec (10px)</span>
@@ -1451,11 +1436,10 @@ export const HeaderDesignerModal: React.FC = () => {
 
                     <button
                       onClick={() => addTextElement('— EDITION 2026 —', 11, 'bold')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${
-                        isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                      }`}
+                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
+                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                        }`}
                     >
                       <span className={`block text-sm font-bold tracking-widest ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Decorated</span>
                       <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Centered dash</span>
@@ -1487,20 +1471,18 @@ export const HeaderDesignerModal: React.FC = () => {
                       <button
                         key={item.tag}
                         onClick={() => addTextElement(item.tag, 11, '600', true)}
-                        className={`w-full p-2.5 border rounded-[6px] flex items-center justify-between transition-all group text-left ${
-                          isDark
-                            ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                        }`}
+                        className={`w-full p-2.5 border rounded-[6px] flex items-center justify-between transition-all group text-left ${isDark
+                          ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
+                          }`}
                       >
                         <div>
                           <div className="flex items-center gap-2">
                             <span className={`text-xs font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>{item.label}</span>
-                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
-                              isDark
-                                ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
-                                : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
-                            }`}>
+                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${isDark
+                              ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
+                              : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
+                              }`}>
                               {item.tag}
                             </span>
                           </div>
@@ -1530,23 +1512,20 @@ export const HeaderDesignerModal: React.FC = () => {
                       <button
                         key={shape.type}
                         onClick={() => addShapeElement(shape.type)}
-                        className={`p-3 border rounded-[6px] flex flex-col items-center justify-center gap-2 transition-all group shadow-sm ${
-                          isDark
-                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40 hover:shadow-cyan-950/20'
-                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-slate-200'
-                        }`}
+                        className={`p-3 border rounded-[6px] flex flex-col items-center justify-center gap-2 transition-all group shadow-sm ${isDark
+                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40 hover:shadow-cyan-950/20'
+                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-slate-200'
+                          }`}
                         title={`Add ${shape.label} shape`}
                       >
-                        <div className={`w-9 h-9 rounded border flex items-center justify-center transition-colors ${
-                          isDark
-                            ? 'bg-[#121214] border-[#2e2e32] group-hover:border-[#E2DCC8]/50 text-[#E2DCC8]'
-                            : 'bg-white border-slate-300 group-hover:border-[#0F3D3E]/50 text-[#0F3D3E]'
-                        }`}>
+                        <div className={`w-9 h-9 rounded border flex items-center justify-center transition-colors ${isDark
+                          ? 'bg-[#121214] border-[#2e2e32] group-hover:border-[#E2DCC8]/50 text-[#E2DCC8]'
+                          : 'bg-white border-slate-300 group-hover:border-[#0F3D3E]/50 text-[#0F3D3E]'
+                          }`}>
                           {shape.icon}
                         </div>
-                        <span className={`text-[10px] font-bold transition-colors ${
-                          isDark ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
-                        }`}>
+                        <span className={`text-[10px] font-bold transition-colors ${isDark ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
+                          }`}>
                           {shape.label}
                         </span>
                       </button>
@@ -1577,11 +1556,10 @@ export const HeaderDesignerModal: React.FC = () => {
 
                   <button
                     onClick={() => fileInputRef.current?.click()}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-[6px] text-xs font-bold transition-all shadow-sm ${
-                      isDark
-                        ? 'bg-gradient-to-r from-[#0F3D3E]/30 to-[#100F0F] hover:bg-[#0F3D3E]/50 border border-[#E2DCC8]/40 text-[#E2DCC8]'
-                        : 'bg-gradient-to-r from-[#0F3D3E]/10 to-slate-100 hover:bg-[#0F3D3E]/20 border border-[#0F3D3E]/30 text-[#0F3D3E]'
-                    }`}
+                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-[6px] text-xs font-bold transition-all shadow-sm ${isDark
+                      ? 'bg-gradient-to-r from-[#0F3D3E]/30 to-[#100F0F] hover:bg-[#0F3D3E]/50 border border-[#E2DCC8]/40 text-[#E2DCC8]'
+                      : 'bg-gradient-to-r from-[#0F3D3E]/10 to-slate-100 hover:bg-[#0F3D3E]/20 border border-[#0F3D3E]/30 text-[#0F3D3E]'
+                      }`}
                   >
                     <Upload size={15} />
                     <span>Upload Logo Image</span>
@@ -1603,11 +1581,10 @@ export const HeaderDesignerModal: React.FC = () => {
                         <div
                           key={item.id}
                           onClick={() => addImageLogo(item.url)}
-                          className={`aspect-video border rounded cursor-pointer overflow-hidden p-1 flex items-center justify-center transition-all group ${
-                            isDark
-                              ? 'bg-[#18181a] border-[#2a2a2e] hover:border-[#E2DCC8]'
-                              : 'bg-slate-50 border-slate-200 hover:border-[#0F3D3E]'
-                          }`}
+                          className={`aspect-video border rounded cursor-pointer overflow-hidden p-1 flex items-center justify-center transition-all group ${isDark
+                            ? 'bg-[#18181a] border-[#2a2a2e] hover:border-[#E2DCC8]'
+                            : 'bg-slate-50 border-slate-200 hover:border-[#0F3D3E]'
+                            }`}
                         >
                           <img
                             src={item.url}
@@ -1618,9 +1595,8 @@ export const HeaderDesignerModal: React.FC = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className={`p-4 rounded-[6px] border border-dashed text-center ${
-                      isDark ? 'border-[#333] text-[#888]' : 'border-slate-300 text-slate-500'
-                    }`}>
+                    <div className={`p-4 rounded-[6px] border border-dashed text-center ${isDark ? 'border-[#333] text-[#888]' : 'border-slate-300 text-slate-500'
+                      }`}>
                       <ImageIcon size={20} className={`mx-auto mb-1 ${isDark ? 'text-[#666]' : 'text-slate-400'}`} />
                       <p className="text-[11px]">No media assets yet.</p>
                       <p className={`text-[9px] ${isDark ? 'text-[#666]' : 'text-slate-400'}`}>Upload your logo above.</p>
@@ -1647,9 +1623,8 @@ export const HeaderDesignerModal: React.FC = () => {
                       setColorPickerTarget('bg');
                       setShowColorPicker(true);
                     }}
-                    className={`p-3 rounded-[6px] border cursor-pointer transition-all flex items-center justify-between mb-3 ${
-                      isDark ? 'border-[#38383c] hover:border-[#E2DCC8]' : 'border-slate-300 hover:border-[#0F3D3E]'
-                    }`}
+                    className={`p-3 rounded-[6px] border cursor-pointer transition-all flex items-center justify-between mb-3 ${isDark ? 'border-[#38383c] hover:border-[#E2DCC8]' : 'border-slate-300 hover:border-[#0F3D3E]'
+                      }`}
                     style={{ background: headerBg }}
                   >
                     <span className="text-xs font-black px-2 py-1 bg-black/60 rounded text-white shadow">
@@ -1684,20 +1659,18 @@ export const HeaderDesignerModal: React.FC = () => {
                       setColorPickerTarget('bg');
                       setShowColorPicker(!showColorPicker);
                     }}
-                    className={`w-full py-2 border rounded-[6px] text-xs font-bold flex items-center justify-center gap-2 transition-all ${
-                      isDark
-                        ? 'bg-[#1a1a1c] hover:bg-[#242428] border-[#333] text-[#E2DCC8]'
-                        : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
-                    }`}
+                    className={`w-full py-2 border rounded-[6px] text-xs font-bold flex items-center justify-center gap-2 transition-all ${isDark
+                      ? 'bg-[#1a1a1c] hover:bg-[#242428] border-[#333] text-[#E2DCC8]'
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
+                      }`}
                   >
                     <Palette size={14} />
                     <span>{showColorPicker ? 'Hide Color Studio' : 'Open Color & Gradient Studio'}</span>
                   </button>
 
                   {showColorPicker && colorPickerTarget === 'bg' && (
-                    <div className={`p-3 border rounded-[6px] mt-2 animate-in fade-in ${
-                      isDark ? 'bg-[#18181a] border-[#333]' : 'bg-slate-50 border-slate-300'
-                    }`}>
+                    <div className={`p-3 border rounded-[6px] mt-2 animate-in fade-in ${isDark ? 'bg-[#18181a] border-[#333]' : 'bg-slate-50 border-slate-300'
+                      }`}>
                       <AdvancedColorPicker
                         color={headerBg}
                         onChange={(newColor) => setHeaderBg(newColor)}
@@ -1714,11 +1687,10 @@ export const HeaderDesignerModal: React.FC = () => {
                     type="text"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
-                    className={`w-full border text-xs p-2 rounded-[4px] outline-none transition-colors ${
-                      isDark
-                        ? 'bg-[#18181a] border-[#2a2a2e] focus:border-[#E2DCC8] text-white placeholder:text-gray-500'
-                        : 'bg-white border-slate-300 focus:border-[#0F3D3E] text-slate-900 placeholder:text-slate-400'
-                    }`}
+                    className={`w-full border text-xs p-2 rounded-[4px] outline-none transition-colors ${isDark
+                      ? 'bg-[#18181a] border-[#2a2a2e] focus:border-[#E2DCC8] text-white placeholder:text-gray-500'
+                      : 'bg-white border-slate-300 focus:border-[#0F3D3E] text-slate-900 placeholder:text-slate-400'
+                      }`}
                     placeholder="e.g. Corporate, Luxury, Industrial"
                   />
                 </div>
@@ -1768,22 +1740,19 @@ export const HeaderDesignerModal: React.FC = () => {
                                 }
                                 setSelectedId(null);
                               }}
-                              className={`p-2.5 rounded-[6px] cursor-pointer transition-all group relative border ${
-                                isDark
-                                  ? 'bg-[#17171a] hover:bg-[#202025] border-cyan-900/40 hover:border-cyan-500'
-                                  : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-cyan-600 shadow-sm'
-                              }`}
+                              className={`p-2.5 rounded-[6px] cursor-pointer transition-all group relative border ${isDark
+                                ? 'bg-[#17171a] hover:bg-[#202025] border-cyan-900/40 hover:border-cyan-500'
+                                : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-cyan-600 shadow-sm'
+                                }`}
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className={`text-xs font-bold truncate max-w-[150px] ${
-                                  isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-900 group-hover:text-cyan-700'
-                                }`}>
+                                <span className={`text-xs font-bold truncate max-w-[150px] ${isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-900 group-hover:text-cyan-700'
+                                  }`}>
                                   {tmpl.name}
                                 </span>
                                 <div className="flex items-center gap-1.5">
-                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${
-                                    isDark ? 'bg-cyan-950/80 text-cyan-400' : 'bg-cyan-50 text-cyan-700'
-                                  }`}>
+                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${isDark ? 'bg-cyan-950/80 text-cyan-400' : 'bg-cyan-50 text-cyan-700'
+                                    }`}>
                                     {toMm(h)}mm
                                   </span>
                                   <button
@@ -1835,19 +1804,17 @@ export const HeaderDesignerModal: React.FC = () => {
                   <div
                     key={preset.id}
                     onClick={() => applyPreset(preset)}
-                    className={`p-3 border rounded-[6px] cursor-pointer transition-all group ${
-                      isDark
-                        ? 'bg-[#18181b] hover:bg-[#202024] border-[#2a2a2e] hover:border-[#0F3D3E]'
-                        : 'bg-slate-50 hover:bg-white border-slate-200 hover:border-[#0F3D3E] shadow-sm'
-                    }`}
+                    className={`p-3 border rounded-[6px] cursor-pointer transition-all group ${isDark
+                      ? 'bg-[#18181b] hover:bg-[#202024] border-[#2a2a2e] hover:border-[#0F3D3E]'
+                      : 'bg-slate-50 hover:bg-white border-slate-200 hover:border-[#0F3D3E] shadow-sm'
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className={`text-xs font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>
                         {preset.name}
                       </span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${
-                        isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E]'
-                      }`}>
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E]'
+                        }`}>
                         {preset.category}
                       </span>
                     </div>
@@ -1876,15 +1843,13 @@ export const HeaderDesignerModal: React.FC = () => {
         </div>
 
         {/* ── Center Editor Canvas Area ─────────────────────────────── */}
-        <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors ${
-          isDark ? 'bg-[#0e0e10]' : 'bg-slate-100'
-        }`}>
-          
-          {/* Top Canvas Bar: Selection Controls & Precision Zoom */}
-          <div className={`h-12 px-5 border-b flex items-center justify-between shrink-0 transition-colors ${
-            isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+        <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors ${isDark ? 'bg-[#0e0e10]' : 'bg-slate-100'
           }`}>
-            
+
+          {/* Top Canvas Bar: Selection Controls & Precision Zoom */}
+          <div className={`h-12 px-5 border-b flex items-center justify-between shrink-0 transition-colors ${isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
+            }`}>
+
             {/* Selected Element Quick Properties */}
             {selectedElement ? (
               <div className="flex items-center gap-2 text-xs">
@@ -1901,13 +1866,12 @@ export const HeaderDesignerModal: React.FC = () => {
                     <div className="relative" ref={fontMenuRef}>
                       <button
                         onClick={() => setIsFontMenuOpen(!isFontMenuOpen)}
-                        className={`h-7 px-2.5 rounded-[4px] border flex items-center justify-between gap-1.5 min-w-[110px] max-w-[150px] transition-all ${
-                          isFontMenuOpen
-                            ? 'bg-[#0F3D3E] border-[#E2DCC8]/60 text-white shadow'
-                            : isDark
-                              ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
-                              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
-                        }`}
+                        className={`h-7 px-2.5 rounded-[4px] border flex items-center justify-between gap-1.5 min-w-[110px] max-w-[150px] transition-all ${isFontMenuOpen
+                          ? 'bg-[#0F3D3E] border-[#E2DCC8]/60 text-white shadow'
+                          : isDark
+                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
+                            : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
+                          }`}
                         title="Change Font Family"
                       >
                         <span
@@ -1920,13 +1884,11 @@ export const HeaderDesignerModal: React.FC = () => {
                       </button>
 
                       {isFontMenuOpen && (
-                        <div className={`absolute top-full left-0 mt-1.5 w-64 border rounded-[8px] shadow-2xl overflow-hidden z-[110] animate-in fade-in zoom-in-95 flex flex-col ${
-                          isDark ? 'bg-[#18181b] border-[#38383c] text-[#EDEDED]' : 'bg-white border-slate-300 text-slate-800'
-                        }`}>
-                          {/* Search Header */}
-                          <div className={`p-2 border-b flex items-center gap-2 sticky top-0 z-10 ${
-                            isDark ? 'border-[#28282c] bg-[#121214]' : 'border-slate-200 bg-slate-50'
+                        <div className={`absolute top-full left-0 mt-1.5 w-64 border rounded-[8px] shadow-2xl overflow-hidden z-[110] animate-in fade-in zoom-in-95 flex flex-col ${isDark ? 'bg-[#18181b] border-[#38383c] text-[#EDEDED]' : 'bg-white border-slate-300 text-slate-800'
                           }`}>
+                          {/* Search Header */}
+                          <div className={`p-2 border-b flex items-center gap-2 sticky top-0 z-10 ${isDark ? 'border-[#28282c] bg-[#121214]' : 'border-slate-200 bg-slate-50'
+                            }`}>
                             <Search size={13} className="text-slate-400" />
                             <input
                               autoFocus
@@ -1934,9 +1896,8 @@ export const HeaderDesignerModal: React.FC = () => {
                               placeholder="Search fonts..."
                               value={fontSearch}
                               onChange={e => setFontSearch(e.target.value)}
-                              className={`w-full bg-transparent border-none outline-none text-xs font-bold ${
-                                isDark ? 'text-[#F1F1F1] placeholder:text-[#666]' : 'text-slate-900 placeholder:text-slate-400'
-                              }`}
+                              className={`w-full bg-transparent border-none outline-none text-xs font-bold ${isDark ? 'text-[#F1F1F1] placeholder:text-[#666]' : 'text-slate-900 placeholder:text-slate-400'
+                                }`}
                             />
                             {fontSearch && (
                               <button onClick={() => setFontSearch('')} className="text-slate-400 hover:text-slate-700 text-[10px]">
@@ -1949,9 +1910,8 @@ export const HeaderDesignerModal: React.FC = () => {
                           <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-1 overscroll-contain">
                             {filteredFonts.map(group => (
                               <div key={group.label} className="flex flex-col mb-1 last:mb-0">
-                                <div className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded mb-0.5 ${
-                                  isDark ? 'text-[#E2DCC8]/60 bg-white/[0.03]' : 'text-[#0F3D3E] bg-slate-100'
-                                }`}>
+                                <div className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded mb-0.5 ${isDark ? 'text-[#E2DCC8]/60 bg-white/[0.03]' : 'text-[#0F3D3E] bg-slate-100'
+                                  }`}>
                                   {group.label}
                                 </div>
                                 <div className="flex flex-col">
@@ -1965,17 +1925,16 @@ export const HeaderDesignerModal: React.FC = () => {
                                           if (typeof document !== 'undefined' && document.fonts) {
                                             document.fonts.load(`16px "${f}"`).then(() => {
                                               fabricCanvasRef.current?.requestRenderAll();
-                                            }).catch(() => {});
+                                            }).catch(() => { });
                                           }
                                           setIsFontMenuOpen(false);
                                         }}
-                                        className={`w-full text-left px-2.5 py-1.5 text-xs rounded transition-all flex items-center justify-between ${
-                                          isCurrent
-                                            ? 'bg-[#0F3D3E] text-white font-bold border border-[#E2DCC8]/30 shadow-sm'
-                                            : isDark
-                                              ? 'text-gray-300 hover:bg-[#222226] hover:text-white'
-                                              : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                                        }`}
+                                        className={`w-full text-left px-2.5 py-1.5 text-xs rounded transition-all flex items-center justify-between ${isCurrent
+                                          ? 'bg-[#0F3D3E] text-white font-bold border border-[#E2DCC8]/30 shadow-sm'
+                                          : isDark
+                                            ? 'text-gray-300 hover:bg-[#222226] hover:text-white'
+                                            : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
+                                          }`}
                                       >
                                         <span style={{ fontFamily: f }} className="truncate">
                                           {f}
@@ -1999,14 +1958,12 @@ export const HeaderDesignerModal: React.FC = () => {
                     </div>
 
                     {/* Font Size with Minus / Plus */}
-                    <div className={`flex items-center border rounded overflow-hidden h-7 ${
-                      isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
-                    }`}>
+                    <div className={`flex items-center border rounded overflow-hidden h-7 ${isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
+                      }`}>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { fontSize: Math.max(8, (selectedElement.fontSize || 14) - 1) })}
-                        className={`px-1.5 h-full transition-all ${
-                          isDark ? 'text-[#888] hover:text-white hover:bg-[#252528]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                        }`}
+                        className={`px-1.5 h-full transition-all ${isDark ? 'text-[#888] hover:text-white hover:bg-[#252528]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                          }`}
                         title="Decrease Font Size"
                       >
                         <Minus size={11} />
@@ -2017,15 +1974,13 @@ export const HeaderDesignerModal: React.FC = () => {
                         max="72"
                         value={selectedElement.fontSize || 14}
                         onChange={(e) => updateElementLocal(selectedElement.id, { fontSize: Number(e.target.value) })}
-                        className={`w-9 bg-transparent font-bold text-center outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                          isDark ? 'text-white' : 'text-slate-900'
-                        }`}
+                        className={`w-9 bg-transparent font-bold text-center outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isDark ? 'text-white' : 'text-slate-900'
+                          }`}
                       />
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { fontSize: Math.min(72, (selectedElement.fontSize || 14) + 1) })}
-                        className={`px-1.5 h-full transition-all ${
-                          isDark ? 'text-[#888] hover:text-white hover:bg-[#252528]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                        }`}
+                        className={`px-1.5 h-full transition-all ${isDark ? 'text-[#888] hover:text-white hover:bg-[#252528]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                          }`}
                         title="Increase Font Size"
                       >
                         <Plus size={11} />
@@ -2036,13 +1991,12 @@ export const HeaderDesignerModal: React.FC = () => {
                       onClick={() => updateElementLocal(selectedElement.id, {
                         fontWeight: selectedElement.fontWeight === 'bold' ? 'normal' : 'bold'
                       })}
-                      className={`p-1.5 rounded transition-colors ${
-                        selectedElement.fontWeight === 'bold'
-                          ? 'bg-[#0F3D3E] text-white'
-                          : isDark
-                            ? 'hover:bg-[#222] text-[#888]'
-                            : 'hover:bg-slate-200 text-slate-600'
-                      }`}
+                      className={`p-1.5 rounded transition-colors ${selectedElement.fontWeight === 'bold'
+                        ? 'bg-[#0F3D3E] text-white'
+                        : isDark
+                          ? 'hover:bg-[#222] text-[#888]'
+                          : 'hover:bg-slate-200 text-slate-600'
+                        }`}
                       title="Bold"
                     >
                       <Bold size={13} />
@@ -2052,22 +2006,20 @@ export const HeaderDesignerModal: React.FC = () => {
                       onClick={() => updateElementLocal(selectedElement.id, {
                         fontStyle: selectedElement.fontStyle === 'italic' ? 'normal' : 'italic'
                       })}
-                      className={`p-1.5 rounded transition-colors ${
-                        selectedElement.fontStyle === 'italic'
-                          ? 'bg-[#0F3D3E] text-white'
-                          : isDark
-                            ? 'hover:bg-[#222] text-[#888]'
-                            : 'hover:bg-slate-200 text-slate-600'
-                      }`}
+                      className={`p-1.5 rounded transition-colors ${selectedElement.fontStyle === 'italic'
+                        ? 'bg-[#0F3D3E] text-white'
+                        : isDark
+                          ? 'hover:bg-[#222] text-[#888]'
+                          : 'hover:bg-slate-200 text-slate-600'
+                        }`}
                       title="Italic"
                     >
                       <Italic size={13} />
                     </button>
 
                     {/* Alignment */}
-                    <div className={`flex items-center border rounded overflow-hidden ${
-                      isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
-                    }`}>
+                    <div className={`flex items-center border rounded overflow-hidden ${isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
+                      }`}>
                       <button
                         onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'left' })}
                         className={`p-1 transition-colors ${selectedElement.textAlign === 'left' ? 'bg-[#0F3D3E] text-white' : isDark ? 'text-[#888]' : 'text-slate-600 hover:bg-slate-200'}`}
@@ -2092,13 +2044,12 @@ export const HeaderDesignerModal: React.FC = () => {
                     <div className="relative" ref={activeColorMenu === 'text' ? colorMenuRef : undefined}>
                       <button
                         onClick={() => setActiveColorMenu(activeColorMenu === 'text' ? null : 'text')}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-xs font-bold transition-all ${
-                          activeColorMenu === 'text'
-                            ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow'
-                            : isDark
-                              ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
-                              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
-                        }`}
+                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-xs font-bold transition-all ${activeColorMenu === 'text'
+                          ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow'
+                          : isDark
+                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
+                            : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
+                          }`}
                         title="Text Color"
                       >
                         <div className="flex flex-col items-center">
@@ -2123,9 +2074,8 @@ export const HeaderDesignerModal: React.FC = () => {
 
                       {/* Floating Text Color Popover */}
                       {activeColorMenu === 'text' && (
-                        <div className={`absolute top-full left-0 mt-2 w-72 p-3 border rounded-[8px] shadow-2xl z-[100] animate-in fade-in zoom-in-95 ${
-                          isDark ? 'bg-[#18181b] border-[#38383c]' : 'bg-white border-slate-300 shadow-2xl'
-                        }`}>
+                        <div className={`absolute top-full left-0 mt-2 w-72 p-3 border rounded-[8px] shadow-2xl z-[100] animate-in fade-in zoom-in-95 ${isDark ? 'bg-[#18181b] border-[#38383c]' : 'bg-white border-slate-300 shadow-2xl'
+                          }`}>
                           <div className={`flex items-center justify-between pb-2 mb-2 border-b ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
                             <div className="flex items-center gap-1.5">
                               <Palette size={13} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
@@ -2140,9 +2090,8 @@ export const HeaderDesignerModal: React.FC = () => {
                           </div>
 
                           {/* Quick Color Input */}
-                          <div className={`flex items-center gap-2 mb-3 border p-1.5 rounded-[4px] ${
-                            isDark ? 'bg-[#121214] border-[#2e2e32]' : 'bg-slate-50 border-slate-200'
-                          }`}>
+                          <div className={`flex items-center gap-2 mb-3 border p-1.5 rounded-[4px] ${isDark ? 'bg-[#121214] border-[#2e2e32]' : 'bg-slate-50 border-slate-200'
+                            }`}>
                             <input
                               type="color"
                               value={selectedElement.fill?.startsWith('#') && selectedElement.fill.length === 7 ? selectedElement.fill : '#ffffff'}
@@ -2153,9 +2102,8 @@ export const HeaderDesignerModal: React.FC = () => {
                               type="text"
                               value={selectedElement.fill || '#ffffff'}
                               onChange={(e) => updateElementLocal(selectedElement.id, { fill: e.target.value })}
-                              className={`flex-1 bg-transparent text-xs font-mono font-bold outline-none ${
-                                isDark ? 'text-white' : 'text-slate-900'
-                              }`}
+                              className={`flex-1 bg-transparent text-xs font-mono font-bold outline-none ${isDark ? 'text-white' : 'text-slate-900'
+                                }`}
                               placeholder="#ffffff or gradient"
                             />
                           </div>
@@ -2172,9 +2120,8 @@ export const HeaderDesignerModal: React.FC = () => {
                                 <button
                                   key={hex}
                                   onClick={() => updateElementLocal(selectedElement.id, { fill: hex })}
-                                  className={`w-full aspect-square rounded-[3px] border transition-transform hover:scale-110 shadow-sm ${
-                                    selectedElement.fill === hex ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-black/15'
-                                  }`}
+                                  className={`w-full aspect-square rounded-[3px] border transition-transform hover:scale-110 shadow-sm ${selectedElement.fill === hex ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-black/15'
+                                    }`}
                                   style={{ backgroundColor: hex }}
                                   title={hex}
                                 />
@@ -2186,9 +2133,8 @@ export const HeaderDesignerModal: React.FC = () => {
                           <div className={`pt-2 border-t ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
                             <button
                               onClick={() => setShowColorPicker(!showColorPicker)}
-                              className={`w-full flex items-center justify-between py-1.5 px-2 border rounded-[4px] text-[11px] font-bold ${
-                                isDark ? 'bg-[#202024] hover:bg-[#28282c] border-[#333] text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
-                              }`}
+                              className={`w-full flex items-center justify-between py-1.5 px-2 border rounded-[4px] text-[11px] font-bold ${isDark ? 'bg-[#202024] hover:bg-[#28282c] border-[#333] text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
+                                }`}
                             >
                               <span>Advanced Color Studio & Gradients</span>
                               <ChevronDown size={12} className={`transition-transform ${showColorPicker ? 'rotate-180' : ''}`} />
@@ -2213,13 +2159,12 @@ export const HeaderDesignerModal: React.FC = () => {
                   <div className="relative" ref={activeColorMenu === 'shape' ? colorMenuRef : undefined}>
                     <button
                       onClick={() => setActiveColorMenu(activeColorMenu === 'shape' ? null : 'shape')}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-xs font-bold transition-all ${
-                        activeColorMenu === 'shape'
-                          ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow'
-                          : isDark
-                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
-                      }`}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-xs font-bold transition-all ${activeColorMenu === 'shape'
+                        ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow'
+                        : isDark
+                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
+                          : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
+                        }`}
                       title="Shape Fill Color"
                     >
                       <span
@@ -2232,9 +2177,8 @@ export const HeaderDesignerModal: React.FC = () => {
 
                     {/* Floating Shape Color Popover */}
                     {activeColorMenu === 'shape' && (
-                      <div className={`absolute top-full left-0 mt-2 w-72 p-3 border rounded-[8px] shadow-2xl z-[100] animate-in fade-in zoom-in-95 ${
-                        isDark ? 'bg-[#18181b] border-[#38383c]' : 'bg-white border-slate-300'
-                      }`}>
+                      <div className={`absolute top-full left-0 mt-2 w-72 p-3 border rounded-[8px] shadow-2xl z-[100] animate-in fade-in zoom-in-95 ${isDark ? 'bg-[#18181b] border-[#38383c]' : 'bg-white border-slate-300'
+                        }`}>
                         <div className={`flex items-center justify-between pb-2 mb-2 border-b ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
                           <div className="flex items-center gap-1.5">
                             <Palette size={13} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
@@ -2249,9 +2193,8 @@ export const HeaderDesignerModal: React.FC = () => {
                         </div>
 
                         {/* Quick Color Input */}
-                        <div className={`flex items-center gap-2 mb-3 border p-1.5 rounded-[4px] ${
-                          isDark ? 'bg-[#121214] border-[#2e2e32]' : 'bg-slate-50 border-slate-200'
-                        }`}>
+                        <div className={`flex items-center gap-2 mb-3 border p-1.5 rounded-[4px] ${isDark ? 'bg-[#121214] border-[#2e2e32]' : 'bg-slate-50 border-slate-200'
+                          }`}>
                           <input
                             type="color"
                             value={selectedElement.fill?.startsWith('#') && selectedElement.fill.length === 7 ? selectedElement.fill : '#cbd5e1'}
@@ -2262,9 +2205,8 @@ export const HeaderDesignerModal: React.FC = () => {
                             type="text"
                             value={selectedElement.fill || '#cbd5e1'}
                             onChange={(e) => updateElementLocal(selectedElement.id, { fill: e.target.value })}
-                            className={`flex-1 bg-transparent text-xs font-mono font-bold outline-none ${
-                              isDark ? 'text-white' : 'text-slate-900'
-                            }`}
+                            className={`flex-1 bg-transparent text-xs font-mono font-bold outline-none ${isDark ? 'text-white' : 'text-slate-900'
+                              }`}
                             placeholder="#ffffff or gradient"
                           />
                         </div>
@@ -2281,9 +2223,8 @@ export const HeaderDesignerModal: React.FC = () => {
                               <button
                                 key={hex}
                                 onClick={() => updateElementLocal(selectedElement.id, { fill: hex })}
-                                className={`w-full aspect-square rounded-[3px] border transition-transform hover:scale-110 shadow-sm ${
-                                  selectedElement.fill === hex ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-black/15'
-                                }`}
+                                className={`w-full aspect-square rounded-[3px] border transition-transform hover:scale-110 shadow-sm ${selectedElement.fill === hex ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-black/15'
+                                  }`}
                                 style={{ backgroundColor: hex }}
                                 title={hex}
                               />
@@ -2295,9 +2236,8 @@ export const HeaderDesignerModal: React.FC = () => {
                         <div className={`pt-2 border-t ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
                           <button
                             onClick={() => setShowColorPicker(!showColorPicker)}
-                            className={`w-full flex items-center justify-between py-1.5 px-2 border rounded-[4px] text-[11px] font-bold ${
-                              isDark ? 'bg-[#202024] hover:bg-[#28282c] border-[#333] text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
-                            }`}
+                            className={`w-full flex items-center justify-between py-1.5 px-2 border rounded-[4px] text-[11px] font-bold ${isDark ? 'bg-[#202024] hover:bg-[#28282c] border-[#333] text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
+                              }`}
                           >
                             <span>Advanced Color Studio & Gradients</span>
                             <ChevronDown size={12} className={`transition-transform ${showColorPicker ? 'rotate-180' : ''}`} />
@@ -2329,11 +2269,10 @@ export const HeaderDesignerModal: React.FC = () => {
                         fabricCanvasRef.current?.requestRenderAll();
                       }
                     }}
-                    className={`flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-bold transition-all shadow-sm ${
-                      isDark
-                        ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-cyan-400 text-cyan-400'
-                        : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-cyan-600 text-cyan-700'
-                    }`}
+                    className={`flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-bold transition-all shadow-sm ${isDark
+                      ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-cyan-400 text-cyan-400'
+                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-cyan-600 text-cyan-700'
+                      }`}
                     title="Straighten line (Reset rotation to 0°)"
                   >
                     <RotateCcw size={12} />
@@ -2344,9 +2283,8 @@ export const HeaderDesignerModal: React.FC = () => {
                 <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-200'}`} />
 
                 {/* Layer Arrangement Controls */}
-                <div className={`flex items-center border rounded overflow-hidden ${
-                  isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
-                }`} title="Layer Stacking Order">
+                <div className={`flex items-center border rounded overflow-hidden ${isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
+                  }`} title="Layer Stacking Order">
                   <button
                     onClick={() => bringToFront(selectedElement.id)}
                     className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'}`}
@@ -2426,9 +2364,8 @@ export const HeaderDesignerModal: React.FC = () => {
               </button>
               <button
                 onClick={() => setZoom(1)}
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors ${
-                  isDark ? 'text-[#888] hover:text-white hover:bg-[#222]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                }`}
+                className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors ${isDark ? 'text-[#888] hover:text-white hover:bg-[#222]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                  }`}
               >
                 100%
               </button>
@@ -2437,11 +2374,10 @@ export const HeaderDesignerModal: React.FC = () => {
 
           {/* Canvas Viewport (Scrollable container centering the header strip) */}
           <div className="flex-1 overflow-auto flex flex-col items-center justify-center p-8 relative">
-            
+
             {/* Dimension Indicator Pill */}
-            <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold px-3 py-1 rounded-full shadow border ${
-              isDark ? 'text-[#888] bg-[#161618] border-[#262626]' : 'text-slate-600 bg-white border-slate-200 shadow-sm'
-            }`}>
+            <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold px-3 py-1 rounded-full shadow border ${isDark ? 'text-[#888] bg-[#161618] border-[#262626]' : 'text-slate-600 bg-white border-slate-200 shadow-sm'
+              }`}>
               <span>Catalog Width: <strong>794px</strong></span>
               <span>•</span>
               <span>Header Height: <strong>{Math.round(headerHeight)}px</strong> ({toMm(headerHeight)}mm)</span>
@@ -2496,31 +2432,26 @@ export const HeaderDesignerModal: React.FC = () => {
         </div>
 
         {/* ── Right Sidebar: Layer Elements List ───────────────────── */}
-        <div className={`w-72 border-l flex flex-col shrink-0 transition-colors ${
-          isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
-        }`}>
-          <div className={`h-12 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${
-            isDark ? 'border-[#262626] bg-[#121214]' : 'border-slate-200 bg-slate-50'
+        <div className={`w-72 border-l flex flex-col shrink-0 transition-colors ${isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
           }`}>
+          <div className={`h-12 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${isDark ? 'border-[#262626] bg-[#121214]' : 'border-slate-200 bg-slate-50'
+            }`}>
             <div className="flex items-center gap-2">
               <Layers size={14} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
               <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>Header Layers</h4>
             </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-              isDark ? 'text-[#888] bg-[#1c1c1f] border-[#2a2a2e]' : 'text-slate-600 bg-slate-100 border-slate-300'
-            }`}>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDark ? 'text-[#888] bg-[#1c1c1f] border-[#2a2a2e]' : 'text-slate-600 bg-slate-100 border-slate-300'
+              }`}>
               {elements.length}
             </span>
           </div>
 
           {/* Quick Arrange Controls for Selected Layer */}
           {selectedElement && (
-            <div className={`px-3 py-2 border-b flex items-center justify-between gap-1 animate-in fade-in ${
-              isDark ? 'bg-[#18181c] border-[#26262a]' : 'bg-slate-50 border-slate-200'
-            }`}>
-              <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 min-w-0 ${
-                isDark ? 'text-[#888]' : 'text-slate-500'
+            <div className={`px-3 py-2 border-b flex items-center justify-between gap-1 animate-in fade-in ${isDark ? 'bg-[#18181c] border-[#26262a]' : 'bg-slate-50 border-slate-200'
               }`}>
+              <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 min-w-0 ${isDark ? 'text-[#888]' : 'text-slate-500'
+                }`}>
                 <span>Arrange:</span>
                 <span className={`truncate max-w-[85px] ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
                   {selectedElement.type === 'text' ? (selectedElement.text || 'Text') : (selectedElement.shapeType || 'Shape')}
@@ -2529,36 +2460,32 @@ export const HeaderDesignerModal: React.FC = () => {
               <div className="flex items-center gap-1 shrink-0">
                 <button
                   onClick={() => bringToFront(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${
-                    isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                  }`}
+                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
+                    }`}
                   title="Bring to Top / Front"
                 >
                   <ChevronsUp size={13} />
                 </button>
                 <button
                   onClick={() => moveForward(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${
-                    isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                  }`}
+                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
+                    }`}
                   title="Move Up / Forward (1 step)"
                 >
                   <ArrowUp size={13} />
                 </button>
                 <button
                   onClick={() => moveBackward(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${
-                    isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                  }`}
+                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
+                    }`}
                   title="Move Down / Backward (1 step)"
                 >
                   <ArrowDown size={13} />
                 </button>
                 <button
                   onClick={() => sendToBack(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${
-                    isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                  }`}
+                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
+                    }`}
                   title="Send to Bottom / Back"
                 >
                   <ChevronsDown size={13} />
@@ -2601,22 +2528,19 @@ export const HeaderDesignerModal: React.FC = () => {
                         setDraggedLayerId(null);
                       }}
                       onClick={() => setSelectedId(el.id)}
-                      className={`group flex items-center justify-between p-2 rounded-[4px] border cursor-pointer transition-all ${
-                        draggedLayerId === el.id ? 'opacity-40 border-dashed border-cyan-400' : ''
-                      } ${
-                        isSelected
+                      className={`group flex items-center justify-between p-2 rounded-[4px] border cursor-pointer transition-all ${draggedLayerId === el.id ? 'opacity-40 border-dashed border-cyan-400' : ''
+                        } ${isSelected
                           ? isDark
                             ? 'bg-[#0F3D3E]/40 border-[#E2DCC8]/60 text-white shadow-sm ring-1 ring-[#E2DCC8]/20'
                             : 'bg-[#0F3D3E]/10 border-[#0F3D3E] text-slate-900 shadow-sm ring-1 ring-[#0F3D3E]/20'
                           : isDark
                             ? 'bg-[#18181a] border-[#26262a] text-[#aaa] hover:text-white hover:bg-[#202024]'
                             : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-white'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <GripVertical size={13} className={`cursor-grab shrink-0 transition-colors ${
-                          isDark ? 'text-[#555] group-hover:text-[#999]' : 'text-slate-400 group-hover:text-slate-600'
-                        }`} />
+                        <GripVertical size={13} className={`cursor-grab shrink-0 transition-colors ${isDark ? 'text-[#555] group-hover:text-[#999]' : 'text-slate-400 group-hover:text-slate-600'
+                          }`} />
                         {el.type === 'text' ? (
                           <Type size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
                         ) : el.type === 'shape' ? (
@@ -2637,13 +2561,12 @@ export const HeaderDesignerModal: React.FC = () => {
                             moveForward(el.id);
                           }}
                           disabled={isTop}
-                          className={`p-1 rounded transition-all ${
-                            isTop
-                              ? 'text-slate-300 dark:text-[#383838] cursor-not-allowed'
-                              : isDark
-                                ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
-                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                          }`}
+                          className={`p-1 rounded transition-all ${isTop
+                            ? 'text-slate-300 dark:text-[#383838] cursor-not-allowed'
+                            : isDark
+                              ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
+                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                            }`}
                           title={isTop ? 'Already at Top' : 'Move Up (Bring Forward)'}
                         >
                           <ArrowUp size={12} />
@@ -2656,13 +2579,12 @@ export const HeaderDesignerModal: React.FC = () => {
                             moveBackward(el.id);
                           }}
                           disabled={isBottom}
-                          className={`p-1 rounded transition-all ${
-                            isBottom
-                              ? 'text-slate-300 dark:text-[#383838] cursor-not-allowed'
-                              : isDark
-                                ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
-                                : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                          }`}
+                          className={`p-1 rounded transition-all ${isBottom
+                            ? 'text-slate-300 dark:text-[#383838] cursor-not-allowed'
+                            : isDark
+                              ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
+                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
+                            }`}
                           title={isBottom ? 'Already at Bottom' : 'Move Down (Send Backward)'}
                         >
                           <ArrowDown size={12} />
@@ -2673,9 +2595,8 @@ export const HeaderDesignerModal: React.FC = () => {
                             e.stopPropagation();
                             duplicateElementLocal(el.id);
                           }}
-                          className={`p-1 rounded transition-all ${
-                            isDark ? 'hover:bg-[#333] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'
-                          }`}
+                          className={`p-1 rounded transition-all ${isDark ? 'hover:bg-[#333] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'
+                            }`}
                           title="Duplicate"
                         >
                           <Copy size={12} />
@@ -2685,9 +2606,8 @@ export const HeaderDesignerModal: React.FC = () => {
                             e.stopPropagation();
                             deleteElementLocal(el.id);
                           }}
-                          className={`p-1 rounded transition-all ${
-                            isDark ? 'hover:bg-rose-950/50 text-rose-400 hover:text-rose-300' : 'hover:bg-rose-100 text-rose-600 hover:text-rose-700'
-                          }`}
+                          className={`p-1 rounded transition-all ${isDark ? 'hover:bg-rose-950/50 text-rose-400 hover:text-rose-300' : 'hover:bg-rose-100 text-rose-600 hover:text-rose-700'
+                            }`}
                           title="Delete"
                         >
                           <Trash2 size={12} />
@@ -2709,11 +2629,10 @@ export const HeaderDesignerModal: React.FC = () => {
                     setSelectedId(null);
                   }
                 }}
-                className={`w-full py-2 border text-[11px] font-bold rounded transition-all ${
-                  isDark
-                    ? 'bg-[#1a1a1c] hover:bg-rose-950/40 border-[#333] hover:border-rose-800 text-[#888] hover:text-rose-300'
-                    : 'bg-slate-100 hover:bg-rose-50 border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600'
-                }`}
+                className={`w-full py-2 border text-[11px] font-bold rounded transition-all ${isDark
+                  ? 'bg-[#1a1a1c] hover:bg-rose-950/40 border-[#333] hover:border-rose-800 text-[#888] hover:text-rose-300'
+                  : 'bg-slate-100 hover:bg-rose-50 border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600'
+                  }`}
               >
                 Clear All Elements
               </button>

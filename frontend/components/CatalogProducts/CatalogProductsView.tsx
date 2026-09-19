@@ -1,34 +1,7 @@
 import React, { useState } from 'react';
 import { Package, Plus, Info, Search } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { getProductThumbnailUrl, normalizeImageUrl } from '../../utils/imageUtils';
-
-const ProductThumbnail: React.FC<{ product?: any; src?: string; alt?: string; isDark?: boolean; className?: string; iconSize?: number }> = ({ product, src, alt, isDark = true, className = 'w-16 h-16', iconSize = 22 }) => {
-  const [hasError, setHasError] = useState(false);
-  const resolvedSrc = getProductThumbnailUrl(product) || normalizeImageUrl(src) || '';
-
-  useEffect(() => {
-    setHasError(false);
-  }, [resolvedSrc]);
-
-  return (
-    <div className={`relative shrink-0 ${className} rounded-[4px] overflow-hidden border flex items-center justify-center ${
-      isDark ? 'bg-[#121212] border-[#262626]' : 'bg-slate-100 border-slate-200'
-    }`}>
-      {resolvedSrc && !hasError ? (
-        <img
-          src={resolvedSrc}
-          alt={alt || ''}
-          onError={() => setHasError(true)}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <Package size={iconSize} className={isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'} />
-      )}
-    </div>
-  );
-};
+import { ProductThumbnail } from '../Common/ProductThumbnail';
 
 const CatalogProductsView: React.FC = () => {
   const { catalog, products, toggleCatalogProduct, setView, uiTheme } = useStore();
