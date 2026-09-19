@@ -3200,9 +3200,11 @@ export const useStore = create<State>((set, get) => ({
         const availableHeight = bottomBound - topBound;
 
         const sectionCount = Math.max(1, bucket.sections.length);
+        const baseSlotCount = Math.max(3, sectionCount);
         const gap = 15;
-        const totalGaps = (sectionCount - 1) * gap;
-        const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / sectionCount));
+        const totalGaps = (baseSlotCount - 1) * gap;
+        const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
+        const sectionHeight = standardSlotHeight;
 
         const elements: CanvasElement[] = [];
         const timestamp = Date.now();
@@ -3231,7 +3233,7 @@ export const useStore = create<State>((set, get) => ({
 
           // Product / Category Image
           const imageWidth = 240;
-          const imageHeight = Math.max(70, sectionHeight - 10);
+          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
           const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
           elements.push({
             id: `${sectionId}-img`,
@@ -4127,9 +4129,10 @@ export const useStore = create<State>((set, get) => ({
       const availableHeight = bottomBound - topBound;
 
       const sectionCount = Math.max(1, sections.length);
+      const baseSlotCount = Math.max(3, sectionCount);
       const gap = options?.gap ?? 15;
-      const totalGaps = (sectionCount - 1) * gap;
-      const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / sectionCount));
+      const totalGaps = (baseSlotCount - 1) * gap;
+      const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
 
       const leftMargin = catalog.marginLeft || 35;
       const rightMargin = catalog.marginRight || 35;
@@ -4155,13 +4158,14 @@ export const useStore = create<State>((set, get) => ({
             fill: sec.backgroundColor || '#e2e8f0',
             zIndex: idx * 10 + 1,
             rotation: 0,
-            opacity: 1
+            opacity: 1,
+            sectionTag: sectionId
           });
         }
 
-        // 2. Product Image on Left (approx 240px width)
+        // 2. Product Image on Left (natural, bounded dimensions)
         const imageWidth = 240;
-        const imageHeight = sectionHeight - 10;
+        const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
         const imgX = leftMargin;
         const imgY = curY;
         const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
@@ -4176,7 +4180,8 @@ export const useStore = create<State>((set, get) => ({
           src: finalImgSrc,
           zIndex: idx * 10 + 2,
           rotation: 0,
-          opacity: 1
+          opacity: 1,
+          sectionTag: sectionId
         });
 
         // 3. Right Column: Title + Table
@@ -4200,7 +4205,8 @@ export const useStore = create<State>((set, get) => ({
           letterSpacing: 0.5,
           zIndex: idx * 10 + 3,
           rotation: 0,
-          opacity: 1
+          opacity: 1,
+          sectionTag: sectionId
         });
 
         // Specs Table
@@ -4231,7 +4237,8 @@ export const useStore = create<State>((set, get) => ({
           tableData,
           zIndex: idx * 10 + 4,
           rotation: 0,
-          opacity: 1
+          opacity: 1,
+          sectionTag: sectionId
         });
       });
 
@@ -4344,14 +4351,20 @@ export const useStore = create<State>((set, get) => ({
         const availableHeight = bottomBound - topBound;
 
         const sectionCount = sections.length;
+        const baseSlotCount = Math.max(3, sectionCount);
         const gap = 15;
-        const totalGaps = (sectionCount - 1) * gap;
+        const totalGaps = (baseSlotCount - 1) * gap;
+        const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
 
         const weights = sections.map(sec => {
           const rowCount = sec.tableData?.rows?.length || 2;
           return Math.max(1, 0.7 + rowCount * 0.25);
         });
         const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+        const effectiveTotalHeight = sectionCount >= 3
+          ? (availableHeight - (sectionCount - 1) * gap)
+          : (standardSlotHeight * sectionCount);
 
         const leftMargin = catalog.marginLeft || 35;
         const rightMargin = catalog.marginRight || 35;
@@ -4363,7 +4376,7 @@ export const useStore = create<State>((set, get) => ({
         sections.forEach((sec, idx) => {
           const sectionHeight = Math.max(
             110,
-            Math.floor(((availableHeight - totalGaps) * weights[idx]) / totalWeight)
+            Math.floor((effectiveTotalHeight * weights[idx]) / totalWeight)
           );
           const sectionId = `grid-sec-${timestamp}-${idx}`;
 
@@ -4385,9 +4398,9 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          // Left Image
+          // Left Image (bounded to avoid stretching)
           const imageWidth = 240;
-          const imageHeight = Math.max(70, sectionHeight - 10);
+          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
           if (sec.imageSrc) {
             newElements.push({
               id: `${sectionId}-img`,
@@ -4634,14 +4647,20 @@ export const useStore = create<State>((set, get) => ({
       const availableHeight = bottomBound - topBound;
 
       const sectionCount = sections.length;
+      const baseSlotCount = Math.max(3, sectionCount);
       const gap = 15;
-      const totalGaps = (sectionCount - 1) * gap;
+      const totalGaps = (baseSlotCount - 1) * gap;
+      const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
 
       const weights = sections.map(sec => {
         const rowCount = sec.tableData?.rows?.length || 2;
         return Math.max(1, 0.7 + rowCount * 0.25);
       });
       const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+      const effectiveTotalHeight = sectionCount >= 3
+        ? (availableHeight - (sectionCount - 1) * gap)
+        : (standardSlotHeight * sectionCount);
 
       const leftMargin = catalog.marginLeft || 35;
       const rightMargin = catalog.marginRight || 35;
@@ -4653,7 +4672,7 @@ export const useStore = create<State>((set, get) => ({
       sections.forEach((sec, idx) => {
         const sectionHeight = Math.max(
           110,
-          Math.floor(((availableHeight - totalGaps) * weights[idx]) / totalWeight)
+          Math.floor((effectiveTotalHeight * weights[idx]) / totalWeight)
         );
         const sectionId = `grid-sec-${timestamp}-${idx}`;
 
@@ -4675,7 +4694,7 @@ export const useStore = create<State>((set, get) => ({
         }
 
         const imageWidth = 240;
-        const imageHeight = Math.max(70, sectionHeight - 10);
+        const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
         if (sec.imageSrc) {
           newElements.push({
             id: `${sectionId}-img`,
@@ -4816,14 +4835,20 @@ export const useStore = create<State>((set, get) => ({
         const availableHeight = bottomBound - topBound;
 
         const sectionCount = remainingSections.length;
+        const baseSlotCount = Math.max(3, sectionCount);
         const gap = 15;
-        const totalGaps = (sectionCount - 1) * gap;
+        const totalGaps = (baseSlotCount - 1) * gap;
+        const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
 
         const weights = remainingSections.map(sec => {
           const rowCount = sec.tableData?.rows?.length || 2;
           return Math.max(1, 0.7 + rowCount * 0.25);
         });
         const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+
+        const effectiveTotalHeight = sectionCount >= 3
+          ? (availableHeight - (sectionCount - 1) * gap)
+          : (standardSlotHeight * sectionCount);
 
         const leftMargin = catalog.marginLeft || 35;
         const rightMargin = catalog.marginRight || 35;
@@ -4835,7 +4860,7 @@ export const useStore = create<State>((set, get) => ({
         remainingSections.forEach((sec, idx) => {
           const sectionHeight = Math.max(
             110,
-            Math.floor(((availableHeight - totalGaps) * weights[idx]) / totalWeight)
+            Math.floor((effectiveTotalHeight * weights[idx]) / totalWeight)
           );
           const sectionId = `grid-sec-${timestamp}-${idx}`;
 
@@ -4857,7 +4882,7 @@ export const useStore = create<State>((set, get) => ({
           }
 
           const imageWidth = 240;
-          const imageHeight = Math.max(70, sectionHeight - 10);
+          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
           if (sec.imageSrc) {
             newElements.push({
               id: `${sectionId}-img`,
@@ -5103,9 +5128,11 @@ export const useStore = create<State>((set, get) => ({
         const availableHeight = bottomBound - topBound;
 
         const sectionCount = Math.max(1, bucket.sections.length);
+        const baseSlotCount = Math.max(3, sectionCount);
         const gap = 15;
-        const totalGaps = (sectionCount - 1) * gap;
-        const sectionHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / sectionCount));
+        const totalGaps = (baseSlotCount - 1) * gap;
+        const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
+        const sectionHeight = standardSlotHeight;
 
         const elements: CanvasElement[] = [];
 
@@ -5131,9 +5158,9 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          // Product Image
+          // Product Image (bounded to prevent stretching)
           const imageWidth = 240;
-          const imageHeight = Math.max(70, sectionHeight - 10);
+          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
           const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
           elements.push({
             id: `${sectionId}-img`,
