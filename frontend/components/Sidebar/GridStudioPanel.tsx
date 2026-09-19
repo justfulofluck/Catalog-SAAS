@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   X, Sparkles, Image as ImageIcon, Plus, Trash2,
   ArrowUp, ArrowDown, Check, Package, Palette,
   Upload, Layers, Zap, SlidersHorizontal, ChevronRight,
   ChevronLeft, ChevronDown, Grid, MoveRight, MoveLeft, ExternalLink,
-  FileText, Copy, ArrowRightLeft, Eye, CheckCircle2, Search, Table
+  FileText, Copy, ArrowRightLeft, Eye, CheckCircle2, Search, Table, FolderPlus
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category } from '../../types';
@@ -145,6 +145,111 @@ export const generateSectionsFromRealProducts = (
   });
 
   return result;
+};
+
+export const generateSectionForCategory = (
+  cat: Category | { id: string | number; name: string; thumbnail?: string; images?: string[]; customSchema?: any[] },
+  products: Product[],
+  categories: any[],
+  sectionIndex: number = 0
+): ProductGridSection => {
+  const catProds = products.filter(p => String(p.categoryId) === String(cat.id));
+  const catImg = resolveProductImage(catProds[0], cat as any, catProds);
+  const headers = ['MODEL NO', 'PRODUCTS', 'PRICE'];
+  const rows: string[][] = [];
+
+  if (catProds.length > 0) {
+    catProds.forEach(p => {
+      if (p.variants && p.variants.length > 0) {
+        p.variants.forEach(v => rows.push(generateRowFromProduct(headers, p, v, categories)));
+      } else {
+        rows.push(generateRowFromProduct(headers, p, undefined, categories));
+      }
+    });
+  } else {
+    rows.push(['-', `${cat.name} Series`, '-']);
+  }
+
+  return {
+    id: `sec-${Date.now()}-${sectionIndex}`,
+    title: cat.name.toUpperCase(),
+    titleColor: '#00a651',
+    titleFontSize: 22,
+    imageSrc: catImg,
+    hasBackground: sectionIndex % 2 === 1,
+    backgroundColor: '#e2e8f0',
+    tableData: {
+      headers,
+      rows,
+      headerBg: '#002b36',
+      headerTextColor: '#ffffff',
+      alternateRowBg: '#f8fafc',
+      rowBg: '#ffffff',
+      borderColor: '#002b36',
+      fontSize: 7.5,
+      headerFontSize: 8,
+      cellPadding: 4,
+      colWidths: [80, 200, 80]
+    }
+  };
+};
+
+export const getUnincludedCategories = (
+  catalog: any,
+  categories: Category[],
+  products: Product[],
+  currentSections?: ProductGridSection[],
+  currentPageIdx?: number
+): Category[] => {
+  if (!catalog?.pages || !categories || !Array.isArray(categories)) return [];
+
+  const includedCatIds = new Set<string>();
+  const includedCatNames = new Set<string>();
+
+  catalog.pages.forEach((p: CatalogPage, pIdx: number) => {
+    if (p.categoryId) {
+      includedCatIds.add(String(p.categoryId));
+    }
+
+    const pageSecs = (currentPageIdx !== undefined && pIdx === currentPageIdx && currentSections && currentSections.length > 0)
+      ? currentSections
+      : extractSectionsFromPage(p);
+
+    pageSecs.forEach(sec => {
+      if (sec.title) {
+        includedCatNames.add(sec.title.trim().toLowerCase());
+      }
+    });
+
+    (p.elements || []).forEach(el => {
+      if (el.productId) {
+        const prod = products.find(pr => String(pr.id) === String(el.productId));
+        if (prod?.categoryId) {
+          includedCatIds.add(String(prod.categoryId));
+        }
+      }
+    });
+  });
+
+  return categories.filter(cat => {
+    const idStr = String(cat.id);
+    const nameStr = (cat.name || '').trim().toLowerCase();
+
+    // Check ID match
+    if (includedCatIds.has(idStr)) return false;
+
+    // Check Name match
+    if (includedCatNames.has(nameStr)) return false;
+
+    // Check if any section title contains or is contained by category name
+    for (const title of includedCatNames) {
+      if (title && (title === nameStr || title.includes(nameStr) || (nameStr.length > 4 && nameStr.includes(title)))) {
+        return false;
+      }
+    }
+
+    return true;
+  });
 };
 
 const PRESET_TITLE_COLORS = ['#00a651', '#0F3D3E', '#E2DCC8', '#38bdf8', '#f59e0b', '#dc2626'];
@@ -483,6 +588,57 @@ export const GridStudioPanel: React.FC = () => {
 
   const sectionsRef = useRef(sections);
   useEffect(() => { sectionsRef.current = sections; }, [sections]);
+
+  // Add Unincluded Category modal state
+  const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
+  const [addCategoryTargetPageIdx, setAddCategoryTargetPageIdx] = useState<number | null>(null);
+  const [addCategorySearch, setAddCategorySearch] = useState('');
+
+  // Compute unincluded categories dynamically
+  const unincludedCategories = useMemo(() => {
+    return getUnincludedCategories(catalog, categories, products, sections, currentPageIndex);
+  }, [catalog, categories, products, sections, currentPageIndex]);
+
+  const handleAddCategoryToCatalog = (cat: Category, targetPageIdx?: number | null) => {
+    let pageIdx = targetPageIdx;
+
+    if (pageIdx === undefined || pageIdx === null) {
+      // Find first non-cover interior page with < 3 sections
+      const availablePageIdx = catalog.pages.findIndex((p, idx) => {
+        if (p.type === 'cover' || p.type === 'index' || p.type === 'closing') return false;
+        const secs = (idx === currentPageIndex) ? sections : extractSectionsFromPage(p);
+        return secs.length < 3;
+      });
+
+      if (availablePageIdx !== -1) {
+        pageIdx = availablePageIdx;
+      } else {
+        // Need a new interior page
+        addInteriorPageWithInheritedLayout();
+        pageIdx = catalog.pages.length;
+      }
+    }
+
+    const targetPage = catalog.pages[pageIdx];
+    const existingSecs = (pageIdx === currentPageIndex)
+      ? [...sections]
+      : (targetPage ? extractSectionsFromPage(targetPage) : []);
+
+    const newSec = generateSectionForCategory(cat, products, categories, existingSecs.length);
+    const updatedSecs = [...existingSecs, newSec];
+
+    // Apply to page
+    applyProductGridToPage(pageIdx, updatedSecs);
+
+    if (pageIdx === currentPageIndex) {
+      setSections(updatedSecs);
+    }
+
+    navigateToPage(pageIdx);
+    setShowAddCategoryModal(false);
+    setAddCategoryTargetPageIdx(null);
+    setAddCategorySearch('');
+  };
 
   // Re-sync local sections state whenever active page or products change
   useEffect(() => {
@@ -964,13 +1120,23 @@ export const GridStudioPanel: React.FC = () => {
   const availableProductFields = React.useMemo(() => {
     const fieldSet = new Set<string>();
 
-    products.forEach(p => {
-      if (p.price !== undefined && p.price !== null && Number(p.price) > 0) {
-        fieldSet.add('PRICE');
+    // 1. Gather all schema fields from categories
+    categories.forEach((cat: any) => {
+      if (cat.customSchema && Array.isArray(cat.customSchema)) {
+        cat.customSchema.forEach((f: any) => {
+          const lbl = (f.label || f.name || '').trim().toUpperCase();
+          if (lbl) {
+            fieldSet.add(lbl);
+          }
+        });
       }
+    });
+
+    // 2. Gather actual customFields & customAttributes present in products
+    products.forEach(p => {
       if (p.customFields && typeof p.customFields === 'object') {
         Object.entries(p.customFields).forEach(([k, v]) => {
-          if (k && k.trim() && v !== undefined && v !== null && String(v).trim() !== '') {
+          if (k && k.trim() && v !== undefined && v !== null && String(v).trim() !== '' && String(v).trim() !== '-') {
             const humanLabel = resolveFieldLabel(k, categories as any, p);
             if (humanLabel) {
               fieldSet.add(humanLabel.trim().toUpperCase());
@@ -982,15 +1148,9 @@ export const GridStudioPanel: React.FC = () => {
       }
       if (p.variants && Array.isArray(p.variants)) {
         p.variants.forEach(v => {
-          if (v.price !== undefined && v.price !== null && String(v.price).trim() !== '') {
-            fieldSet.add('PRICE');
-          }
-          if (v.cutOut && v.cutOut.trim()) fieldSet.add('CUT-OUT');
-          if (v.color && v.color.trim()) fieldSet.add('COLOR');
-          if (v.packing && v.packing.trim()) fieldSet.add('PACKING');
           if (v.customAttributes && typeof v.customAttributes === 'object') {
             Object.entries(v.customAttributes).forEach(([k, val]) => {
-              if (k && k.trim() && val !== undefined && val !== null && String(val).trim() !== '') {
+              if (k && k.trim() && val !== undefined && val !== null && String(val).trim() !== '' && String(val).trim() !== '-') {
                 const humanLabel = resolveFieldLabel(k, categories as any, p);
                 if (humanLabel) {
                   fieldSet.add(humanLabel.trim().toUpperCase());
@@ -1004,28 +1164,40 @@ export const GridStudioPanel: React.FC = () => {
       }
     });
 
-    categories.forEach((cat: any) => {
-      if (cat.customSchema && Array.isArray(cat.customSchema)) {
-        cat.customSchema.forEach((f: any) => {
-          if (f.label && f.label.trim()) {
-            fieldSet.add(f.label.trim().toUpperCase());
-          } else if (f.name && f.name.trim()) {
-            fieldSet.add(f.name.trim().toUpperCase());
-          }
-        });
+    const fields = Array.from(fieldSet);
+
+    // Build clean list without duplicate fields
+    const result: string[] = [];
+
+    // 1. Model field (prefer user's exact schema name e.g. "MODEL NUMBER" or "MODEL NO")
+    const modelMatch = fields.find(f => f === 'MODEL NUMBER' || f === 'MODEL NO' || f === 'MODEL' || f === 'ITEM NO');
+    result.push(modelMatch || 'MODEL NO');
+
+    // 2. Product Name / Description field
+    const prodMatch = fields.find(f => f === 'PRODUCT NAME' || f === 'PRODUCTS' || f === 'PRODUCT' || f === 'DESCRIPTION');
+    result.push(prodMatch || 'PRODUCTS');
+
+    // 3. Price / MRP field (only one price field, prefer MRP if present, else PRICE)
+    const hasMrp = fields.some(f => f === 'MRP' || f.includes('MRP'));
+    if (hasMrp) {
+      result.push('MRP');
+    } else {
+      result.push('PRICE');
+    }
+
+    // 4. Any other custom fields defined in schema or products without duplicating the above
+    fields.forEach(f => {
+      const norm = f.replace(/[^A-Z0-9]/g, '');
+      const isModel = norm.includes('MODEL') || norm === 'SKU' || norm === 'ITEMNO';
+      const isProd = norm.includes('PRODUCT') || norm === 'DESCRIPTION' || norm === 'NAME' || norm === 'ID';
+      const isPrice = norm === 'PRICE' || norm === 'MRP' || norm === 'RATE' || norm === 'COST';
+
+      if (!isModel && !isProd && !isPrice && !result.includes(f)) {
+        result.push(f);
       }
     });
 
-    // Core Standard Product Fields
-    const standardFields = ['MODEL NO', 'PRODUCTS', 'PRICE'];
-
-    // Collect additional category schema & variant attributes
-    const extraFields = Array.from(fieldSet).filter(k => 
-      !['SKU', 'PRODUCT NAME', 'NAME', 'ID'].includes(k) &&
-      !standardFields.includes(k)
-    );
-
-    return [...standardFields, ...extraFields];
+    return result;
   }, [products, categories]);
 
   // Helper to accurately match a table row to its product and variant using candidate scoring
@@ -1597,18 +1769,41 @@ export const GridStudioPanel: React.FC = () => {
                 View & arrange grid sections across all catalog pages
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                addInteriorPageWithInheritedLayout();
-                navigateToPage(catalog.pages.length);
-              }}
-              className={`px-2 py-1 border rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-all ${
-                isDark ? 'bg-[#202020] hover:bg-[#282828] border-[#333] text-[#E2DCC8]' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm'
-              }`}
-            >
-              <Plus size={11} /> New Page
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setAddCategoryTargetPageIdx(null);
+                  setShowAddCategoryModal(true);
+                }}
+                className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-sm ${
+                  unincludedCategories.length > 0
+                    ? 'bg-[#00a651] hover:bg-[#009247] text-white shadow-[#00a651]/20'
+                    : (isDark ? 'bg-[#202020] text-slate-400 border border-[#333]' : 'bg-slate-100 text-slate-500 border border-slate-200')
+                }`}
+                title="Add a category not already included in this catalog"
+              >
+                <Plus size={11} /> Add Category
+                {unincludedCategories.length > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-black/25 text-[8px] font-mono font-bold">
+                    {unincludedCategories.length}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  addInteriorPageWithInheritedLayout();
+                  navigateToPage(catalog.pages.length);
+                }}
+                className={`px-2 py-1 border rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-all ${
+                  isDark ? 'bg-[#202020] hover:bg-[#282828] border-[#333] text-[#E2DCC8]' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm'
+                }`}
+              >
+                <Plus size={11} /> New Page
+              </button>
+            </div>
           </div>
 
           {catalog.pages.map((p, pIdx) => {
@@ -1694,125 +1889,145 @@ export const GridStudioPanel: React.FC = () => {
                       </button>
                     </div>
                   ) : (
-                    pSections.map((sec, secIdx) => {
-                      return (
-                        <div
-                          key={sec.id || secIdx}
-                          className={`px-2.5 py-1.5 rounded flex items-center justify-between gap-2 border transition-all ${
-                            isDark ? 'bg-[#1a1a1a] border-[#2a2a2a] hover:border-[#3a3a3a]' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`w-4 h-4 rounded-[2px] border flex items-center justify-center text-[8px] font-bold shrink-0 ${
-                              isDark ? 'bg-[#222] border-[#333] text-[#E2DCC8]' : 'bg-white border-slate-300 text-slate-700 shadow-xs'
-                            }`}>
-                              {secIdx + 1}
-                            </span>
-                            {sec.imageSrc ? (
-                              <img src={sec.imageSrc} alt="" className={`w-6 h-6 rounded object-contain border p-0.5 shrink-0 ${
-                                isDark ? 'bg-[#111] border-[#333]' : 'bg-white border-slate-200'
-                              }`} />
-                            ) : (
-                              <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: sec.titleColor || '#00a651' }} />
-                            )}
-                            <div className="min-w-0">
-                              <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ color: sec.titleColor || '#00a651' }}>
-                                {sec.title || `Section #${secIdx + 1}`}
-                              </p>
-                              <p className={`text-[7.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                                {sec.tableData?.rows?.length || 0} product rows {sec.hasBackground ? '• Stripe' : ''}
-                              </p>
+                    <>
+                      {pSections.map((sec, secIdx) => {
+                        return (
+                          <div
+                            key={sec.id || secIdx}
+                            className={`px-2.5 py-1.5 rounded flex items-center justify-between gap-2 border transition-all ${
+                              isDark ? 'bg-[#1a1a1a] border-[#2a2a2a] hover:border-[#3a3a3a]' : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`w-4 h-4 rounded-[2px] border flex items-center justify-center text-[8px] font-bold shrink-0 ${
+                                isDark ? 'bg-[#222] border-[#333] text-[#E2DCC8]' : 'bg-white border-slate-300 text-slate-700 shadow-xs'
+                              }`}>
+                                {secIdx + 1}
+                              </span>
+                              {sec.imageSrc ? (
+                                <img src={sec.imageSrc} alt="" className={`w-6 h-6 rounded object-contain border p-0.5 shrink-0 ${
+                                  isDark ? 'bg-[#111] border-[#333]' : 'bg-white border-slate-200'
+                                }`} />
+                              ) : (
+                                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: sec.titleColor || '#00a651' }} />
+                              )}
+                              <div className="min-w-0">
+                                <p className={`text-[9px] font-bold truncate ${isDark ? 'text-white' : 'text-slate-900'}`} style={{ color: sec.titleColor || '#00a651' }}>
+                                  {sec.title || `Section #${secIdx + 1}`}
+                                </p>
+                                <p className={`text-[7.5px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {sec.tableData?.rows?.length || 0} product rows {sec.hasBackground ? '• Stripe' : ''}
+                                </p>
+                              </div>
                             </div>
-                          </div>
 
-                          {/* Quick Section Transfer & Reorder Controls */}
-                          <div className="flex items-center gap-1 shrink-0">
-                            {/* Move to another page dropdown */}
-                            {catalog.pages.length > 1 && (
-                              <select
-                                value=""
-                                onChange={(e) => {
-                                  const targetP = parseInt(e.target.value, 10);
-                                  if (!isNaN(targetP)) {
-                                    handleMoveSectionToPage(pIdx, targetP, secIdx);
-                                  }
-                                }}
-                                className={`px-1.5 py-0.5 border text-[8px] font-bold rounded outline-none cursor-pointer ${
-                                  isDark ? 'bg-[#242424] border-[#383838] text-[#E2DCC8] hover:border-[#0F3D3E]' : 'bg-white border-slate-200 text-slate-700 hover:border-[#0F3D3E]'
-                                }`}
-                                title="Move this section to another page"
-                              >
-                                <option value="" disabled>➔ Move to...</option>
-                                {catalog.pages.map((_, optIdx) => {
-                                  if (optIdx === 0 || optIdx === pIdx) return null; // Skip cover page & current page
-                                  return (
-                                    <option key={optIdx} value={optIdx}>
-                                      Page {optIdx + 1}
-                                    </option>
-                                  );
-                                })}
-                              </select>
-                            )}
+                            {/* Quick Section Transfer & Reorder Controls */}
+                            <div className="flex items-center gap-1 shrink-0">
+                              {/* Move to another page dropdown */}
+                              {catalog.pages.length > 1 && (
+                                <select
+                                  value=""
+                                  onChange={(e) => {
+                                    const targetP = parseInt(e.target.value, 10);
+                                    if (!isNaN(targetP)) {
+                                      handleMoveSectionToPage(pIdx, targetP, secIdx);
+                                    }
+                                  }}
+                                  className={`px-1.5 py-0.5 border text-[8px] font-bold rounded outline-none cursor-pointer ${
+                                    isDark ? 'bg-[#242424] border-[#383838] text-[#E2DCC8] hover:border-[#0F3D3E]' : 'bg-white border-slate-200 text-slate-700 hover:border-[#0F3D3E]'
+                                  }`}
+                                  title="Move this section to another page"
+                                >
+                                  <option value="" disabled>➔ Move to...</option>
+                                  {catalog.pages.map((_, optIdx) => {
+                                    if (optIdx === 0 || optIdx === pIdx) return null; // Skip cover page & current page
+                                    return (
+                                      <option key={optIdx} value={optIdx}>
+                                        Page {optIdx + 1}
+                                      </option>
+                                    );
+                                  })}
+                                </select>
+                              )}
 
-                            {/* Move Up */}
-                            <button
-                              type="button"
-                              disabled={secIdx === 0}
-                              onClick={() => {
-                                if (pIdx === currentPageIndex) {
-                                  handleMoveSection(secIdx, 'up');
-                                } else {
-                                  swapPageSections(pIdx, secIdx, secIdx - 1);
-                                }
-                              }}
-                              className={`p-1 disabled:opacity-20 transition-colors ${
-                                isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'
-                              }`}
-                              title="Move Section Up"
-                            >
-                              <ArrowUp size={11} />
-                            </button>
-
-                            {/* Move Down */}
-                            <button
-                              type="button"
-                              disabled={secIdx === pSections.length - 1}
-                              onClick={() => {
-                                if (pIdx === currentPageIndex) {
-                                  handleMoveSection(secIdx, 'down');
-                                } else {
-                                  swapPageSections(pIdx, secIdx, secIdx + 1);
-                                }
-                              }}
-                              className={`p-1 disabled:opacity-20 transition-colors ${
-                                isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'
-                              }`}
-                              title="Move Section Down"
-                            >
-                              <ArrowDown size={11} />
-                            </button>
-
-                            {/* Delete */}
-                            {pSections.length > 1 && (
+                              {/* Move Up */}
                               <button
                                 type="button"
+                                disabled={secIdx === 0}
                                 onClick={() => {
                                   if (pIdx === currentPageIndex) {
-                                    handleDeleteSection(secIdx);
+                                    handleMoveSection(secIdx, 'up');
                                   } else {
-                                    deletePageSection(pIdx, secIdx);
+                                    swapPageSections(pIdx, secIdx, secIdx - 1);
                                   }
                                 }}
-                                className="p-1 text-slate-400 hover:text-red-500 transition-colors"
-                                title="Delete Section"
+                                className={`p-1 disabled:opacity-20 transition-colors ${
+                                  isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'
+                                }`}
+                                title="Move Section Up"
                               >
-                                <Trash2 size={11} />
+                                <ArrowUp size={11} />
                               </button>
-                            )}
+
+                              {/* Move Down */}
+                              <button
+                                type="button"
+                                disabled={secIdx === pSections.length - 1}
+                                onClick={() => {
+                                  if (pIdx === currentPageIndex) {
+                                    handleMoveSection(secIdx, 'down');
+                                  } else {
+                                    swapPageSections(pIdx, secIdx, secIdx + 1);
+                                  }
+                                }}
+                                className={`p-1 disabled:opacity-20 transition-colors ${
+                                  isDark ? 'text-slate-400 hover:text-white' : 'text-slate-400 hover:text-slate-800'
+                                }`}
+                                title="Move Section Down"
+                              >
+                                <ArrowDown size={11} />
+                              </button>
+
+                              {/* Delete */}
+                              {pSections.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (pIdx === currentPageIndex) {
+                                      handleDeleteSection(secIdx);
+                                    } else {
+                                      deletePageSection(pIdx, secIdx);
+                                    }
+                                  }}
+                                  className="p-1 text-slate-400 hover:text-red-500 transition-colors"
+                                  title="Delete Section"
+                                >
+                                  <Trash2 size={11} />
+                                </button>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+
+                      {/* Inline Add Category Section button if page has slots free */}
+                      {pSections.length < 3 && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAddCategoryTargetPageIdx(pIdx);
+                            setShowAddCategoryModal(true);
+                          }}
+                          className={`w-full py-1.5 px-2 rounded border border-dashed text-[8.5px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all ${
+                            isDark
+                              ? 'border-[#2d2d2d] hover:border-[#00a651] bg-[#141414] hover:bg-[#00a651]/10 text-slate-400 hover:text-[#00a651]'
+                              : 'border-slate-300 hover:border-[#00a651] bg-slate-50 hover:bg-emerald-50 text-slate-600 hover:text-[#00a651]'
+                          }`}
+                        >
+                          <Plus size={11} className="text-[#00a651]" /> Add Category to Page {pIdx + 1} ({3 - pSections.length} slots free)
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -2878,6 +3093,24 @@ export const GridStudioPanel: React.FC = () => {
               </div>
             );
           }))}
+
+          {!isSpecialPage && sections.length < 3 && (
+            <button
+              type="button"
+              onClick={() => {
+                setAddCategoryTargetPageIdx(currentPageIndex);
+                setShowAddCategoryModal(true);
+              }}
+              className={`w-full py-2.5 px-3 rounded-xl border-2 border-dashed text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all ${
+                isDark
+                  ? 'border-[#2e2e2e] hover:border-[#00a651] bg-[#161616]/60 hover:bg-[#00a651]/10 text-slate-300 hover:text-[#00a651]'
+                  : 'border-slate-300 hover:border-[#00a651] bg-slate-50 hover:bg-emerald-50/60 text-slate-700 hover:text-[#00a651]'
+              }`}
+            >
+              <Plus size={14} className="text-[#00a651]" />
+              <span>Add Category Section ({3 - sections.length} slots free)</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -3653,6 +3886,184 @@ export const GridStudioPanel: React.FC = () => {
                           </button>
                         )}
                       </div>
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= ADD UNINCLUDED CATEGORY MODAL ================= */}
+      {showAddCategoryModal && (
+        <div
+          className="fixed inset-0 z-[1250] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => {
+            setShowAddCategoryModal(false);
+            setAddCategoryTargetPageIdx(null);
+            setAddCategorySearch('');
+          }}
+        >
+          <div
+            className={`w-full max-w-lg border rounded-xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden animate-in fade-in zoom-in-95 duration-150 ${
+              isDark ? 'bg-[#141414] border-[#262626] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className={`px-4 py-3.5 border-b flex items-center justify-between ${
+              isDark ? 'border-[#242424] bg-[#181818]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#00a651] text-black flex items-center justify-center shadow-md shadow-[#00a651]/20 font-bold">
+                  <FolderPlus size={18} className="stroke-[2.5]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                      Add Category to Catalog
+                    </h4>
+                    {addCategoryTargetPageIdx !== null ? (
+                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8]">
+                        Target: Page {addCategoryTargetPageIdx + 1}
+                      </span>
+                    ) : (
+                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8]">
+                        Auto-Place
+                      </span>
+                    )}
+                  </div>
+                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Showing only categories not currently included in this catalog
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddCategoryModal(false);
+                  setAddCategoryTargetPageIdx(null);
+                  setAddCategorySearch('');
+                }}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white hover:bg-white/10' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                }`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Search filter if there are categories */}
+            {unincludedCategories.length > 0 && (
+              <div className={`p-3 border-b ${
+                isDark ? 'border-[#242424] bg-[#161616]' : 'border-slate-200 bg-white'
+              }`}>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={addCategorySearch}
+                    onChange={(e) => setAddCategorySearch(e.target.value)}
+                    placeholder="Search available categories..."
+                    className={`w-full pl-9 pr-3 py-1.5 border rounded-lg text-xs placeholder-slate-400 outline-none focus:border-[#00a651] ${
+                      isDark ? 'bg-[#0f0f0f] border-[#333] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    }`}
+                    autoFocus
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Categories List */}
+            <div className={`flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar ${
+              isDark ? 'bg-[#111111]' : 'bg-slate-50/50'
+            }`}>
+              {(() => {
+                if (unincludedCategories.length === 0) {
+                  return (
+                    <div className="py-12 px-4 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-[#00a651] flex items-center justify-center mx-auto border border-emerald-500/20">
+                        <CheckCircle2 size={24} />
+                      </div>
+                      <div className="space-y-1">
+                        <h5 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                          All Categories Included!
+                        </h5>
+                        <p className={`text-[10.5px] max-w-xs mx-auto leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                          Every category from your inventory is already displayed in this catalog.
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+
+                const filtered = unincludedCategories.filter(cat => {
+                  const q = addCategorySearch.toLowerCase().trim();
+                  return !q || cat.name.toLowerCase().includes(q);
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="py-8 text-center text-slate-400 text-xs">
+                      No categories match "{addCategorySearch}".
+                    </div>
+                  );
+                }
+
+                return filtered.map(cat => {
+                  const catProds = products.filter(p => String(p.categoryId) === String(cat.id));
+                  const catImg = resolveProductImage(catProds[0], cat as any, catProds);
+
+                  return (
+                    <div
+                      key={cat.id}
+                      onClick={() => handleAddCategoryToCatalog(cat, addCategoryTargetPageIdx)}
+                      className={`p-3 border rounded-xl transition-all flex items-center justify-between gap-3 cursor-pointer group ${
+                        isDark
+                          ? 'bg-[#181818] hover:bg-[#202020] border-[#2a2a2a] hover:border-[#00a651]'
+                          : 'bg-white hover:bg-emerald-50/40 border-slate-200 hover:border-[#00a651] shadow-sm'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        {catImg ? (
+                          <img
+                            src={normalizeImageUrl(catImg)}
+                            alt={cat.name}
+                            className={`w-11 h-11 object-contain rounded-lg p-0.5 border shrink-0 ${
+                              isDark ? 'bg-[#0d0d0d] border-[#333]' : 'bg-slate-50 border-slate-200'
+                            }`}
+                          />
+                        ) : (
+                          <div className={`w-11 h-11 rounded-lg border flex items-center justify-center shrink-0 ${
+                            isDark ? 'bg-[#0d0d0d] border-[#333] text-slate-500' : 'bg-slate-50 border-slate-200 text-slate-400'
+                          }`}>
+                            <Layers size={18} />
+                          </div>
+                        )}
+
+                        <div className="min-w-0">
+                          <h5 className={`text-xs font-bold truncate transition-colors ${
+                            isDark ? 'text-white group-hover:text-[#00a651]' : 'text-slate-900 group-hover:text-[#00a651]'
+                          }`}>
+                            {cat.name}
+                          </h5>
+                          <div className={`flex items-center gap-2 text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                            <span className="font-semibold text-[#00a651] font-mono">{catProds.length} Products</span>
+                            {catProds.length > 0 && (
+                              <span>• {catProds.reduce((acc, p) => acc + (p.variants?.length || 1), 0)} model rows</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        className="px-3 py-1.5 bg-[#00a651] hover:bg-[#009247] text-black font-black uppercase text-[10px] rounded-lg tracking-wider transition-all shrink-0 shadow-sm flex items-center gap-1"
+                      >
+                        <Plus size={12} className="stroke-[3]" /> Add
+                      </button>
                     </div>
                   );
                 });
