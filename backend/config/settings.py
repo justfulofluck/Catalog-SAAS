@@ -182,6 +182,8 @@ CORS_ALLOWED_ORIGINS = [
     "http://192.168.1.29:3000",
     "http://192.168.1.208:3000",
     "http://192.168.1.177:3000",
+    "http://catalog.blueglobaltechnology.com",
+    "https://catalog.blueglobaltechnology.com",
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^http://localhost(:[0-9]+)?$",
@@ -197,6 +199,8 @@ CSRF_TRUSTED_ORIGINS = [
     "http://192.168.1.29:3000",
     "http://192.168.1.208:3000",
     "http://192.168.1.177:3000",
+    "http://catalog.blueglobaltechnology.com",
+    "https://catalog.blueglobaltechnology.com",
 ] + [f"http://192.168.1.{i}:3000" for i in range(1, 255)]
 
 # JWT Settings (dj-rest-auth)

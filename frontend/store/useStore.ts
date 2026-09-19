@@ -1548,28 +1548,60 @@ export const useStore = create<State>((set, get) => ({
   },
 
   removeMedia: async (id: string) => {
-    const { mediaApi } = await import('../client');
-    try {
-      await mediaApi.delete(id);
-      set((state) => ({
-        mediaItems: state.mediaItems.filter(m => String(m.id) !== String(id))
-      }));
-    } catch (error) {
-      console.error("Failed to remove media", error);
+    const catMatch = /^cat-(\d+)-\d+$/.exec(id);
+    if (catMatch) {
+      const { categoriesApi } = await import('../client');
+      await categoriesApi.update(catMatch[1], { thumbnail: null });
+      get().fetchCategories();
+      return;
     }
+    const prodMatch = /^prod-(\d+)-\d+$/.exec(id);
+    if (prodMatch) {
+      const { productsApi } = await import('../client');
+      await productsApi.update(prodMatch[1], { image: null });
+      get().fetchProducts();
+      return;
+    }
+    const { mediaApi } = await import('../client');
+    await mediaApi.delete(id);
+    set((state) => ({
+      mediaItems: state.mediaItems.filter(m => String(m.id) !== String(id))
+    }));
   },
 
   removeMediaBatch: async (ids: string[]) => {
-    const { mediaApi } = await import('../client');
-    try {
-      for (const id of ids) {
+    const catIds = new Set<string>();
+    const prodIds = new Set<string>();
+    const mediaIds: string[] = [];
+    for (const id of ids) {
+      const catMatch = /^cat-(\d+)-\d+$/.exec(id);
+      const prodMatch = /^prod-(\d+)-\d+$/.exec(id);
+      if (catMatch) catIds.add(catMatch[1]);
+      else if (prodMatch) prodIds.add(prodMatch[1]);
+      else mediaIds.push(String(id));
+    }
+    if (catIds.size) {
+      const { categoriesApi } = await import('../client');
+      for (const cid of catIds) {
+        await categoriesApi.update(cid, { thumbnail: null });
+      }
+      get().fetchCategories();
+    }
+    if (prodIds.size) {
+      const { productsApi } = await import('../client');
+      for (const pid of prodIds) {
+        await productsApi.update(pid, { image: null });
+      }
+      get().fetchProducts();
+    }
+    if (mediaIds.length) {
+      const { mediaApi } = await import('../client');
+      for (const id of mediaIds) {
         await mediaApi.delete(id);
       }
       set((state) => ({
-        mediaItems: state.mediaItems.filter(m => !ids.map(String).includes(String(m.id)))
+        mediaItems: state.mediaItems.filter(m => !mediaIds.includes(String(m.id)))
       }));
-    } catch (error) {
-      console.error("Failed to remove media batch", error);
     }
   },
 
