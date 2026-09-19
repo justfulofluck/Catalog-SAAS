@@ -170,31 +170,84 @@ export const TableEditorModal: React.FC<TableEditorModalProps> = ({ elementId, o
   const matchRowToProduct = useCallback((row: string[]): { product: Product; variant: ProductVariant | null } | null => {
     if (!products || products.length === 0) return null;
 
-    for (const cell of row) {
-      if (!cell || cell === '-' || cell.trim() === '') continue;
-      const cleanCell = cell.trim().toLowerCase();
+    const rowTokens = row
+      .map(c => (c || '').trim().toLowerCase().replace(/^[₹$]/, ''))
+      .filter(c => c && c !== '-');
+    if (rowTokens.length === 0) return null;
 
-      // 1. Try SKU match
-      for (const p of products) {
-        if (p.sku && p.sku.toLowerCase() === cleanCell) {
-          return { product: p, variant: null };
-        }
-        if (p.variants && p.variants.length > 0) {
-          const matchedVariant = p.variants.find(v => v.sku && v.sku.toLowerCase() === cleanCell);
-          if (matchedVariant) return { product: p, variant: matchedVariant };
-        }
-      }
+    let bestScore = 0;
+    let bestMatch: { product: Product; variant: ProductVariant | null } | null = null;
 
-      // 2. Try Name match
-      for (const p of products) {
-        if (p.name && (p.name.toLowerCase() === cleanCell || cleanCell.includes(p.name.toLowerCase()) || p.name.toLowerCase().includes(cleanCell))) {
-          const matchedVariant = p.variants?.find(v => v.name && (v.name.toLowerCase() === cleanCell || cleanCell.includes(v.name.toLowerCase())));
-          return { product: p, variant: matchedVariant || p.variants?.[0] || null };
+    for (const p of products) {
+      const pSku = (p.sku || '').trim().toLowerCase();
+      const pName = (p.name || '').trim().toLowerCase();
+      const pPrice = p.price !== undefined ? String(p.price).trim().toLowerCase() : '';
+
+      const checkCandidate = (variant: ProductVariant | null) => {
+        let score = 0;
+        const vSku = (variant?.sku || '').trim().toLowerCase();
+        const vName = (variant?.name || '').trim().toLowerCase();
+        const vPrice = (variant?.price !== undefined && variant?.price !== null && String(variant.price).trim() !== '')
+          ? String(variant.price).trim().toLowerCase()
+          : pPrice;
+        const vCutOut = (variant?.cutOut || '').trim().toLowerCase();
+
+        // 1. Exact SKU / Model match
+        if (vSku && rowTokens.some(tok => tok === vSku)) score += 100;
+        else if (pSku && rowTokens.some(tok => tok === pSku)) score += 80;
+
+        // 2. Exact Name match
+        if (vName && rowTokens.some(tok => tok === vName)) score += 75;
+        else if (pName && rowTokens.some(tok => tok === pName)) score += 65;
+
+        // 3. Exact Price match
+        if (vPrice && rowTokens.some(tok => tok === vPrice || tok === `₹${vPrice}` || tok === `$${vPrice}`)) score += 50;
+
+        // 4. Exact Cut-Out match
+        if (vCutOut && rowTokens.some(tok => tok === vCutOut)) score += 40;
+
+        // 5. Custom Attributes / Fields match
+        const customObj = { ...(p.customFields || {}), ...(variant?.customAttributes || {}) };
+        for (const [k, val] of Object.entries(customObj)) {
+          const valStr = String(val || '').trim().toLowerCase().replace(/^[₹$]/, '');
+          if (!valStr || valStr === '-') continue;
+
+          const isModelKey = /model|item|sku|code/i.test(k);
+          const isPriceKey = /price|rate|mrp|cost|dlp/i.test(k);
+          const isCutKey = /cut|size|dim/i.test(k);
+
+          if (rowTokens.some(tok => tok === valStr)) {
+            if (isModelKey) score += 90;
+            else if (isPriceKey) score += 50;
+            else if (isCutKey) score += 40;
+            else score += 15;
+          }
         }
+
+        // 6. Distinct word match
+        for (const tok of rowTokens) {
+          if (tok.length >= 4 && !['downlight', 'series', 'light', 'white', 'black', 'warm'].includes(tok)) {
+            if (pName.includes(tok)) score += 6;
+            if (vName && vName.includes(tok)) score += 8;
+          }
+        }
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = { product: p, variant };
+        }
+      };
+
+      if (p.variants && p.variants.length > 0) {
+        for (const v of p.variants) {
+          checkCandidate(v);
+        }
+      } else {
+        checkCandidate(null);
       }
     }
 
-    return null;
+    return bestScore > 0 ? bestMatch : null;
   }, [products]);
 
   const extractParamValue = useCallback((product: Product, variant: ProductVariant | null, paramKey: string, paramLabel?: string): string => {

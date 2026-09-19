@@ -1026,58 +1026,98 @@ export const GridStudioPanel: React.FC = () => {
     return [...standardFields, ...extraFields];
   }, [products, categories]);
 
-  // Helper to accurately match a table row to its product and variant using any token in the row
-  const matchProductAndVariantForRow = (row: string[]): { matchedProd?: Product; matchedVar?: ProductVariant } => {
-    const rowTokens = row.map(c => (c || '').trim().toLowerCase()).filter(c => c && c !== '-');
+  // Helper to accurately match a table row to its product and variant using candidate scoring
+  const matchProductAndVariantForRow = (
+    row: string[],
+    secContext?: ProductGridSection
+  ): { matchedProd?: Product; matchedVar?: ProductVariant } => {
+    const rowTokens = row
+      .map(c => (c || '').trim().toLowerCase().replace(/^[₹$]/, ''))
+      .filter(c => c && c !== '-');
     if (rowTokens.length === 0 || !products || products.length === 0) return {};
+
+    const secTitleNorm = (secContext?.title || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+    let bestScore = 0;
+    let bestMatch: { matchedProd?: Product; matchedVar?: ProductVariant } = {};
 
     for (const p of products) {
       const pSku = (p.sku || '').trim().toLowerCase();
       const pName = (p.name || '').trim().toLowerCase();
+      const pPrice = p.price !== undefined ? String(p.price).trim().toLowerCase() : '';
 
-      // Check variants
+      const isSecCat = secTitleNorm && (
+        (p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '').includes(secTitleNorm) ||
+        categories.some(cat => String(cat.id) === String(p.categoryId) && cat.name.toLowerCase().replace(/[^a-z0-9]/g, '').includes(secTitleNorm))
+      );
+
+      const checkCandidate = (variant?: ProductVariant) => {
+        let score = 0;
+        const vSku = (variant?.sku || '').trim().toLowerCase();
+        const vName = (variant?.name || '').trim().toLowerCase();
+        const vPrice = (variant?.price !== undefined && variant?.price !== null && String(variant.price).trim() !== '')
+          ? String(variant.price).trim().toLowerCase()
+          : pPrice;
+        const vCutOut = (variant?.cutOut || '').trim().toLowerCase();
+
+        // 1. Exact SKU / Model Number Match (Highest confidence)
+        if (vSku && rowTokens.some(tok => tok === vSku)) score += 100;
+        else if (pSku && rowTokens.some(tok => tok === pSku)) score += 80;
+
+        // 2. Exact Name Match
+        if (vName && rowTokens.some(tok => tok === vName)) score += 75;
+        else if (pName && rowTokens.some(tok => tok === pName)) score += 65;
+
+        // 3. Exact Price Match (Crucial when products share generic category names)
+        if (vPrice && rowTokens.some(tok => tok === vPrice || tok === `₹${vPrice}` || tok === `$${vPrice}`)) score += 50;
+
+        // 4. Exact Cut-Out / Dimensions Match
+        if (vCutOut && rowTokens.some(tok => tok === vCutOut)) score += 40;
+
+        // 5. Custom Attributes / Fields matching
+        const customObj = { ...(p.customFields || {}), ...(variant?.customAttributes || {}) };
+        for (const [k, val] of Object.entries(customObj)) {
+          const valStr = String(val || '').trim().toLowerCase().replace(/^[₹$]/, '');
+          if (!valStr || valStr === '-') continue;
+
+          const isModelKey = /model|item|sku|code/i.test(k);
+          const isPriceKey = /price|rate|mrp|cost|dlp/i.test(k);
+          const isCutKey = /cut|size|dim/i.test(k);
+
+          if (rowTokens.some(tok => tok === valStr)) {
+            if (isModelKey) score += 90;
+            else if (isPriceKey) score += 50;
+            else if (isCutKey) score += 40;
+            else score += 15;
+          }
+        }
+
+        // 6. Distinct word matching (avoiding common short noise tokens)
+        for (const tok of rowTokens) {
+          if (tok.length >= 4 && !['downlight', 'series', 'light', 'white', 'black', 'warm'].includes(tok)) {
+            if (pName.includes(tok)) score += 6;
+            if (vName && vName.includes(tok)) score += 8;
+          }
+        }
+
+        if (isSecCat) score += 10;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = { matchedProd: p, matchedVar: variant || p.variants?.[0] };
+        }
+      };
+
       if (p.variants && p.variants.length > 0) {
         for (const v of p.variants) {
-          const vSku = (v.sku || '').trim().toLowerCase();
-          const vName = (v.name || '').trim().toLowerCase();
-          
-          if (rowTokens.some(tok => 
-            (vSku && (vSku === tok || vSku.includes(tok) || tok.includes(vSku))) ||
-            (vName && (vName === tok || vName.includes(tok) || tok.includes(vName)))
-          )) {
-            return { matchedProd: p, matchedVar: v };
-          }
-
-          if (v.customAttributes && typeof v.customAttributes === 'object') {
-            for (const val of Object.values(v.customAttributes)) {
-              const vStr = String(val || '').trim().toLowerCase();
-              if (vStr && vStr !== '-' && rowTokens.some(tok => vStr === tok || vStr.includes(tok) || tok.includes(vStr))) {
-                return { matchedProd: p, matchedVar: v };
-              }
-            }
-          }
+          checkCandidate(v);
         }
-      }
-
-      // Check product name and sku
-      if (rowTokens.some(tok => 
-        (pSku && (pSku === tok || pSku.includes(tok) || tok.includes(pSku))) ||
-        (pName && (pName === tok || pName.includes(tok) || tok.includes(pName)))
-      )) {
-        return { matchedProd: p, matchedVar: p.variants?.[0] };
-      }
-
-      if (p.customFields && typeof p.customFields === 'object') {
-        for (const val of Object.values(p.customFields)) {
-          const pStr = String(val || '').trim().toLowerCase();
-          if (pStr && pStr !== '-' && rowTokens.some(tok => pStr === tok || pStr.includes(tok) || tok.includes(pStr))) {
-            return { matchedProd: p, matchedVar: p.variants?.[0] };
-          }
-        }
+      } else {
+        checkCandidate();
       }
     }
 
-    return {};
+    return bestScore > 0 ? bestMatch : {};
   };
 
   const handleAddTableColumn = (secIdx: number, paramName: string = 'NEW PARAM') => {
@@ -1086,7 +1126,7 @@ export const GridStudioPanel: React.FC = () => {
       if (i !== secIdx) return sec;
       const headers = [...sec.tableData.headers, cleanParam];
       const rows = sec.tableData.rows.map(row => {
-        const { matchedProd, matchedVar } = matchProductAndVariantForRow(row);
+        const { matchedProd, matchedVar } = matchProductAndVariantForRow(row, sec);
         let val = '-';
         if (matchedProd) {
           const gen = generateRowFromProduct([cleanParam], matchedProd, matchedVar, categories);
@@ -1157,7 +1197,7 @@ export const GridStudioPanel: React.FC = () => {
     updateAndApplySections(prev => prev.map((sec, i) => {
       if (i !== secIdx) return sec;
       const newRows = sec.tableData.rows.map(row => {
-        const { matchedProd, matchedVar } = matchProductAndVariantForRow(row);
+        const { matchedProd, matchedVar } = matchProductAndVariantForRow(row, sec);
         const newRow = [...row];
         if (matchedProd) {
           const gen = generateRowFromProduct([cleanParam], matchedProd, matchedVar, categories);
