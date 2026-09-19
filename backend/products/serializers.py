@@ -49,6 +49,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
         # Handle base64 thumbnail
         thumbnail = data.get('thumbnail')
+        external_thumbnail_url = None
         if isinstance(thumbnail, str) and thumbnail.startswith('data:image'):
             try:
                 format, imgstr = thumbnail.split(';base64,')
@@ -59,11 +60,18 @@ class CategorySerializer(serializers.ModelSerializer):
             except Exception as e:
                 print(f"DEBUG: CategorySerializer - Error decoding base64 thumbnail: {e}")
         elif isinstance(thumbnail, str) and thumbnail.startswith(('http', '/media')):
-            # If it's already a URL, we don't want DRF to try and validate it as a file upload during creation
-            # Remove it so the model keeps its default or existing value
-            data.pop('thumbnail')
+            # It's already a URL: don't let DRF try and validate it as a file upload during creation.
+            # Pop it temporarily and store it manually on the model field (mirrors ProductSerializer).
+            external_thumbnail_url = data.pop('thumbnail')
 
-        return super().to_internal_value(data)
+        ret = super().to_internal_value(data)
+        if external_thumbnail_url:
+            clean_url = external_thumbnail_url
+            if clean_url.startswith('/media/'):
+                clean_url = clean_url[len('/media/'):]
+            ret['thumbnail'] = clean_url
+
+        return ret
 
 
 class ProductSerializer(serializers.ModelSerializer):
