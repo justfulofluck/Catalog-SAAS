@@ -89,6 +89,10 @@ class CatalogViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['post'])
     def save_page(self, request, pk=None):
+        import time
+        from django.db import transaction, OperationalError
+        from products.models import Category
+
         catalog = self.get_object()
         page_data = request.data
         page_number = page_data.get('pageNumber')
@@ -111,24 +115,82 @@ class CatalogViewSet(viewsets.ModelViewSet):
                 el['src'] = self._save_base64_src(src, catalog)
 
         category_id = page_data.get('categoryId')
-        # Validate that category_id is a valid integer and exists in DB or None
         valid_cat_id = None
         if category_id:
             try:
-                from products.models import Category
                 cat_int = int(category_id)
                 if Category.objects.filter(id=cat_int).exists():
                     valid_cat_id = cat_int
-            except (ValueError, TypeError, Exception):
+            except Exception:
                 valid_cat_id = None
 
-        page, created = CatalogPage.objects.update_or_create(
-            catalog=catalog,
-            page_number=page_number,
-            defaults={
-                'type': page_data.get('type', 'interior'),
-                'layout_data': elements,
-                'category_id': valid_cat_id
-            }
-        )
-        return Response({'status': 'saved', 'page_id': page.id})
+        page_type = str(page_data.get('type', 'interior'))[:20]
+
+        # Retry up to 3 times in case SQLite is briefly locked
+        for attempt in range(3):
+            try:
+                with transaction.atomic():
+                    page, created = CatalogPage.objects.update_or_create(
+                        catalog=catalog,
+                        page_number=page_number,
+                        defaults={
+                            'type': page_type,
+                            'layout_data': elements,
+                            'category_id': valid_cat_id
+                        }
+                    )
+                return Response({'status': 'saved', 'page_id': page.id})
+            except OperationalError:
+                if attempt == 2:
+                    raise
+                time.sleep(0.1 * (attempt + 1))
+            except Exception as e:
+                return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'])
+    def save_all_pages(self, request, pk=None):
+        from django.db import transaction
+        from products.models import Category
+
+        catalog = self.get_object()
+        pages_data = request.data.get('pages', [])
+        
+        saved_count = 0
+        with transaction.atomic():
+            for idx, page_data in enumerate(pages_data):
+                page_number = page_data.get('pageNumber') or page_data.get('page_number') or (idx + 1)
+                try:
+                    page_number = int(page_number)
+                except (ValueError, TypeError):
+                    page_number = idx + 1
+
+                elements = page_data.get('elements', [])
+                for el in elements:
+                    if isinstance(el, dict):
+                        src = el.get('src', '')
+                        el['src'] = self._save_base64_src(src, catalog)
+
+                category_id = page_data.get('categoryId')
+                valid_cat_id = None
+                if category_id:
+                    try:
+                        cat_int = int(category_id)
+                        if Category.objects.filter(id=cat_int).exists():
+                            valid_cat_id = cat_int
+                    except Exception:
+                        valid_cat_id = None
+
+                page_type = str(page_data.get('type', 'interior'))[:20]
+
+                CatalogPage.objects.update_or_create(
+                    catalog=catalog,
+                    page_number=page_number,
+                    defaults={
+                        'type': page_type,
+                        'layout_data': elements,
+                        'category_id': valid_cat_id
+                    }
+                )
+                saved_count += 1
+
+        return Response({'status': 'saved', 'saved_count': saved_count})

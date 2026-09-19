@@ -8,9 +8,9 @@ import { Product, Category } from '../types';
  * - Replaces deprecated / 404 remote placeholder URLs with reliable working images.
  */
 export function normalizeImageUrl(url?: string | null): string {
-  if (!url) return '';
+  if (!url || typeof url !== 'string') return '';
   let trimmed = url.trim();
-  if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
+  if (!trimmed || trimmed.startsWith('data:') || trimmed.startsWith('blob:')) return trimmed;
 
   // Handle broken / deprecated Unsplash image from old demo data
   if (trimmed.includes('photo-1540518614846-7ede433c4ef5')) {
@@ -20,15 +20,8 @@ export function normalizeImageUrl(url?: string | null): string {
   // If URL points to backend media on localhost/127.0.0.1 or LAN IP, strip host to make it relative
   const mediaIdx = trimmed.indexOf('/media/');
   if (mediaIdx !== -1) {
-    let path = trimmed.substring(mediaIdx);
-    while (path.startsWith('/media/media/')) {
-      path = path.replace('/media/media/', '/media/');
-    }
-    return path;
-  }
-
-  while (trimmed.startsWith('/media/media/')) {
-    trimmed = trimmed.replace('/media/media/', '/media/');
+    const afterMedia = trimmed.substring(mediaIdx).replace(/^\/+(media\/+)+/, '');
+    return `/media/${afterMedia}`;
   }
 
   return trimmed;

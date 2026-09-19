@@ -317,6 +317,8 @@ const TECHNOVA_SCHEMA: FormField[] = [
   { id: 'emi', label: 'EMI Available', type: 'boolean', section: 'commercial' }
 ];
 
+let _lastPushHistoryTime = 0;
+
 export const useStore = create<State>((set, get) => ({
   user: null,
   isAuthenticated: false,
@@ -373,10 +375,10 @@ export const useStore = create<State>((set, get) => ({
     hasFooter: true,
     headerMigrated: false,
     footerMigrated: false,
-    marginTop: 37.8,
-    marginBottom: 37.8,
-    marginLeft: 37.8,
-    marginRight: 37.8,
+    marginTop: 0,
+    marginBottom: 0,
+    marginLeft: 18.9,
+    marginRight: 18.9,
     headerElements: [
       {
         id: 'default-header-title',
@@ -541,12 +543,21 @@ export const useStore = create<State>((set, get) => ({
   }),
 
   pushHistory: () => {
+    const now = Date.now();
+    if (_lastPushHistoryTime && now - _lastPushHistoryTime < 200) {
+      return;
+    }
+    _lastPushHistoryTime = now;
     const { catalog, undoStack } = get();
-    const currentSnapshot = JSON.parse(JSON.stringify(catalog));
-    set({
-      undoStack: [currentSnapshot, ...undoStack].slice(0, 50),
-      redoStack: []
-    });
+    try {
+      const currentSnapshot = JSON.parse(JSON.stringify(catalog));
+      set({
+        undoStack: [currentSnapshot, ...undoStack].slice(0, 25),
+        redoStack: []
+      });
+    } catch (e) {
+      console.warn("Could not snapshot history", e);
+    }
   },
 
   undo: () => {
@@ -1833,16 +1844,20 @@ export const useStore = create<State>((set, get) => ({
         }));
       }
 
-      // Save all pages (This could be optimized to only sav changed pages, but for now we save all)
+      // Save all pages sequentially with try/catch to ensure SQLite concurrency stability
       for (let i = 0; i < catalog.pages.length; i++) {
         const page = catalog.pages[i];
         const pageNum = page.pageNumber || (page as any).page_number || (i + 1);
-        await catalogsApi.savePage(backendId, {
-          pageNumber: pageNum,
-          type: page.type || 'interior',
-          elements: page.elements || [],
-          categoryId: page.categoryId
-        });
+        try {
+          await catalogsApi.savePage(backendId, {
+            pageNumber: pageNum,
+            type: page.type || 'interior',
+            elements: page.elements || [],
+            categoryId: page.categoryId
+          });
+        } catch (pageErr) {
+          console.warn(`Page ${pageNum} save deferred:`, pageErr);
+        }
       }
 
       set({ isLoading: false });

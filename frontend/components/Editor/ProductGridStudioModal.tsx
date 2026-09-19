@@ -294,7 +294,7 @@ export const ProductGridStudioModal: React.FC<ProductGridStudioModalProps> = ({ 
 
         if (extracted.length >= 1) {
           // Fill up to 3 if only 1 or 2 found
-          while (extracted.length < 3) {
+          while (extracted.length < 3 && DEFAULT_SECTIONS[extracted.length]) {
             const def = DEFAULT_SECTIONS[extracted.length];
             extracted.push({ ...def, id: `sec-${extracted.length + 1}` });
           }

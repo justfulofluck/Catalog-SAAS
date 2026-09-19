@@ -4,7 +4,7 @@ import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
 import { elementToFabricObject } from './fabricRenderer';
-import { globalSpatialIndex, DistanceBadge } from '../../utils/spatialIndex';
+import { SpatialIndex, DistanceBadge } from '../../utils/spatialIndex';
 import { initCanvaGlobals, applyCanvaSelectionStyle, renderCanvaHoverOutline, CANVA_THEME } from '../../utils/canvaControls';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
@@ -40,7 +40,7 @@ if (typeof window !== 'undefined') {
 const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = [], footerElements = [], footerHeight = 38, editingId = null }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
-  const renderThrottleRef = useRef<number | null>(null);
+  const spatialIndexRef = useRef<SpatialIndex>(new SpatialIndex());
   const [activeGuides, setActiveGuides] = useState<{ type: 'horizontal' | 'vertical'; pos: number }[]>([]);
   const [activeDistanceBadges, setActiveDistanceBadges] = useState<DistanceBadge[]>([]);
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
@@ -68,20 +68,41 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   useEffect(() => {
     if (!canvasRef.current) return;
 
-    const canvas = new Canvas(canvasRef.current, {
-      width: (curW + CANVAS_PAD_X * 2) * zoom,
-      height: (curH + CANVAS_PAD_Y * 2) * zoom,
-      backgroundColor: 'transparent',
-      selection: true, // Enable click-and-drag area marquee multi-selection
-      selectionColor: 'rgba(139, 61, 255, 0.12)', // Canva-style translucent purple
-      selectionBorderColor: CANVA_THEME.borderColor, // Signature Canva purple border
-      selectionLineWidth: 1.5,
-      preserveObjectStacking: true,
-      enableRetinaScaling: true,
-      fireRightClick: true,
-      stopContextMenu: true,
-      controlsAboveOverlay: true,
-    });
+    // Dispose any previous fabric canvas instance on this ref
+    if (fabricCanvasRef.current) {
+      try {
+        fabricCanvasRef.current.dispose();
+      } catch (e) {}
+      fabricCanvasRef.current = null;
+    }
+
+    const canvasEl = canvasRef.current;
+    if ((canvasEl as any).__fabric) {
+      try {
+        (canvasEl as any).__fabric.dispose();
+      } catch (e) {}
+    }
+
+    let canvas: Canvas;
+    try {
+      canvas = new Canvas(canvasEl, {
+        width: (curW + CANVAS_PAD_X * 2) * zoom,
+        height: (curH + CANVAS_PAD_Y * 2) * zoom,
+        backgroundColor: 'transparent',
+        selection: true, // Enable click-and-drag area marquee multi-selection
+        selectionColor: 'rgba(139, 61, 255, 0.12)', // Canva-style translucent purple
+        selectionBorderColor: CANVA_THEME.borderColor, // Signature Canva purple border
+        selectionLineWidth: 1.5,
+        preserveObjectStacking: true,
+        enableRetinaScaling: true,
+        fireRightClick: true,
+        stopContextMenu: true,
+        controlsAboveOverlay: true,
+      });
+    } catch (err) {
+      console.warn('Fabric Canvas init safely skipped or already disposed:', err);
+      return;
+    }
     canvas.controlsAboveOverlay = true;
     // Set viewport transform to offset world (0,0) by CANVAS_PAD_X and CANVAS_PAD_Y
     canvas.viewportTransform = [zoom, 0, 0, zoom, CANVAS_PAD_X * zoom, CANVAS_PAD_Y * zoom];
@@ -291,27 +312,6 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         canvas.requestRenderAll();
         setSelectedElementIds([]);
         return;
-      }
-
-      // 2. Clicked on ActiveSelection (multi-selection)
-      if (target instanceof ActiveSelection || target.type === 'ActiveSelection' || target.type === 'activeSelection') {
-        const subTargets = (opt.subTargets || []).filter((st: any) => st && st !== target && st.id);
-        if (subTargets.length === 0) {
-          // User clicked on empty space between objects in the selection -> Deselect
-          canvas.discardActiveObject();
-          canvas.requestRenderAll();
-          setSelectedElementIds([]);
-        } else if (subTargets.length === 1 && !opt.e?.shiftKey) {
-          // User clicked directly on one child element inside the selection -> select that single element
-          const singleObj = subTargets[0];
-          if (singleObj && singleObj.id) {
-            canvas.setActiveObject(singleObj);
-            applyCanvaSelectionStyle(singleObj);
-            singleObj.setCoords();
-            canvas.requestRenderAll();
-            setSelectedElementIds([singleObj.id]);
-          }
-        }
       }
     });
 
@@ -524,7 +524,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           right: curW - (catalog.marginRight || 0),
         } : undefined;
 
-        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6, activeMargins);
+        const { snapX, snapY, guideLines, distanceBadges } = spatialIndexRef.current.findSnapTargets(currentBox, 6, activeMargins);
         if (snapX !== null) {
           obj.set('left', snapX);
         }
@@ -558,7 +558,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           right: curW - (catalog.marginRight || 0),
         } : undefined;
 
-        const { snapX, snapY, guideLines, distanceBadges } = globalSpatialIndex.findSnapTargets(currentBox, 6, activeMargins);
+        const { snapX, snapY, guideLines, distanceBadges } = spatialIndexRef.current.findSnapTargets(currentBox, 6, activeMargins);
         if (snapX !== null) {
           obj.set('left', snapX + objW / 2);
         }
@@ -574,21 +574,6 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           h: Math.round(objH)
         });
       }
-
-      if (renderThrottleRef.current) clearTimeout(renderThrottleRef.current);
-      if (!dragTimer) {
-        pushHistory();
-        dragTimer = window.setTimeout(() => { dragTimer = null; }, 300);
-      }
-      renderThrottleRef.current = window.setTimeout(() => {
-        if (obj && obj.id) {
-          const isHeader = headerElements?.some(el => el.id === obj.id);
-          const isFooter = footerElements?.some(el => el.id === obj.id);
-          if (isHeader || isFooter) return; // Header and Footer cannot be moved in the main editor
-          const updates = { x: obj.left || 0, y: obj.top || 0 };
-          updateElement(pageIdxRef.current, obj.id, updates);
-        }
-      }, 16);
     });
 
     canvas.on('object:scaling', (e: any) => {
@@ -644,7 +629,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const childSx = Math.abs(child.scaleX || 1);
             const childSy = Math.abs(child.scaleY || 1);
 
-            if (child instanceof IText || child.type === 'i-text' || child.type === 'text') {
+            if (child.type === 'i-text' || child.type === 'text' || child.type === 'FabricText') {
               updates.width = Math.max(20, Math.round((child.width || (el?.width || 0)) * childSx));
             } else if (child instanceof Circle) {
               const newRadius = (child.radius || (el?.width ? el.width / 2 : 0)) * childSx;
@@ -753,12 +738,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     });
 
     return () => {
-      if (renderThrottleRef.current) clearTimeout(renderThrottleRef.current);
       if (dragTimer) clearTimeout(dragTimer);
       if (upperEl) {
         upperEl.removeEventListener('contextmenu', handleNativeContextMenu);
       }
-      canvas.dispose();
+      try {
+        canvas.dispose();
+      } catch (e) {}
       fabricCanvasRef.current = null;
     };
   }, [curW, curH]);
@@ -789,11 +775,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         // removed from canvas._objects. If we call canvas.getObjects() while an
         // ActiveSelection exists, those objects won't be found, leading to duplicate
         // creation and the originals being lost. Discard the selection first, then
-        // restore it after rendering.
-        let savedActiveIds: string[] = [];
+        // restore it after rendering from store state.
         const activeObj = canvas.getActiveObject();
         if (activeObj && (activeObj instanceof ActiveSelection || (activeObj as any).type === 'activeSelection')) {
-          savedActiveIds = canvas.getActiveObjects().map((o: any) => o.id).filter(Boolean);
           suppressSelectionClearedRef.current = true;
           canvas.discardActiveObject();
           suppressSelectionClearedRef.current = false;
@@ -1139,13 +1123,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
         // Restore active selection if the active table/element was rebuilt, but never select the object currently being edited in HTML overlay
         // Read selectedElementIds fresh from the store to avoid stale closure issues during paste
-        // Also merge savedActiveIds from the pre-render ActiveSelection discard
         const freshSelectedIds = useStore.getState().selectedElementIds || [];
-        const mergedSelectedIds = savedActiveIds.length > 0
-          ? Array.from(new Set([...freshSelectedIds, ...savedActiveIds]))
-          : freshSelectedIds;
-        if (isActive && mergedSelectedIds.length > 0) {
-          const selectableIds = mergedSelectedIds.filter(id => id !== editingId);
+        if (isActive && freshSelectedIds.length > 0) {
+          const selectableIds = freshSelectedIds.filter(id => id !== editingId);
           const selectedObjs = validObjects.filter((o: any) => o && o.id && selectableIds.includes(o.id));
           const currentActive = canvas.getActiveObjects();
           if (selectedObjs.length > 0 && (!currentActive.length || !selectedObjs.every(o => currentActive.includes(o)))) {
@@ -1161,7 +1141,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
 
         // Update Spatial Index for high-performance snapping & culling
-        globalSpatialIndex.clear();
+        spatialIndexRef.current.clear();
         const boxes = validObjects.map((obj: any) => {
           const w = (obj.width || 0) * (obj.scaleX || 1);
           const h = (obj.height || 0) * (obj.scaleY || 1);
@@ -1174,7 +1154,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             zIndex: obj.get?.('zIndex') || 0,
           };
         }).filter(b => !!b.id);
-        globalSpatialIndex.insertMany(boxes);
+        spatialIndexRef.current.insertMany(boxes);
 
         canvas._objects.sort((a: any, b: any) => (a.get('zIndex') || 0) - (b.get('zIndex') || 0));
         
