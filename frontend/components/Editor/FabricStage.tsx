@@ -44,7 +44,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const [activeGuides, setActiveGuides] = useState<{ type: 'horizontal' | 'vertical'; pos: number }[]>([]);
   const [activeDistanceBadges, setActiveDistanceBadges] = useState<DistanceBadge[]>([]);
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const { selectedElementIds, setSelectedElementIds, updateElement, updateElements, pushHistory, catalog } = useStore();
+  const { selectedElementIds, setSelectedElementIds, updateElement, updateElements, nudgeElement, pushHistory, catalog } = useStore();
   const products = useStore((state) => state.products);
   const categories = useStore((state) => state.categories);
   const user = useStore((state) => state.user);
@@ -336,6 +336,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         // Regular text elements — open inline text editor
         if (el.type === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
+        } else if (el.type === 'product-block') {
+          window.dispatchEvent(new CustomEvent('catalog:editProductCard', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         }
       }
     });
@@ -749,6 +751,90 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     };
   }, [curW, curH]);
 
+  // Keyboard arrow keys nudge handler for active page canvas
+  useEffect(() => {
+    if (!isActive) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement;
+      const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.isContentEditable;
+      if (isInput) return;
+
+      const canvas = fabricCanvasRef.current;
+      if (!canvas) return;
+
+      const activeObj = canvas.getActiveObject() as any;
+      if (!activeObj) return;
+
+      // If Fabric text is currently in inline editing mode, let standard cursor navigation handle it
+      if (activeObj.isEditing) return;
+
+      if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) return;
+
+      e.preventDefault();
+
+      const nudge = e.shiftKey ? 10 : 1;
+      let dx = 0;
+      let dy = 0;
+
+      if (e.key === 'ArrowUp') dy = -nudge;
+      else if (e.key === 'ArrowDown') dy = nudge;
+      else if (e.key === 'ArrowLeft') dx = -nudge;
+      else if (e.key === 'ArrowRight') dx = nudge;
+
+      // Move the active object on Fabric canvas immediately
+      const isMulti = activeObj instanceof ActiveSelection || activeObj.type === 'ActiveSelection' || activeObj.type === 'activeSelection';
+
+      if (isMulti) {
+        activeObj.set({
+          left: (activeObj.left || 0) + dx,
+          top: (activeObj.top || 0) + dy,
+        });
+        activeObj.setCoords();
+
+        const objects = (typeof activeObj.getObjects === 'function' ? activeObj.getObjects() : []) as any[];
+        const updates: { id: string; updates: any }[] = [];
+        objects.forEach((child: any) => {
+          if (!child.id) return;
+          const el = pageRef.current.elements.find((item: CanvasElement) => item.id === child.id);
+          if (el && !el.locked) {
+            updates.push({
+              id: child.id,
+              updates: { x: el.x + dx, y: el.y + dy }
+            });
+          }
+        });
+        if (updates.length > 0) {
+          if (!e.repeat) pushHistory();
+          updateElements(pageIdxRef.current, updates);
+        }
+      } else if (activeObj && activeObj.id) {
+        const isHeader = headerElements?.some(el => el.id === activeObj.id);
+        const isFooter = footerElements?.some(el => el.id === activeObj.id);
+        if (isHeader || isFooter) return; // Protected global header/footer
+
+        const el = pageRef.current.elements.find((item: CanvasElement) => item.id === activeObj.id);
+        if (el && !el.locked) {
+          activeObj.set({
+            left: (activeObj.left || 0) + dx,
+            top: (activeObj.top || 0) + dy,
+          });
+          activeObj.setCoords();
+
+          if (!e.repeat) pushHistory();
+          nudgeElement(pageIdxRef.current, activeObj.id, dx, dy);
+        }
+      }
+
+      canvas.requestRenderAll();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isActive, updateElements, nudgeElement, pushHistory, headerElements, footerElements]);
+
   useEffect(() => {
     if (!fabricCanvasRef.current) return;
     const canvas = fabricCanvasRef.current;
@@ -881,6 +967,16 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
           const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
           
+          const oldFill = existingObj._fill || '';
+          const newFill = el.fill || '';
+          const oldStroke = existingObj._stroke || '';
+          const newStroke = el.stroke || '';
+          const oldStrokeWidth = existingObj._strokeWidth;
+          const newStrokeWidth = el.strokeWidth;
+          if (oldFill !== newFill || oldStroke !== newStroke || oldStrokeWidth !== newStrokeWidth) {
+            return true;
+          }
+
           const oldShowTitle = existingObj._showTitle ?? true;
           const oldShowPrice = existingObj._showPrice ?? true;
           const oldShowSKU = existingObj._showSKU ?? true;
@@ -902,6 +998,21 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const oldCardTheme = existingObj._cardTheme || '';
           const newFontFamily = (el as any).fontFamily || (catalog as any).fontFamily || '';
           const newCardTheme = (el as any).cardTheme || '';
+
+          const hasCustomChanges = 
+            existingObj._customTitle !== el.customTitle ||
+            existingObj._customPrice !== el.customPrice ||
+            existingObj._customSku !== el.customSku ||
+            existingObj._customDesc !== el.customDesc ||
+            existingObj._titleFontSize !== el.titleFontSize ||
+            existingObj._priceFontSize !== el.priceFontSize ||
+            existingObj._fontSize !== el.fontSize ||
+            existingObj._titleColor !== el.titleColor ||
+            existingObj._priceColor !== el.priceColor ||
+            existingObj._textColor !== el.textColor ||
+            existingObj._borderRadius !== (el as any).borderRadius;
+
+          if (hasCustomChanges) return true;
 
           return el.productId !== existingObj._productId || el.src !== existingObj._src ||
             Math.abs(el.width - oldW) > 5 || Math.abs(el.height - oldH) > 5 ||
@@ -1003,8 +1114,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 existingObj.dirty = true;
               } else if (el.type === 'shape' || el.type === 'comment') {
                 existingObj.set({
-                  fill: el.fill || '#ffffff', stroke: el.stroke || undefined,
-                  strokeWidth: el.strokeWidth || 0,
+                  fill: el.fill || '#ffffff',
+                  stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+                  strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
                 });
                 if (!isActiveObj) {
                   existingObj.set({ width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
@@ -1013,6 +1125,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   }
                 }
               } else if (el.type === 'image') {
+                existingObj.set({
+                  stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+                  strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+                });
                 if (!isActiveObj) {
                   const unscaledW = (existingObj as any).width || 1;
                   const unscaledH = (existingObj as any).height || 1;
@@ -1021,6 +1137,25 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               } else if (el.type === 'product-block') {
                 existingObj._productId = el.productId;
                 existingObj._src = el.src;
+                existingObj._fill = el.fill || '';
+                existingObj._stroke = el.stroke || '';
+                existingObj._strokeWidth = el.strokeWidth;
+
+                // Directly update the base card Rect inside the product group
+                const baseCardRect = (existingObj as any)._objects?.[0];
+                if (baseCardRect) {
+                  const cardFill = el.fill || '#ffffff';
+                  const cardStroke = el.stroke && el.stroke !== 'transparent' ? el.stroke : '#e2e8f0';
+                  const cardStrokeWidth = el.stroke && el.stroke !== 'transparent'
+                    ? (el.strokeWidth !== undefined ? el.strokeWidth : 2)
+                    : (el.stroke === 'transparent' ? 0 : 1.5);
+                  baseCardRect.set({
+                    fill: cardFill,
+                    stroke: cardStroke,
+                    strokeWidth: cardStrokeWidth
+                  });
+                }
+
                 if (!isActiveObj) {
                   const unscaledW = (existingObj as any).width || 1;
                   const unscaledH = (existingObj as any).height || 1;
@@ -1071,6 +1206,20 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             if (el.type === 'product-block') {
               obj._productId = el.productId;
               obj._src = el.src;
+              obj._fill = el.fill || '';
+              obj._stroke = el.stroke || '';
+              obj._strokeWidth = el.strokeWidth;
+              obj._customTitle = el.customTitle;
+              obj._customPrice = el.customPrice;
+              obj._customSku = el.customSku;
+              obj._customDesc = el.customDesc;
+              obj._titleFontSize = el.titleFontSize;
+              obj._priceFontSize = el.priceFontSize;
+              obj._fontSize = el.fontSize;
+              obj._titleColor = el.titleColor;
+              obj._priceColor = el.priceColor;
+              obj._textColor = el.textColor;
+              obj._borderRadius = (el as any).borderRadius;
               obj._showTitle = catalog.showTitle !== false;
               obj._showPrice = catalog.showPrice !== false;
               obj._showSKU = catalog.showSKU !== false;

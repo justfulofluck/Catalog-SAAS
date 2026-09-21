@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ArrowLeft,
   Rocket,
@@ -17,6 +17,282 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { exportCatalogToPDF } from '../Editor/pdfExporter';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
+import { normalizeImageUrl } from '../../utils/imageUtils';
+import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
+
+const CatalogThumbnailPreview: React.FC<{
+  catalog: any;
+  products: any[];
+  isDark: boolean;
+}> = ({ catalog, products, isDark }) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [renderTrigger, setRenderTrigger] = useState(0);
+
+  const page = catalog?.pages?.[0];
+  const thumbW = 192;
+  const thumbH = Math.round(thumbW * (PAGE_HEIGHT / PAGE_WIDTH));
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !page) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let isMounted = true;
+    const scale = thumbW / PAGE_WIDTH;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, thumbW, thumbH);
+
+    ctx.fillStyle = page.backgroundColor || catalog.backgroundColor || '#ffffff';
+    ctx.fillRect(0, 0, thumbW, thumbH);
+
+    ctx.scale(scale, scale);
+
+    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
+    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+    const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || 38) - (catalog.marginBottom || 0);
+    const pageCategory = getPageCategoryName(page, [], products, catalog);
+    const dynamicContext = {
+      pageNumber: page.pageNumber || 1,
+      totalPages: catalog.pages?.length || 1,
+      catalogName: catalog.name || 'Catalog',
+      categoryName: pageCategory,
+      companyName: (catalog as any)?.company || 'V-TAC',
+      year: new Date().getFullYear(),
+    };
+
+    const allElements = [
+      ...(pageHasHeader ? (catalog.headerElements || []).map((el: any) => ({
+        ...el,
+        text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+      })) : []),
+      ...page.elements.map((el: any) => ({
+        ...el,
+        text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text
+      })),
+      ...(pageHasFooter ? (catalog.footerElements || []).map((el: any) => ({
+        ...el,
+        y: (el.y || 0) > 500 ? el.y : ((el.y || 0) + footerBaseY),
+        text: el.type === 'text' ? resolveDynamicText(el.text, dynamicContext) : el.text,
+      })) : []),
+    ];
+
+    const sortedElements = [...allElements].filter(el => el.visible !== false).sort((a, b) => (a.zIndex || 0) - (b.zIndex || 0));
+
+    sortedElements.forEach((el) => {
+      ctx.save();
+      ctx.globalAlpha = el.opacity ?? 1;
+      ctx.translate(el.x, el.y);
+      if (el.rotation) {
+        ctx.rotate((el.rotation * Math.PI) / 180);
+      }
+
+      if (el.type === 'shape' || el.type === 'comment') {
+        const getCanvasFill = () => {
+          if (!el.fill) return '#cbd5e1';
+          if (el.fill.includes('linear-gradient')) {
+            const match = el.fill.match(/linear-gradient\s*\(\s*([^,]+)\s*,\s*(#[a-fA-F0-9]+)\s*,\s*(#[a-fA-F0-9]+)\s*\)/i);
+            if (match) {
+              const dir = match[1].trim();
+              const c1 = match[2].trim();
+              const c2 = match[3].trim();
+              let x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+              switch (dir) {
+                case 'to right': x2 = el.width; break;
+                case 'to bottom': y2 = el.height; break;
+                case 'to bottom right': x2 = el.width; y2 = el.height; break;
+                case 'to top right': y1 = el.height; x2 = el.width; break;
+                default: x2 = el.width;
+              }
+              const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+              grad.addColorStop(0, c1);
+              grad.addColorStop(1, c2);
+              return grad;
+            }
+          }
+          return el.fill;
+        };
+
+        ctx.fillStyle = getCanvasFill();
+        if (el.shapeType === 'circle') {
+          const r = Math.min(el.width, el.height) / 2;
+          ctx.beginPath();
+          ctx.arc(r, r, r, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (el.shapeType === 'line') {
+          ctx.strokeStyle = el.stroke || (typeof ctx.fillStyle === 'string' ? ctx.fillStyle : '#000000');
+          ctx.lineWidth = el.strokeWidth || 2;
+          ctx.beginPath();
+          ctx.moveTo(0, el.height / 2);
+          ctx.lineTo(el.width, el.height / 2);
+          ctx.stroke();
+        } else if (el.shapeType === 'roundedRect' || el.shapeType === 'pill') {
+          const r = el.shapeType === 'pill' ? Math.min(el.width, el.height) / 2 : Math.min(el.width, el.height) * 0.15;
+          ctx.beginPath();
+          if (typeof (ctx as any).roundRect === 'function') {
+            (ctx as any).roundRect(0, 0, el.width, el.height, r);
+          } else {
+            ctx.rect(0, 0, el.width, el.height);
+          }
+          ctx.fill();
+        } else {
+          ctx.fillRect(0, 0, el.width, el.height);
+        }
+
+        if (el.stroke && el.strokeWidth && el.shapeType !== 'line') {
+          ctx.strokeStyle = el.stroke;
+          ctx.lineWidth = el.strokeWidth;
+          if (el.shapeType === 'circle') {
+            const r = Math.min(el.width, el.height) / 2;
+            ctx.beginPath();
+            ctx.arc(r, r, r, 0, Math.PI * 2);
+            ctx.stroke();
+          } else if ((el.shapeType === 'roundedRect' || el.shapeType === 'pill') && typeof (ctx as any).roundRect === 'function') {
+            ctx.beginPath();
+            (ctx as any).roundRect(0, 0, el.width, el.height, el.shapeType === 'pill' ? Math.min(el.width, el.height) / 2 : Math.min(el.width, el.height) * 0.15);
+            ctx.stroke();
+          } else {
+            ctx.strokeRect(0, 0, el.width, el.height);
+          }
+        }
+      } else if (el.type === 'text') {
+        let textContent = resolveDynamicText((el.text || '').replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>/g, ''), dynamicContext);
+        ctx.fillStyle = el.fill || '#000000';
+        const fontSize = el.fontSize || 16;
+        ctx.font = `${el.fontWeight || 'normal'} ${fontSize}px ${el.fontFamily || 'Inter, sans-serif'}`;
+        ctx.textBaseline = 'top';
+        
+        const textAlign = el.textAlign || 'left';
+        ctx.textAlign = textAlign;
+        let textX = 0;
+        if (textAlign === 'center') textX = el.width / 2;
+        else if (textAlign === 'right') textX = el.width;
+
+        const lines = textContent.split('\n');
+        const lineHeight = fontSize * (el.lineHeight || 1.2);
+        lines.forEach((line, idx) => {
+          ctx.fillText(line, textX, idx * lineHeight, el.width);
+        });
+      } else if (el.type === 'image' && el.src) {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.src = normalizeImageUrl(el.src);
+        if (img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, 0, 0, el.width, el.height);
+        } else {
+          img.onload = () => {
+            if (!isMounted) return;
+            setRenderTrigger(prev => prev + 1);
+          };
+        }
+      } else if (el.type === 'table' || el.tableData) {
+        const td = el.tableData || {
+          headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING'],
+          rows: []
+        };
+        const headerBg = td.headerBg || '#002b36';
+        const headerTextColor = td.headerTextColor || '#ffffff';
+        const rowBg = td.rowBg || '#ffffff';
+        const alternateRowBg = td.alternateRowBg || '#f8fafc';
+        const borderColor = td.borderColor || '#334155';
+        const cellPadding = td.cellPadding || 6;
+        const headerFontSize = td.headerFontSize || 9.5;
+        const bodyFontSize = td.fontSize || 8.5;
+
+        const numCols = td.headers?.length || 1;
+        const colWidth = el.width / numCols;
+        const headerRowHeight = 28;
+
+        // Header Background
+        ctx.fillStyle = headerBg;
+        ctx.fillRect(0, 0, el.width, headerRowHeight);
+
+        // Header text
+        td.headers?.forEach((h: string, colIdx: number) => {
+          ctx.fillStyle = headerTextColor;
+          ctx.font = `900 ${headerFontSize}px Montserrat, sans-serif`;
+          ctx.textBaseline = 'middle';
+          ctx.textAlign = colIdx <= 1 ? 'left' : 'center';
+          const textX = colIdx <= 1 ? colIdx * colWidth + cellPadding : colIdx * colWidth + colWidth / 2;
+          ctx.fillText((h || '').toUpperCase(), textX, headerRowHeight / 2, colWidth - cellPadding * 2);
+        });
+
+        // Rows
+        let curY = headerRowHeight;
+        (td.rows || []).slice(0, 6).forEach((row: string[], rowIdx: number) => {
+          const rH = 22;
+          ctx.fillStyle = rowIdx % 2 === 1 ? alternateRowBg : rowBg;
+          ctx.fillRect(0, curY, el.width, rH);
+
+          row.forEach((cellText, colIdx) => {
+            ctx.fillStyle = '#0f172a';
+            ctx.font = `500 ${bodyFontSize}px Inter, sans-serif`;
+            ctx.textBaseline = 'middle';
+            ctx.textAlign = colIdx <= 1 ? 'left' : 'center';
+            const textX = colIdx <= 1 ? colIdx * colWidth + cellPadding : colIdx * colWidth + colWidth / 2;
+            ctx.fillText(cellText || '-', textX, curY + rH / 2, colWidth - cellPadding * 2);
+          });
+          curY += rH;
+        });
+
+        ctx.strokeStyle = borderColor;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, el.width, curY);
+      } else if (el.type === 'product-block') {
+        const prod = products.find(p => p.id === el.productId);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, el.width, el.height);
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(0, 0, el.width, el.height);
+
+        const imgSrc = el.src || prod?.image;
+        const imgH = Math.max(20, el.height * 0.45);
+        if (imgSrc) {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = normalizeImageUrl(imgSrc);
+          if (img.complete && img.naturalWidth > 0) {
+            ctx.drawImage(img, 6, 6, el.width - 12, imgH);
+          } else {
+            img.onload = () => {
+              if (!isMounted) return;
+              setRenderTrigger(prev => prev + 1);
+            };
+          }
+        }
+      }
+
+      ctx.restore();
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [page, catalog, products, thumbW, thumbH, renderTrigger]);
+
+  if (!page) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <FileText size={32} className={isDark ? "text-[#666666]" : "text-slate-400"} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full h-full flex items-center justify-center overflow-hidden bg-slate-900/10">
+      <canvas
+        ref={canvasRef}
+        width={thumbW}
+        height={thumbH}
+        className="max-w-full max-h-full object-contain rounded-[2px] shadow-sm cursor-pointer"
+        style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+      />
+    </div>
+  );
+};
 
 const PublishView: React.FC = () => {
   const { savedCatalogs, loadCatalog, setView, updateSavedCatalog, publishCatalog, deleteCatalog, openPublicViewer, products, uiTheme, showConfirm, showToast } = useStore();
@@ -264,26 +540,29 @@ const PublishView: React.FC = () => {
                 }`}>
 
                   {/* Thumbnail / Status Icon */}
-                  <div className={`w-full md:w-48 h-32 rounded-[4px] flex items-center justify-center shrink-0 relative overflow-hidden border ${
-                    isPublished 
-                      ? (isDark ? 'bg-emerald-950/20 border-emerald-800/30' : 'bg-emerald-50 border-emerald-200')
-                      : (isDark ? 'bg-[#1c1c1c] border-[#262626]' : 'bg-slate-100 border-slate-200')
-                  }`}>
-                    {isPublished ? (
-                      <div className="flex flex-col items-center gap-2 text-emerald-500 animate-in zoom-in">
-                        <Globe size={32} />
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Live</span>
-                      </div>
-                    ) : (
-                      <FileText size={32} className={isDark ? "text-[#666666]" : "text-slate-400"} />
-                    )}
-                    {/* Status Badge */}
-                    <div className={`absolute top-3 left-3 px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border ${
+                  <div 
+                    onClick={() => openPublicViewer(catalog.id)}
+                    className={`w-full md:w-48 h-32 rounded-[4px] flex items-center justify-center shrink-0 relative overflow-hidden border cursor-pointer group/thumb ${
                       isPublished 
-                        ? (isDark ? 'bg-emerald-950/70 text-emerald-300 border-emerald-800/40' : 'bg-emerald-100 text-emerald-700 border-emerald-300')
-                        : (isDark ? 'bg-amber-950/70 text-amber-300 border-amber-800/40' : 'bg-amber-100 text-amber-800 border-amber-300')
+                        ? (isDark ? 'bg-emerald-950/20 border-emerald-800/30' : 'bg-emerald-50 border-emerald-200')
+                        : (isDark ? 'bg-[#1c1c1c] border-[#262626]' : 'bg-slate-100 border-slate-200')
+                    }`}
+                  >
+                    <CatalogThumbnailPreview catalog={catalog} products={products} isDark={isDark} />
+
+                    {/* Status Badge */}
+                    <div className={`absolute top-2.5 left-2.5 px-2 py-0.5 rounded-[4px] text-[9px] font-bold uppercase tracking-widest border backdrop-blur-md shadow-sm pointer-events-none z-10 ${
+                      isPublished 
+                        ? (isDark ? 'bg-emerald-950/90 text-emerald-300 border-emerald-800/60' : 'bg-emerald-100/90 text-emerald-800 border-emerald-300')
+                        : (isDark ? 'bg-amber-950/90 text-amber-300 border-amber-800/60' : 'bg-amber-100/90 text-amber-800 border-amber-300')
                     }`}>
                       {isPublished ? 'Published' : 'Draft'}
+                    </div>
+
+                    {/* Live overlay icon on hover */}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/thumb:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-bold pointer-events-none z-10">
+                      <ExternalLink size={16} />
+                      <span>Preview</span>
                     </div>
                   </div>
 

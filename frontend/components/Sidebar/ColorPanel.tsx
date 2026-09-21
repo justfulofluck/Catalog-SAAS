@@ -115,6 +115,7 @@ export const ColorPanel: React.FC = () => {
   const handleApplyColor = (color: string) => {
     if (colorPickerTarget?.onChange) {
       colorPickerTarget.onChange(color);
+      openColorPicker({ ...colorPickerTarget, color });
       return;
     }
 
@@ -125,7 +126,7 @@ export const ColorPanel: React.FC = () => {
       pushHistory();
       selectedElementIds.forEach(id => {
         if (targetType === 'stroke') {
-          updateElement(currentPageIndex, id, { stroke: color });
+          updateElement(currentPageIndex, id, { stroke: color, strokeWidth: 2 });
         } else {
           updateElement(currentPageIndex, id, { fill: color });
         }

@@ -16,10 +16,15 @@ import {
   Pipette,
   Palette,
   Table as TableIcon,
-  Sliders
+  Sliders,
+  Edit3,
+  Type,
+  RotateCcw,
+  X
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH } from '../../constants';
+import { isDarkColor } from '../Editor/fabricRenderer';
 
 interface Props {
   onOpenMenu: (x: number, y: number) => void;
@@ -45,7 +50,7 @@ const FloatingToolbar: React.FC<Props> = ({
     toggleLock, removeElement, duplicateElement, updateElement,
     removeProductFromPage, pushHistory, updateHeaderElement, updateFooterElement,
     removeHeaderElement, removeFooterElement, duplicateHeaderElement, duplicateFooterElement,
-    setIsTableEditorOpen
+    setIsTableEditorOpen, products
   } = useStore(useShallow(state => ({
     catalog: state.catalog,
     currentPageIndex: state.currentPageIndex,
@@ -66,6 +71,7 @@ const FloatingToolbar: React.FC<Props> = ({
     duplicateFooterElement: state.duplicateFooterElement,
     setIsPropertyPanelOpen: state.setIsPropertyPanelOpen,
     setIsTableEditorOpen: state.setIsTableEditorOpen,
+    products: state.products || [],
   })));
 
   const currentPage = catalog.pages?.[currentPageIndex];
@@ -81,21 +87,35 @@ const FloatingToolbar: React.FC<Props> = ({
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const [showProductPopover, setShowProductPopover] = useState(false);
   const [tempLink, setTempLink] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const linkPopoverRef = useRef<HTMLDivElement>(null);
+  const productPopoverRef = useRef<HTMLDivElement>(null);
   const fillInputRef = useRef<HTMLInputElement>(null);
   const strokeInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const handleEditProductCard = (e: any) => {
+      if (e.detail?.id) {
+        setSelectedElementIds([e.detail.id]);
+        setShowProductPopover(true);
+      }
+    };
+    window.addEventListener('catalog:editProductCard', handleEditProductCard);
+    return () => window.removeEventListener('catalog:editProductCard', handleEditProductCard);
+  }, [setSelectedElementIds]);
+
+  useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setShowMoreMenu(false);
       if (linkPopoverRef.current && !linkPopoverRef.current.contains(e.target as Node)) setShowLinkPopover(false);
+      if (productPopoverRef.current && !productPopoverRef.current.contains(e.target as Node)) setShowProductPopover(false);
     };
-    if (showMoreMenu || showLinkPopover) document.addEventListener('mousedown', handleClickOutside);
+    if (showMoreMenu || showLinkPopover || showProductPopover) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu, showLinkPopover]);
+  }, [showMoreMenu, showLinkPopover, showProductPopover]);
 
   if (selectedElements.length === 0) return null;
 
@@ -213,6 +233,9 @@ const FloatingToolbar: React.FC<Props> = ({
 
 
 
+  const activeFill = element?.fill || currentFill;
+  const activeStroke = element?.stroke || currentStroke;
+
   const btnClass = 'p-1.5 rounded-[4px] text-[#E2DCC8]/80 hover:text-white hover:bg-[#0F3D3E]/40 transition-all active:scale-95';
 
   const isTableElement = element.type === 'table' || !!element.tableData;
@@ -232,7 +255,7 @@ const FloatingToolbar: React.FC<Props> = ({
         onClick={() => {
           useStore.getState().openColorPicker({
             type: 'fill',
-            color: currentFill,
+            color: activeFill,
             title: 'Fill Color',
             onChange: (color) => {
               onFillChange?.(color);
@@ -245,7 +268,7 @@ const FloatingToolbar: React.FC<Props> = ({
           });
         }}
       >
-        <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: currentFill }} />
+        <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: activeFill }} />
       </button>
 
       {/* Stroke color */}
@@ -255,7 +278,7 @@ const FloatingToolbar: React.FC<Props> = ({
         onClick={() => {
           useStore.getState().openColorPicker({
             type: 'stroke',
-            color: currentStroke === 'transparent' ? '#000000' : currentStroke,
+            color: activeStroke === 'transparent' ? '#000000' : activeStroke,
             title: 'Border / Stroke Color',
             onChange: (color) => {
               onStrokeChange?.(color);
@@ -271,10 +294,290 @@ const FloatingToolbar: React.FC<Props> = ({
           });
         }}
       >
-        <div className="w-5 h-5 rounded-[2px] border-2" style={{ borderColor: currentStroke === 'transparent' ? '#666' : currentStroke, backgroundColor: 'transparent' }}>
-          {currentStroke === 'transparent' && <div className="w-full h-full flex items-center justify-center text-red-400 text-[10px] font-bold leading-none">\</div>}
+        <div className="w-5 h-5 rounded-[2px] border-2" style={{ borderColor: activeStroke === 'transparent' ? '#666' : activeStroke, backgroundColor: 'transparent' }}>
+          {activeStroke === 'transparent' && <div className="w-full h-full flex items-center justify-center text-red-400 text-[10px] font-bold leading-none">\</div>}
         </div>
       </button>
+
+      {/* Product Block specific: Text Color, Quick Font Size Stepper, and Edit Content Button */}
+      {element.type === 'product-block' && (
+        <>
+          {/* Card Text Color */}
+          <button
+            className={btnClass}
+            title="Card Text & Title Color"
+            onClick={() => {
+              const defaultColor = isDarkColor(element.fill) ? '#ffffff' : '#0f172a';
+              useStore.getState().openColorPicker({
+                type: 'text',
+                color: element.titleColor || defaultColor,
+                title: 'Card Text Color',
+                onChange: (color) => {
+                  internalUpdate(element.id, {
+                    titleColor: color,
+                    textColor: color
+                  });
+                }
+              });
+            }}
+          >
+            <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm flex items-center justify-center bg-[#18181b]">
+              <Type size={13} className="text-white" />
+            </div>
+          </button>
+
+          {/* Edit Card Content Popover Button */}
+          <div className="relative">
+            <button
+              className={`p-1.5 rounded-[4px] flex items-center gap-1.5 text-xs font-bold transition-all ${showProductPopover ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/40 shadow-sm' : btnClass}`}
+              title="Edit Card Content, Specs & Font Sizes"
+              onClick={() => setShowProductPopover(!showProductPopover)}
+            >
+              <Edit3 size={15} strokeWidth={2} />
+              <span className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap hidden sm:inline">Edit</span>
+            </button>
+
+            {/* Edit Card Popover */}
+            {showProductPopover && (
+              <div
+                ref={productPopoverRef}
+                className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 p-4 bg-[#18181b] border border-[#27272a] rounded-[10px] shadow-[0_20px_50px_rgba(0,0,0,0.85)] w-[360px] max-h-[480px] overflow-y-auto custom-scrollbar z-[999] flex flex-col gap-3 text-left animate-in fade-in zoom-in-95 duration-200"
+                onClick={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
+                  <div className="flex items-center gap-2">
+                    <Edit3 size={15} className="text-indigo-400" />
+                    <span className="text-xs font-bold text-white tracking-wide">Edit Product Card</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {(element.customTitle !== undefined || element.customPrice !== undefined || element.customSku !== undefined || element.customDesc !== undefined || element.titleFontSize || element.priceFontSize || element.fontSize || element.titleColor || element.priceColor || element.textColor || element.borderRadius !== undefined) && (
+                      <button
+                        onClick={() => {
+                          internalUpdate(element.id, {
+                            customTitle: undefined,
+                            customPrice: undefined,
+                            customSku: undefined,
+                            customDesc: undefined,
+                            titleFontSize: undefined,
+                            priceFontSize: undefined,
+                            fontSize: undefined,
+                            titleColor: undefined,
+                            priceColor: undefined,
+                            textColor: undefined,
+                            borderRadius: undefined,
+                          });
+                        }}
+                        className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-medium hover:underline"
+                        title="Reset all edits to product database defaults"
+                      >
+                        <RotateCcw size={11} /> Reset
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setShowProductPopover(false)}
+                      className="p-1 text-slate-400 hover:text-white rounded hover:bg-white/10"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Title / Name */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Product Name / Title</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-slate-500 mr-0.5">Size:</span>
+                      <button
+                        onClick={() => {
+                          const currentSize = element.titleFontSize || Math.max(11, Math.min(16, Math.round(element.width * 0.065)));
+                          internalUpdate(element.id, { titleFontSize: Math.max(8, currentSize - 1) });
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] hover:bg-[#3f3f46] text-white rounded text-xs"
+                      >-</button>
+                      <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-400">
+                        {element.titleFontSize || Math.max(11, Math.min(16, Math.round(element.width * 0.065)))}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const currentSize = element.titleFontSize || Math.max(11, Math.min(16, Math.round(element.width * 0.065)));
+                          internalUpdate(element.id, { titleFontSize: currentSize + 1 });
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] hover:bg-[#3f3f46] text-white rounded text-xs"
+                      >+</button>
+                      
+                      {/* Title Color Button */}
+                      <button
+                        onClick={() => {
+                          useStore.getState().openColorPicker({
+                            type: 'text',
+                            color: element.titleColor || (isDarkColor(element.fill) ? '#ffffff' : '#0f172a'),
+                            title: 'Title Color',
+                            onChange: (color) => internalUpdate(element.id, { titleColor: color })
+                          });
+                        }}
+                        className="w-5 h-5 rounded ml-1 border border-white/20 shadow-sm flex items-center justify-center"
+                        style={{ backgroundColor: element.titleColor || (isDarkColor(element.fill) ? '#ffffff' : '#0f172a') }}
+                        title="Title Color"
+                      />
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={element.customTitle !== undefined ? element.customTitle : (products.find(p => p.id === element.productId)?.name || '')}
+                    placeholder="Product Title..."
+                    onChange={(e) => internalUpdate(element.id, { customTitle: e.target.value })}
+                    className="w-full px-2.5 py-1.5 text-xs bg-[#121214] border border-[#2e2e32] rounded-[6px] text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                {/* Price */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Price</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-slate-500 mr-0.5">Size:</span>
+                      <button
+                        onClick={() => {
+                          const currentSize = element.priceFontSize || Math.max(11, Math.min(15, Math.round(element.width * 0.058)));
+                          internalUpdate(element.id, { priceFontSize: Math.max(8, currentSize - 1) });
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] hover:bg-[#3f3f46] text-white rounded text-xs"
+                      >-</button>
+                      <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-400">
+                        {element.priceFontSize || Math.max(11, Math.min(15, Math.round(element.width * 0.058)))}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const currentSize = element.priceFontSize || Math.max(11, Math.min(15, Math.round(element.width * 0.058)));
+                          internalUpdate(element.id, { priceFontSize: currentSize + 1 });
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] hover:bg-[#3f3f46] text-white rounded text-xs"
+                      >+</button>
+
+                      {/* Price Color Button */}
+                      <button
+                        onClick={() => {
+                          useStore.getState().openColorPicker({
+                            type: 'text',
+                            color: element.priceColor || (isDarkColor(element.fill) ? '#38bdf8' : '#4f46e5'),
+                            title: 'Price Color',
+                            onChange: (color) => internalUpdate(element.id, { priceColor: color })
+                          });
+                        }}
+                        className="w-5 h-5 rounded ml-1 border border-white/20 shadow-sm flex items-center justify-center"
+                        style={{ backgroundColor: element.priceColor || (isDarkColor(element.fill) ? '#38bdf8' : '#4f46e5') }}
+                        title="Price Color"
+                      />
+                    </div>
+                  </div>
+                  <input
+                    type="text"
+                    value={element.customPrice !== undefined ? element.customPrice : (() => {
+                      const prod = products.find(p => p.id === element.productId);
+                      return prod ? `${prod.currency || '₹'}${prod.price || ''}` : '';
+                    })()}
+                    placeholder="e.g. ₹1300"
+                    onChange={(e) => internalUpdate(element.id, { customPrice: e.target.value })}
+                    className="w-full px-2.5 py-1.5 text-xs bg-[#121214] border border-[#2e2e32] rounded-[6px] text-white focus:outline-none focus:border-indigo-500 font-bold"
+                  />
+                </div>
+
+                {/* SKU */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">SKU / Model Number</label>
+                  <input
+                    type="text"
+                    value={element.customSku !== undefined ? element.customSku : (products.find(p => p.id === element.productId)?.sku || '')}
+                    placeholder="SKU Code..."
+                    onChange={(e) => internalUpdate(element.id, { customSku: e.target.value })}
+                    className="w-full px-2.5 py-1.5 text-xs bg-[#121214] border border-[#2e2e32] rounded-[6px] text-white focus:outline-none focus:border-indigo-500 font-mono"
+                  />
+                </div>
+
+                {/* Specifications / Details Description */}
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Specs & Details (Lines)</label>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[9px] text-slate-500 mr-0.5">Size:</span>
+                      <button
+                        onClick={() => {
+                          const currentSize = element.fontSize || 9;
+                          internalUpdate(element.id, { fontSize: Math.max(6, currentSize - 1) });
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] hover:bg-[#3f3f46] text-white rounded text-xs"
+                      >-</button>
+                      <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-400">
+                        {element.fontSize || 9}
+                      </span>
+                      <button
+                        onClick={() => {
+                          const currentSize = element.fontSize || 9;
+                          internalUpdate(element.id, { fontSize: currentSize + 1 });
+                        }}
+                        className="w-5 h-5 flex items-center justify-center bg-[#27272a] hover:bg-[#3f3f46] text-white rounded text-xs"
+                      >+</button>
+
+                      {/* Specs Text Color Button */}
+                      <button
+                        onClick={() => {
+                          useStore.getState().openColorPicker({
+                            type: 'text',
+                            color: element.textColor || (isDarkColor(element.fill) ? '#cbd5e1' : '#475569'),
+                            title: 'Specs Text Color',
+                            onChange: (color) => internalUpdate(element.id, { textColor: color })
+                          });
+                        }}
+                        className="w-5 h-5 rounded ml-1 border border-white/20 shadow-sm flex items-center justify-center"
+                        style={{ backgroundColor: element.textColor || (isDarkColor(element.fill) ? '#cbd5e1' : '#475569') }}
+                        title="Specs Text Color"
+                      />
+                    </div>
+                  </div>
+                  <textarea
+                    rows={4}
+                    value={element.customDesc !== undefined ? element.customDesc : (() => {
+                      const prod = products.find(p => p.id === element.productId);
+                      if (!prod) return '';
+                      const lines: string[] = [];
+                      if (catalog?.showSKU !== false && prod.sku) lines.push(`SKU: ${prod.sku}`);
+                      if (prod.description) lines.push(prod.description);
+                      if (prod.customFields) {
+                        Object.entries(prod.customFields).forEach(([k, v]) => {
+                          if (v !== undefined && v !== null && v !== '' && typeof v !== 'object') lines.push(`• ${k}: ${v}`);
+                        });
+                      }
+                      return lines.join('\n');
+                    })()}
+                    placeholder="Enter specs line by line..."
+                    onChange={(e) => internalUpdate(element.id, { customDesc: e.target.value })}
+                    className="w-full px-2.5 py-1.5 text-xs bg-[#121214] border border-[#2e2e32] rounded-[6px] text-white focus:outline-none focus:border-indigo-500 font-mono resize-y leading-relaxed"
+                  />
+                </div>
+
+                {/* Border Radius */}
+                <div className="space-y-1 pt-1 border-t border-[#27272a]">
+                  <div className="flex justify-between items-center text-[10px] font-bold text-slate-400">
+                    <span>Corner Roundness</span>
+                    <span className="text-white font-mono">{element.borderRadius !== undefined ? element.borderRadius : 4}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max="30"
+                    step="1"
+                    value={element.borderRadius !== undefined ? element.borderRadius : 4}
+                    onChange={(e) => internalUpdate(element.id, { borderRadius: parseInt(e.target.value, 10) })}
+                    className="w-full h-1 bg-[#27272a] rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
 
       {/* Icon color (if element has icons) */}
       {element.iconConfig && (

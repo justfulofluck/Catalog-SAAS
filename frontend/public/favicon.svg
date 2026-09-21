@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <!-- Background Squircle -->
+  <rect width="32" height="32" rx="7" fill="#0F3D3E"/>
+  
+  <!-- Subtle minimalist border accent -->
+  <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#1C6B6D" stroke-width="1" stroke-opacity="0.6"/>
+
+  <!-- Minimalist 'c' glyph -->
+  <path d="M 19.5 11.2 C 17.8 9.5 14.2 9.2 11.8 11 C 9 13.2 9 18.8 11.8 21 C 14.2 22.8 17.8 22.5 19.5 20.8" 
+        fill="none" 
+        stroke="#E2DCC8" 
+        stroke-width="3.2" 
+        stroke-linecap="round" 
+        stroke-linejoin="round"/>
+
+  <!-- Minimalist Brand Accent Dot -->
+  <circle cx="23.5" cy="20.5" r="2" fill="#00A651"/>
+</svg>

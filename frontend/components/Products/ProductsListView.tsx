@@ -20,6 +20,67 @@ import {
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ProductThumbnail } from '../Common/ProductThumbnail';
+import { Product, Category } from '../../types';
+
+export const getProductModelNo = (product: Product, categories: Category[]): string => {
+  // 1. Direct customFields checks
+  if (product.customFields) {
+    const cf = product.customFields;
+    if (cf.model_no && String(cf.model_no).trim()) return String(cf.model_no).trim();
+    if (cf.model && String(cf.model).trim()) return String(cf.model).trim();
+    if (cf.model_number && String(cf.model_number).trim()) return String(cf.model_number).trim();
+    if (cf.modelno && String(cf.modelno).trim()) return String(cf.modelno).trim();
+    if (cf.model_num && String(cf.model_num).trim()) return String(cf.model_num).trim();
+    if (cf['model no'] && String(cf['model no']).trim()) return String(cf['model no']).trim();
+    if (cf['model_name'] && String(cf['model_name']).trim()) return String(cf['model_name']).trim();
+    if (cf.item_no && String(cf.item_no).trim()) return String(cf.item_no).trim();
+    if (cf.item_code && String(cf.item_code).trim()) return String(cf.item_code).trim();
+  }
+
+  // 2. Search category customSchema for model field
+  const category = categories.find(c => c.id === product.categoryId);
+  if (category?.customSchema) {
+    for (const field of category.customSchema) {
+      const fieldId = (field.id || '').toLowerCase();
+      const fieldLabel = (field.label || '').toLowerCase();
+      if (fieldId.includes('model') || fieldLabel.includes('model') || fieldLabel.includes('item no')) {
+        const val = product.customFields?.[field.id];
+        if (val !== undefined && val !== null && String(val).trim() !== '') {
+          return String(val).trim();
+        }
+      }
+    }
+  }
+
+  // 3. Fallback: check all categories schemas
+  for (const cat of categories) {
+    if (cat.customSchema) {
+      for (const field of cat.customSchema) {
+        const fieldId = (field.id || '').toLowerCase();
+        const fieldLabel = (field.label || '').toLowerCase();
+        if (fieldId.includes('model') || fieldLabel.includes('model')) {
+          const val = product.customFields?.[field.id];
+          if (val !== undefined && val !== null && String(val).trim() !== '') {
+            return String(val).trim();
+          }
+        }
+      }
+    }
+  }
+
+  // 4. Check first variant if any
+  if (product.variants && product.variants.length > 0) {
+    const v = product.variants[0];
+    if (v.customFields) {
+      const vcf = v.customFields;
+      if (vcf.model_no && String(vcf.model_no).trim()) return String(vcf.model_no).trim();
+      if (vcf.model && String(vcf.model).trim()) return String(vcf.model).trim();
+      if (vcf.model_number && String(vcf.model_number).trim()) return String(vcf.model_number).trim();
+    }
+  }
+
+  return '-';
+};
 
 const ProductsListView: React.FC = () => {
   const { products, categories, setView, removeProduct, activeCategoryId, setActiveCategoryId, setEditingProductId, uiTheme, showConfirm, showToast, openCreateProductModal } = useStore();
@@ -35,8 +96,10 @@ const ProductsListView: React.FC = () => {
   // Filter by category if one is selected, then by search term
   const filteredProducts = products.filter(p => {
     const matchesCategory = activeCategoryId ? p.categoryId === activeCategoryId : true;
+    const modelNo = getProductModelNo(p, categories);
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.sku.toLowerCase().includes(searchTerm.toLowerCase());
+      p.sku.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (modelNo !== '-' && modelNo.toLowerCase().includes(searchTerm.toLowerCase()));
     return matchesCategory && matchesSearch;
   });
 
@@ -338,6 +401,7 @@ const ProductsListView: React.FC = () => {
                 </th>
                 <th className={`px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] font-heading ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Product Details</th>
                 <th className={`px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] font-heading ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Category</th>
+                <th className={`px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] font-heading ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Model No</th>
                 <th className={`px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] font-heading ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>SKU</th>
                 <th className={`px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] font-heading ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Pricing</th>
                 <th className={`px-8 py-3.5 text-[10px] font-bold uppercase tracking-[0.2em] text-right font-heading ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Actions</th>
@@ -346,7 +410,7 @@ const ProductsListView: React.FC = () => {
             <tbody className={`divide-y ${isDark ? 'divide-[#E2DCC8]/10 bg-[#121212]' : 'divide-slate-200 bg-white'}`}>
               {paginatedProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-8 py-24 text-center">
+                  <td colSpan={7} className="px-8 py-24 text-center">
                     <div className={`w-16 h-16 border border-dashed rounded-[4px] flex items-center justify-center mx-auto mb-4 ${
                       isDark ? 'bg-[#171616] border-[#E2DCC8]/20 text-[#E2DCC8]/50' : 'bg-slate-50 border-slate-300 text-slate-400'
                     }`}>
@@ -360,6 +424,7 @@ const ProductsListView: React.FC = () => {
                 paginatedProducts.map((product) => {
                   const category = categories.find(c => c.id === product.categoryId);
                   const isSelected = selectedIds.includes(product.id);
+                  const modelNo = getProductModelNo(product, categories);
                   return (
                     <tr 
                       key={product.id} 
@@ -404,6 +469,17 @@ const ProductsListView: React.FC = () => {
                             {category?.name || 'Uncategorized'}
                           </span>
                         </div>
+                      </td>
+                      <td className="px-8 py-3">
+                        {modelNo !== '-' ? (
+                          <span className={`px-2.5 py-1 rounded-[3px] text-[10px] font-mono uppercase border font-medium ${
+                            isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20' : 'bg-teal-50 text-[#0F3D3E] border-teal-200'
+                          }`}>
+                            {modelNo}
+                          </span>
+                        ) : (
+                          <span className={`text-xs ${isDark ? 'text-[#666666]' : 'text-slate-400'}`}>-</span>
+                        )}
                       </td>
                       <td className="px-8 py-3">
                         <span className={`px-2.5 py-1 rounded-[3px] text-[10px] font-mono uppercase border font-medium ${

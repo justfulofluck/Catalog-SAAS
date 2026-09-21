@@ -1,18 +1,24 @@
-# ──────────────────────────── General ────────────────────────────
+# ──────────────────────────── General / OS ────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 *.log
 logs/
 *.pid
 *.seed
 *.pid.lock
+*.tmp
 
-# Editors / OS
+# Editors & AI IDE Tooling
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.cursor/
+.kilo/
+.opencode/
+.agents/
 
 # ──────────────────────── Environment Variables ──────────────────
 .env
@@ -25,7 +31,6 @@ env/
 ENV/
 env.bak/
 venv.bak/
-.kilo/
 
 # ───────────────────────────── Frontend ──────────────────────────
 node_modules/
@@ -71,6 +76,7 @@ backend/logs/
 
 # Virtualenv (local)
 backend/venv/
+backend/.venv/
 
 # ──────────────────────── Database (local dev) ───────────────────
 *.sqlite3
@@ -78,8 +84,9 @@ backend/venv/
 backend/*.sqlite3
 backend/*.sqlite3-journal
 backend/*.db
+*.db
 
-# ──────────────────────── Uploaded Media ─────────────────────────
+# ──────────────────────── Uploaded Media & Exports ───────────────
 # NOTE: The Django `media` app source code lives directly in
 # MEDIA_ROOT (backend/media/). Uploaded files are stored as
 # <business_name>/... subfolders. Ignore all upload content but keep
@@ -97,7 +104,13 @@ backend/media/*
 !backend/media/migrations/__init__.py
 !backend/media/migrations/*.py
 
-# Testing / Tooling
+# Exports / PDFs
+exports/
+backend/exports/
+frontend/exports/
+*.pdf
+
+# ──────────────────────── Testing / Tooling ──────────────────────
 .coverage
 coverage.xml
 htmlcov/

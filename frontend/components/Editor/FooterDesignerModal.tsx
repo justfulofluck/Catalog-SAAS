@@ -564,6 +564,34 @@ export const FooterDesignerModal: React.FC = () => {
     }
   }, [isFooterDesignerOpen, editingFooterTemplate]);
 
+  // Refs for shortcuts and history
+  const elementsRef = useRef(elements);
+  elementsRef.current = elements;
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
+  const copiedElementRef = useRef<CanvasElement | null>(null);
+  const historyRef = useRef<{ past: CanvasElement[][]; future: CanvasElement[][] }>({ past: [], future: [] });
+
+  const pushHistory = useCallback(() => {
+    historyRef.current.past.push(JSON.parse(JSON.stringify(elementsRef.current)));
+    if (historyRef.current.past.length > 30) historyRef.current.past.shift();
+    historyRef.current.future = [];
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (historyRef.current.past.length === 0) return;
+    const prev = historyRef.current.past.pop()!;
+    historyRef.current.future.push(JSON.parse(JSON.stringify(elementsRef.current)));
+    setElements(prev);
+  }, []);
+
+  const handleRedo = useCallback(() => {
+    if (historyRef.current.future.length === 0) return;
+    const next = historyRef.current.future.pop()!;
+    historyRef.current.past.push(JSON.parse(JSON.stringify(elementsRef.current)));
+    setElements(next);
+  }, []);
+
   // Selected element derived
   const selectedElement = elements.find(el => el.id === selectedId) || null;
 
@@ -586,6 +614,7 @@ export const FooterDesignerModal: React.FC = () => {
 
   // Remove element helper
   const deleteElementLocal = (id: string) => {
+    pushHistory();
     setElements(prev => prev.filter(el => el.id !== id));
     if (selectedId === id) setSelectedId(null);
   };
@@ -594,6 +623,7 @@ export const FooterDesignerModal: React.FC = () => {
   const duplicateElementLocal = (id: string) => {
     const target = elements.find(el => el.id === id);
     if (!target) return;
+    pushHistory();
     const newId = `ftr-copy-${Date.now()}`;
     const copy: CanvasElement = {
       ...JSON.parse(JSON.stringify(target)),
@@ -608,6 +638,7 @@ export const FooterDesignerModal: React.FC = () => {
 
   // Layer Ordering & Arranging Helpers
   const bringToFront = (id: string) => {
+    pushHistory();
     setElements(prev => {
       const idx = prev.findIndex(el => el.id === id);
       if (idx === -1 || idx === prev.length - 1) return prev;
@@ -619,6 +650,7 @@ export const FooterDesignerModal: React.FC = () => {
   };
 
   const sendToBack = (id: string) => {
+    pushHistory();
     setElements(prev => {
       const idx = prev.findIndex(el => el.id === id);
       if (idx === -1 || idx === 0) return prev;
@@ -630,6 +662,7 @@ export const FooterDesignerModal: React.FC = () => {
   };
 
   const moveForward = (id: string) => {
+    pushHistory();
     setElements(prev => {
       const idx = prev.findIndex(el => el.id === id);
       if (idx === -1 || idx === prev.length - 1) return prev;
@@ -642,6 +675,7 @@ export const FooterDesignerModal: React.FC = () => {
   };
 
   const moveBackward = (id: string) => {
+    pushHistory();
     setElements(prev => {
       const idx = prev.findIndex(el => el.id === id);
       if (idx === -1 || idx === 0) return prev;
@@ -657,6 +691,7 @@ export const FooterDesignerModal: React.FC = () => {
 
   const reorderLayer = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
+    pushHistory();
     setElements(prev => {
       const fromIdx = prev.findIndex(el => el.id === draggedId);
       const toIdx = prev.findIndex(el => el.id === targetId);
@@ -779,6 +814,19 @@ export const FooterDesignerModal: React.FC = () => {
         updates.width = Math.round((obj.width || 0) * sx);
         updates.height = Math.round((obj.height || 0) * sy);
         obj.setCoords();
+      } else if (obj instanceof FabricImage || obj.type === 'image' || elObj?.type === 'image') {
+        const newW = Math.max(10, Math.round(obj.getScaledWidth ? obj.getScaledWidth() : (obj.width || 0) * sx));
+        const newH = Math.max(10, Math.round(obj.getScaledHeight ? obj.getScaledHeight() : (obj.height || 0) * sy));
+        updates.width = newW;
+        updates.height = newH;
+        
+        const natW = (obj as any)._element?.naturalWidth || (obj as any)._originalElement?.naturalWidth || (obj as any).naturalWidth || obj.width || newW;
+        const natH = (obj as any)._element?.naturalHeight || (obj as any)._originalElement?.naturalHeight || (obj as any).naturalHeight || obj.height || newH;
+        obj.set({
+          scaleX: newW / (natW || 1),
+          scaleY: newH / (natH || 1)
+        });
+        obj.setCoords();
       } else {
         const newW = Math.max(10, Math.round((obj.width || 0) * sx));
         const newH = Math.max(10, Math.round((obj.height || 0) * sy));
@@ -819,6 +867,225 @@ export const FooterDesignerModal: React.FC = () => {
     canvas.requestRenderAll();
   }, [zoom, footerHeight]);
 
+  // Keyboard shortcuts handler in Footer Designer
+  useEffect(() => {
+    if (!isFooterDesignerOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement as HTMLElement;
+      const isInput = activeEl?.tagName === 'INPUT' || activeEl?.tagName === 'TEXTAREA' || activeEl?.isContentEditable;
+      const isMod = e.metaKey || e.ctrlKey;
+
+      const canvas = fabricCanvasRef.current;
+      const activeObj = canvas?.getActiveObject() as any;
+      const isEditingText = isInput || (activeObj && activeObj.isEditing);
+
+      // 1. While editing text, only allow inline formatting shortcuts
+      if (isEditingText) {
+        if (isMod) {
+          if (['b', 'B'].includes(e.key)) { e.preventDefault(); document.execCommand('bold'); return; }
+          if (['i', 'I'].includes(e.key)) { e.preventDefault(); document.execCommand('italic'); return; }
+          if (['u', 'U'].includes(e.key)) { e.preventDefault(); document.execCommand('underline'); return; }
+        }
+        return;
+      }
+
+      // 2. Undo / Redo
+      if (isMod && (e.key === 'z' || e.key === 'Z')) {
+        e.preventDefault();
+        if (e.shiftKey) handleRedo(); else handleUndo();
+        return;
+      }
+      if (isMod && (e.key === 'y' || e.key === 'Y')) {
+        e.preventDefault();
+        handleRedo();
+        return;
+      }
+
+      // 3. Deselect element (Escape & NumpadEnter)
+      if (e.code === 'NumpadEnter' || e.key === 'Escape') {
+        e.preventDefault();
+        setSelectedId(null);
+        if (activeEl) activeEl.blur();
+        if (canvas) {
+          canvas.discardActiveObject();
+          canvas.requestRenderAll();
+        }
+        return;
+      }
+
+      // 4. Zoom shortcuts
+      if (isMod && (e.key === '=' || e.key === '+')) {
+        e.preventDefault();
+        setZoom(prev => Math.min(3, Math.round((prev + 0.1) * 10) / 10));
+        return;
+      }
+      if (isMod && (e.key === '-' || e.key === '_')) {
+        e.preventDefault();
+        setZoom(prev => Math.max(0.2, Math.round((prev - 0.1) * 10) / 10));
+        return;
+      }
+      if (isMod && e.key === '0') {
+        e.preventDefault();
+        setZoom(1);
+        return;
+      }
+
+      // 5. Duplicate (Ctrl+D)
+      if (isMod && (e.key === 'd' || e.key === 'D')) {
+        e.preventDefault();
+        const currId = selectedIdRef.current || activeObj?.id;
+        if (currId) {
+          duplicateElementLocal(currId);
+        }
+        return;
+      }
+
+      // 6. Copy (Ctrl+C) & Paste (Ctrl+V)
+      if (isMod && (e.key === 'c' || e.key === 'C')) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        const target = elementsRef.current.find(el => el.id === currId);
+        if (target) {
+          e.preventDefault();
+          copiedElementRef.current = JSON.parse(JSON.stringify(target));
+        }
+        return;
+      }
+      if (isMod && (e.key === 'v' || e.key === 'V')) {
+        if (copiedElementRef.current) {
+          e.preventDefault();
+          pushHistory();
+          const newId = `ftr-copy-${Date.now()}`;
+          const pasteItem: CanvasElement = {
+            ...JSON.parse(JSON.stringify(copiedElementRef.current)),
+            id: newId,
+            x: Math.min(PAGE_WIDTH - 50, (copiedElementRef.current.x || 0) + 15),
+            y: Math.min(footerHeight - 20, (copiedElementRef.current.y || 0) + 5),
+            zIndex: elementsRef.current.length + 1
+          };
+          setElements(prev => [...prev, pasteItem]);
+          setSelectedId(newId);
+        }
+        return;
+      }
+
+      // 7. Select All (Ctrl+A)
+      if (isMod && (e.key === 'a' || e.key === 'A')) {
+        if (elementsRef.current.length > 0) {
+          e.preventDefault();
+          setSelectedId(elementsRef.current[0].id);
+        }
+        return;
+      }
+
+      // 8. Text Formatting on Selected Element (Ctrl+B, Ctrl+I, Ctrl+U)
+      if (isMod && (e.key === 'b' || e.key === 'B')) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        const el = elementsRef.current.find(item => item.id === currId);
+        if (el?.type === 'text') {
+          e.preventDefault();
+          pushHistory();
+          const isBold = el.fontWeight === 'bold' || el.fontWeight === '700' || el.fontWeight === '800';
+          updateElementLocal(el.id, { fontWeight: isBold ? '400' : '700' });
+        }
+        return;
+      }
+      if (isMod && (e.key === 'i' || e.key === 'I')) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        const el = elementsRef.current.find(item => item.id === currId);
+        if (el?.type === 'text') {
+          e.preventDefault();
+          pushHistory();
+          updateElementLocal(el.id, { fontStyle: el.fontStyle === 'italic' ? 'normal' : 'italic' });
+        }
+        return;
+      }
+      if (isMod && (e.key === 'u' || e.key === 'U')) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        const el = elementsRef.current.find(item => item.id === currId);
+        if (el?.type === 'text') {
+          e.preventDefault();
+          pushHistory();
+          updateElementLocal(el.id, { textDecoration: el.textDecoration === 'underline' ? 'none' : 'underline' });
+        }
+        return;
+      }
+
+      // 9. Layer Reordering (Ctrl+] and Ctrl+[)
+      if (isMod && (e.key === ']' || e.key === '}')) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        if (currId) {
+          e.preventDefault();
+          if (e.altKey || e.shiftKey) bringToFront(currId);
+          else moveForward(currId);
+        }
+        return;
+      }
+      if (isMod && (e.key === '[' || e.key === '{')) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        if (currId) {
+          e.preventDefault();
+          if (e.altKey || e.shiftKey) sendToBack(currId);
+          else moveBackward(currId);
+        }
+        return;
+      }
+
+      // 10. Delete (Backspace / Delete)
+      if (e.key === 'Backspace' || e.key === 'Delete') {
+        const currId = selectedIdRef.current || activeObj?.id;
+        if (currId) {
+          e.preventDefault();
+          deleteElementLocal(currId);
+        }
+        return;
+      }
+
+      // 11. Arrow Keys Nudge
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+        const currId = selectedIdRef.current || activeObj?.id;
+        if (!currId) return;
+
+        e.preventDefault();
+        if (!e.repeat) pushHistory();
+
+        const nudge = e.shiftKey ? 10 : 1;
+        let dx = 0;
+        let dy = 0;
+
+        if (e.key === 'ArrowUp') dy = -nudge;
+        else if (e.key === 'ArrowDown') dy = nudge;
+        else if (e.key === 'ArrowLeft') dx = -nudge;
+        else if (e.key === 'ArrowRight') dx = nudge;
+
+        if (activeObj && activeObj.id === currId) {
+          activeObj.set({
+            left: (activeObj.left || 0) + dx,
+            top: (activeObj.top || 0) + dy,
+          });
+          activeObj.setCoords();
+
+          const newX = Math.round((activeObj.left || 0) - CANVAS_PAD_X);
+          const newY = Math.round((activeObj.top || 0) - CANVAS_PAD_Y);
+
+          updateElementLocal(activeObj.id, { x: newX, y: newY });
+          canvas?.requestRenderAll();
+        } else {
+          const el = elementsRef.current.find(item => item.id === currId);
+          if (el) {
+            updateElementLocal(currId, { x: (el.x || 0) + dx, y: (el.y || 0) + dy });
+          }
+        }
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFooterDesignerOpen, footerHeight, handleUndo, handleRedo, pushHistory]);
+
   // Sync Elements into Fabric Objects
   useEffect(() => {
     const canvas = fabricCanvasRef.current;
@@ -851,21 +1118,47 @@ export const FooterDesignerModal: React.FC = () => {
           const isActiveObj = canvas.getActiveObjects().includes(fabricObj);
 
           if (!isActiveObj) {
-            fabricObj.set({
-              left: el.x + CANVAS_PAD_X,
-              top: el.y + CANVAS_PAD_Y,
-              angle: el.rotation || 0,
-            });
-
-            if (fabricObj.setDimensions) {
-              fabricObj.setDimensions({ width: el.width, height: el.height });
-            } else {
-              const unscaledW = fabricObj.width || el.width;
-              const unscaledH = fabricObj.height || el.height;
+            if (el.type === 'image' || fabricObj instanceof FabricImage || fabricObj.type === 'image') {
+              const natW = (fabricObj as any)._element?.naturalWidth || (fabricObj as any)._originalElement?.naturalWidth || (fabricObj as any).naturalWidth || fabricObj.width || el.width;
+              const natH = (fabricObj as any)._element?.naturalHeight || (fabricObj as any)._originalElement?.naturalHeight || (fabricObj as any).naturalHeight || fabricObj.height || el.height;
               fabricObj.set({
-                scaleX: el.width / unscaledW,
-                scaleY: el.height / unscaledH,
+                left: el.x + CANVAS_PAD_X,
+                top: el.y + CANVAS_PAD_Y,
+                scaleX: el.width / (natW || 1),
+                scaleY: el.height / (natH || 1),
+                angle: el.rotation || 0,
+                opacity: el.opacity ?? 1,
+                originX: 'left',
+                originY: 'top',
               });
+            } else {
+              fabricObj.set({
+                left: el.x + CANVAS_PAD_X,
+                top: el.y + CANVAS_PAD_Y,
+                width: el.width,
+                height: el.height,
+                angle: el.rotation || 0,
+                scaleX: 1,
+                scaleY: 1,
+              });
+
+              if (el.type === 'shape') {
+                if (el.shapeType === 'circle' && fabricObj instanceof Circle) {
+                  fabricObj.set({ radius: Math.min(el.width, el.height) / 2 });
+                } else if (el.shapeType && fabricObj.points) {
+                  const pts = getPolyPoints(el.shapeType, el.width, el.height);
+                  if (pts && pts.length >= 3) {
+                    fabricObj.set({ points: pts });
+                  }
+                }
+              } else if (fabricObj instanceof Group) {
+                const unscaledW = (fabricObj as any).width || 1;
+                const unscaledH = (fabricObj as any).height || 1;
+                fabricObj.set({
+                  scaleX: el.width / unscaledW,
+                  scaleY: el.height / unscaledH,
+                });
+              }
             }
           }
 
@@ -938,11 +1231,15 @@ export const FooterDesignerModal: React.FC = () => {
           } else if (el.type === 'image' && el.src) {
             try {
               fabricObj = await FabricImage.fromURL(el.src, { crossOrigin: 'anonymous' });
+              const natW = (fabricObj as any)._element?.naturalWidth || (fabricObj as any)._originalElement?.naturalWidth || (fabricObj as any).naturalWidth || fabricObj.width || el.width;
+              const natH = (fabricObj as any)._element?.naturalHeight || (fabricObj as any)._originalElement?.naturalHeight || (fabricObj as any).naturalHeight || fabricObj.height || el.height;
               fabricObj.set({
                 left: el.x + CANVAS_PAD_X,
                 top: el.y + CANVAS_PAD_Y,
-                scaleX: el.width / (fabricObj.width || el.width),
-                scaleY: el.height / (fabricObj.height || el.height),
+                scaleX: el.width / (natW || 1),
+                scaleY: el.height / (natH || 1),
+                angle: el.rotation || 0,
+                opacity: el.opacity ?? 1,
                 originX: 'left',
                 originY: 'top'
               });
@@ -1060,20 +1357,48 @@ export const FooterDesignerModal: React.FC = () => {
 
   const addImageLogo = (src: string) => {
     const newId = `ftr-logo-${Date.now()}`;
-    const logoEl: CanvasElement = {
-      id: newId,
-      type: 'image',
-      x: 38,
-      y: Math.max(6, Math.round((footerHeight - 32) / 2)),
-      width: 70,
-      height: 32,
-      src: src,
-      rotation: 0,
-      opacity: 1,
-      zIndex: elements.length + 1
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      const naturalW = img.naturalWidth || 100;
+      const naturalH = img.naturalHeight || 40;
+      const maxH = Math.max(20, Math.min(footerHeight - 10, 50));
+      const targetH = Math.min(naturalH, maxH);
+      const targetW = Math.round(targetH * (naturalW / naturalH));
+      const initialY = Math.max(4, Math.round((footerHeight - targetH) / 2));
+
+      const logoEl: CanvasElement = {
+        id: newId,
+        type: 'image',
+        x: 38,
+        y: initialY,
+        width: Math.max(30, targetW),
+        height: Math.max(16, targetH),
+        src: src,
+        rotation: 0,
+        opacity: 1,
+        zIndex: elements.length + 1
+      };
+      setElements(prev => [...prev, logoEl]);
+      setSelectedId(newId);
     };
-    setElements(prev => [...prev, logoEl]);
-    setSelectedId(newId);
+    img.onerror = () => {
+      const logoEl: CanvasElement = {
+        id: newId,
+        type: 'image',
+        x: 38,
+        y: Math.max(6, Math.round((footerHeight - 32) / 2)),
+        width: 70,
+        height: 32,
+        src: src,
+        rotation: 0,
+        opacity: 1,
+        zIndex: elements.length + 1
+      };
+      setElements(prev => [...prev, logoEl]);
+      setSelectedId(newId);
+    };
+    img.src = src;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {

@@ -99,6 +99,16 @@ export interface CanvasElement {
    showPrice?: boolean;
    showSku?: boolean;
    showName?: boolean;
+   customTitle?: string;
+   customPrice?: string;
+   customSku?: string;
+   customDesc?: string;
+   titleFontSize?: number;
+   priceFontSize?: number;
+   titleColor?: string;
+   priceColor?: string;
+   textColor?: string;
+   borderRadius?: number;
    filters?: {
      brightness?: number;
      blur?: number;

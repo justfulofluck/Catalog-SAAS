@@ -85,7 +85,7 @@ const App: React.FC = () => {
 
   const [loading, setLoading] = useState(true);
   const [fontsLoaded, setFontsLoaded] = useState(false);
-  const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(false);
+  const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(true);
   const [isCatalogMenuOpen, setCatalogMenuOpen] = useState(true);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 

@@ -5,7 +5,8 @@ import {
   Layers, Trash2, Copy, Lock, Unlock,
   Sparkles, Sliders, Bold, Italic, Underline,
   ChevronUp, ChevronDown as ChevronDownIcon,
-  ChevronsUp, ChevronsDown, MousePointer2
+  ChevronsUp, ChevronsDown, MousePointer2,
+  Package, RotateCcw
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { FONTS, CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
@@ -27,7 +28,8 @@ const PropertyPanel: React.FC = () => {
     uiTheme,
     setEditorTab,
     setSidebarExpanded,
-    updateCatalog
+    updateCatalog,
+    products = []
   } = useStore();
 
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -518,6 +520,207 @@ const handleOpenEffects = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Product Block Content & Typography Section */}
+            {selectedElement?.type === 'product-block' && (
+              <section>
+                {renderSectionHeader("PRODUCT CARD & DETAILS", <Package size={11} />)}
+                <div className="space-y-4">
+                  {/* Reset Button */}
+                  {(selectedElement.customTitle !== undefined || selectedElement.customPrice !== undefined || selectedElement.customSku !== undefined || selectedElement.customDesc !== undefined || selectedElement.titleFontSize || selectedElement.priceFontSize || selectedElement.fontSize || selectedElement.titleColor || selectedElement.priceColor || selectedElement.textColor || (selectedElement as any).borderRadius !== undefined) && (
+                    <div className="flex justify-end">
+                      <button
+                        onClick={() => {
+                          handleBatchUpdate({
+                            customTitle: undefined,
+                            customPrice: undefined,
+                            customSku: undefined,
+                            customDesc: undefined,
+                            titleFontSize: undefined,
+                            priceFontSize: undefined,
+                            fontSize: undefined,
+                            titleColor: undefined,
+                            priceColor: undefined,
+                            textColor: undefined,
+                            borderRadius: undefined,
+                          });
+                        }}
+                        className="text-[10px] text-amber-500 hover:text-amber-600 flex items-center gap-1 font-bold"
+                      >
+                        <RotateCcw size={12} /> Reset Overrides
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Product Title / Name */}
+                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Title / Name</label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] text-slate-400">Size:</span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)));
+                            handleBatchUpdate({ titleFontSize: Math.max(8, cur - 1) });
+                          }}
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                        >-</button>
+                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-600">
+                          {selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)))}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)));
+                            handleBatchUpdate({ titleFontSize: cur + 1 });
+                          }}
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                        >+</button>
+                        <input
+                          type="color"
+                          value={selectedElement.titleColor || '#0f172a'}
+                          onChange={(e) => handleBatchUpdate({ titleColor: e.target.value })}
+                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer"
+                          title="Title Text Color"
+                        />
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={selectedElement.customTitle !== undefined ? selectedElement.customTitle : (products.find(p => p.id === selectedElement.productId)?.name || '')}
+                      placeholder="Product Title..."
+                      onChange={(e) => handleBatchUpdate({ customTitle: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  {/* Price */}
+                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price</label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] text-slate-400">Size:</span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)));
+                            handleBatchUpdate({ priceFontSize: Math.max(8, cur - 1) });
+                          }}
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                        >-</button>
+                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-600">
+                          {selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)))}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)));
+                            handleBatchUpdate({ priceFontSize: cur + 1 });
+                          }}
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                        >+</button>
+                        <input
+                          type="color"
+                          value={selectedElement.priceColor || '#4f46e5'}
+                          onChange={(e) => handleBatchUpdate({ priceColor: e.target.value })}
+                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer"
+                          title="Price Text Color"
+                        />
+                      </div>
+                    </div>
+                    <input
+                      type="text"
+                      value={selectedElement.customPrice !== undefined ? selectedElement.customPrice : (() => {
+                        const prod = products.find(p => p.id === selectedElement.productId);
+                        return prod ? `${prod.currency || '₹'}${prod.price || ''}` : '';
+                      })()}
+                      placeholder="e.g. ₹1300"
+                      onChange={(e) => handleBatchUpdate({ customPrice: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-black text-indigo-600 outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  {/* SKU / Model */}
+                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SKU / Model Number</label>
+                    <input
+                      type="text"
+                      value={selectedElement.customSku !== undefined ? selectedElement.customSku : (products.find(p => p.id === selectedElement.productId)?.sku || '')}
+                      placeholder="SKU Code..."
+                      onChange={(e) => handleBatchUpdate({ customSku: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-600"
+                    />
+                  </div>
+
+                  {/* Specifications & Details */}
+                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Specs & Details</label>
+                      <div className="flex items-center gap-1">
+                        <span className="text-[9px] text-slate-400">Size:</span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedElement.fontSize || 9;
+                            handleBatchUpdate({ fontSize: Math.max(6, cur - 1) });
+                          }}
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                        >-</button>
+                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-600">
+                          {selectedElement.fontSize || 9}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const cur = selectedElement.fontSize || 9;
+                            handleBatchUpdate({ fontSize: cur + 1 });
+                          }}
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                        >+</button>
+                        <input
+                          type="color"
+                          value={selectedElement.textColor || '#475569'}
+                          onChange={(e) => handleBatchUpdate({ textColor: e.target.value })}
+                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer"
+                          title="Details Text Color"
+                        />
+                      </div>
+                    </div>
+                    <textarea
+                      rows={4}
+                      value={selectedElement.customDesc !== undefined ? selectedElement.customDesc : (() => {
+                        const prod = products.find(p => p.id === selectedElement.productId);
+                        if (!prod) return '';
+                        const lines: string[] = [];
+                        if (catalog?.showSKU !== false && prod.sku) lines.push(`SKU: ${prod.sku}`);
+                        if (prod.description) lines.push(prod.description);
+                        if (prod.customFields) {
+                          Object.entries(prod.customFields).forEach(([k, v]) => {
+                            if (v !== undefined && v !== null && v !== '' && typeof v !== 'object') lines.push(`• ${k}: ${v}`);
+                          });
+                        }
+                        return lines.join('\n');
+                      })()}
+                      placeholder="Enter specs line by line..."
+                      onChange={(e) => handleBatchUpdate({ customDesc: e.target.value })}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] p-2.5 text-xs font-mono text-slate-700 outline-none focus:border-indigo-600 resize-y leading-relaxed"
+                    />
+                  </div>
+
+                  {/* Corner Roundness */}
+                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      <span>Corner Roundness</span>
+                      <span className="text-indigo-600 font-mono">{(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}px</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="0"
+                      max="30"
+                      step="1"
+                      value={(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}
+                      onChange={(e) => handleBatchUpdate({ borderRadius: parseInt(e.target.value, 10) })}
+                      className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                    />
                   </div>
                 </div>
               </section>

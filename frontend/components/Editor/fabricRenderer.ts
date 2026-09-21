@@ -206,6 +206,30 @@ function rgba(color: string, opacity: number): string {
   return color;
 }
 
+export function isDarkColor(colorStr?: string): boolean {
+  if (!colorStr || colorStr === 'transparent') return false;
+  let r = 255, g = 255, b = 255;
+  if (colorStr.startsWith('#')) {
+    let hex = colorStr.slice(1);
+    if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+    if (hex.length >= 6) {
+      r = parseInt(hex.slice(0, 2), 16);
+      g = parseInt(hex.slice(2, 4), 16);
+      b = parseInt(hex.slice(4, 6), 16);
+    }
+  } else if (colorStr.startsWith('rgb')) {
+    const match = colorStr.match(/\d+/g);
+    if (match && match.length >= 3) {
+      r = parseInt(match[0], 10);
+      g = parseInt(match[1], 10);
+      b = parseInt(match[2], 10);
+    }
+  }
+  // Perceived luminance using HSP formula
+  const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
+  return hsp < 140;
+}
+
 export function parseGradient(fillStr: string, w: number, h: number): { stops: { offset: number; color: string }[]; coords: { x1: number; y1: number; x2: number; y2: number } } | null {
   if (!fillStr || !fillStr.includes('linear-gradient')) return null;
 
@@ -758,6 +782,8 @@ async function _elementToFabricObject(
         ...common,
         scaleX: el.width / (img.width || 1),
         scaleY: el.height / (img.height || 1),
+        stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+        strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
       });
 
       if (finalSrc === el.src && el.filters) {
@@ -846,10 +872,30 @@ async function _elementToFabricObject(
   if (elType === 'product-block') {
     const objs: any[] = [];
 
+    const cardFill = el.fill || '#ffffff';
+    const cardStroke = el.stroke && el.stroke !== 'transparent' ? el.stroke : '#e2e8f0';
+    const cardStrokeWidth = el.stroke && el.stroke !== 'transparent'
+      ? (el.strokeWidth !== undefined ? el.strokeWidth : 2)
+      : (el.stroke === 'transparent' ? 0 : 1.5);
+    const cardRx = (el as any).borderRadius !== undefined ? (el as any).borderRadius : 4;
+
+    const isDark = isDarkColor(cardFill);
+    const defaultTitleColor = isDark ? '#ffffff' : '#0f172a';
+    const defaultPriceColor = isDark ? '#38bdf8' : '#4f46e5';
+    const defaultTextColor = isDark ? '#cbd5e1' : '#475569';
+
+    const titleColor = el.titleColor || defaultTitleColor;
+    const priceColor = el.priceColor || defaultPriceColor;
+    const textColor = el.textColor || defaultTextColor;
+
     objs.push(new Rect({
       left: 0, top: 0, width: el.width, height: el.height,
       originX: 'left', originY: 'top',
-      fill: '#ffffff', stroke: '#e2e8f0', strokeWidth: 1.5, rx: 4, ry: 4,
+      fill: cardFill,
+      stroke: cardStroke,
+      strokeWidth: cardStrokeWidth,
+      rx: cardRx,
+      ry: cardRx,
     }));
     const product = products.find(p => p.id === el.productId);
     if (product) {
@@ -858,56 +904,57 @@ async function _elementToFabricObject(
       
       // Prepare Details, SKU & Custom Fields first so we can gauge content volume
       let detailLines: string[] = [];
-      if (catalog?.showSKU !== false && product.sku) {
-        detailLines.push(`SKU: ${product.sku}`);
-      }
-      if (product.description) {
-        detailLines.push(product.description);
-      }
-      
-      if (product.customFields && Object.keys(product.customFields).length > 0) {
-        const categories = useStore.getState().categories || [];
-        const catId = product.categoryId ? String(product.categoryId) : '';
-        // Look up by string catId or matching category
-        const visibleParamKeys: string[] | null = 
-          (catalog?.categoryVisibleParams && (
-            catalog.categoryVisibleParams[catId] ||
-            catalog.categoryVisibleParams[String(product.categoryId)] ||
-            Object.entries(catalog.categoryVisibleParams).find(([k]) => String(k) === catId)?.[1]
-          )) || null;
+      if (el.customDesc) {
+        detailLines = el.customDesc.split('\n');
+      } else {
+        const effectiveSku = el.customSku !== undefined ? el.customSku : product.sku;
+        if (catalog?.showSKU !== false && effectiveSku) {
+          detailLines.push(`SKU: ${effectiveSku}`);
+        }
+        if (product.description) {
+          detailLines.push(product.description);
+        }
+        
+        if (product.customFields && Object.keys(product.customFields).length > 0) {
+          const categories = useStore.getState().categories || [];
+          const catId = product.categoryId ? String(product.categoryId) : '';
+          const visibleParamKeys: string[] | null = 
+            (catalog?.categoryVisibleParams && (
+              catalog.categoryVisibleParams[catId] ||
+              catalog.categoryVisibleParams[String(product.categoryId)] ||
+              Object.entries(catalog.categoryVisibleParams).find(([k]) => String(k) === catId)?.[1]
+            )) || null;
 
-        const fields = Object.entries(product.customFields)
-          .filter(([k, v]) => {
-            if (v === undefined || v === null || v === '' || typeof v === 'object') return false;
-            if (visibleParamKeys !== null) {
-              const label = resolveFieldLabel(k, categories, product);
-              const normLabel = label ? label.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-              const normKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+          const fields = Object.entries(product.customFields)
+            .filter(([k, v]) => {
+              if (v === undefined || v === null || v === '' || typeof v === 'object') return false;
+              if (visibleParamKeys !== null) {
+                const label = resolveFieldLabel(k, categories, product);
+                const normLabel = label ? label.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
+                const normKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-              // Check if any enabled key matches the field key, id, or normalized label
-              const isMatch = visibleParamKeys.some(vk => {
-                const normVk = vk.toLowerCase().replace(/[^a-z0-9]/g, '');
-                return vk === k || normVk === normKey || (normLabel && normVk === normLabel);
-              });
-              return isMatch;
-            }
-            return true;
-          }) 
-          .map(([k, v]) => {
-             const label = resolveFieldLabel(k, categories, product);
-             if (!label) return null;
-             return `• ${label}: ${v}`;
-          })
-          .filter(Boolean) as string[];
+                const isMatch = visibleParamKeys.some(vk => {
+                  const normVk = vk.toLowerCase().replace(/[^a-z0-9]/g, '');
+                  return vk === k || normVk === normKey || (normLabel && normVk === normLabel);
+                });
+                return isMatch;
+              }
+              return true;
+            }) 
+            .map(([k, v]) => {
+               const label = resolveFieldLabel(k, categories, product);
+               if (!label) return null;
+               return `• ${label}: ${v}`;
+            })
+            .filter(Boolean) as string[];
 
-        if (fields.length > 0) {
-          detailLines = detailLines.concat(fields);
+          if (fields.length > 0) {
+            detailLines = detailLines.concat(fields);
+          }
         }
       }
 
       // Proportional Balancing:
-      // If content is short (fewer lines), give more vertical space to the product image (up to 52%)
-      // and allow a healthier font size and line-height so the card is elegantly filled.
       const lineCount = detailLines.length;
       let imgRatio = 0.44;
       if (lineCount <= 4) {
@@ -934,7 +981,6 @@ async function _elementToFabricObject(
           
           const naturalW = img.width || 1;
           const naturalH = img.height || 1;
-          // Contain calculation with inner padding
           const availableImgW = contentWidth;
           const availableImgH = maxImgH - cardPadding;
           const imgScale = Math.min(availableImgW / naturalW, availableImgH / naturalH, 1.8);
@@ -942,7 +988,6 @@ async function _elementToFabricObject(
           const renderedW = naturalW * imgScale;
           const renderedH = naturalH * imgScale;
           
-          // Center image horizontally and vertically within its allocated area
           const imgLeft = cardPadding + (contentWidth - renderedW) / 2;
           const imgY = imgTop + (availableImgH - renderedH) / 2;
           
@@ -961,28 +1006,32 @@ async function _elementToFabricObject(
       let currentTop = imgTop + maxImgH + 6;
       const cardFontFamily = (el as any).fontFamily || (catalog as any).fontFamily || 'Inter';
 
-      // Product Title / Name - Bada aur Prominent
+      // Product Title / Name - Bada, Prominent aur Customizable
       if (catalog?.showTitle !== false) {
-        const titleFontSize = Math.max(11, Math.min(16, Math.round(el.width * 0.065)));
-        const nameText = new Textbox(product.name || 'Unnamed Product', {
+        const autoTitleFontSize = Math.max(11, Math.min(16, Math.round(el.width * 0.065)));
+        const titleFontSize = el.titleFontSize || autoTitleFontSize;
+        const displayName = el.customTitle !== undefined ? el.customTitle : (product.name || 'Unnamed Product');
+        const nameText = new Textbox(displayName, {
           left: cardPadding, top: currentTop, width: contentWidth,
           originX: 'left', originY: 'top',
           fontSize: titleFontSize,
-          fontFamily: cardFontFamily, fontWeight: 'bold', fill: '#0f172a', splitByGrapheme: false,
+          fontFamily: cardFontFamily, fontWeight: 'bold', fill: titleColor, splitByGrapheme: false,
           lineHeight: 1.2,
         });
         objs.push(nameText);
         currentTop += (nameText.height || (titleFontSize * 1.25)) + 4;
       }
       
-      // Price - Bada, Clear aur Vibrant
+      // Price - Bada, Clear aur Customizable
       if (catalog?.showPrice !== false) {
-        const priceFontSize = Math.max(11, Math.min(15, Math.round(el.width * 0.058)));
-        const priceText = new Textbox(`${product.currency || '₹'}${product.price || '0'}`, {
+        const autoPriceFontSize = Math.max(11, Math.min(15, Math.round(el.width * 0.058)));
+        const priceFontSize = el.priceFontSize || autoPriceFontSize;
+        const displayPrice = el.customPrice !== undefined ? el.customPrice : `${product.currency || '₹'}${product.price || '0'}`;
+        const priceText = new Textbox(displayPrice, {
           left: cardPadding, top: currentTop, width: contentWidth,
           originX: 'left', originY: 'top',
           fontSize: priceFontSize,
-          fontFamily: cardFontFamily, fill: '#4f46e5', fontWeight: 'bold', splitByGrapheme: false,
+          fontFamily: cardFontFamily, fill: priceColor, fontWeight: 'bold', splitByGrapheme: false,
           lineHeight: 1.15,
         });
         objs.push(priceText);
@@ -991,19 +1040,19 @@ async function _elementToFabricObject(
       
       const fullText = detailLines.join('\n');
       if (fullText.trim() && (el.height - currentTop) > 10) {
-        // Dynamically compute font size & line-height using the bottom space
         const availableTextH = el.height - currentTop - cardPadding;
         const targetLineHeight = lineCount <= 5 ? 1.35 : (lineCount <= 8 ? 1.25 : 1.18);
         const autoFontSize = Math.min(
           11,
           Math.max(7.5, Math.floor(availableTextH / Math.max(1, lineCount * targetLineHeight)))
         );
+        const descFontSize = el.fontSize || autoFontSize;
 
         const descText = new Textbox(fullText, {
           left: cardPadding, top: currentTop, width: contentWidth,
           originX: 'left', originY: 'top',
-          fontSize: autoFontSize,
-          fontFamily: cardFontFamily, fill: '#475569', splitByGrapheme: false,
+          fontSize: descFontSize,
+          fontFamily: cardFontFamily, fill: textColor, splitByGrapheme: false,
           lineHeight: targetLineHeight,
         });
         objs.push(descText);
