@@ -243,11 +243,13 @@ const CategoryListView: React.FC = () => {
               </div>
               <div className={`text-[8px] font-bold uppercase tracking-widest mt-1 ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'}`}>Products</div>
             </div>
-            <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={(e) => handleEditCategory(e, cat.id)}
-                className={`p-1.5 rounded-[4px] transition-all border border-transparent ${
-                  isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                className={`p-1.5 rounded-[4px] transition-all border ${
+                  isDark 
+                    ? 'text-[#E2DCC8]/80 hover:text-white bg-[#141414] hover:bg-[#0F3D3E]/40 border-[#262626] hover:border-[#E2DCC8]/30' 
+                    : 'text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-sm'
                 }`}
                 title="Edit Category"
               >
@@ -255,8 +257,10 @@ const CategoryListView: React.FC = () => {
               </button>
               <button
                 onClick={(e) => handleDeleteCategory(e, cat.id, cat.name)}
-                className={`p-1.5 rounded-[4px] transition-all border border-transparent ${
-                  isDark ? 'text-[#E2DCC8]/70 hover:text-red-400 hover:bg-[#100F0F]' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                className={`p-1.5 rounded-[4px] transition-all border ${
+                  isDark 
+                    ? 'text-[#E2DCC8]/80 hover:text-red-400 bg-[#141414] hover:bg-red-500/15 border-[#262626] hover:border-red-500/30' 
+                    : 'text-slate-600 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 shadow-sm'
                 }`}
                 title="Delete Category"
               >

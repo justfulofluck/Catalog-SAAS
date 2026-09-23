@@ -319,12 +319,12 @@ export function parseGradient(fillStr: string, w: number, h: number): { stops: {
 }
 
 function applyFill(obj: any, fill: string | undefined, w: number, h: number) {
-  const isLineType = obj instanceof Line || 
-    obj instanceof HorizontalLineShape || 
-    obj instanceof CurvedLineShape || 
-    obj instanceof ElbowLineShape || 
-    obj.shapeType === 'line' || 
-    obj.shapeType === 'curved-line' || 
+  const isLineType = obj instanceof Line ||
+    obj instanceof HorizontalLineShape ||
+    obj instanceof CurvedLineShape ||
+    obj instanceof ElbowLineShape ||
+    obj.shapeType === 'line' ||
+    obj.shapeType === 'curved-line' ||
     obj.shapeType === 'elbow-line';
 
   if (!fill) {
@@ -601,7 +601,7 @@ async function _elementToFabricObject(
   common.id = el.id;
 
   const setCommon = (obj: any) => {
-    Object.entries(common).forEach(([k, v]) => { try { obj.set(k as any, v); } catch {} });
+    Object.entries(common).forEach(([k, v]) => { try { obj.set(k as any, v); } catch { } });
   };
 
   if (elType === 'text') {
@@ -901,7 +901,7 @@ async function _elementToFabricObject(
     if (product) {
       const cardPadding = Math.max(6, Math.min(14, el.width * 0.04));
       const contentWidth = el.width - cardPadding * 2;
-      
+
       // Prepare Details, SKU & Custom Fields first so we can gauge content volume
       let detailLines: string[] = [];
       if (el.customDesc) {
@@ -914,11 +914,11 @@ async function _elementToFabricObject(
         if (product.description) {
           detailLines.push(product.description);
         }
-        
+
         if (product.customFields && Object.keys(product.customFields).length > 0) {
           const categories = useStore.getState().categories || [];
           const catId = product.categoryId ? String(product.categoryId) : '';
-          const visibleParamKeys: string[] | null = 
+          const visibleParamKeys: string[] | null =
             (catalog?.categoryVisibleParams && (
               catalog.categoryVisibleParams[catId] ||
               catalog.categoryVisibleParams[String(product.categoryId)] ||
@@ -940,11 +940,11 @@ async function _elementToFabricObject(
                 return isMatch;
               }
               return true;
-            }) 
+            })
             .map(([k, v]) => {
-               const label = resolveFieldLabel(k, categories, product);
-               if (!label) return null;
-               return `• ${label}: ${v}`;
+              const label = resolveFieldLabel(k, categories, product);
+              if (!label) return null;
+              return `• ${label}: ${v}`;
             })
             .filter(Boolean) as string[];
 
@@ -978,19 +978,19 @@ async function _elementToFabricObject(
           } catch {
             img = await FabricImage.fromURL(imgUrl);
           }
-          
+
           const naturalW = img.width || 1;
           const naturalH = img.height || 1;
           const availableImgW = contentWidth;
           const availableImgH = maxImgH - cardPadding;
           const imgScale = Math.min(availableImgW / naturalW, availableImgH / naturalH, 1.8);
-          
+
           const renderedW = naturalW * imgScale;
           const renderedH = naturalH * imgScale;
-          
+
           const imgLeft = cardPadding + (contentWidth - renderedW) / 2;
           const imgY = imgTop + (availableImgH - renderedH) / 2;
-          
+
           img.set({
             left: imgLeft,
             top: imgY,
@@ -1000,7 +1000,7 @@ async function _elementToFabricObject(
             scaleY: imgScale,
           });
           objs.push(img);
-        } catch {}
+        } catch { }
       }
 
       let currentTop = imgTop + maxImgH + 6;
@@ -1021,7 +1021,7 @@ async function _elementToFabricObject(
         objs.push(nameText);
         currentTop += (nameText.height || (titleFontSize * 1.25)) + 4;
       }
-      
+
       // Price - Bada, Clear aur Customizable
       if (catalog?.showPrice !== false) {
         const autoPriceFontSize = Math.max(11, Math.min(15, Math.round(el.width * 0.058)));
@@ -1037,7 +1037,7 @@ async function _elementToFabricObject(
         objs.push(priceText);
         currentTop += (priceText.height || (priceFontSize * 1.2)) + 6;
       }
-      
+
       const fullText = detailLines.join('\n');
       if (fullText.trim() && (el.height - currentTop) > 10) {
         const availableTextH = el.height - currentTop - cardPadding;
@@ -1065,7 +1065,7 @@ async function _elementToFabricObject(
         textAlign: 'center', splitByGrapheme: false,
       }));
     }
-    
+
     // Add clipPath to the group to ensure nothing bleeds out of the card
     const clipPath = new Rect({
       left: -el.width / 2, top: -el.height / 2, // Group clipPath is relative to group center
@@ -1073,8 +1073,8 @@ async function _elementToFabricObject(
       originX: 'left', originY: 'top',
       rx: 0, ry: 0
     });
-    
-    const group = new Group(objs, { 
+
+    const group = new Group(objs, {
       left: el.x,
       top: el.y,
       angle: el.rotation || 0,
@@ -1148,7 +1148,7 @@ async function _elementToFabricObject(
       const avgCharWidth = fontSize * (hasUppercase ? 0.72 : 0.65);
       const usableWidth = Math.max(15, colW - cellPadding * 2);
       const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
-      
+
       const words = clean.split(/\s+/);
       let lines = 1;
       let curLineLen = 0;

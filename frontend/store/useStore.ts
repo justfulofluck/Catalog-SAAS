@@ -1,7 +1,7 @@
 
 import { create } from 'zustand';
-import { Product, ProductVariant, TableData, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection, ToastNotification, ConfirmDialogState } from '../types';
-import { authApi, systemTemplatesApi, adminAssetsApi } from '../client';
+import { Product, ProductVariant, TableData, Category, Catalog, CanvasElement, CatalogPage, MediaItem, AdminAsset, MediaType, FullCatalogTemplate, PageType, GridTemplate, Theme, PageTemplate, HeaderFooterTemplate, PaginationStyle, LogoStyle, FormField, SubscriptionPlan, UserSubscription, SystemTemplate, ProductGridSection, ToastNotification, ConfirmDialogState, SystemSetting } from '../types';
+import { authApi, systemTemplatesApi, adminAssetsApi, systemSettingsApi } from '../client';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, COVER_TEMPLATES, INDEX_TEMPLATES, CLOSING_TEMPLATES, FULL_CATALOG_TEMPLATES, HEADER_TEMPLATES, FOOTER_TEMPLATES, GRID_TEMPLATES } from '../constants';
 import { normalizeImageUrl, resolveProductImage, resolveProductTitle } from '../utils/imageUtils';
 import { resolveFieldLabel } from '../utils/fieldUtils';
@@ -139,6 +139,12 @@ interface State {
   fetchMedia: () => Promise<void>;
   fetchAdminAssets: () => Promise<void>;
 
+  // System Settings (Super Admin)
+  systemSettings: SystemSetting | null;
+  fetchSystemSettings: () => Promise<void>;
+  updateSystemSettings: (updates: Partial<SystemSetting>) => Promise<boolean>;
+  changeAdminPassword: (data: { current_password?: string; new_password: string }) => Promise<{ success: boolean; message: string }>;
+
   setActiveCategoryId: (id: string | null) => void;
   setSelectedCategoryId: (id: string | null) => void;
   setSelectedPageIndex: (index: number | null) => void;
@@ -173,8 +179,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | null) => void;
+  editorTab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null) => void;
   colorPickerTarget: {
     type: 'background' | 'fill' | 'stroke' | 'text';
     elementId?: string;
@@ -333,6 +339,7 @@ export const useStore = create<State>((set, get) => ({
   allSubscriptions: [],
   systemTemplates: [],
   editingSystemTemplate: null,
+  systemSettings: null,
 
 
   activeCategoryId: null,
@@ -1620,7 +1627,10 @@ export const useStore = create<State>((set, get) => ({
     isPropertyPanelOpen: ids.length > 0 ? true : state.isPropertyPanelOpen
   })),
   setHoveredElementId: (id) => set({ hoveredElementId: id }),
-  setIsPropertyPanelOpen: (isOpen) => set({ isPropertyPanelOpen: isOpen }),
+  setIsPropertyPanelOpen: (isOpen) => set((state) => ({
+    isPropertyPanelOpen: isOpen,
+    ...(isOpen ? { editorTab: 'properties' as const, isSidebarExpanded: true } : {})
+  })),
   setIsTableEditorOpen: (isOpen, elementId = null) => set({
     isTableEditorOpen: isOpen,
     editingTableElementId: isOpen ? (elementId || null) : null
@@ -5375,6 +5385,58 @@ export const useStore = create<State>((set, get) => ({
         currentPageIndex: resolvedPageIndex,
         selectedElementIds: pastedElements.map(el => el.id)
       });
+    }
+  },
+
+  fetchSystemSettings: async () => {
+    try {
+      const settings = await systemSettingsApi.get();
+      set({ systemSettings: settings });
+    } catch (err) {
+      console.error('Failed to fetch system settings:', err);
+    }
+  },
+
+  updateSystemSettings: async (updates: Partial<SystemSetting>) => {
+    try {
+      const updated = await systemSettingsApi.update(updates);
+      set((state) => ({
+        systemSettings: state.systemSettings ? { ...state.systemSettings, ...updated } : updated,
+      }));
+      get().showToast({
+        type: 'success',
+        title: 'Settings Saved',
+        message: 'System settings have been successfully updated.',
+      });
+      return true;
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to update system settings.';
+      get().showToast({
+        type: 'error',
+        title: 'Update Failed',
+        message: msg,
+      });
+      return false;
+    }
+  },
+
+  changeAdminPassword: async (data: { current_password?: string; new_password: string }) => {
+    try {
+      const res = await systemSettingsApi.changeAdminPassword(data);
+      get().showToast({
+        type: 'success',
+        title: 'Password Updated',
+        message: res.message || 'Admin password updated successfully.',
+      });
+      return { success: true, message: res.message || 'Password updated successfully.' };
+    } catch (err: any) {
+      const msg = err.response?.data?.error || 'Failed to update admin password.';
+      get().showToast({
+        type: 'error',
+        title: 'Error',
+        message: msg,
+      });
+      return { success: false, message: msg };
     }
   },
 

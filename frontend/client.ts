@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { Product, Category, Catalog, User, AuthResponse, MediaItem, AdminAsset, UserSubscription, PricingPlan } from './types';
+import { Product, Category, Catalog, User, AuthResponse, MediaItem, AdminAsset, UserSubscription, PricingPlan, SystemSetting } from './types';
 
 // Create Axios instance
 const api = axios.create({
@@ -149,13 +149,23 @@ export const adminAssetsApi = {
     getAll: () => api.get<AdminAsset[]>('/admin-assets/'),
 };
 
-// System Templates API (Super Admin Template Studio)
+// System Templates API
 export const systemTemplatesApi = {
-    getAll: () => api.get<SystemTemplate[]>('/templates/'),
-    get: (id: string | number) => api.get<SystemTemplate>(`/templates/${id}/`),
-    create: (data: Partial<SystemTemplate>) => api.post<SystemTemplate>('/templates/', data),
-    update: (id: string | number, data: Partial<SystemTemplate>) => api.patch<SystemTemplate>(`/templates/${id}/`, data),
+    getAll: () => api.get<any[]>('/templates/'),
+    get: (id: string | number) => api.get<any>(`/templates/${id}/`),
+    create: (data: any) => api.post<any>('/templates/', data),
+    update: (id: string | number, data: any) => api.patch<any>(`/templates/${id}/`, data),
     delete: (id: string | number) => api.delete(`/templates/${id}/`),
 };
 
+// System Settings API (Super Admin)
+export const systemSettingsApi = {
+    get: () => api.get<SystemSetting>('/users/system-settings/'),
+    update: (data: Partial<SystemSetting>) => api.patch<SystemSetting>('/users/system-settings/', data),
+    changeAdminPassword: (data: { current_password?: string; new_password: string }) => 
+        api.post<{ message: string }>('/users/change-admin-password/', data),
+};
+
 export default api;
+
+

@@ -125,21 +125,21 @@ const PageManager: React.FC = () => {
           </button>
 
           {isDropdownOpen && (
-            <div className="absolute right-full mr-2 top-0 w-56 bg-white border border-slate-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[4px] z-[100] py-2 overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-              <div className="px-4 py-2 border-b border-slate-50 mb-1">
-                <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Select Blueprint</p>
+            <div className="absolute right-full mr-2.5 top-0 w-56 bg-white/95 backdrop-blur-xl border border-slate-200/80 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-[6px] z-[100] py-2 overflow-hidden animate-dropdown-right">
+              <div className="px-4 py-2 border-b border-slate-100 mb-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Select Blueprint</p>
               </div>
               {pageTypes.map((pt) => (
                 <button
                   key={pt.type}
                   onClick={() => handleAddPage(pt.type)}
-                  className="w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition-colors text-left group"
+                  className="w-full px-4 py-2.5 flex items-center gap-3 hover:bg-slate-50 transition-all text-left group active:scale-[0.99]"
                 >
-                  <div className="w-8 h-8 rounded-[4px] bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors">
+                  <div className="w-8 h-8 rounded-[4px] bg-slate-100 text-slate-500 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-colors shrink-0">
                     {pt.icon}
                   </div>
                   <div>
-                    <p className="text-[11px] font-black text-slate-800 leading-none mb-1">{pt.label}</p>
+                    <p className="text-[11px] font-bold text-slate-800 leading-none mb-1">{pt.label}</p>
                     <p className="text-[9px] font-medium text-slate-400 leading-none">{pt.desc}</p>
                   </div>
                 </button>

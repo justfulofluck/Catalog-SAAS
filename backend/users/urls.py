@@ -6,9 +6,10 @@ from .views import (
     ResetPasswordWithOTP,
     ForceLogoutView,
     SubscriptionPlanViewSet,
-    DebugJWTSettingsView,
     UpdateSubscriptionView,
     AdminSubscriptionViewSet,
+    SystemSettingsView,
+    AdminChangePasswordView,
 )
 
 router = DefaultRouter()
@@ -30,8 +31,7 @@ urlpatterns = [
         name="password-reset-otp-confirm",
     ),
     path("users/force-logout/", ForceLogoutView.as_view(), name="force-logout"),
-    path(
-        "debug/jwt-settings/", DebugJWTSettingsView.as_view(), name="debug-jwt-settings"
-    ),
     path("subscriptions/update/", UpdateSubscriptionView.as_view(), name="update-subscription"),
+    path("users/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
+    path("users/change-admin-password/", AdminChangePasswordView.as_view(), name="admin-change-password"),
 ]

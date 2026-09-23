@@ -38,10 +38,11 @@ const PropertyPanel: React.FC = () => {
   const selectedElements = currentPage?.elements.filter(el => selectedElementIds.includes(el.id)) || [];
   const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
-  if (!isPropertyPanelOpen) return null;
-
+  const isProductBlock = selectedElement?.type === 'product-block';
   const isPageSettings = selectedElementIds.length === 0;
   const isText = !isPageSettings && selectedElement?.type === 'text';
+
+  const isDark = uiTheme === 'dark';
 
   const handleAlignment = (align: 'left' | 'center' | 'right') => {
     if (!selectedElement || selectedElement.type !== 'text') {
@@ -131,48 +132,56 @@ const PropertyPanel: React.FC = () => {
 
   const renderSectionHeader = (title: string, icon: React.ReactNode) => (
     <div className="flex items-center gap-2 mb-3">
-      <div className="text-slate-400">{icon}</div>
-      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+      <div className={isDark ? 'text-[#888888]' : 'text-slate-400'}>{icon}</div>
+      <h4 className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-[#888888]' : 'text-slate-400'}`}>
         {title}
       </h4>
     </div>
   );
 
-const handleOpenEffects = () => {
-     setEditorTab('components');
-     setSidebarExpanded(true);
-   };
+  const handleOpenEffects = () => {
+    setEditorTab('components');
+    setSidebarExpanded(true);
+  };
 
   const activeFill = selectedElement?.fill || '#000000';
 
   return (
-    <div className={`w-[360px] h-full flex flex-col border-l transition-colors duration-300 ${uiTheme === 'dark' ? 'bg-[#0f172a] border-slate-800' : 'bg-[#f8fafc] border-slate-200'}`}>
+    <div className={`w-full h-full flex flex-col transition-colors duration-200 ${isDark ? 'bg-[#141414] text-[#EDEDED]' : 'bg-white text-slate-900'}`}>
       {/* Header */}
-      <div className="p-6 pb-2">
-        <div className="flex items-center justify-between mb-6">
+      <div className={`p-5 pb-4 border-b ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-[14px] flex items-center justify-center shadow-sm ${uiTheme === 'dark' ? 'bg-indigo-500/20' : 'bg-indigo-100/50'}`}>
-              <Palette className="text-indigo-600" size={18} />
+            <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center shadow-sm ${
+              isProductBlock 
+                ? 'bg-indigo-600/20 text-indigo-400' 
+                : isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8]' : 'bg-teal-50 text-[#0F3D3E]'
+            }`}>
+              {isProductBlock ? <Package size={18} /> : isText ? <Type size={18} /> : <Palette size={18} />}
             </div>
             <div>
-              <h3 className={`text-sm font-black tracking-tight ${uiTheme === 'dark' ? 'text-white' : 'text-slate-900'}`}>
-                {isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : 'ELEMENT')}
+              <h3 className={`text-xs font-black tracking-wider uppercase ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                {isProductBlock ? 'PRODUCT CARD' : isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : 'ELEMENT')}
               </h3>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                {isPageSettings ? 'No Element Selected' : 'Instance Properties'}
+              <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-400'}`}>
+                {isProductBlock ? 'Card Typography & Specs' : isPageSettings ? 'No Element Selected' : 'Instance Properties'}
               </p>
             </div>
           </div>
           <button
-            onClick={() => setIsPropertyPanelOpen(false)}
-            className="p-2 rounded-[4px] text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
+            onClick={() => {
+              setIsPropertyPanelOpen(false);
+              setSidebarExpanded(false);
+            }}
+            className={`p-1.5 rounded-[4px] transition-all ${isDark ? 'text-[#888] hover:text-white hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'}`}
+            title="Close Panel"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar p-6 pt-0 space-y-8">
+      <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-6">
         {isPageSettings ? (
           <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50 py-20">
             <div className="p-4 rounded-full bg-slate-100">
@@ -185,67 +194,6 @@ const handleOpenEffects = () => {
           </div>
         ) : (
           <>
-            {/* Visual Style Section */}
-            <section>
-              {renderSectionHeader("VISUAL STYLE", <Palette size={11} />)}
-              <div className="space-y-3">
-                <div className="flex gap-3">
-                  {/* Color Code Card */}
-                  <div
-                    onClick={() => setPickerOpen(!pickerOpen)}
-                    className="flex-1 p-3 rounded-[18px] border bg-white border-slate-100 shadow-sm flex items-center gap-3 cursor-pointer hover:border-indigo-200 transition-all"
-                  >
-                    <div
-                      className="w-10 h-10 rounded-[4px] shadow-sm border-2 border-slate-50"
-                      style={{ background: (activeFill && !activeFill.includes('gradient')) ? activeFill : '#ffffff' }}
-                    />
-                    <div className="flex flex-col">
-                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Color Code</span>
-                      <span className="text-[11px] font-black text-slate-900 uppercase">
-                        {(activeFill && !activeFill.includes('gradient')) ? activeFill : 'Default'}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Effects Button Card */}
-                  <button
-                    onClick={handleOpenEffects}
-                    className="w-[100px] p-3 rounded-[18px] border bg-white border-slate-100 shadow-sm flex flex-col items-center justify-center gap-1 hover:bg-slate-50 hover:border-indigo-100 transition-all group"
-                  >
-                    <Sparkles size={16} className="text-indigo-600 group-hover:scale-110 transition-transform" />
-                    <span className="text-[9px] font-black text-slate-900 uppercase tracking-widest">Effects</span>
-                  </button>
-                </div>
-
-                {/* Picker Overlay */}
-                {pickerOpen && (
-                  <div className="p-3 border rounded-[4px] bg-white shadow-xl animate-in fade-in zoom-in-95 duration-200">
-                    <AdvancedColorPicker
-                      color={(activeFill && !activeFill.includes('gradient')) ? activeFill : '#ffffff'}
-                      onChange={(c) => handleBatchUpdate({ fill: c })}
-                    />
-                  </div>
-                )}
-
-                {/* Transparency Card */}
-                <div className="p-4 rounded-[18px] border bg-white border-slate-100 shadow-sm space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Transparency</span>
-                    <span className="text-[11px] font-black text-indigo-600">{Math.round((selectedElement?.opacity || 1) * 100)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={selectedElement?.opacity ?? 1}
-                    onChange={(e) => handleBatchUpdate({ opacity: parseFloat(e.target.value) })}
-                    className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
-                  />
-                </div>
-              </div>
-            </section>
-
             {/* Text Formatting Section */}
             {isText && (
               <section>
@@ -528,38 +476,41 @@ const handleOpenEffects = () => {
             {/* Product Block Content & Typography Section */}
             {selectedElement?.type === 'product-block' && (
               <section>
-                {renderSectionHeader("PRODUCT CARD & DETAILS", <Package size={11} />)}
-                <div className="space-y-4">
-                  {/* Reset Button */}
+                <div className="flex items-center justify-between mb-2 pb-1 border-b border-slate-100 dark:border-[#262626]">
+                  <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-indigo-500">
+                    <Package size={13} />
+                    <span>PRODUCT CARD & DETAILS</span>
+                  </div>
                   {(selectedElement.customTitle !== undefined || selectedElement.customPrice !== undefined || selectedElement.customSku !== undefined || selectedElement.customDesc !== undefined || selectedElement.titleFontSize || selectedElement.priceFontSize || selectedElement.fontSize || selectedElement.titleColor || selectedElement.priceColor || selectedElement.textColor || (selectedElement as any).borderRadius !== undefined) && (
-                    <div className="flex justify-end">
-                      <button
-                        onClick={() => {
-                          handleBatchUpdate({
-                            customTitle: undefined,
-                            customPrice: undefined,
-                            customSku: undefined,
-                            customDesc: undefined,
-                            titleFontSize: undefined,
-                            priceFontSize: undefined,
-                            fontSize: undefined,
-                            titleColor: undefined,
-                            priceColor: undefined,
-                            textColor: undefined,
-                            borderRadius: undefined,
-                          });
-                        }}
-                        className="text-[10px] text-amber-500 hover:text-amber-600 flex items-center gap-1 font-bold"
-                      >
-                        <RotateCcw size={12} /> Reset Overrides
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => {
+                        handleBatchUpdate({
+                          customTitle: undefined,
+                          customPrice: undefined,
+                          customSku: undefined,
+                          customDesc: undefined,
+                          titleFontSize: undefined,
+                          priceFontSize: undefined,
+                          fontSize: undefined,
+                          titleColor: undefined,
+                          priceColor: undefined,
+                          textColor: undefined,
+                          borderRadius: undefined,
+                        });
+                      }}
+                      className="text-[10px] text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold cursor-pointer"
+                      title="Reset all custom overrides back to product database defaults"
+                    >
+                      <RotateCcw size={11} /> Reset
+                    </button>
                   )}
+                </div>
 
+                <div className="space-y-3.5">
                   {/* Product Title / Name */}
-                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Title / Name</label>
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Title / Name</label>
                       <div className="flex items-center gap-1">
                         <span className="text-[9px] text-slate-400">Size:</span>
                         <button
@@ -567,9 +518,9 @@ const handleOpenEffects = () => {
                             const cur = selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)));
                             handleBatchUpdate({ titleFontSize: Math.max(8, cur - 1) });
                           }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
                         >-</button>
-                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-600">
+                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-500">
                           {selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)))}
                         </span>
                         <button
@@ -577,13 +528,13 @@ const handleOpenEffects = () => {
                             const cur = selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)));
                             handleBatchUpdate({ titleFontSize: cur + 1 });
                           }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
                         >+</button>
                         <input
                           type="color"
                           value={selectedElement.titleColor || '#0f172a'}
                           onChange={(e) => handleBatchUpdate({ titleColor: e.target.value })}
-                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer"
+                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer bg-transparent"
                           title="Title Text Color"
                         />
                       </div>
@@ -593,14 +544,14 @@ const handleOpenEffects = () => {
                       value={selectedElement.customTitle !== undefined ? selectedElement.customTitle : (products.find(p => p.id === selectedElement.productId)?.name || '')}
                       placeholder="Product Title..."
                       onChange={(e) => handleBatchUpdate({ customTitle: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-bold text-slate-800 outline-none focus:border-indigo-600"
+                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   {/* Price */}
-                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Price</label>
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Price</label>
                       <div className="flex items-center gap-1">
                         <span className="text-[9px] text-slate-400">Size:</span>
                         <button
@@ -608,9 +559,9 @@ const handleOpenEffects = () => {
                             const cur = selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)));
                             handleBatchUpdate({ priceFontSize: Math.max(8, cur - 1) });
                           }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
                         >-</button>
-                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-600">
+                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-500">
                           {selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)))}
                         </span>
                         <button
@@ -618,13 +569,13 @@ const handleOpenEffects = () => {
                             const cur = selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)));
                             handleBatchUpdate({ priceFontSize: cur + 1 });
                           }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
                         >+</button>
                         <input
                           type="color"
                           value={selectedElement.priceColor || '#4f46e5'}
                           onChange={(e) => handleBatchUpdate({ priceColor: e.target.value })}
-                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer"
+                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer bg-transparent"
                           title="Price Text Color"
                         />
                       </div>
@@ -637,26 +588,26 @@ const handleOpenEffects = () => {
                       })()}
                       placeholder="e.g. ₹1300"
                       onChange={(e) => handleBatchUpdate({ customPrice: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-black text-indigo-600 outline-none focus:border-indigo-600"
+                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] px-3 py-1.5 text-xs font-black text-indigo-600 dark:text-indigo-400 outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   {/* SKU / Model */}
-                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">SKU / Model Number</label>
+                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
+                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">SKU / Model Number</label>
                     <input
                       type="text"
                       value={selectedElement.customSku !== undefined ? selectedElement.customSku : (products.find(p => p.id === selectedElement.productId)?.sku || '')}
                       placeholder="SKU Code..."
                       onChange={(e) => handleBatchUpdate({ customSku: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] px-3 py-2 text-xs font-mono font-bold text-slate-800 outline-none focus:border-indigo-600"
+                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   {/* Specifications & Details */}
-                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
+                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Specs & Details</label>
+                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Specs & Details (Lines)</label>
                       <div className="flex items-center gap-1">
                         <span className="text-[9px] text-slate-400">Size:</span>
                         <button
@@ -664,9 +615,9 @@ const handleOpenEffects = () => {
                             const cur = selectedElement.fontSize || 9;
                             handleBatchUpdate({ fontSize: Math.max(6, cur - 1) });
                           }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
                         >-</button>
-                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-600">
+                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-500">
                           {selectedElement.fontSize || 9}
                         </span>
                         <button
@@ -674,19 +625,19 @@ const handleOpenEffects = () => {
                             const cur = selectedElement.fontSize || 9;
                             handleBatchUpdate({ fontSize: cur + 1 });
                           }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-xs"
+                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
                         >+</button>
                         <input
                           type="color"
                           value={selectedElement.textColor || '#475569'}
                           onChange={(e) => handleBatchUpdate({ textColor: e.target.value })}
-                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer"
+                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer bg-transparent"
                           title="Details Text Color"
                         />
                       </div>
                     </div>
                     <textarea
-                      rows={4}
+                      rows={5}
                       value={selectedElement.customDesc !== undefined ? selectedElement.customDesc : (() => {
                         const prod = products.find(p => p.id === selectedElement.productId);
                         if (!prod) return '';
@@ -702,15 +653,15 @@ const handleOpenEffects = () => {
                       })()}
                       placeholder="Enter specs line by line..."
                       onChange={(e) => handleBatchUpdate({ customDesc: e.target.value })}
-                      className="w-full bg-slate-50 border border-slate-200 rounded-[10px] p-2.5 text-xs font-mono text-slate-700 outline-none focus:border-indigo-600 resize-y leading-relaxed"
+                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] p-2.5 text-xs font-mono text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 resize-y leading-relaxed"
                     />
                   </div>
 
                   {/* Corner Roundness */}
-                  <div className="p-3 bg-white border border-slate-100 rounded-[14px] shadow-sm space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
+                    <div className="flex justify-between items-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
                       <span>Corner Roundness</span>
-                      <span className="text-indigo-600 font-mono">{(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}px</span>
+                      <span className="text-indigo-500 font-mono">{(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}px</span>
                     </div>
                     <input
                       type="range"
@@ -719,70 +670,12 @@ const handleOpenEffects = () => {
                       step="1"
                       value={(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}
                       onChange={(e) => handleBatchUpdate({ borderRadius: parseInt(e.target.value, 10) })}
-                      className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-indigo-600"
+                      className="w-full h-1.5 bg-slate-100 dark:bg-[#27272a] rounded-full appearance-none cursor-pointer accent-indigo-500"
                     />
                   </div>
                 </div>
               </section>
             )}
-
-            {/* Layer Stacking Section */}
-            <section>
-              {renderSectionHeader("LAYER STACKING", <Layers size={11} />)}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'front')}
-                  className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
-                >
-                  <ChevronsUp size={20} />
-                </button>
-                <button
-                  onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'forward')}
-                  className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
-                >
-                  <ChevronUp size={20} />
-                </button>
-                <button
-                  onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'backward')}
-                  className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
-                >
-                  <ChevronDownIcon size={20} />
-                </button>
-                <button
-                  onClick={() => reorderElement(currentPageIndex, selectedElementIds[0], 'back')}
-                  className="flex-1 py-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 shadow-sm text-slate-400 hover:text-indigo-600 hover:bg-slate-50 transition-all"
-                >
-                  <ChevronsDown size={20} />
-                </button>
-              </div>
-            </section>
-
-            {/* Control Flags Section */}
-            <section>
-              {renderSectionHeader("CONTROL FLAGS", <Sliders size={11} />)}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => toggleLock(currentPageIndex, selectedElementIds[0])}
-                  className={`flex-1 py-3 px-4 flex items-center justify-center gap-2 rounded-[18px] border transition-all ${selectedElement?.locked ? 'bg-indigo-50 border-indigo-200 text-indigo-600' : 'bg-white border-slate-100 text-slate-400 hover:text-slate-600 shadow-sm'}`}
-                >
-                  {selectedElement?.locked ? <Lock size={16} /> : <Unlock size={16} />}
-                  <span className="text-[10px] font-black uppercase tracking-widest">{selectedElement?.locked ? 'Locked' : 'Lock'}</span>
-                </button>
-                <button
-                  onClick={() => duplicateElement(currentPageIndex, selectedElementIds[0])}
-                  className="flex-1 py-3 px-4 flex items-center justify-center gap-2 rounded-[18px] border bg-white border-slate-100 text-slate-400 hover:text-indigo-600 shadow-sm transition-all"
-                >
-                  <Copy size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Duplicate</span>
-                </button>
-                <button
-                  onClick={() => removeElement(currentPageIndex, selectedElementIds[0])}
-                  className="p-3 px-4 flex items-center justify-center rounded-[18px] border bg-white border-slate-100 text-red-400 hover:bg-red-50 hover:border-red-100 shadow-sm transition-all"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </section>
           </>
         )}
       </div>

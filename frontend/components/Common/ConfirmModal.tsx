@@ -26,9 +26,9 @@ export const ConfirmModal: React.FC = () => {
   const isDanger = confirmModal.type === 'danger' || !confirmModal.type;
 
   return (
-    <div className="fixed inset-0 z-[99998] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[99998] bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div
-        className="bg-[#141414] border border-[#E2DCC8]/20 rounded-[6px] max-w-md w-full p-6 shadow-2xl space-y-5 text-left animate-in zoom-in-95 duration-200 relative text-[#F1F1F1]"
+        className="bg-[#141414] border border-[#E2DCC8]/20 rounded-[8px] max-w-md w-full p-6 shadow-2xl space-y-5 text-left animate-modal-card relative text-[#F1F1F1]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start gap-4">

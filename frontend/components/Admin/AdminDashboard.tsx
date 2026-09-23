@@ -10,15 +10,15 @@ import {
     XCircle,
     LogOut,
     CreditCard,
-    Sparkles
+    Sliders
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import SubscriptionManagement from './SubscriptionManagement';
-import { AdminTemplateManager } from './AdminTemplateManager';
+import { AdminSettings } from './AdminSettings';
 
 const AdminDashboard: React.FC = () => {
     const { registeredUsers, logout, user, fetchUsers, error } = useStore();
-    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions' | 'templates'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions' | 'settings'>('users');
 
     React.useEffect(() => {
         fetchUsers();
@@ -80,10 +80,10 @@ const AdminDashboard: React.FC = () => {
                     </button>
 
                     <button
-                        onClick={() => setActiveTab('templates')}
-                        className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'templates' ? 'border-[#0F3D3E] text-[#E2DCC8]' : 'border-transparent text-[#888888] hover:text-white'}`}
+                        onClick={() => setActiveTab('settings')}
+                        className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'settings' ? 'border-[#0F3D3E] text-[#E2DCC8]' : 'border-transparent text-[#888888] hover:text-white'}`}
                     >
-                        <Sparkles size={16} /> Template Studio
+                        <Sliders size={16} /> System Settings
                     </button>
                 </div>
             </div>
@@ -220,7 +220,7 @@ const AdminDashboard: React.FC = () => {
                     ) : activeTab === 'subscriptions' ? (
                         <SubscriptionManagement />
                     ) : (
-                        <AdminTemplateManager />
+                        <AdminSettings />
                     )}
                 </div>
             </div>

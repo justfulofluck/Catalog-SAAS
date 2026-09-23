@@ -1,8 +1,13 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import User, PasswordResetOTP, SubscriptionPlan, UserSubscription
-from .serializers import UserSerializer, SubscriptionPlanSerializer, UserSubscriptionSerializer
+from .models import User, PasswordResetOTP, SubscriptionPlan, UserSubscription, SystemSetting
+from .serializers import (
+    UserSerializer,
+    SubscriptionPlanSerializer,
+    UserSubscriptionSerializer,
+    SystemSettingSerializer,
+)
 from django.utils import timezone
 from django.conf import settings
 import random
@@ -18,32 +23,32 @@ class CustomLoginView(LoginView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
 
-
-class DebugJWTSettingsView(APIView):
-    permission_classes = [permissions.AllowAny]
-    authentication_classes = []
-
-    def get(self, request):
-        return Response(
-            {
-                "USE_JWT": api_settings.USE_JWT,
-                "JWT_AUTH_COOKIE": api_settings.JWT_AUTH_COOKIE,
-                "JWT_AUTH_REFRESH_COOKIE": api_settings.JWT_AUTH_REFRESH_COOKIE,
-                "JWT_AUTH_COOKIE_PATH": api_settings.JWT_AUTH_COOKIE_PATH,
-                "JWT_AUTH_REFRESH_COOKIE_PATH": api_settings.JWT_AUTH_REFRESH_COOKIE_PATH,
-                "JWT_AUTH_COOKIE_DOMAIN": api_settings.JWT_AUTH_COOKIE_DOMAIN,
-                "JWT_AUTH_HTTPONLY": api_settings.JWT_AUTH_HTTPONLY,
-                "JWT_AUTH_SECURE": api_settings.JWT_AUTH_SECURE,
-                "JWT_AUTH_SAMESITE": api_settings.JWT_AUTH_SAMESITE,
-                "JWT_AUTH_COOKIE_USE_CSRF": api_settings.JWT_AUTH_COOKIE_USE_CSRF,
-                "JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED": api_settings.JWT_AUTH_COOKIE_ENFORCE_CSRF_ON_UNAUTHENTICATED,
-            }
-        )
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        system_settings = SystemSetting.get_settings()
+        if system_settings.maintenance_mode and response.status_code == 200:
+            email = request.data.get('email') or request.data.get('username')
+            user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
+            if user and not (user.is_staff or user.is_superuser):
+                return Response(
+                    {"error": f"Maintenance Mode Active: {system_settings.maintenance_message}"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+        return response
 
 
 class PublicRegisterView(RegisterView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
+
+    def post(self, request, *args, **kwargs):
+        system_settings = SystemSetting.get_settings()
+        if not system_settings.allow_public_signup:
+            return Response(
+                {"error": "Public registration is currently disabled by administrator."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return super().post(request, *args, **kwargs)
 
 
 class PublicUserDetailsView(UserDetailsView):
@@ -260,3 +265,52 @@ class ForceLogoutView(APIView):
             print(f"Error clearing cookies: {e}")
 
         return response
+
+
+class SystemSettingsView(APIView):
+    def get_permissions(self):
+        if self.request.method == 'GET':
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    def get(self, request):
+        setting = SystemSetting.get_settings()
+        serializer = SystemSettingSerializer(setting)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        setting = SystemSetting.get_settings()
+        serializer = SystemSettingSerializer(setting, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminChangePasswordView(APIView):
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request):
+        current_password = request.data.get('current_password')
+        new_password = request.data.get('new_password')
+
+        if not new_password or len(new_password) < 6:
+            return Response(
+                {"error": "New password must be at least 6 characters."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = request.user
+        if current_password and not user.check_password(current_password):
+            return Response(
+                {"error": "Current password is incorrect."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.set_password(new_password)
+        user.save()
+        return Response(
+            {"message": "Admin password updated successfully."},
+            status=status.HTTP_200_OK,
+        )
+

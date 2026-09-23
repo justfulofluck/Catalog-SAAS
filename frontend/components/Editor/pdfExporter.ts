@@ -162,6 +162,40 @@ export async function exportCatalogToPDF(
         offscreenCanvas.add(obj);
       });
 
+      // Optional Free Plan Watermark
+      const systemSettings = useStore.getState().systemSettings;
+      const currentUser = useStore.getState().user;
+      const isFreePlan = !currentUser?.subscription_plan || currentUser.subscription_plan.toLowerCase() === 'starter' || currentUser.subscription_plan.toLowerCase() === 'free';
+      const enableWatermark = systemSettings?.enable_free_watermark !== false;
+      const watermarkText = systemSettings?.watermark_text || 'Made with catalogmakerr.';
+
+      if (isFreePlan && enableWatermark) {
+        const { FabricText, Rect: FabricRect } = await import('fabric');
+        const watermarkBg = new FabricRect({
+          left: 0,
+          top: PAGE_HEIGHT - 22,
+          width: PAGE_WIDTH,
+          height: 22,
+          fill: '#100F0F',
+          opacity: 0.85,
+          selectable: false,
+          evented: false,
+        });
+        const watermarkLabel = new FabricText(watermarkText, {
+          left: PAGE_WIDTH / 2,
+          top: PAGE_HEIGHT - 17,
+          originX: 'center',
+          originY: 'top',
+          fontSize: 10,
+          fontFamily: 'Inter',
+          fill: '#E2DCC8',
+          selectable: false,
+          evented: false,
+        });
+        offscreenCanvas.add(watermarkBg);
+        offscreenCanvas.add(watermarkLabel);
+      }
+
       offscreenCanvas.renderAll();
 
       // Ensure all text layout and image draws complete cleanly

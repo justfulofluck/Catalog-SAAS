@@ -541,8 +541,8 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
 
       <div
         ref={menuRef}
-        className="fixed z-[9999] w-[260px] bg-[#22252a] border border-[#343842] shadow-[0_20px_50px_rgba(0,0,0,0.75),0_6px_20px_rgba(0,0,0,0.5)] rounded-[10px] py-1.5 px-1 select-none animate-in fade-in zoom-in-95 duration-100"
-        style={{ left: `${coords.x}px`, top: `${coords.y}px`, backgroundColor: '#22252a' }}
+        className="fixed z-[9999] w-[260px] bg-[#22252a]/95 backdrop-blur-xl border border-[#343842] shadow-[0_20px_50px_rgba(0,0,0,0.75),0_6px_20px_rgba(0,0,0,0.5)] rounded-[8px] py-1.5 px-1 select-none animate-dropdown"
+        style={{ left: `${coords.x}px`, top: `${coords.y}px` }}
         onContextMenu={(e) => e.preventDefault()}
         onClick={(e) => e.stopPropagation()}
       >

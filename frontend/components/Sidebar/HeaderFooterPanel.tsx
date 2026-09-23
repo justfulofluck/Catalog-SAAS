@@ -20,13 +20,11 @@ const HeaderFooterPanel: React.FC = () => {
   const toPx = (mm: number) => Math.round(mm * PX_PER_MM);
 
   return (
-    <div className={`flex flex-col h-full w-full font-sans overflow-hidden select-none transition-colors ${
-      isDark ? 'bg-[#161616] text-white' : 'bg-white text-slate-800'
-    }`}>
-      {/* Panel Top Header */}
-      <div className={`h-14 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${
-        isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-100 bg-white'
+    <div className={`flex flex-col h-full w-full font-sans overflow-hidden select-none transition-colors ${isDark ? 'bg-[#161616] text-white' : 'bg-white text-slate-800'
       }`}>
+      {/* Panel Top Header */}
+      <div className={`h-14 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-100 bg-white'
+        }`}>
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-white shadow-sm">
             <Layout size={14} />
@@ -45,11 +43,10 @@ const HeaderFooterPanel: React.FC = () => {
       {/* Panel Content Body */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {/* Custom Header Studio Unified Card */}
-        <div className={`p-3.5 rounded-[6px] border transition-all ${
-          isDark
+        <div className={`p-3.5 rounded-[6px] border transition-all ${isDark
             ? 'bg-gradient-to-br from-[#0F3D3E]/30 via-[#161616] to-[#121212] border-[#0F3D3E]/40'
             : 'bg-gradient-to-br from-[#0F3D3E]/10 via-slate-50 to-white border-[#0F3D3E]/30'
-        }`}>
+          }`}>
           {/* Header Card Top: Title + Enable Checkbox */}
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <div className="flex items-center gap-2">
@@ -83,11 +80,10 @@ const HeaderFooterPanel: React.FC = () => {
         </div>
 
         {/* Custom Footer Studio Unified Card */}
-        <div className={`p-3.5 rounded-[6px] border transition-all ${
-          isDark
+        <div className={`p-3.5 rounded-[6px] border transition-all ${isDark
             ? 'bg-gradient-to-br from-[#0F3D3E]/30 via-[#161616] to-[#121212] border-[#0F3D3E]/40'
             : 'bg-gradient-to-br from-[#0F3D3E]/10 via-slate-50 to-white border-[#0F3D3E]/30'
-        }`}>
+          }`}>
           {/* Footer Card Top: Title + Enable Checkbox */}
           <div className="flex items-center justify-between gap-2 mb-1.5">
             <div className="flex items-center gap-2">
@@ -121,17 +117,14 @@ const HeaderFooterPanel: React.FC = () => {
         </div>
 
         {/* Page Margins Card (Transferred from Page Settings) */}
-        <div className={`p-3.5 rounded-[4px] border transition-all ${
-          isDark ? 'border-[#262626] bg-[#1a1a1a]' : 'border-slate-200 bg-slate-50'
-        }`}>
+        <div className={`p-3.5 rounded-[4px] border transition-all ${isDark ? 'border-[#262626] bg-[#1a1a1a]' : 'border-slate-200 bg-slate-50'
+          }`}>
           <div className="flex items-center justify-between mb-3">
-            <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] ${
-              isDark ? 'bg-[#222222]' : 'bg-slate-200/60'
-            }`}>
+            <div className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[4px] ${isDark ? 'bg-[#222222]' : 'bg-slate-200/60'
+              }`}>
               <Settings size={13} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
-              <span className={`text-[10px] font-black uppercase tracking-widest ${
-                isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
-              }`}>Page Margins</span>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'
+                }`}>Page Margins</span>
             </div>
 
             {/* Canva-style Show Margin Guides Toggle */}
@@ -157,9 +150,8 @@ const HeaderFooterPanel: React.FC = () => {
             ].map((m) => (
               <div key={m.label} className="space-y-1">
                 <span className="text-[9px] font-bold text-[#888888] uppercase block">{m.label}</span>
-                <div className={`flex items-center border rounded-[4px] px-2.5 py-1.5 transition-all focus-within:border-[#0F3D3E] ${
-                  isDark ? 'border-[#262626] bg-[#121212]' : 'border-slate-300 bg-white'
-                }`}>
+                <div className={`flex items-center border rounded-[4px] px-2.5 py-1.5 transition-all focus-within:border-[#0F3D3E] ${isDark ? 'border-[#262626] bg-[#121212]' : 'border-slate-300 bg-white'
+                  }`}>
                   <input
                     type="number"
                     value={toMm(m.val)}
@@ -169,9 +161,8 @@ const HeaderFooterPanel: React.FC = () => {
                       if (!isNaN(val)) updateProjectSettings({ [m.key]: toPx(val) });
                       else if (rawVal === '') updateProjectSettings({ [m.key]: 0 });
                     }}
-                    className={`w-full bg-transparent outline-none text-xs font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${
-                      isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
-                    }`}
+                    className={`w-full bg-transparent outline-none text-xs font-bold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
+                      }`}
                   />
                   <span className="text-[9px] font-bold text-[#888888] ml-1">mm</span>
                 </div>

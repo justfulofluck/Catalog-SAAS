@@ -180,7 +180,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     <ChevronDown size={12} className="text-[#E2DCC8]/50 shrink-0" />
                 </button>
                 {isFontMenuOpen && (
-                    <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2' : 'bottom-full mb-2'} left-0 w-64 bg-[#18181b] border border-[#E2DCC8]/20 rounded-[4px] shadow-2xl overflow-hidden z-50 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 flex flex-col text-[#EDEDED]`}>
+                    <div className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2 animate-dropdown' : 'bottom-full mb-2 animate-popover'} left-0 w-64 bg-[#18181b]/95 backdrop-blur-xl border border-[#E2DCC8]/20 rounded-[6px] shadow-2xl overflow-hidden z-50 flex flex-col text-[#EDEDED]`}>
                         {/* Search Bar - Fixed at top */}
                         <div className="p-2 border-b border-[#E2DCC8]/15 bg-[#121214] flex items-center gap-2 sticky top-0 z-10">
                             <Search size={14} className="text-gray-400" />
@@ -374,7 +374,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     </button>
                     {isSettingsOpen && (
                         <div
-                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2' : 'bottom-full mb-2'} left-1/2 -translate-x-1/2 w-[240px] bg-[#18181b] border border-[#E2DCC8]/20 rounded-[4px] shadow-2xl p-3.5 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 text-[#EDEDED] z-50`}
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2 animate-dropdown' : 'bottom-full mb-2 animate-popover-center'} left-1/2 -translate-x-1/2 w-[240px] bg-[#18181b]/95 backdrop-blur-xl border border-[#E2DCC8]/20 rounded-[6px] shadow-2xl p-3.5 text-[#EDEDED] z-50`}
                         >
                             <div className="space-y-3.5">
                                 {/* Letter Spacing */}
@@ -470,7 +470,7 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                     </button>
                     {isLayerMenuOpen && (
                         <div
-                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2' : 'bottom-full mb-2'} right-0 w-[200px] bg-[#18181b] border border-[#E2DCC8]/20 rounded-[4px] shadow-2xl p-2 animate-in ${element.y * zoom < 100 ? 'slide-in-from-top-2' : 'slide-in-from-bottom-2'} duration-200 z-50 text-[#EDEDED]`}
+                            className={`absolute ${element.y * zoom < 100 ? 'top-full mt-2 animate-dropdown-right' : 'bottom-full mb-2 animate-popover'} right-0 w-[200px] bg-[#18181b]/95 backdrop-blur-xl border border-[#E2DCC8]/20 rounded-[6px] shadow-2xl p-2 z-50 text-[#EDEDED]`}
                         >
                             <div className="space-y-1">
                                 <div className="px-2.5 py-1 border-b border-white/10">

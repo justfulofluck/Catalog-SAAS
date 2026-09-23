@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ShieldCheck, Mail, Lock, ArrowRight, Eye, EyeOff, KeyRound, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../client';
+import { AppIcon } from '../Common/AppIcon';
 
 const AdminLogin: React.FC = () => {
     const { adminLogin, setView, error, isLoading } = useStore();
@@ -226,11 +227,16 @@ const AdminLogin: React.FC = () => {
 
     return (
         <div className="min-h-screen w-full bg-[#100F0F] text-white flex items-center justify-center p-6 font-sans">
-            <div className="w-full max-w-md bg-[#161616] rounded-[24px] border border-[#262626] shadow-2xl overflow-hidden">
+            <div className="w-full max-w-md bg-[#161616] rounded-[24px] border border-[#262626] shadow-2xl overflow-hidden login-card-enter relative">
+                {isSubmitting && (
+                    <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#100F0F] overflow-hidden z-20">
+                        <div className="h-full bg-gradient-to-r from-transparent via-[#E2DCC8] to-transparent animate-shimmer-progress w-full" />
+                    </div>
+                )}
                 <div className="bg-[#1c1c1c] p-8 text-center relative overflow-hidden border-b border-[#262626]">
                     <div className="relative z-10 flex flex-col items-center">
-                        <div className="w-14 h-14 bg-[#0F3D3E]/10 border border-[#0F3D3E]/30 rounded-[14px] flex items-center justify-center mb-3">
-                            <ShieldCheck size={28} className="text-[#E2DCC8]" />
+                        <div className="mb-3">
+                            <AppIcon size={54} withGlow={true} />
                         </div>
                         <h2 className="text-2xl font-medium text-white tracking-tight font-heading">Catalog Team</h2>
                         <p className="text-[#999999] text-xs font-medium uppercase tracking-widest mt-1">Authorized Personnel Only</p>

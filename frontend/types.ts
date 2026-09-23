@@ -49,84 +49,84 @@ export interface ProductGridSection {
 }
 
 export interface CanvasElement {
-   id: string;
-   type: ElementType;
-   shapeType?: ShapeType;
-   x: number;
-   y: number;
-   width: number;
-   height: number;
-   rotation: number;
-   opacity: number;
-   fill?: string;
-   stroke?: string;
-   strokeWidth?: number;
-   text?: string;
-   fontSize?: number;
-   fontFamily?: string;
-   fontWeight?: string;
-   fontStyle?: 'normal' | 'italic';
-   textDecoration?: string;
-   textAlign?: 'left' | 'center' | 'right' | 'justify';
-   verticalAlign?: 'top' | 'middle' | 'bottom';
-   lineHeight?: number;
-   letterSpacing?: number;
-   src?: string;
-   productId?: string;
-   zIndex: number;
-   author?: string;
-   groupId?: string;
-   sectionTag?: string;
-   locked?: boolean;
-   visible?: boolean;
-   effectStyle?: 'none' | 'hollow' | 'outline' | 'shadow' | 'lift' | 'neon' | 'glitch' | 'echo' | 'splice' | 'background';
-   effectColor?: string;
-   effectColor2?: string;
-   shadowBlur?: number;
-   shadowOpacity?: number;
-   shadowOffsetX?: number;
-   shadowOffsetY?: number;
-   textStrokeWidth?: number;
-   effectSpread?: number;
-   effectRoundness?: number;
+  id: string;
+  type: ElementType;
+  shapeType?: ShapeType;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  opacity: number;
+  fill?: string;
+  stroke?: string;
+  strokeWidth?: number;
+  text?: string;
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string;
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: string;
+  textAlign?: 'left' | 'center' | 'right' | 'justify';
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  lineHeight?: number;
+  letterSpacing?: number;
+  src?: string;
+  productId?: string;
+  zIndex: number;
+  author?: string;
+  groupId?: string;
+  sectionTag?: string;
+  locked?: boolean;
+  visible?: boolean;
+  effectStyle?: 'none' | 'hollow' | 'outline' | 'shadow' | 'lift' | 'neon' | 'glitch' | 'echo' | 'splice' | 'background';
+  effectColor?: string;
+  effectColor2?: string;
+  shadowBlur?: number;
+  shadowOpacity?: number;
+  shadowOffsetX?: number;
+  shadowOffsetY?: number;
+  textStrokeWidth?: number;
+  effectSpread?: number;
+  effectRoundness?: number;
 
-   // Table specific
-   tableData?: TableData;
+  // Table specific
+  tableData?: TableData;
 
-   // Product Block specific
-   productData?: Product;
-   cardTheme?: CardTheme;
-   showPrice?: boolean;
-   showSku?: boolean;
-   showName?: boolean;
-   customTitle?: string;
-   customPrice?: string;
-   customSku?: string;
-   customDesc?: string;
-   titleFontSize?: number;
-   priceFontSize?: number;
-   titleColor?: string;
-   priceColor?: string;
-   textColor?: string;
-   borderRadius?: number;
-   filters?: {
-     brightness?: number;
-     blur?: number;
-     contrast?: number;
-     saturation?: number;
-   };
-   iconConfig?: {
-     iconName: string;
-     iconLibrary: 'fontawesome';
-     color?: string;
-     size?: number;
-     fontFamily?: string;
-     fontWeight?: string;
-     linkUrl?: string;
-     linkType?: 'url' | 'whatsapp' | 'phone' | 'email';
-   };
-   linkUrl?: string;
-   linkType?: 'url' | 'whatsapp' | 'phone' | 'email';
+  // Product Block specific
+  productData?: Product;
+  cardTheme?: CardTheme;
+  showPrice?: boolean;
+  showSku?: boolean;
+  showName?: boolean;
+  customTitle?: string;
+  customPrice?: string;
+  customSku?: string;
+  customDesc?: string;
+  titleFontSize?: number;
+  priceFontSize?: number;
+  titleColor?: string;
+  priceColor?: string;
+  textColor?: string;
+  borderRadius?: number;
+  filters?: {
+    brightness?: number;
+    blur?: number;
+    contrast?: number;
+    saturation?: number;
+  };
+  iconConfig?: {
+    iconName: string;
+    iconLibrary: 'fontawesome';
+    color?: string;
+    size?: number;
+    fontFamily?: string;
+    fontWeight?: string;
+    linkUrl?: string;
+    linkType?: 'url' | 'whatsapp' | 'phone' | 'email';
+  };
+  linkUrl?: string;
+  linkType?: 'url' | 'whatsapp' | 'phone' | 'email';
 }
 
 export interface GridTemplate {
@@ -405,3 +405,17 @@ export interface ConfirmDialogState {
   onConfirm: () => void | Promise<void>;
   onCancel?: () => void;
 }
+
+export interface SystemSetting {
+  id?: number;
+  platform_name: string;
+  support_email: string;
+  allow_public_signup: boolean;
+  maintenance_mode: boolean;
+  maintenance_message: string;
+  enable_free_watermark: boolean;
+  watermark_text: string;
+  default_currency: string;
+  updated_at?: string;
+}
+

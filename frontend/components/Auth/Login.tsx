@@ -4,9 +4,10 @@ import { useStore } from '../../store/useStore';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../client';
 import GradientBlinds from '../Common/GradientBlinds';
+import { AppIcon } from '../Common/AppIcon';
 
 const Login: React.FC = () => {
-  const { login, setView, error, plans, fetchPlans } = useStore();
+  const { login, setView, error, plans, fetchPlans, systemSettings, fetchSystemSettings } = useStore();
 
   // Auth Modes: 'signin' | 'signup'
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -28,6 +29,10 @@ const Login: React.FC = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  React.useEffect(() => {
+    fetchSystemSettings();
+  }, [fetchSystemSettings]);
 
   // Show error alert if exists
   React.useEffect(() => {
@@ -337,14 +342,19 @@ const Login: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 mt-4 active:scale-98"
+          className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-60 mt-4 active:scale-98 relative overflow-hidden"
         >
           {isSubmitting ? (
-            <div className="w-5 h-5 border-2 border-[#F1F1F1]/30 border-t-[#F1F1F1] rounded-full animate-spin"></div>
+            <div className="flex items-center justify-center gap-2.5">
+              <div className="w-4 h-4 border-2 border-[#E2DCC8]/30 border-t-[#E2DCC8] rounded-full animate-spin"></div>
+              <span className="tracking-widest font-bold text-[#E2DCC8]">
+                {isLoginMode ? 'Signing In...' : (regStep === 'info' ? 'Processing...' : 'Creating Account...')}
+              </span>
+            </div>
           ) : (
             <>
-              {isLoginMode ? 'Sign In To Studio' : (regStep === 'info' ? 'Next: Select Plan' : 'Confirm & Register')}
-              <ArrowRight size={18} />
+              <span>{isLoginMode ? 'Sign In To Studio' : (regStep === 'info' ? 'Next: Select Plan' : 'Confirm & Register')}</span>
+              <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
             </>
           )}
         </button>
@@ -438,14 +448,32 @@ const Login: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-[#100F0F] via-[#100F0F]/65 to-transparent pointer-events-none" />
       </div>
 
-      <div className="w-full max-w-md bg-[#161616]/90 backdrop-blur-xl rounded-[4px] border border-[#262626] shadow-2xl overflow-hidden p-8 md:p-10 relative z-10">
-        <div className="flex items-center gap-2 mb-8">
+      <div className="w-full max-w-md bg-[#161616]/90 backdrop-blur-xl rounded-[4px] border border-[#262626] shadow-2xl overflow-hidden p-8 md:p-10 relative z-10 login-card-enter">
+        {/* Top Loading Shimmer Bar during submission */}
+        {isSubmitting && (
+          <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#100F0F] overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-transparent via-[#E2DCC8] to-transparent animate-shimmer-progress w-full" />
+          </div>
+        )}
+
+        <div className="flex items-center gap-2.5 mb-8">
+          <AppIcon size={28} withGlow={true} />
           <span className="font-bold text-xl tracking-tight font-heading text-[#F1F1F1]">catalogmakerr.</span>
         </div>
           {regStep === 'plan' && !isLoginMode && recoveryStep === 'none' ? renderPlanSelection() : renderFormContent()}
 
+          {systemSettings?.maintenance_mode && (
+            <div className="mt-5 p-3.5 bg-amber-950/40 border border-amber-800/60 rounded-[4px] flex items-start gap-2.5 text-amber-300 animate-in slide-in-from-bottom-2">
+              <Shield size={16} className="shrink-0 mt-0.5 text-amber-400" />
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-amber-400">Maintenance Mode Active</p>
+                <p className="text-[11px] text-amber-200/80 mt-0.5">{systemSettings.maintenance_message}</p>
+              </div>
+            </div>
+          )}
+
           {error && (
-            <div className="mt-5 p-3.5 bg-red-950/40 border border-red-800/60 rounded-[4px] flex items-start gap-2.5 text-red-400 animate-in slide-in-from-bottom-2">
+            <div className="mt-5 p-3.5 bg-red-950/40 border border-red-800/60 rounded-[4px] flex items-start gap-2.5 text-red-400 animate-in slide-in-from-bottom-2 animate-shake">
               <Shield size={16} className="shrink-0 mt-0.5" />
               <p className="text-xs font-medium">{error}</p>
             </div>
@@ -453,12 +481,18 @@ const Login: React.FC = () => {
 
           {recoveryStep === 'none' && (
             <div className="mt-8 text-center">
-              <p className="text-xs text-[#E2DCC8]/70">
-                {isLoginMode ? "New here?" : "Already a user?"}
-                <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-[#E2DCC8] hover:text-[#F1F1F1] font-semibold ml-2 hover:underline font-heading transition-colors">
-                  {isLoginMode ? "Sign Up" : "Sign In"}
-                </button>
-              </p>
+              {systemSettings?.allow_public_signup === false && isLoginMode ? (
+                <p className="text-[11px] text-[#E2DCC8]/50">
+                  Public registrations are currently invitation-only.
+                </p>
+              ) : (
+                <p className="text-xs text-[#E2DCC8]/70">
+                  {isLoginMode ? "New here?" : "Already a user?"}
+                  <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-[#E2DCC8] hover:text-[#F1F1F1] font-semibold ml-2 hover:underline font-heading transition-colors">
+                    {isLoginMode ? "Sign Up" : "Sign In"}
+                  </button>
+                </p>
+              )}
             </div>
           )}
       </div>

@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { ArrowLeft, Check, Sparkles, CreditCard, ShieldCheck, Lock, Loader2 } from 'lucide-react';
+import { AppIcon } from '../Common/AppIcon';
 
 const PricingView: React.FC = () => {
   const { plans, fetchPlans, setView, user, updateSubscription, uiTheme } = useStore();
@@ -183,7 +184,8 @@ const PricingView: React.FC = () => {
           >
             <ArrowLeft size={20} />
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <AppIcon size={24} />
             <span className={`font-space font-bold text-xl tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>catalogmakerr.</span>
           </div>
         </div>

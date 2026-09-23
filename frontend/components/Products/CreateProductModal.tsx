@@ -61,7 +61,7 @@ export const CreateProductModal: React.FC = () => {
       <div 
         ref={modalRef}
         onClick={(e) => e.stopPropagation()}
-        className={`w-full max-w-xl flex flex-col rounded-[8px] border shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 ${
+        className={`w-full max-w-xl flex flex-col rounded-[8px] border shadow-2xl overflow-hidden animate-modal-card ${
           isDark ? 'bg-[#141414] border-[#E2DCC8]/20 text-[#F1F1F1]' : 'bg-white border-slate-300 text-slate-900'
         }`}
       >

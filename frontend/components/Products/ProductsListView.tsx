@@ -495,11 +495,13 @@ const ProductsListView: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-8 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => handleEdit(product.id)}
-                            className={`p-1.5 rounded-[4px] border border-transparent transition-all ${
-                              isDark ? 'text-[#E2DCC8]/70 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30 hover:border-[#E2DCC8]/20' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100 hover:border-slate-200'
+                            className={`p-1.5 rounded-[4px] border transition-all ${
+                              isDark 
+                                ? 'text-[#E2DCC8]/80 hover:text-white bg-[#141414] hover:bg-[#0F3D3E]/40 border-[#262626] hover:border-[#E2DCC8]/30' 
+                                : 'text-slate-600 hover:text-slate-900 bg-white hover:bg-slate-100 border-slate-200 shadow-sm'
                             }`}
                             title="Edit Product"
                           >
@@ -507,16 +509,15 @@ const ProductsListView: React.FC = () => {
                           </button>
                           <button
                             onClick={(e) => handleDeleteSingle(e, product.id, product.name)}
-                            className={`p-1.5 rounded-[4px] border border-transparent transition-all ${
-                              isDark ? 'text-[#E2DCC8]/70 hover:text-red-400 hover:bg-[#100F0F] hover:border-red-500/30' : 'text-slate-500 hover:text-red-600 hover:bg-red-50 hover:border-red-200'
+                            className={`p-1.5 rounded-[4px] border transition-all ${
+                              isDark 
+                                ? 'text-[#E2DCC8]/80 hover:text-red-400 bg-[#141414] hover:bg-red-500/15 border-[#262626] hover:border-red-500/30' 
+                                : 'text-slate-600 hover:text-red-600 bg-white hover:bg-red-50 border-slate-200 shadow-sm'
                             }`}
                             title="Delete Product"
                           >
                             <Trash2 size={14} />
                           </button>
-                        </div>
-                        <div className={`group-hover:hidden ${isDark ? 'text-[#444444]' : 'text-slate-300'}`}>
-                          <ChevronRight size={16} />
                         </div>
                       </td>
                     </tr>

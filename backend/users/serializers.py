@@ -54,9 +54,18 @@ class UserSubscriptionSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'user_email', 'user_name', 'plan', 'plan_name', 'start_date', 'end_date', 'is_active')
         read_only_fields = ('start_date',)
 
+from .models import User, SubscriptionPlan, UserSubscription, SystemSetting
+
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubscriptionPlan
         fields = '__all__'
+
+
+class SystemSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemSetting
+        fields = '__all__'
+
 
 

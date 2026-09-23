@@ -49,3 +49,26 @@ class UserSubscription(models.Model):
 
     def __str__(self):
         return f"{self.user.email} - {self.plan.name}"
+
+
+class SystemSetting(models.Model):
+    platform_name = models.CharField(max_length=100, default="catalogmakerr.")
+    support_email = models.EmailField(default="support@catalogstudio.com")
+    allow_public_signup = models.BooleanField(default=True)
+    maintenance_mode = models.BooleanField(default=False)
+    maintenance_message = models.TextField(
+        default="System is currently under maintenance. We will be back shortly."
+    )
+    enable_free_watermark = models.BooleanField(default=True)
+    watermark_text = models.CharField(max_length=200, default="Made with catalogmakerr.")
+    default_currency = models.CharField(max_length=3, default="INR")
+    updated_at = models.DateTimeField(auto_now=True)
+
+    @classmethod
+    def get_settings(cls):
+        setting, _ = cls.objects.get_or_create(id=1)
+        return setting
+
+    def __str__(self):
+        return f"System Settings ({self.platform_name})"
+
