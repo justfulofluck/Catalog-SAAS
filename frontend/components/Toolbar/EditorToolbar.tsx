@@ -30,7 +30,8 @@ import {
   Plus as PlusIcon,
   Sun,
   Moon,
-  FileDown
+  FileDown,
+  Flag
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ShapeType } from '../../types';

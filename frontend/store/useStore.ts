@@ -237,6 +237,8 @@ interface State {
   duplicateElement: (pageIndex: number, elementId: string) => void;
   nudgeElement: (pageIndex: number, elementId: string, dx: number, dy: number) => void;
   toggleLock: (pageIndex: number, elementId: string) => void;
+  toggleLockElement: (elementId: string) => void;
+  toggleVisibilityElement: (elementId: string) => void;
   reorderElement: (pageIndex: number, elementId: string, direction: 'front' | 'back' | 'forward' | 'backward') => void;
   setElementOrder: (pageIndex: number, newIds: string[]) => void;
 
@@ -2401,6 +2403,20 @@ export const useStore = create<State>((set, get) => ({
         catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() }
       };
     });
+  },
+
+  toggleLockElement: (elementId) => {
+    const pageIndex = get().currentPageIndex;
+    get().toggleLock(pageIndex, elementId);
+  },
+
+  toggleVisibilityElement: (elementId) => {
+    const pageIndex = get().currentPageIndex;
+    const page = get().catalog.pages[pageIndex];
+    if (!page) return;
+    const el = page.elements.find(e => e.id === elementId);
+    if (!el) return;
+    get().updateElement(pageIndex, elementId, { hidden: !(el as any).hidden });
   },
 
   reorderElement: (pageIndex, elementId, direction) => set((state) => {
