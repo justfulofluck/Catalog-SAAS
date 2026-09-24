@@ -714,6 +714,25 @@ export function createCanvaLineControls(): Record<string, Control> {
  */
 export function applyCanvaSelectionStyle(obj: any) {
   if (!obj) return;
+  if (obj.locked || (obj as any).locked) {
+    obj.set({
+      hasControls: false,
+      hasBorders: true,
+      lockMovementX: true,
+      lockMovementY: true,
+      lockRotation: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      lockSkewingX: true,
+      lockSkewingY: true,
+      hoverCursor: 'pointer',
+      borderColor: CANVA_THEME.borderColor,
+      borderScaleFactor: 1.5,
+      borderDashArray: null,
+      padding: 0,
+    });
+    return;
+  }
   const isText = obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text';
   const isLine = obj.type === 'line' ||
     obj.shapeType === 'line' ||
