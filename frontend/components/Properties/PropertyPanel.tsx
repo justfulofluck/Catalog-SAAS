@@ -2,11 +2,12 @@ import React, { useState } from 'react';
 import {
   X, Type, Palette, AlignLeft, AlignCenter,
   AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, Minus, Plus, ChevronDown,
-  Trash2, Bold, Italic, Underline, MousePointer2
+  Trash2, Bold, Italic, Underline, MousePointer2, CheckSquare, Check, Sparkles, SlidersHorizontal, ListTodo
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { toggleStyle } from '../../utils/textStyleSelection';
+import { ChecklistRow, ChecklistData } from '../../types';
 
 const PropertyPanel: React.FC = () => {
   const {
@@ -450,6 +451,223 @@ const PropertyPanel: React.FC = () => {
                         </div>
                       ))}
                     </div>
+                  </div>
+                </div>
+              </section>
+            )}
+
+            {/* Checklist Specific Controls */}
+            {selectedElement.type === 'checklist' && selectedElement.checklistData && (
+              <section className="space-y-4 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <ListTodo size={14} className="text-amber-500" />
+                    <span className="text-[10px] font-black text-slate-800 uppercase tracking-widest">
+                      Checklist Items &amp; Tuning
+                    </span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-amber-50 text-amber-700 rounded-full text-[9px] font-bold">
+                    {selectedElement.checklistData.rows.length} Tasks
+                  </span>
+                </div>
+
+                {/* Theme Selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Theme / Layout Style
+                  </label>
+                  <select
+                    value={selectedElement.checklistData.themeId}
+                    onChange={(e) => {
+                      const newThemeId = e.target.value;
+                      const newChecklistData: ChecklistData = {
+                        ...selectedElement.checklistData!,
+                        themeId: newThemeId,
+                      };
+                      updateElement(currentPageIndex, selectedElement.id, { checklistData: newChecklistData });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-2.5 py-1.5 text-xs font-semibold text-slate-700 outline-none focus:border-amber-500"
+                  >
+                    <option value="customer-feedback-checklist">Customer Service Review (Circles)</option>
+                    <option value="lesson-planning-checklist">Lesson Planning Checklist (Teal)</option>
+                    <option value="employee-development-progress">Employee Progress (Navy Header)</option>
+                    <option value="recruitment-hiring-checklist">Recruitment Checklist (Outlined)</option>
+                    <option value="color-band-process-checklist">Color Band Process (Sections)</option>
+                    <option value="goals-matrix-checklist">Goals Progress Matrix (2-Col Checkboxes)</option>
+                    <option value="gold-task-list-checklist">Task List (Amber Banner &amp; Stripes)</option>
+                  </select>
+                </div>
+
+                {/* Title Edit */}
+                <div className="space-y-1">
+                  <label className="text-[9px] font-bold text-slate-400 uppercase tracking-wider block">
+                    Checklist Header Title
+                  </label>
+                  <input
+                    type="text"
+                    value={selectedElement.checklistData.title || ''}
+                    placeholder="Enter checklist title..."
+                    onChange={(e) => {
+                      const newChecklistData: ChecklistData = {
+                        ...selectedElement.checklistData!,
+                        title: e.target.value,
+                      };
+                      updateElement(currentPageIndex, selectedElement.id, { checklistData: newChecklistData });
+                    }}
+                    className="w-full bg-slate-50 border border-slate-200 rounded px-2.5 py-1 text-xs font-medium text-slate-700 outline-none focus:border-amber-500"
+                  />
+                </div>
+
+                {/* Interactive Tasks List */}
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex justify-between items-center">
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                      Tasks ({selectedElement.checklistData.rows.length})
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newId = `r-${Date.now()}`;
+                        const newRow: ChecklistRow = {
+                          id: newId,
+                          text: 'New checklist task',
+                          checked: false,
+                          columnValues: { 'In Progress': false, 'Completed': false }
+                        };
+                        const newChecklistData: ChecklistData = {
+                          ...selectedElement.checklistData!,
+                          rows: [...selectedElement.checklistData!.rows, newRow],
+                        };
+                        updateElement(currentPageIndex, selectedElement.id, {
+                          checklistData: newChecklistData,
+                          height: selectedElement.height + 34
+                        });
+                      }}
+                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-600 text-white rounded text-[9px] font-black uppercase tracking-wider flex items-center gap-1 shadow-sm transition-all"
+                    >
+                      <Plus size={11} /> Add Task
+                    </button>
+                  </div>
+
+                  {/* Task Rows List */}
+                  <div className="space-y-2 max-h-72 overflow-y-auto custom-scrollbar p-1">
+                    {selectedElement.checklistData.rows.map((row, rIdx) => (
+                      <div
+                        key={row.id || rIdx}
+                        className="p-2 bg-slate-50 hover:bg-white border border-slate-200/80 rounded-lg space-y-1.5 shadow-sm transition-all"
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* Interactive Click-to-Tick Checkbox */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newRows = selectedElement.checklistData!.rows.map((r, i) => {
+                                if (i !== rIdx) return r;
+                                return { ...r, checked: !r.checked };
+                              });
+                              const newChecklistData = { ...selectedElement.checklistData!, rows: newRows };
+                              updateElement(currentPageIndex, selectedElement.id, { checklistData: newChecklistData });
+                            }}
+                            className={`w-6 h-6 rounded flex items-center justify-center transition-all shrink-0 ${
+                              row.checked
+                                ? 'bg-amber-500 text-white shadow-sm'
+                                : 'bg-white border border-slate-300 text-transparent hover:border-amber-400'
+                            }`}
+                            title={row.checked ? 'Click to uncheck' : 'Click to tick'}
+                          >
+                            <Check size={14} className={row.checked ? 'opacity-100 stroke-[3]' : 'opacity-0'} />
+                          </button>
+
+                          {/* Editable Task Input */}
+                          <input
+                            type="text"
+                            value={row.text || ''}
+                            placeholder="Task description..."
+                            onChange={(e) => {
+                              const newRows = selectedElement.checklistData!.rows.map((r, i) => {
+                                if (i !== rIdx) return r;
+                                return { ...r, text: e.target.value };
+                              });
+                              const newChecklistData = { ...selectedElement.checklistData!, rows: newRows };
+                              updateElement(currentPageIndex, selectedElement.id, { checklistData: newChecklistData });
+                            }}
+                            className={`flex-1 bg-white border border-slate-200 rounded px-2 py-1 text-xs font-medium outline-none focus:border-amber-500 transition-all ${
+                              row.checked ? 'text-slate-400 line-through' : 'text-slate-700'
+                            }`}
+                          />
+
+                          {/* Delete Task Button */}
+                          <button
+                            type="button"
+                            disabled={selectedElement.checklistData.rows.length <= 1}
+                            onClick={() => {
+                              const newRows = selectedElement.checklistData!.rows.filter((_, i) => i !== rIdx);
+                              const newChecklistData = { ...selectedElement.checklistData!, rows: newRows };
+                              updateElement(currentPageIndex, selectedElement.id, {
+                                checklistData: newChecklistData,
+                                height: Math.max(100, selectedElement.height - 34),
+                              });
+                            }}
+                            className="p-1 text-slate-300 hover:text-red-500 rounded disabled:opacity-20 transition-colors"
+                            title="Delete Task"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+
+                        {/* Multi-column Toggles for Goals Matrix Theme */}
+                        {selectedElement.checklistData.themeId === 'goals-matrix-checklist' && (
+                          <div className="flex items-center gap-3 pl-8 text-[10px] text-slate-500 font-semibold">
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(row.columnValues?.['In Progress'])}
+                                onChange={(e) => {
+                                  const newRows = selectedElement.checklistData!.rows.map((r, i) => {
+                                    if (i !== rIdx) return r;
+                                    return {
+                                      ...r,
+                                      columnValues: {
+                                        ...(r.columnValues || {}),
+                                        'In Progress': e.target.checked,
+                                      },
+                                    };
+                                  });
+                                  const newChecklistData = { ...selectedElement.checklistData!, rows: newRows };
+                                  updateElement(currentPageIndex, selectedElement.id, { checklistData: newChecklistData });
+                                }}
+                                className="rounded text-amber-600 focus:ring-amber-500"
+                              />
+                              In Progress
+                            </label>
+
+                            <label className="flex items-center gap-1.5 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={Boolean(row.columnValues?.['Completed'] || row.checked)}
+                                onChange={(e) => {
+                                  const newRows = selectedElement.checklistData!.rows.map((r, i) => {
+                                    if (i !== rIdx) return r;
+                                    return {
+                                      ...r,
+                                      checked: e.target.checked,
+                                      columnValues: {
+                                        ...(r.columnValues || {}),
+                                        'Completed': e.target.checked,
+                                      },
+                                    };
+                                  });
+                                  const newChecklistData = { ...selectedElement.checklistData!, rows: newRows };
+                                  updateElement(currentPageIndex, selectedElement.id, { checklistData: newChecklistData });
+                                }}
+                                className="rounded text-amber-600 focus:ring-amber-500"
+                              />
+                              Completed
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               </section>

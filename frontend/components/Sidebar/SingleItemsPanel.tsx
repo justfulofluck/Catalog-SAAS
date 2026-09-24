@@ -307,15 +307,15 @@ export const SingleItemsPanel: React.FC = () => {
         if (!product && el.productData) {
           product = el.productData as Product;
         }
-        if (!product) {
           product = {
             id: el.productId || Number(elementId) || 1,
             name: el.customTitle || 'Product',
             price: el.customPrice || '0',
             sku: el.customSku || '',
-            currency: '₹'
-          } as Product;
-        }
+            currency: '₹',
+            description: '',
+            image: ''
+          } as unknown as Product;
         openCustomizer(product, el, targetPageIdx);
       }
     };

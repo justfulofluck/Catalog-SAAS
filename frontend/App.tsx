@@ -24,6 +24,7 @@ import TextPanel from './components/Sidebar/TextPanel';
 import ColorPanel from './components/Sidebar/ColorPanel';
 import GridStudioPanel from './components/Sidebar/GridStudioPanel';
 import SingleItemsPanel from './components/Sidebar/SingleItemsPanel';
+import ElementsPanel from './components/Sidebar/ElementsPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
 import { CreateProductModal } from './components/Products/CreateProductModal';
@@ -58,7 +59,8 @@ import {
   Image as ImageIcon,
   Type,
   Sliders,
-  Package
+  Package,
+  PenTool
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -358,6 +360,25 @@ const App: React.FC = () => {
 
                 <button
                   onClick={() => {
+                    if (editorTab === 'elements' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('elements');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'elements' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
+                  title="Elements & Blocks"
+                >
+                  <PenTool size={20} />
+                </button>
+
+                <button
+                  onClick={() => {
                     if (editorTab === 'buttons' && isSidebarExpanded) {
                       setSidebarExpanded(false);
                     } else {
@@ -399,13 +420,14 @@ const App: React.FC = () => {
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
-                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
+                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors' || editorTab === 'elements') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'grid-studio' && <GridStudioPanel />}
                 {editorTab === 'single-items' && <SingleItemsPanel />}
                 {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
+                {editorTab === 'elements' && <ElementsPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
                 {editorTab === 'header-footer' && <HeaderFooterPanel />}
                 {editorTab === 'colors' && <ColorPanel />}

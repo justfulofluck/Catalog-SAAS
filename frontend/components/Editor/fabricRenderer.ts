@@ -495,6 +495,17 @@ export function getPolyPoints(shapeType: string, w: number, h: number): { x: num
       const skew = w * 0.2;
       return [{ x: skew, y: 0 }, { x: w, y: 0 }, { x: w - skew, y: h }, { x: 0, y: h }];
     }
+    case 'chevron':
+    case 'chevron-right': {
+      const indent = w * 0.16;
+      return [
+        { x: 0, y: 0 },
+        { x: w - indent, y: 0 },
+        { x: w, y: h / 2 },
+        { x: w - indent, y: h },
+        { x: 0, y: h }
+      ];
+    }
     case 'cross': {
       const t = Math.min(w, h) * 0.3;
       return [
@@ -671,6 +682,17 @@ async function _elementToFabricObject(
   const setCommon = (obj: any) => {
     Object.entries(common).forEach(([k, v]) => { try { obj.set(k as any, v); } catch { } });
   };
+
+  if (el.svgContent) {
+    try {
+      const htmlImg = await loadSvgAsImage(el.svgContent);
+      const img = await FabricImage.fromURL(htmlImg.src, { crossOrigin: 'anonymous' });
+      img.set({ ...common, width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
+      return img;
+    } catch (err) {
+      console.warn('Failed to render svgContent, falling back:', err);
+    }
+  }
 
   if (elType === 'text') {
     const hasMixedStyles = /<[a-z]+[^>]*style\s*=|color:\s*|font-size:\s*|font-family:\s*/.test(el.text || '');
@@ -1977,6 +1999,789 @@ async function _elementToFabricObject(
     (tableGroup as any).id = el.id;
     (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
     return tableGroup;
+  }
+
+  // ==========================================
+  // CHECKLIST ELEMENT RENDERING
+  // ==========================================
+  if (el.type === 'checklist') {
+    const data = el.checklistData || {
+      themeId: 'customer-feedback-checklist',
+      title: 'Checklist',
+      rows: [
+        { id: 'r1', text: 'Task 1', checked: false },
+        { id: 'r2', text: 'Task 2', checked: true },
+      ],
+    };
+
+    const themeId = data.themeId || 'customer-feedback-checklist';
+    const rows = data.rows || [];
+    const checklistObjs: any[] = [];
+    const w = el.width || 380;
+    const baseFontSize = data.fontSize || 11;
+    const textColor = data.textColor || '#334155';
+
+    if (themeId === 'customer-feedback-checklist') {
+      const rowHeight = 44;
+      const totalH = Math.max(el.height || 180, rows.length * rowHeight);
+      
+      // Outer Box
+      checklistObjs.push(new Rect({
+        left: 0,
+        top: 0,
+        width: w,
+        height: totalH,
+        rx: 4,
+        ry: 4,
+        fill: data.cardBg || '#FFFFFF',
+        stroke: data.borderColor || '#CBD5E1',
+        strokeWidth: 1.5,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Vertical divider between check column and text
+      checklistObjs.push(new Line([48, 0, 48, totalH], {
+        stroke: '#F1F5F9',
+        strokeWidth: 1,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      rows.forEach((row, i) => {
+        const rowY = i * rowHeight;
+        
+        // Row divider
+        if (i > 0) {
+          checklistObjs.push(new Line([0, rowY, w, rowY], {
+            stroke: '#E2E8F0',
+            strokeWidth: 1,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+        }
+
+        // Checkbox circle
+        if (row.checked) {
+          checklistObjs.push(new Circle({
+            left: 24,
+            top: rowY + 22,
+            radius: 7.5,
+            fill: '#E2E8F0',
+            originX: 'center',
+            originY: 'center',
+            objectCaching: false,
+          }));
+          checklistObjs.push(new Textbox('✓', {
+            left: 24,
+            top: rowY + 22,
+            fontSize: 11,
+            fontWeight: 'bold',
+            fill: '#475569',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        } else {
+          checklistObjs.push(new Circle({
+            left: 24,
+            top: rowY + 22,
+            radius: 7,
+            fill: '#CBD5E1',
+            originX: 'center',
+            originY: 'center',
+            objectCaching: false,
+          }));
+        }
+
+        // Task text
+        checklistObjs.push(new Textbox(String(row.text || ''), {
+          left: 56,
+          top: rowY + 14,
+          width: w - 70,
+          fontSize: baseFontSize,
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '500',
+          fill: textColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+      });
+
+    } else if (themeId === 'lesson-planning-checklist') {
+      let curY = 10;
+      
+      // Title
+      checklistObjs.push(new Textbox(String(data.title || 'Lesson Planning Checklist'), {
+        left: w / 2,
+        top: curY,
+        width: w - 20,
+        fontSize: 16,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '900',
+        fill: '#0F172A',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'top',
+        objectCaching: false,
+      }));
+      curY += 36;
+
+      rows.forEach((row) => {
+        const rowH = 38;
+        const boxColor = row.checked ? (data.checkboxColor || '#A7DCD7') : '#BCE3DF';
+        
+        // Square Checkbox
+        checklistObjs.push(new Rect({
+          left: 25,
+          top: curY + 2,
+          width: 18,
+          height: 18,
+          rx: 3,
+          ry: 3,
+          fill: boxColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        if (row.checked) {
+          checklistObjs.push(new Textbox('✓', {
+            left: 34,
+            top: curY + 11,
+            fontSize: 12,
+            fontWeight: '900',
+            fill: '#2D6A65',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        }
+
+        // Task text
+        checklistObjs.push(new Textbox(String(row.text || ''), {
+          left: 56,
+          top: curY + 3,
+          width: w - 70,
+          fontSize: baseFontSize,
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '500',
+          fill: textColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        curY += rowH;
+      });
+
+    } else if (themeId === 'employee-development-progress') {
+      const headerH = 34;
+      const rowHeight = 46;
+      const totalH = headerH + rows.length * rowHeight;
+      const colSplit = w - 90;
+
+      // Header Bar
+      checklistObjs.push(new Rect({
+        left: 0,
+        top: 0,
+        width: w,
+        height: headerH,
+        rx: 2,
+        ry: 2,
+        fill: data.headerBg || '#132B50',
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Header Title
+      checklistObjs.push(new Textbox(String(data.title || 'Employee Development Progress'), {
+        left: 14,
+        top: 9,
+        width: colSplit - 20,
+        fontSize: 12,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '800',
+        fill: data.headerTextColor || '#FFFFFF',
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Header Column "Done"
+      checklistObjs.push(new Textbox('Done', {
+        left: colSplit + 45,
+        top: 9,
+        width: 80,
+        fontSize: 12,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '800',
+        fill: data.headerTextColor || '#FFFFFF',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Outer Body Box
+      checklistObjs.push(new Rect({
+        left: 0,
+        top: headerH,
+        width: w,
+        height: rows.length * rowHeight,
+        fill: data.cardBg || '#FFFFFF',
+        stroke: data.borderColor || '#CBD5E1',
+        strokeWidth: 1.2,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Vertical Column Divider in body
+      checklistObjs.push(new Line([colSplit, headerH, colSplit, totalH], {
+        stroke: '#CBD5E1',
+        strokeWidth: 1.2,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      rows.forEach((row, i) => {
+        const rowY = headerH + i * rowHeight;
+
+        if (i > 0) {
+          checklistObjs.push(new Line([0, rowY, w, rowY], {
+            stroke: '#E2E8F0',
+            strokeWidth: 1,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+        }
+
+        // Text
+        checklistObjs.push(new Textbox(String(row.text || ''), {
+          left: 14,
+          top: rowY + 14,
+          width: colSplit - 28,
+          fontSize: baseFontSize,
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '600',
+          fill: textColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        // Circular Done Badge
+        checklistObjs.push(new Circle({
+          left: colSplit + 45,
+          top: rowY + 23,
+          radius: 10,
+          fill: data.checkboxColor || '#1B3A68',
+          originX: 'center',
+          originY: 'center',
+          objectCaching: false,
+        }));
+
+        if (row.checked) {
+          checklistObjs.push(new Textbox('✓', {
+            left: colSplit + 45,
+            top: rowY + 23,
+            fontSize: 12,
+            fontWeight: 'bold',
+            fill: '#FFFFFF',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        }
+      });
+
+    } else if (themeId === 'recruitment-hiring-checklist') {
+      let curY = 8;
+      
+      // Title
+      checklistObjs.push(new Textbox(String(data.title || 'Recruitment & Hiring To-Do Checklist'), {
+        left: w / 2,
+        top: curY,
+        width: w - 20,
+        fontSize: 15,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '900',
+        fill: '#0F172A',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'top',
+        objectCaching: false,
+      }));
+      curY += 36;
+
+      rows.forEach((row) => {
+        const rowH = 38;
+
+        // Circle outline
+        checklistObjs.push(new Circle({
+          left: 34,
+          top: curY + 10,
+          radius: 8,
+          fill: '#FFFFFF',
+          stroke: data.checkboxColor || '#334155',
+          strokeWidth: 1.5,
+          originX: 'center',
+          originY: 'center',
+          objectCaching: false,
+        }));
+
+        if (row.checked) {
+          checklistObjs.push(new Textbox('✓', {
+            left: 34,
+            top: curY + 10,
+            fontSize: 11,
+            fontWeight: 'bold',
+            fill: data.checkboxColor || '#334155',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        }
+
+        // Text
+        checklistObjs.push(new Textbox(String(row.text || ''), {
+          left: 56,
+          top: curY + 2,
+          width: w - 70,
+          fontSize: baseFontSize,
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '500',
+          fill: textColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        curY += rowH;
+      });
+
+    } else if (themeId === 'color-band-process-checklist') {
+      let curY = 0;
+      const sections = data.sections || [
+        { id: 's1', title: 'Feedback and Development', color: '#38BDF8' },
+        { id: 's2', title: 'Future Planning and Goal Setting', color: '#2DD4BF' },
+        { id: 's3', title: 'Open Discussion and Wrap-up', color: '#84CC16' },
+      ];
+
+      sections.forEach((sec) => {
+        const secRows = rows.filter(r => r.section === sec.id || (!r.section && sec.id === sections[0].id));
+        const secRowsH = Math.max(38, (secRows.length || 1) * 22 + 8);
+
+        // Color Header Band
+        checklistObjs.push(new Rect({
+          left: 0,
+          top: curY,
+          width: w,
+          height: 18,
+          rx: 2,
+          ry: 2,
+          fill: sec.color,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        // Header Title
+        checklistObjs.push(new Textbox(String(sec.title), {
+          left: 10,
+          top: curY + 3,
+          width: w - 20,
+          fontSize: 9,
+          fontFamily: 'Montserrat, sans-serif',
+          fontWeight: '800',
+          fill: '#0F172A',
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+        curY += 18;
+
+        // Content Box
+        checklistObjs.push(new Rect({
+          left: 0,
+          top: curY,
+          width: w,
+          height: secRowsH,
+          fill: '#FFFFFF',
+          stroke: '#E2E8F0',
+          strokeWidth: 1,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        secRows.forEach((row, rIdx) => {
+          const itemY = curY + 5 + rIdx * 20;
+
+          // Square Checkbox
+          checklistObjs.push(new Rect({
+            left: 14,
+            top: itemY,
+            width: 10,
+            height: 10,
+            rx: 1,
+            ry: 1,
+            fill: 'none',
+            stroke: '#64748B',
+            strokeWidth: 1,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+
+          if (row.checked) {
+            checklistObjs.push(new Textbox('✓', {
+              left: 19,
+              top: itemY + 5,
+              fontSize: 8,
+              fontWeight: '900',
+              fill: '#0F172A',
+              originX: 'center',
+              originY: 'center',
+              fontFamily: 'Inter, sans-serif',
+              objectCaching: false,
+            }));
+          }
+
+          // Text
+          checklistObjs.push(new Textbox(String(row.text || ''), {
+            left: 32,
+            top: itemY,
+            width: w - 45,
+            fontSize: baseFontSize,
+            fontFamily: 'Inter, sans-serif',
+            fontWeight: '500',
+            fill: textColor,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+        });
+
+        curY += secRowsH + 6;
+      });
+
+    } else if (themeId === 'goals-matrix-checklist') {
+      const headerH = 28;
+      const rowH = 32;
+      const totalH = headerH + rows.length * rowH;
+      const col1Split = w - 160;
+      const col2Split = w - 80;
+
+      // Header Row
+      checklistObjs.push(new Rect({
+        left: 0,
+        top: 0,
+        width: w,
+        height: headerH,
+        fill: data.headerBg || '#BDD3F5',
+        stroke: data.borderColor || '#93B4E4',
+        strokeWidth: 1,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Title "Goals"
+      checklistObjs.push(new Textbox(String(data.title || 'Goals'), {
+        left: 12,
+        top: 7,
+        width: col1Split - 20,
+        fontSize: 11,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '900',
+        fill: data.headerTextColor || '#0F172A',
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Col 1 Header "In Progress"
+      checklistObjs.push(new Textbox('In Progress', {
+        left: col1Split + 40,
+        top: 7,
+        width: 75,
+        fontSize: 10,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '800',
+        fill: data.headerTextColor || '#0F172A',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Col 2 Header "Completed"
+      checklistObjs.push(new Textbox('Completed', {
+        left: col2Split + 40,
+        top: 7,
+        width: 75,
+        fontSize: 10,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '800',
+        fill: data.headerTextColor || '#0F172A',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Outer Body Box
+      checklistObjs.push(new Rect({
+        left: 0,
+        top: headerH,
+        width: w,
+        height: rows.length * rowH,
+        fill: data.cardBg || '#FFFFFF',
+        stroke: data.borderColor || '#93B4E4',
+        strokeWidth: 1,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Vertical Grid Lines
+      checklistObjs.push(new Line([col1Split, 0, col1Split, totalH], {
+        stroke: data.borderColor || '#93B4E4',
+        strokeWidth: 1,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      checklistObjs.push(new Line([col2Split, 0, col2Split, totalH], {
+        stroke: data.borderColor || '#93B4E4',
+        strokeWidth: 1,
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      rows.forEach((row, i) => {
+        const rowY = headerH + i * rowH;
+
+        if (i > 0) {
+          checklistObjs.push(new Line([0, rowY, w, rowY], {
+            stroke: '#E2E8F0',
+            strokeWidth: 1,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+        }
+
+        // Text
+        checklistObjs.push(new Textbox(String(row.text || ''), {
+          left: 12,
+          top: rowY + 9,
+          width: col1Split - 20,
+          fontSize: baseFontSize,
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '600',
+          fill: textColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        // Checkbox In Progress
+        const inProgressChecked = Boolean(row.columnValues?.['In Progress']);
+        checklistObjs.push(new Rect({
+          left: col1Split + 32,
+          top: rowY + 8,
+          width: 16,
+          height: 16,
+          rx: 4,
+          ry: 4,
+          fill: inProgressChecked ? '#93B4E4' : 'none',
+          stroke: '#64748B',
+          strokeWidth: 1.2,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+        if (inProgressChecked) {
+          checklistObjs.push(new Textbox('✓', {
+            left: col1Split + 40,
+            top: rowY + 16,
+            fontSize: 10,
+            fontWeight: 'bold',
+            fill: '#FFFFFF',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        }
+
+        // Checkbox Completed
+        const completedChecked = Boolean(row.columnValues?.['Completed'] || row.checked);
+        checklistObjs.push(new Rect({
+          left: col2Split + 32,
+          top: rowY + 8,
+          width: 16,
+          height: 16,
+          rx: 4,
+          ry: 4,
+          fill: completedChecked ? '#93B4E4' : 'none',
+          stroke: '#64748B',
+          strokeWidth: 1.2,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+        if (completedChecked) {
+          checklistObjs.push(new Textbox('✓', {
+            left: col2Split + 40,
+            top: rowY + 16,
+            fontSize: 10,
+            fontWeight: 'bold',
+            fill: '#FFFFFF',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        }
+      });
+
+    } else {
+      // Default: Task list with Amber/Gold Banner & Alternating rows
+      const headerH = 28;
+      const rowH = 28;
+      let curY = 6;
+
+      // Header Banner
+      checklistObjs.push(new Rect({
+        left: 25,
+        top: curY,
+        width: w - 50,
+        height: headerH,
+        rx: 2,
+        ry: 2,
+        fill: data.headerBg || '#E58E26',
+        originX: 'left',
+        originY: 'top',
+        objectCaching: false,
+      }));
+
+      // Header Title
+      checklistObjs.push(new Textbox(String(data.title || 'Task List:'), {
+        left: w / 2,
+        top: curY + 6,
+        width: w - 70,
+        fontSize: 14,
+        fontFamily: 'Montserrat, sans-serif',
+        fontWeight: '900',
+        fill: data.headerTextColor || '#1C1917',
+        textAlign: 'center',
+        originX: 'center',
+        originY: 'top',
+        objectCaching: false,
+      }));
+      curY += headerH + 6;
+
+      rows.forEach((row, i) => {
+        const isAlternate = i % 2 === 1;
+
+        if (isAlternate) {
+          checklistObjs.push(new Rect({
+            left: 25,
+            top: curY,
+            width: w - 50,
+            height: rowH - 4,
+            rx: 2,
+            ry: 2,
+            fill: data.alternateRowBg || '#FFE8CC',
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false,
+          }));
+        }
+
+        // Square Checkbox
+        checklistObjs.push(new Rect({
+          left: 42,
+          top: curY + 4,
+          width: 14,
+          height: 14,
+          rx: 2.5,
+          ry: 2.5,
+          fill: '#FFFFFF',
+          stroke: '#94A3B8',
+          strokeWidth: 1.3,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        if (row.checked) {
+          checklistObjs.push(new Textbox('✓', {
+            left: 49,
+            top: curY + 11,
+            fontSize: 10,
+            fontWeight: 'bold',
+            fill: '#1C1917',
+            originX: 'center',
+            originY: 'center',
+            fontFamily: 'Inter, sans-serif',
+            objectCaching: false,
+          }));
+        }
+
+        // Text
+        checklistObjs.push(new Textbox(String(row.text || ''), {
+          left: 64,
+          top: curY + 4,
+          width: w - 120,
+          fontSize: baseFontSize,
+          fontFamily: 'Inter, sans-serif',
+          fontWeight: '500',
+          fill: textColor,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false,
+        }));
+
+        curY += rowH;
+      });
+    }
+
+    const calculatedHeight = Math.max(el.height || 180, (checklistObjs[checklistObjs.length - 1]?.top || 0) + 40);
+
+    const checklistGroup = new Group(checklistObjs, {
+      left: el.x,
+      top: el.y,
+      angle: el.rotation || 0,
+      width: el.width,
+      height: calculatedHeight,
+      originX: 'left',
+      originY: 'top',
+      opacity: el.opacity ?? 1,
+      objectCaching: false,
+      subTargetCheck: true,
+    });
+
+    (checklistGroup as any).id = el.id;
+    (checklistGroup as any)._checklistDataJSON = JSON.stringify(data);
+    return checklistGroup;
   }
 
   return null;

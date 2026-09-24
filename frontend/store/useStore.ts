@@ -64,6 +64,8 @@ interface State {
   isPropertyPanelOpen: boolean;
   isTableEditorOpen: boolean;
   editingTableElementId: string | null;
+  isChecklistEditorOpen: boolean;
+  editingChecklistElementId: string | null;
   isHeaderDesignerOpen: boolean;
   editingHeaderTemplate: any | null;
   isFooterDesignerOpen: boolean;
@@ -156,6 +158,7 @@ interface State {
   setHoveredElementId: (id: string | null) => void;
   setIsPropertyPanelOpen: (isOpen: boolean) => void;
   setIsTableEditorOpen: (isOpen: boolean, elementId?: string | null) => void;
+  setIsChecklistEditorOpen: (isOpen: boolean, elementId?: string | null) => void;
   isGridStudioOpen: boolean;
   gridStudioPageIndex: number | null;
   setIsGridStudioOpen: (isOpen: boolean, pageIndex?: number | null) => void;
@@ -179,8 +182,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'grid-studio' | 'single-items' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'single-items' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null) => void;
+  editorTab: 'pages' | 'products' | 'grid-studio' | 'single-items' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'elements' | 'properties' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'single-items' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'elements' | 'properties' | null) => void;
   colorPickerTarget: {
     type: 'background' | 'fill' | 'stroke' | 'text';
     elementId?: string;
@@ -226,6 +229,7 @@ interface State {
   closeConfirm: () => void;
 
   addElement: (pageIndex: number, element: CanvasElement) => void;
+  addElements: (pageIndex: number, elements: CanvasElement[]) => void;
   updateElement: (pageIndex: number, elementId: string, updates: Partial<CanvasElement>) => void;
   updateElements: (pageIndex: number, updatesList: { id: string; updates: Partial<CanvasElement> }[]) => void;
   moveElements: (pageIndex: number, elementIds: string[], dx: number, dy: number) => void;
@@ -255,10 +259,10 @@ interface State {
     name: string,
     template: GridTemplate,
     categoryIds: string[],
-    options?: { 
-      includeCover: boolean; 
-      includeIndex: boolean; 
-      includeCategoryCovers: boolean; 
+    options?: {
+      includeCover: boolean;
+      includeIndex: boolean;
+      includeCategoryCovers: boolean;
       selectedTemplateId?: string;
       tableHeaders?: string[];
     }
@@ -458,6 +462,8 @@ export const useStore = create<State>((set, get) => ({
   isPropertyPanelOpen: true,
   isTableEditorOpen: false,
   editingTableElementId: null,
+  isChecklistEditorOpen: false,
+  editingChecklistElementId: null,
   isGridStudioOpen: false,
   gridStudioPageIndex: null,
   isHeaderDesignerOpen: false,
@@ -521,7 +527,7 @@ export const useStore = create<State>((set, get) => ({
     const oldCatalog = state.catalog;
     const newCatalog = { ...oldCatalog, ...updates };
 
-    const isGridConfigChanged = 
+    const isGridConfigChanged =
       updates.gridCols !== undefined ||
       updates.gridRows !== undefined ||
       updates.gridSpacing !== undefined ||
@@ -600,7 +606,7 @@ export const useStore = create<State>((set, get) => ({
         payload.username = email;
       }
       if (username) payload.username = username;
-      
+
       const response: any = await authApi.login(payload);
       const token = response?.access || response?.access_token || response?.data?.access;
       const refreshToken = response?.refresh || response?.refresh_token || response?.data?.refresh;
@@ -652,11 +658,11 @@ export const useStore = create<State>((set, get) => ({
       get().fetchSystemTemplates();
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
-      let errorMessage = error.response?.data?.non_field_errors?.[0] || 
-                         error.response?.data?.detail || 
-                         (typeof error.response?.data === 'string' ? error.response.data : null) ||
-                         error.message || 
-                         'Login failed';
+      let errorMessage = error.response?.data?.non_field_errors?.[0] ||
+        error.response?.data?.detail ||
+        (typeof error.response?.data === 'string' ? error.response.data : null) ||
+        error.message ||
+        'Login failed';
       if (typeof errorMessage === 'string' && errorMessage.includes('Unable to log in with provided credentials')) {
         set({ error: 'Invalid email or password. New here? Create an account.', isLoading: false });
       } else {
@@ -730,30 +736,6 @@ export const useStore = create<State>((set, get) => ({
       set({ error: error.response?.data?.non_field_errors?.[0] || 'Admin login failed', isLoading: false });
     }
   },
-
-  // guestLogin: () => {
-  //   const guestUser: User = {
-  //     id: `guest-${Date.now()}`,
-  //     name: 'Guest Designer',
-  //     email: 'guest@example.com',
-  //     role: 'user',
-  //     status: 'active',
-  //     joinedAt: new Date().toISOString(),
-  //     businessId: 'guest-biz',
-  //     businessName: 'Guest Studio'
-  //   };
-
-  //   set({
-  //     isAuthenticated: true,
-  //     user: guestUser,
-  //     currentView: 'dashboard',
-  //     isLoading: false,
-  //     error: null
-  //   });
-
-  //   // Initialize guest data
-  //   get().fetchBusinessTemplates();
-  // },
 
   logout: async () => {
     try {
@@ -1077,12 +1059,12 @@ export const useStore = create<State>((set, get) => ({
       // Load existing template into live canvas
       const pages = (template.pages_data && template.pages_data.length > 0)
         ? template.pages_data.map((p: any, idx: number) => ({
-            id: `p-${idx + 1}`,
-            pageNumber: idx + 1,
-            type: p.type || (template.type === 'cover' ? 'cover' : 'interior'),
-            elements: p.elements || [],
-            backgroundColor: p.backgroundColor || '#ffffff'
-          }))
+          id: `p-${idx + 1}`,
+          pageNumber: idx + 1,
+          type: p.type || (template.type === 'cover' ? 'cover' : 'interior'),
+          elements: p.elements || [],
+          backgroundColor: p.backgroundColor || '#ffffff'
+        }))
         : [{ id: 'p-1', pageNumber: 1, type: template.type === 'cover' ? 'cover' : 'interior', elements: [], backgroundColor: '#ffffff' }];
 
       set({
@@ -1633,6 +1615,10 @@ export const useStore = create<State>((set, get) => ({
     isTableEditorOpen: isOpen,
     editingTableElementId: isOpen ? (elementId || null) : null
   }),
+  setIsChecklistEditorOpen: (isOpen, elementId = null) => set({
+    isChecklistEditorOpen: isOpen,
+    editingChecklistElementId: isOpen ? (elementId || null) : null
+  }),
   setIsHeaderDesignerOpen: (isOpen, template = null) => set({
     isHeaderDesignerOpen: isOpen,
     editingHeaderTemplate: isOpen ? (template || null) : null
@@ -1765,7 +1751,7 @@ export const useStore = create<State>((set, get) => ({
       }));
 
       if (typeof document !== 'undefined' && document.fonts && updates.fontFamily) {
-        document.fonts.load(`16px "${updates.fontFamily}"`).catch(() => {});
+        document.fonts.load(`16px "${updates.fontFamily}"`).catch(() => { });
       }
 
       return {
@@ -2194,6 +2180,50 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
+  addElements: (pageIndex, elements) => {
+    if (!elements || elements.length === 0) return;
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      const page = newPages[pageIndex];
+      if (!page) return state;
+      const isLandscape = page.orientation === 'landscape';
+      const pageWidth = isLandscape ? PAGE_HEIGHT : PAGE_WIDTH;
+      const pageHeight = isLandscape ? PAGE_WIDTH : PAGE_HEIGHT;
+
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      elements.forEach(el => {
+        minX = Math.min(minX, el.x);
+        minY = Math.min(minY, el.y);
+        maxX = Math.max(maxX, el.x + el.width);
+        maxY = Math.max(maxY, el.y + el.height);
+      });
+      const totalW = maxX - minX;
+      const totalH = maxY - minY;
+      const targetCenterX = (pageWidth - totalW) / 2;
+      const targetCenterY = (pageHeight - totalH) / 2;
+      const dx = targetCenterX - minX;
+      const dy = targetCenterY - minY;
+
+      const repositioned = elements.map(el => ({
+        ...el,
+        x: Math.round(el.x + dx),
+        y: Math.round(el.y + dy),
+      }));
+
+      newPages[pageIndex] = {
+        ...page,
+        elements: [...(page.elements || []), ...repositioned],
+      };
+
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+        selectedElementIds: repositioned.map(el => el.id),
+        isPropertyPanelOpen: true
+      };
+    });
+  },
+
   updateElement: (pageIndex, elementId, updates) => set((state) => {
     const newPages = [...state.catalog.pages];
     const page = { ...newPages[pageIndex] }; // CLONE the page object
@@ -2202,7 +2232,7 @@ export const useStore = create<State>((set, get) => ({
     if (!element) return state;
 
     const hasPositionMove = (typeof updates.x === 'number' && updates.x !== element.x) ||
-                            (typeof updates.y === 'number' && updates.y !== element.y);
+      (typeof updates.y === 'number' && updates.y !== element.y);
 
     if (element.groupId && hasPositionMove) {
       const dx = typeof updates.x === 'number' ? updates.x - element.x : 0;
@@ -2222,7 +2252,7 @@ export const useStore = create<State>((set, get) => ({
         el.id === elementId ? { ...el, ...updates } : el
       );
     }
-    
+
     newPages[pageIndex] = page; // Set the cloned page back
 
     return {
@@ -3025,7 +3055,7 @@ export const useStore = create<State>((set, get) => ({
               const fKeyNorm = (f.key || '').toLowerCase().replace(/[^a-z0-9]/g, '');
               const fNameNorm = (f.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
               if (fLabelNorm === targetNorm || fKeyNorm === targetNorm || fNameNorm === targetNorm ||
-                  (fLabelNorm && (fLabelNorm.includes(targetNorm) || targetNorm.includes(fLabelNorm)))) {
+                (fLabelNorm && (fLabelNorm.includes(targetNorm) || targetNorm.includes(fLabelNorm)))) {
                 if (f.id) matchingSchemaIds.push(f.id);
               }
             }
@@ -3094,10 +3124,10 @@ export const useStore = create<State>((set, get) => ({
 
         // Model Number (Strictly Model No - never SKU fallback)
         if (h.includes('model') || h.includes('itemno') || h === 'item' || h === 'code' || h === 'itemcode') {
-          const modelVal = findCustomValue('model_no') || findCustomValue('model') || 
-                           findCustomValue('model_number') || findCustomValue('modelno') ||
-                           findCustomValue('item_code') || findCustomValue('item_no') ||
-                           findCustomValue('item_number');
+          const modelVal = findCustomValue('model_no') || findCustomValue('model') ||
+            findCustomValue('model_number') || findCustomValue('modelno') ||
+            findCustomValue('item_code') || findCustomValue('item_no') ||
+            findCustomValue('item_number');
           if (modelVal) return modelVal;
           return '-';
         }
@@ -3805,7 +3835,7 @@ export const useStore = create<State>((set, get) => ({
         const existingProductIds = targetPage.elements
           .filter(el => el.type === 'product-block' && el.productId)
           .map(el => el.productId as string);
-        
+
         let targetProducts: Product[] = existingProductIds
           .map(id => state.products.find(p => p.id === id))
           .filter(Boolean) as Product[];
@@ -3821,7 +3851,7 @@ export const useStore = create<State>((set, get) => ({
         const curCatalog = state.catalog;
         const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
         const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
-        
+
         const padding = template.padding || 35;
         const spacing = template.spacing || 20;
 
@@ -3918,7 +3948,7 @@ export const useStore = create<State>((set, get) => ({
           const curCatalog = state.catalog;
           const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
           const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
-          
+
           const padding = template.padding || 35;
           const spacing = template.spacing || 20;
 
@@ -4000,11 +4030,11 @@ export const useStore = create<State>((set, get) => ({
   reflowAllProductPages: (updatedCatalog) => {
     set((state) => {
       const catalog = updatedCatalog || state.catalog;
-      
+
       // 1. Gather all unique category IDs from existing interior pages
       const interiorPages = catalog.pages.filter(p => p.type === 'interior');
       const categoryIds = Array.from(new Set(interiorPages.map(p => p.categoryId).filter(Boolean))) as string[];
-      
+
       if (categoryIds.length === 0) {
         categoryIds.push(catalog.selectedCategoryIds?.[0] || 'cat1');
       }

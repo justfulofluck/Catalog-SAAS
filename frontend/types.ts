@@ -1,9 +1,48 @@
-export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table';
+export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table' | 'checklist';
 export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
-export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line' | 'curved-line' | 'elbow-line';
+export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line' | 'curved-line' | 'elbow-line' | 'chevron';
 export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image' | 'minimal-pill';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
+
+export type ChecklistTheme = 
+  | 'customer-feedback-checklist'
+  | 'lesson-planning-checklist'
+  | 'employee-development-progress'
+  | 'recruitment-hiring-checklist'
+  | 'color-band-process-checklist'
+  | 'goals-matrix-checklist'
+  | 'gold-task-list-checklist';
+
+export interface ChecklistRow {
+  id: string;
+  text: string;
+  checked: boolean;
+  columnValues?: { [colKey: string]: boolean | string };
+  section?: string;
+}
+
+export interface ChecklistSection {
+  id: string;
+  title: string;
+  color: string;
+}
+
+export interface ChecklistData {
+  themeId: ChecklistTheme | string;
+  title?: string;
+  columns?: string[];
+  sections?: ChecklistSection[];
+  rows: ChecklistRow[];
+  headerBg?: string;
+  headerTextColor?: string;
+  checkboxColor?: string;
+  fontSize?: number;
+  textColor?: string;
+  alternateRowBg?: string;
+  borderColor?: string;
+  cardBg?: string;
+}
 
 export type FieldType = 'text' | 'number' | 'select' | 'boolean' | 'image' | 'textarea';
 
@@ -89,9 +128,14 @@ export interface CanvasElement {
   textStrokeWidth?: number;
   effectSpread?: number;
   effectRoundness?: number;
+  // SVG Content / Rich Vector Element
+  svgContent?: string;
 
   // Table specific
   tableData?: TableData;
+
+  // Checklist specific
+  checklistData?: ChecklistData;
 
   // Product Block specific
   productData?: Product;

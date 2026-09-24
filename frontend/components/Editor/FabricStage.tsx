@@ -49,6 +49,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   
   const setSelectedElementIds = useStore((state) => state.setSelectedElementIds);
+  const setIsPropertyPanelOpen = useStore((state) => state.setIsPropertyPanelOpen);
   const updateElement = useStore((state) => state.updateElement);
   const updateElements = useStore((state) => state.updateElements);
   const nudgeElement = useStore((state) => state.nudgeElement);
@@ -191,6 +192,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
       }
       setSelectedElementIds(ids);
+      if (ids.length > 0) {
+        setIsPropertyPanelOpen(true);
+      }
     });
 
     canvas.on('selection:updated', (e: any) => {
@@ -225,6 +229,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
       }
       setSelectedElementIds(expandedIds);
+      if (expandedIds.length > 0) {
+        setIsPropertyPanelOpen(true);
+      }
     });
 
     canvas.on('selection:cleared', () => {
