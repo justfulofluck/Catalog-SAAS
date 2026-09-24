@@ -1,4 +1,4 @@
-﻿class WorkerPool {
+class WorkerPool {
   private worker: Worker | null = null;
   private pendingRequests: Map<string, { resolve: (val: any) => void; reject: (err: any) => void }> = new Map();
 
@@ -47,7 +47,23 @@
 
     const id = 'req_' + Math.random().toString(36).substr(2, 9);
     return new Promise((resolve, reject) => {
-      this.pendingRequests.set(id, { resolve, reject });
+      const timeoutId = setTimeout(() => {
+        if (this.pendingRequests.has(id)) {
+          this.pendingRequests.delete(id);
+          resolve({ processedUrl: imageUrl, width: targetWidth || 0, height: targetHeight || 0 });
+        }
+      }, 4000);
+
+      this.pendingRequests.set(id, {
+        resolve: (val) => {
+          clearTimeout(timeoutId);
+          resolve(val);
+        },
+        reject: (err) => {
+          clearTimeout(timeoutId);
+          reject(err);
+        }
+      });
       this.worker!.postMessage({
         id,
         type: 'PROCESS_IMAGE',

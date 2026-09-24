@@ -27,14 +27,15 @@ import {
   MoveHorizontal,
   RectangleHorizontal,
   Cloud,
-  Flag,
   Plus as PlusIcon,
   Sun,
-  Moon
+  Moon,
+  FileDown
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ShapeType } from '../../types';
 import SceneTreePanel from './SceneTreePanel';
+import ExportModal from '../Editor/ExportModal';
 
 const EditorToolbar: React.FC = () => {
   const {
@@ -46,6 +47,8 @@ const EditorToolbar: React.FC = () => {
   } = useStore();
   const [isCommiting, setIsCommiting] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportDefaultTab, setExportDefaultTab] = useState<'download' | 'share' | 'embed' | 'publish'>('download');
   const [isLineMenuOpen, setIsLineMenuOpen] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
   const [isTextMenuOpen, setIsTextMenuOpen] = useState(false);
@@ -394,11 +397,11 @@ const EditorToolbar: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {/* Theme Toggle Button in Editor Topbar */}
         <button
           onClick={toggleUiTheme}
-          className={`p-2 rounded-[4px] border transition-all flex items-center justify-center ${
+          className={`p-2 rounded-[4px] border transition-all flex items-center justify-center cursor-pointer ${
             isDark 
               ? 'border-[#E2DCC8]/20 bg-[#161616] text-[#E2DCC8] hover:bg-[#222]' 
               : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100 hover:text-slate-900'
@@ -408,16 +411,35 @@ const EditorToolbar: React.FC = () => {
           {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-indigo-600" />}
         </button>
 
+        {/* Download PDF / Images Icon Button */}
+        <button
+          onClick={() => {
+            setExportDefaultTab('download');
+            setIsExportModalOpen(true);
+          }}
+          className="p-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
+          title="Download PDF or Images"
+        >
+          <FileDown size={16} />
+        </button>
+
         {editingSystemTemplate ? (
-          <button onClick={async () => { setIsSavingTemplate(true); await saveActiveTemplateFromEditor(); setIsSavingTemplate(false); }} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95">
+          <button onClick={async () => { setIsSavingTemplate(true); await saveActiveTemplateFromEditor(); setIsSavingTemplate(false); }} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer">
             {isSavingTemplate ? 'Saving...' : 'Save Global Template'}
           </button>
         ) : (
-          <button onClick={handleSave} disabled={isCommiting} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50">
+          <button onClick={handleSave} disabled={isCommiting} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer">
             <Save size={14} /> {isCommiting ? 'Saving...' : 'Commit'}
           </button>
         )}
       </div>
+
+      {/* High-Fidelity Export & Download Modal (Download, Share, Embed, Publish) */}
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        defaultTab={exportDefaultTab}
+      />
     </header>
   );
 };

@@ -98,9 +98,8 @@ const FloatingToolbar: React.FC<Props> = ({
     const handleEditProductCard = (e: any) => {
       if (e.detail?.id) {
         setSelectedElementIds([e.detail.id]);
-        useStore.getState().setEditorTab('properties');
+        useStore.getState().setEditorTab('single-items');
         useStore.getState().setSidebarExpanded(true);
-        useStore.getState().setIsPropertyPanelOpen(true);
       }
     };
     window.addEventListener('catalog:editProductCard', handleEditProductCard);
@@ -325,15 +324,17 @@ const FloatingToolbar: React.FC<Props> = ({
             </div>
           </button>
 
-          {/* Open Card Properties in Sidebar Button */}
+          {/* Re-edit Card in Single Items Button */}
           <button
             className={`${btnClass} text-indigo-400 hover:text-indigo-300`}
-            title="Edit Card in Sidebar"
+            title="Edit Card Layout & Variables"
             onClick={() => {
               useStore.getState().setSelectedElementIds([element.id]);
-              useStore.getState().setEditorTab('properties');
+              useStore.getState().setEditorTab('single-items');
               useStore.getState().setSidebarExpanded(true);
-              useStore.getState().setIsPropertyPanelOpen(true);
+              window.dispatchEvent(new CustomEvent('catalog:editProductCard', {
+                detail: { id: element.id, pageIndex: currentPageIndex }
+              }));
             }}
           >
             <Sliders size={15} strokeWidth={2} />

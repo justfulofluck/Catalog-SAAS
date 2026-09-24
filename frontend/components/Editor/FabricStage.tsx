@@ -37,14 +37,23 @@ if (typeof window !== 'undefined') {
   window.addEventListener('contextmenu', recordRightClickPos, true);
 }
 
-const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = [], footerElements = [], footerHeight = 38, editingId = null }) => {
+const STABLE_EMPTY_ARRAY: CanvasElement[] = [];
+
+const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg, headerElements = STABLE_EMPTY_ARRAY, footerElements = STABLE_EMPTY_ARRAY, footerHeight = 38, editingId = null }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
+  const [canvasInstance, setCanvasInstance] = useState<Canvas | null>(null);
   const spatialIndexRef = useRef<SpatialIndex>(new SpatialIndex());
   const [activeGuides, setActiveGuides] = useState<{ type: 'horizontal' | 'vertical'; pos: number }[]>([]);
   const [activeDistanceBadges, setActiveDistanceBadges] = useState<DistanceBadge[]>([]);
   const [activeDimensions, setActiveDimensions] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
-  const { selectedElementIds, setSelectedElementIds, updateElement, updateElements, nudgeElement, pushHistory, catalog } = useStore();
+  
+  const setSelectedElementIds = useStore((state) => state.setSelectedElementIds);
+  const updateElement = useStore((state) => state.updateElement);
+  const updateElements = useStore((state) => state.updateElements);
+  const nudgeElement = useStore((state) => state.nudgeElement);
+  const pushHistory = useStore((state) => state.pushHistory);
+  const catalog = useStore((state) => state.catalog);
   const products = useStore((state) => state.products);
   const categories = useStore((state) => state.categories);
   const user = useStore((state) => state.user);
@@ -58,6 +67,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   isActiveRef.current = isActive;
   // Shared flag: suppresses selection:cleared during render-cycle ActiveSelection discard
   const suppressSelectionClearedRef = useRef(false);
+  const renderVersionRef = useRef(0);
 
   const curW = PAGE_WIDTH;
   const curH = PAGE_HEIGHT;
@@ -120,6 +130,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     };
 
     fabricCanvasRef.current = canvas;
+    setCanvasInstance(canvas);
 
     // Helper: expand selection to include all elements sharing the same groupId
     const expandGroupSelection = (selectedIds: string[]) => {
@@ -241,8 +252,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       // Check subTargets first (e.g. image or color swatch inside card), otherwise top target
       let target = (e.subTargets && e.subTargets.length > 0) ? e.subTargets[0] : e.target;
 
-      // If hovering over the base background rect of a card group, treat the card as target
-      if (target && target.group && target === (target.group as any)._objects?.[0]) {
+      // If hovering over sub-objects of a card/group, treat the entire card group as target
+      if (target && target.group) {
         target = target.group;
       }
 
@@ -313,16 +324,29 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         setSelectedElementIds([]);
         return;
       }
+
+      // If clicked a subtarget inside a card/group, select the parent group in store
+      const actualTarget = target.group || target;
+      if (actualTarget && actualTarget.id) {
+        const currentSelected = useStore.getState().selectedElementIds || [];
+        if (!currentSelected.includes(actualTarget.id)) {
+          setSelectedElementIds([actualTarget.id]);
+        }
+      }
     });
 
     canvas.on('mouse:dblclick', (e: any) => {
-      const obj = e.target;
-      if (obj && obj.id) {
+      let obj = e.target;
+      if (!obj && e.subTargets && e.subTargets.length > 0) {
+        obj = e.subTargets[0];
+      }
+      const actualId = obj?.id || obj?.group?.id;
+      if (actualId) {
         // Header & Footer elements cannot be edited on the main canvas (only in their respective Studio)
-        if (headerElements?.some(item => item.id === obj.id) || footerElements?.some(item => item.id === obj.id)) {
+        if (headerElements?.some(item => item.id === actualId) || footerElements?.some(item => item.id === actualId)) {
           return;
         }
-        const el = pageRef.current.elements.find(item => item.id === obj.id);
+        const el = pageRef.current.elements.find(item => item.id === actualId);
         if (!el) return;
 
         // If element belongs to a section (has sectionTag or is a table/grid element), open Grid Studio
@@ -748,6 +772,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         canvas.dispose();
       } catch (e) {}
       fabricCanvasRef.current = null;
+      setCanvasInstance(null);
     };
   }, [curW, curH]);
 
@@ -849,13 +874,17 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   }, [zoom, curW, curH]);
 
   useEffect(() => {
-    if (!fabricCanvasRef.current) return;
+    const canvas = fabricCanvasRef.current || canvasInstance;
+    if (!canvas) return;
 
-    const canvas = fabricCanvasRef.current;
-    let isCurrent = true;
+    const currentVersion = ++renderVersionRef.current;
 
     const loadObjects = async () => {
       if ((canvas as any)._currentTransform) return;
+      if (currentVersion !== renderVersionRef.current) return;
+
+      suppressSelectionClearedRef.current = true;
+      const preSelectedIds = useStore.getState().selectedElementIds || [];
       try {
         // CRITICAL: In Fabric.js, objects inside an ActiveSelection are temporarily
         // removed from canvas._objects. If we call canvas.getObjects() while an
@@ -863,10 +892,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         // creation and the originals being lost. Discard the selection first, then
         // restore it after rendering from store state.
         const activeObj = canvas.getActiveObject();
-        if (activeObj && (activeObj instanceof ActiveSelection || (activeObj as any).type === 'activeSelection')) {
-          suppressSelectionClearedRef.current = true;
+        if (activeObj) {
           canvas.discardActiveObject();
-          suppressSelectionClearedRef.current = false;
         }
 
         const existingObjects = canvas.getObjects();
@@ -964,8 +991,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             return false;
           }
           if (el.type !== 'product-block') return false;
-          const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
-          const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
+          
+          const isScaled = Math.abs((existingObj.scaleX || 1) - 1) > 0.01 || Math.abs((existingObj.scaleY || 1) - 1) > 0.01;
+          const renderedW = existingObj._renderedWidth || (existingObj.width || 1);
+          const renderedH = existingObj._renderedHeight || (existingObj.height || 1);
+          if (isScaled || Math.abs(el.width - renderedW) > 2 || Math.abs(el.height - renderedH) > 2) {
+            return true;
+          }
           
           const oldFill = existingObj._fill || '';
           const newFill = el.fill || '';
@@ -1010,12 +1042,16 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             existingObj._titleColor !== el.titleColor ||
             existingObj._priceColor !== el.priceColor ||
             existingObj._textColor !== el.textColor ||
-            existingObj._borderRadius !== (el as any).borderRadius;
+            existingObj._fill !== (el.fill || '') ||
+            existingObj._stroke !== (el.stroke || '') ||
+            existingObj._cardTheme !== ((el as any).cardTheme || '') ||
+            existingObj._borderRadius !== (el as any).borderRadius ||
+            existingObj._visibleFieldKeysJSON !== JSON.stringify(el.visibleFieldKeys || []) ||
+            existingObj._fieldOverridesJSON !== JSON.stringify(el.fieldOverrides || {});
 
           if (hasCustomChanges) return true;
 
           return el.productId !== existingObj._productId || el.src !== existingObj._src ||
-            Math.abs(el.width - oldW) > 5 || Math.abs(el.height - oldH) > 5 ||
             oldShowTitle !== newShowTitle || oldShowPrice !== newShowPrice || oldShowSKU !== newShowSKU ||
             oldVisibleParamsJSON !== newVisibleParamsJSON ||
             oldFontFamily !== newFontFamily || oldCardTheme !== newCardTheme;
@@ -1034,33 +1070,163 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         };
 
         const objectPromises = allElements.map(async (el: CanvasElement, elIdx: number) => {
-          const isHdr = headerElements?.some(h => h.id === el.id);
-          const isFtr = footerElements?.some(f => f.id === el.id);
-          const isLockedGlobal = isHdr || isFtr;
-          const existingObj = existingElMap.get(el.id);
+          try {
+            const isHdr = headerElements?.some(h => h.id === el.id);
+            const isFtr = footerElements?.some(f => f.id === el.id);
+            const isLockedGlobal = isHdr || isFtr;
+            const existingObj = existingElMap.get(el.id);
 
-          if (existingObj) {
-            const isActiveObj = canvas.getActiveObjects().includes(existingObj);
-            const isTableRebuild = el.type === 'table' && needsRebuild(el, existingObj);
-            const isProductRebuild = el.type === 'product-block' && needsRebuild(el, existingObj);
-            const isShapeRebuild = (el.type === 'shape' || el.type === 'comment') && needsRebuild(el, existingObj);
+            if (existingObj) {
+              const isActiveObj = canvas.getActiveObjects().includes(existingObj);
+              const isTableRebuild = el.type === 'table' && needsRebuild(el, existingObj);
+              const isProductRebuild = el.type === 'product-block' && needsRebuild(el, existingObj);
+              const isShapeRebuild = (el.type === 'shape' || el.type === 'comment') && needsRebuild(el, existingObj);
 
-            if (isTableRebuild || isProductRebuild || isShapeRebuild) {
-              if (isActiveObj) {
-                canvas.discardActiveObject();
+              if (isTableRebuild || isProductRebuild || isShapeRebuild) {
+                if (isActiveObj) {
+                  canvas.discardActiveObject();
+                }
+                canvas.remove(existingObj);
+              } else {
+                const isCurrentlyEditing = isActive && el.id === editingId;
+                existingObj.set({
+                  opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
+                  visible: isCurrentlyEditing ? false : (el.visible !== false),
+                  selectable: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
+                  evented: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
+                });
+
+                if (isLockedGlobal) {
+                  existingObj.set({
+                    hasControls: false,
+                    hasBorders: false,
+                    lockMovementX: true,
+                    lockMovementY: true,
+                    lockRotation: true,
+                    lockScalingX: true,
+                    lockScalingY: true,
+                    hoverCursor: 'default'
+                  });
+                } else {
+                  applyCanvaSelectionStyle(existingObj);
+                }
+
+                if (!isActiveObj) {
+                  existingObj.set({ left: el.x, top: el.y, angle: el.rotation || 0 });
+                }
+
+                if (el.type === 'text') {
+                  let parsedText = resolveDynamicText(String(el.text ?? '').replace(/<[^>]*>/g, ''), dynamicContext);
+                  existingObj.set({
+                    text: parsedText,
+                    fontSize: el.fontSize || 16,
+                    fontFamily: el.fontFamily || catalog?.fontFamily || 'Inter',
+                    fontWeight: el.fontWeight || 'normal',
+                    fontStyle: el.fontStyle || 'normal',
+                    fill: el.fill || '#000000',
+                    textAlign: el.textAlign || 'left',
+                    lineHeight: el.lineHeight || 1.2,
+                    underline: el.textDecoration?.includes('underline') || false,
+                    charSpacing: el.letterSpacing || 0,
+                    objectCaching: false,
+                  });
+                  existingObj._lastFill = el.fill || '';
+                  if (!isActiveObj) {
+                    let safeW = el.width || 100;
+                    if (!el.width && !parsedText.includes('\n')) {
+                      const naturalW = (existingObj as any).calcTextWidth ? (existingObj as any).calcTextWidth() : 0;
+                      if (naturalW > 0) {
+                        safeW = Math.ceil(naturalW + 10);
+                      }
+                    }
+                    existingObj.set({
+                      width: safeW,
+                      scaleX: 1,
+                      scaleY: 1,
+                    });
+                  }
+                  if (existingObj.initDimensions) {
+                    existingObj.initDimensions();
+                  }
+                  existingObj.dirty = true;
+                } else if (el.type === 'shape' || el.type === 'comment') {
+                  existingObj.set({
+                    fill: el.fill || '#ffffff',
+                    stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+                    strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+                  });
+                  if (!isActiveObj) {
+                    existingObj.set({ width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
+                    if (el.shapeType === 'circle' && existingObj instanceof Circle) {
+                      existingObj.set({ radius: Math.min(el.width, el.height) / 2 });
+                    }
+                  }
+                } else if (el.type === 'image') {
+                  existingObj.set({
+                    stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+                    strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+                  });
+                  if (!isActiveObj) {
+                    const unscaledW = (existingObj as any).width || 1;
+                    const unscaledH = (existingObj as any).height || 1;
+                    existingObj.set({ scaleX: el.width / unscaledW, scaleY: el.height / unscaledH });
+                  }
+                } else if (el.type === 'product-block') {
+                  existingObj._productId = el.productId;
+                  existingObj._src = el.src;
+                  existingObj._fill = el.fill || '';
+                  existingObj._stroke = el.stroke || '';
+                  existingObj._strokeWidth = el.strokeWidth;
+                  existingObj._cardTheme = (el as any).cardTheme || '';
+
+                  // Directly update the base card Rect inside the product group
+                  const baseCardRect = (existingObj as any)._objects?.[0];
+                  if (baseCardRect) {
+                    const cardFill = el.fill || '#ffffff';
+                    const cardStroke = el.stroke && el.stroke !== 'transparent' ? el.stroke : '#e2e8f0';
+                    const cardStrokeWidth = el.stroke && el.stroke !== 'transparent'
+                      ? (el.strokeWidth !== undefined ? el.strokeWidth : 2)
+                      : (el.stroke === 'transparent' ? 0 : 1.5);
+                    baseCardRect.set({
+                      fill: cardFill,
+                      stroke: cardStroke,
+                      strokeWidth: cardStrokeWidth
+                    });
+                  }
+
+                  if (!isActiveObj) {
+                    existingObj.set({ left: el.x, top: el.y, angle: el.rotation || 0, scaleX: 1, scaleY: 1 });
+                  }
+                  existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
+                  existingObj.setCoords();
+                  existingObj.dirty = true;
+                  return existingObj;
+                }
+
+                existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
+                existingObj._groupId = el.groupId || undefined;
+                existingObj.setCoords();
+                existingObj.dirty = true;
+                return existingObj;
               }
-              canvas.remove(existingObj);
-            } else {
+            }
+
+            const tempEl = { ...el };
+            if (tempEl.type === 'text' && tempEl.text !== undefined && tempEl.text !== null) {
+              tempEl.text = resolveDynamicText(String(tempEl.text), dynamicContext);
+            }
+            const obj = await elementToFabricObject(tempEl, products, catalog);
+            if (obj) {
               const isCurrentlyEditing = isActive && el.id === editingId;
-              existingObj.set({
+              obj.set('zIndex', getEffectiveZIndex(el, elIdx));
+              obj.set({
                 opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
                 visible: isCurrentlyEditing ? false : (el.visible !== false),
                 selectable: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
                 evented: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
               });
-
               if (isLockedGlobal) {
-                existingObj.set({
+                obj.set({
                   hasControls: false,
                   hasBorders: false,
                   lockMovementX: true,
@@ -1071,181 +1237,59 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   hoverCursor: 'default'
                 });
               } else {
-                applyCanvaSelectionStyle(existingObj);
+                applyCanvaSelectionStyle(obj);
               }
-
-              if (!isActiveObj) {
-                existingObj.set({ left: el.x, top: el.y, angle: el.rotation || 0 });
-              }
-
-              if (el.type === 'text') {
-                let parsedText = resolveDynamicText((el.text || '').replace(/<[^>]*>/g, ''), dynamicContext);
-                existingObj.set({
-                  text: parsedText,
-                  fontSize: el.fontSize || 16,
-                  fontFamily: el.fontFamily || catalog?.fontFamily || 'Inter',
-                  fontWeight: el.fontWeight || 'normal',
-                  fontStyle: el.fontStyle || 'normal',
-                  fill: el.fill || '#000000',
-                  textAlign: el.textAlign || 'left',
-                  lineHeight: el.lineHeight || 1.2,
-                  underline: el.textDecoration?.includes('underline') || false,
-                  charSpacing: el.letterSpacing || 0,
-                  objectCaching: false,
-                });
-                existingObj._lastFill = el.fill || '';
-                if (!isActiveObj) {
-                  let safeW = el.width || 100;
-                  if (!el.width && !parsedText.includes('\n')) {
-                    const naturalW = (existingObj as any).calcTextWidth ? (existingObj as any).calcTextWidth() : 0;
-                    if (naturalW > 0) {
-                      safeW = Math.ceil(naturalW + 10);
-                    }
-                  }
-                  existingObj.set({
-                    width: safeW,
-                    scaleX: 1,
-                    scaleY: 1,
-                  });
-                }
-                if (existingObj.initDimensions) {
-                  existingObj.initDimensions();
-                }
-                existingObj.dirty = true;
+              if (el.type === 'product-block') {
+                obj._renderedWidth = el.width;
+                obj._renderedHeight = el.height;
+                obj._productId = el.productId;
+                obj._src = el.src;
+                obj._fill = el.fill || '';
+                obj._stroke = el.stroke || '';
+                obj._strokeWidth = el.strokeWidth;
+                obj._customTitle = el.customTitle;
+                obj._customPrice = el.customPrice;
+                obj._customSku = el.customSku;
+                obj._customDesc = el.customDesc;
+                obj._titleFontSize = el.titleFontSize;
+                obj._priceFontSize = el.priceFontSize;
+                obj._fontSize = el.fontSize;
+                obj._titleColor = el.titleColor;
+                obj._priceColor = el.priceColor;
+                obj._textColor = el.textColor;
+                obj._borderRadius = (el as any).borderRadius;
+                obj._showTitle = catalog.showTitle !== false;
+                obj._showPrice = catalog.showPrice !== false;
+                obj._showSKU = catalog.showSKU !== false;
+                const prod = products.find(p => p.id === el.productId);
+                const catId = prod?.categoryId ? String(prod.categoryId) : '';
+                obj._visibleParamsJSON = JSON.stringify(
+                  (catId && (
+                    Object.entries(catalog.categoryVisibleParams || {}).find(([k]) => String(k) === catId)?.[1]
+                  )) || []
+                );
+                obj._fontFamily = (el as any).fontFamily || (catalog as any).fontFamily || '';
+                obj._cardTheme = (el as any).cardTheme || '';
+                obj._visibleFieldKeysJSON = JSON.stringify(el.visibleFieldKeys || []);
+                obj._fieldOverridesJSON = JSON.stringify(el.fieldOverrides || {});
+              } else if (el.type === 'table') {
+                obj._tableDataJSON = JSON.stringify(el.tableData || {});
+              } else if (el.type === 'text') {
+                obj._lastFill = el.fill || '';
               } else if (el.type === 'shape' || el.type === 'comment') {
-                existingObj.set({
-                  fill: el.fill || '#ffffff',
-                  stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
-                  strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
-                });
-                if (!isActiveObj) {
-                  existingObj.set({ width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
-                  if (el.shapeType === 'circle' && existingObj instanceof Circle) {
-                    existingObj.set({ radius: Math.min(el.width, el.height) / 2 });
-                  }
-                }
-              } else if (el.type === 'image') {
-                existingObj.set({
-                  stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
-                  strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
-                });
-                if (!isActiveObj) {
-                  const unscaledW = (existingObj as any).width || 1;
-                  const unscaledH = (existingObj as any).height || 1;
-                  existingObj.set({ scaleX: el.width / unscaledW, scaleY: el.height / unscaledH });
-                }
-              } else if (el.type === 'product-block') {
-                existingObj._productId = el.productId;
-                existingObj._src = el.src;
-                existingObj._fill = el.fill || '';
-                existingObj._stroke = el.stroke || '';
-                existingObj._strokeWidth = el.strokeWidth;
-
-                // Directly update the base card Rect inside the product group
-                const baseCardRect = (existingObj as any)._objects?.[0];
-                if (baseCardRect) {
-                  const cardFill = el.fill || '#ffffff';
-                  const cardStroke = el.stroke && el.stroke !== 'transparent' ? el.stroke : '#e2e8f0';
-                  const cardStrokeWidth = el.stroke && el.stroke !== 'transparent'
-                    ? (el.strokeWidth !== undefined ? el.strokeWidth : 2)
-                    : (el.stroke === 'transparent' ? 0 : 1.5);
-                  baseCardRect.set({
-                    fill: cardFill,
-                    stroke: cardStroke,
-                    strokeWidth: cardStrokeWidth
-                  });
-                }
-
-                if (!isActiveObj) {
-                  const unscaledW = (existingObj as any).width || 1;
-                  const unscaledH = (existingObj as any).height || 1;
-                  existingObj.set({ scaleX: el.width / unscaledW, scaleY: el.height / unscaledH });
-                }
-                existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
-                existingObj.setCoords();
-                existingObj.dirty = true;
-                return existingObj;
+                obj._shapeType = el.shapeType || '';
               }
-
-              existingObj.set('zIndex', getEffectiveZIndex(el, elIdx));
-              existingObj._groupId = el.groupId || undefined;
-              existingObj.setCoords();
-              existingObj.dirty = true;
-              return existingObj;
+              obj._groupId = el.groupId || undefined;
             }
+            return obj;
+          } catch (itemErr) {
+            console.error(`Error rendering element ${el.id} (${el.type}):`, itemErr);
+            return null;
           }
-
-          const tempEl = { ...el };
-          if (tempEl.type === 'text' && tempEl.text) {
-            tempEl.text = resolveDynamicText(tempEl.text, dynamicContext);
-          }
-          const obj = await elementToFabricObject(tempEl, products, catalog);
-          if (obj) {
-            const isCurrentlyEditing = isActive && el.id === editingId;
-            obj.set('zIndex', getEffectiveZIndex(el, elIdx));
-            obj.set({
-              opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
-              visible: isCurrentlyEditing ? false : (el.visible !== false),
-              selectable: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
-              evented: !isLockedGlobal && isActive && !el.locked && !isCurrentlyEditing,
-            });
-            if (isLockedGlobal) {
-              obj.set({
-                hasControls: false,
-                hasBorders: false,
-                lockMovementX: true,
-                lockMovementY: true,
-                lockRotation: true,
-                lockScalingX: true,
-                lockScalingY: true,
-                hoverCursor: 'default'
-              });
-            } else {
-              applyCanvaSelectionStyle(obj);
-            }
-            if (el.type === 'product-block') {
-              obj._productId = el.productId;
-              obj._src = el.src;
-              obj._fill = el.fill || '';
-              obj._stroke = el.stroke || '';
-              obj._strokeWidth = el.strokeWidth;
-              obj._customTitle = el.customTitle;
-              obj._customPrice = el.customPrice;
-              obj._customSku = el.customSku;
-              obj._customDesc = el.customDesc;
-              obj._titleFontSize = el.titleFontSize;
-              obj._priceFontSize = el.priceFontSize;
-              obj._fontSize = el.fontSize;
-              obj._titleColor = el.titleColor;
-              obj._priceColor = el.priceColor;
-              obj._textColor = el.textColor;
-              obj._borderRadius = (el as any).borderRadius;
-              obj._showTitle = catalog.showTitle !== false;
-              obj._showPrice = catalog.showPrice !== false;
-              obj._showSKU = catalog.showSKU !== false;
-              const prod = products.find(p => p.id === el.productId);
-              const catId = prod?.categoryId ? String(prod.categoryId) : '';
-              obj._visibleParamsJSON = JSON.stringify(
-                (catId && (
-                  Object.entries(catalog.categoryVisibleParams || {}).find(([k]) => String(k) === catId)?.[1]
-                )) || []
-              );
-              obj._fontFamily = (el as any).fontFamily || (catalog as any).fontFamily || '';
-              obj._cardTheme = (el as any).cardTheme || '';
-            } else if (el.type === 'table') {
-              obj._tableDataJSON = JSON.stringify(el.tableData || {});
-            } else if (el.type === 'text') {
-              obj._lastFill = el.fill || '';
-            } else if (el.type === 'shape' || el.type === 'comment') {
-              obj._shapeType = el.shapeType || '';
-            }
-            obj._groupId = el.groupId || undefined;
-          }
-          return obj;
         });
 
         const resolvedObjects = await Promise.all(objectPromises);
-        if (!isCurrent) return;
+        if (currentVersion !== renderVersionRef.current) return;
 
         const validObjects = resolvedObjects.filter(Boolean);
         const currentCanvasObjects = canvas.getObjects();
@@ -1270,12 +1314,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           }
         });
 
-        // Restore active selection if the active table/element was rebuilt, but never select the object currently being edited in HTML overlay
-        // Read selectedElementIds fresh from the store to avoid stale closure issues during paste
+        // Restore active selection if the active card/table/element was rebuilt, but never select the object currently being edited in HTML overlay
         const freshSelectedIds = useStore.getState().selectedElementIds || [];
-        if (isActive && freshSelectedIds.length > 0) {
-          const selectableIds = freshSelectedIds.filter(id => id !== editingId);
-          const selectedObjs = validObjects.filter((o: any) => o && o.id && selectableIds.includes(o.id));
+        const targetSelectedIds = (freshSelectedIds.length > 0 ? freshSelectedIds : preSelectedIds).filter(id => id !== editingId);
+        if (isActive && targetSelectedIds.length > 0) {
+          const selectedObjs = validObjects.filter((o: any) => o && o.id && targetSelectedIds.includes(o.id));
           const currentActive = canvas.getActiveObjects();
           if (selectedObjs.length > 0 && (!currentActive.length || !selectedObjs.every(o => currentActive.includes(o)))) {
             if (selectedObjs.length === 1) {
@@ -1286,6 +1329,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               applyCanvaSelectionStyle(sel);
               canvas.setActiveObject(sel);
             }
+          }
+          if (JSON.stringify(useStore.getState().selectedElementIds) !== JSON.stringify(targetSelectedIds)) {
+            useStore.getState().setSelectedElementIds(targetSelectedIds);
           }
         }
 
@@ -1314,21 +1360,20 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
         if (typeof document !== 'undefined' && document.fonts && document.fonts.ready) {
           document.fonts.ready.then(() => {
-            if (isCurrent && fabricCanvasRef.current) {
-              fabricCanvasRef.current.requestRenderAll();
+            if (currentVersion === renderVersionRef.current && (fabricCanvasRef.current || canvasInstance)) {
+              (fabricCanvasRef.current || canvasInstance)?.requestRenderAll();
             }
           });
         }
       } catch (err) {
-        console.error('FabricStage render error:', err);
+        console.error('FabricStage render error:', err, (err as any)?.stack);
+      } finally {
+        suppressSelectionClearedRef.current = false;
       }
     };
     loadObjects();
-
-    return () => {
-      isCurrent = false;
-    };
   }, [
+    canvasInstance,
     page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements,
     footerHeight, catalog?.footerHeight, catalog?.marginBottom,
     isActive, editingId, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU,
@@ -1373,8 +1418,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
   useEffect(() => {
     const forceRender = () => {
-      if (fabricCanvasRef.current) {
-        const canvas = fabricCanvasRef.current;
+      const canvas = fabricCanvasRef.current || canvasInstance;
+      if (canvas) {
         canvas.getObjects().forEach((obj: any) => {
           obj.dirty = true;
           if (obj.type === 'group') {

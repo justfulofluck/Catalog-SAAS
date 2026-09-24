@@ -2,15 +2,10 @@ import React, { useState } from 'react';
 import {
   X, Type, Palette, AlignLeft, AlignCenter,
   AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, Minus, Plus, ChevronDown,
-  Layers, Trash2, Copy, Lock, Unlock,
-  Sparkles, Sliders, Bold, Italic, Underline,
-  ChevronUp, ChevronDown as ChevronDownIcon,
-  ChevronsUp, ChevronsDown, MousePointer2,
-  Package, RotateCcw
+  Trash2, Bold, Italic, Underline, MousePointer2
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { FONTS, CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
-import AdvancedColorPicker from './AdvancedColorPicker';
+import { CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { toggleStyle } from '../../utils/textStyleSelection';
 
 const PropertyPanel: React.FC = () => {
@@ -19,26 +14,15 @@ const PropertyPanel: React.FC = () => {
     updateElement,
     catalog,
     currentPageIndex,
-    isPropertyPanelOpen,
     setIsPropertyPanelOpen,
-    removeElement,
-    duplicateElement,
-    toggleLock,
-    reorderElement,
     uiTheme,
-    setEditorTab,
-    setSidebarExpanded,
-    updateCatalog,
-    products = []
+    setSidebarExpanded
   } = useStore();
-
-  const [pickerOpen, setPickerOpen] = useState(false);
 
   const currentPage = catalog.pages[currentPageIndex];
   const selectedElements = currentPage?.elements.filter(el => selectedElementIds.includes(el.id)) || [];
   const selectedElement = selectedElements.length === 1 ? selectedElements[0] : null;
 
-  const isProductBlock = selectedElement?.type === 'product-block';
   const isPageSettings = selectedElementIds.length === 0;
   const isText = !isPageSettings && selectedElement?.type === 'text';
 
@@ -153,18 +137,16 @@ const PropertyPanel: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center shadow-sm ${
-              isProductBlock 
-                ? 'bg-indigo-600/20 text-indigo-400' 
-                : isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8]' : 'bg-teal-50 text-[#0F3D3E]'
+              isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8]' : 'bg-teal-50 text-[#0F3D3E]'
             }`}>
-              {isProductBlock ? <Package size={18} /> : isText ? <Type size={18} /> : <Palette size={18} />}
+              {isText ? <Type size={18} /> : <Palette size={18} />}
             </div>
             <div>
               <h3 className={`text-xs font-black tracking-wider uppercase ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {isProductBlock ? 'PRODUCT CARD' : isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : 'ELEMENT')}
+                {isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : 'ELEMENT')}
               </h3>
               <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-400'}`}>
-                {isProductBlock ? 'Card Typography & Specs' : isPageSettings ? 'No Element Selected' : 'Instance Properties'}
+                {isPageSettings ? 'No Element Selected' : 'Instance Properties'}
               </p>
             </div>
           </div>
@@ -468,210 +450,6 @@ const PropertyPanel: React.FC = () => {
                         </div>
                       ))}
                     </div>
-                  </div>
-                </div>
-              </section>
-            )}
-
-            {/* Product Block Content & Typography Section */}
-            {selectedElement?.type === 'product-block' && (
-              <section>
-                <div className="flex items-center justify-between mb-2 pb-1 border-b border-slate-100 dark:border-[#262626]">
-                  <div className="flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider text-indigo-500">
-                    <Package size={13} />
-                    <span>PRODUCT CARD & DETAILS</span>
-                  </div>
-                  {(selectedElement.customTitle !== undefined || selectedElement.customPrice !== undefined || selectedElement.customSku !== undefined || selectedElement.customDesc !== undefined || selectedElement.titleFontSize || selectedElement.priceFontSize || selectedElement.fontSize || selectedElement.titleColor || selectedElement.priceColor || selectedElement.textColor || (selectedElement as any).borderRadius !== undefined) && (
-                    <button
-                      onClick={() => {
-                        handleBatchUpdate({
-                          customTitle: undefined,
-                          customPrice: undefined,
-                          customSku: undefined,
-                          customDesc: undefined,
-                          titleFontSize: undefined,
-                          priceFontSize: undefined,
-                          fontSize: undefined,
-                          titleColor: undefined,
-                          priceColor: undefined,
-                          textColor: undefined,
-                          borderRadius: undefined,
-                        });
-                      }}
-                      className="text-[10px] text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold cursor-pointer"
-                      title="Reset all custom overrides back to product database defaults"
-                    >
-                      <RotateCcw size={11} /> Reset
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-3.5">
-                  {/* Product Title / Name */}
-                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Title / Name</label>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] text-slate-400">Size:</span>
-                        <button
-                          onClick={() => {
-                            const cur = selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)));
-                            handleBatchUpdate({ titleFontSize: Math.max(8, cur - 1) });
-                          }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
-                        >-</button>
-                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-500">
-                          {selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)))}
-                        </span>
-                        <button
-                          onClick={() => {
-                            const cur = selectedElement.titleFontSize || Math.max(11, Math.min(16, Math.round(selectedElement.width * 0.065)));
-                            handleBatchUpdate({ titleFontSize: cur + 1 });
-                          }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
-                        >+</button>
-                        <input
-                          type="color"
-                          value={selectedElement.titleColor || '#0f172a'}
-                          onChange={(e) => handleBatchUpdate({ titleColor: e.target.value })}
-                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer bg-transparent"
-                          title="Title Text Color"
-                        />
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={selectedElement.customTitle !== undefined ? selectedElement.customTitle : (products.find(p => p.id === selectedElement.productId)?.name || '')}
-                      placeholder="Product Title..."
-                      onChange={(e) => handleBatchUpdate({ customTitle: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] px-3 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {/* Price */}
-                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Price</label>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] text-slate-400">Size:</span>
-                        <button
-                          onClick={() => {
-                            const cur = selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)));
-                            handleBatchUpdate({ priceFontSize: Math.max(8, cur - 1) });
-                          }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
-                        >-</button>
-                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-500">
-                          {selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)))}
-                        </span>
-                        <button
-                          onClick={() => {
-                            const cur = selectedElement.priceFontSize || Math.max(11, Math.min(15, Math.round(selectedElement.width * 0.058)));
-                            handleBatchUpdate({ priceFontSize: cur + 1 });
-                          }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
-                        >+</button>
-                        <input
-                          type="color"
-                          value={selectedElement.priceColor || '#4f46e5'}
-                          onChange={(e) => handleBatchUpdate({ priceColor: e.target.value })}
-                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer bg-transparent"
-                          title="Price Text Color"
-                        />
-                      </div>
-                    </div>
-                    <input
-                      type="text"
-                      value={selectedElement.customPrice !== undefined ? selectedElement.customPrice : (() => {
-                        const prod = products.find(p => p.id === selectedElement.productId);
-                        return prod ? `${prod.currency || '₹'}${prod.price || ''}` : '';
-                      })()}
-                      placeholder="e.g. ₹1300"
-                      onChange={(e) => handleBatchUpdate({ customPrice: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] px-3 py-1.5 text-xs font-black text-indigo-600 dark:text-indigo-400 outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {/* SKU / Model */}
-                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
-                    <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">SKU / Model Number</label>
-                    <input
-                      type="text"
-                      value={selectedElement.customSku !== undefined ? selectedElement.customSku : (products.find(p => p.id === selectedElement.productId)?.sku || '')}
-                      placeholder="SKU Code..."
-                      onChange={(e) => handleBatchUpdate({ customSku: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] px-3 py-1.5 text-xs font-mono font-bold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
-                    />
-                  </div>
-
-                  {/* Specifications & Details */}
-                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Specs & Details (Lines)</label>
-                      <div className="flex items-center gap-1">
-                        <span className="text-[9px] text-slate-400">Size:</span>
-                        <button
-                          onClick={() => {
-                            const cur = selectedElement.fontSize || 9;
-                            handleBatchUpdate({ fontSize: Math.max(6, cur - 1) });
-                          }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
-                        >-</button>
-                        <span className="text-[10px] font-mono font-bold w-6 text-center text-indigo-500">
-                          {selectedElement.fontSize || 9}
-                        </span>
-                        <button
-                          onClick={() => {
-                            const cur = selectedElement.fontSize || 9;
-                            handleBatchUpdate({ fontSize: cur + 1 });
-                          }}
-                          className="w-5 h-5 flex items-center justify-center bg-slate-100 dark:bg-[#27272a] hover:bg-slate-200 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer"
-                        >+</button>
-                        <input
-                          type="color"
-                          value={selectedElement.textColor || '#475569'}
-                          onChange={(e) => handleBatchUpdate({ textColor: e.target.value })}
-                          className="w-5 h-5 ml-1 rounded border-0 cursor-pointer bg-transparent"
-                          title="Details Text Color"
-                        />
-                      </div>
-                    </div>
-                    <textarea
-                      rows={5}
-                      value={selectedElement.customDesc !== undefined ? selectedElement.customDesc : (() => {
-                        const prod = products.find(p => p.id === selectedElement.productId);
-                        if (!prod) return '';
-                        const lines: string[] = [];
-                        if (catalog?.showSKU !== false && prod.sku) lines.push(`SKU: ${prod.sku}`);
-                        if (prod.description) lines.push(prod.description);
-                        if (prod.customFields) {
-                          Object.entries(prod.customFields).forEach(([k, v]) => {
-                            if (v !== undefined && v !== null && v !== '' && typeof v !== 'object') lines.push(`• ${k}: ${v}`);
-                          });
-                        }
-                        return lines.join('\n');
-                      })()}
-                      placeholder="Enter specs line by line..."
-                      onChange={(e) => handleBatchUpdate({ customDesc: e.target.value })}
-                      className="w-full bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded-[8px] p-2.5 text-xs font-mono text-slate-700 dark:text-slate-200 outline-none focus:border-indigo-500 resize-y leading-relaxed"
-                    />
-                  </div>
-
-                  {/* Corner Roundness */}
-                  <div className="p-3 bg-white dark:bg-[#18181b] border border-slate-100 dark:border-[#27272a] rounded-[12px] shadow-sm space-y-2">
-                    <div className="flex justify-between items-center text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">
-                      <span>Corner Roundness</span>
-                      <span className="text-indigo-500 font-mono">{(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}px</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="0"
-                      max="30"
-                      step="1"
-                      value={(selectedElement as any).borderRadius !== undefined ? (selectedElement as any).borderRadius : 4}
-                      onChange={(e) => handleBatchUpdate({ borderRadius: parseInt(e.target.value, 10) })}
-                      className="w-full h-1.5 bg-slate-100 dark:bg-[#27272a] rounded-full appearance-none cursor-pointer accent-indigo-500"
-                    />
                   </div>
                 </div>
               </section>

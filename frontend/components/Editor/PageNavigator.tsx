@@ -144,7 +144,10 @@ const PageNavigator: React.FC = () => {
               key={page.id}
               data-id={page.id}
               className={`relative group shrink-0 flex flex-col items-center gap-2 cursor-pointer transition-all ${isActive ? 'scale-105' : 'hover:scale-105'}`}
-              onClick={() => setCurrentPageIndex(index)}
+              onClick={() => {
+                setCurrentPageIndex(index);
+                window.dispatchEvent(new CustomEvent('catalog:scrollToPage', { detail: { pageIndex: index } }));
+              }}
             >
               {/* Thumbnail / Preview */}
               <div

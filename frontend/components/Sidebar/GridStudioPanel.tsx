@@ -4,10 +4,11 @@ import {
   ArrowUp, ArrowDown, Check, Package, Palette,
   Upload, Layers, Zap, SlidersHorizontal, ChevronRight,
   ChevronLeft, ChevronDown, Grid, MoveRight, MoveLeft, ExternalLink,
-  FileText, Copy, ArrowRightLeft, Eye, CheckCircle2, Search, Table, FolderPlus
+  FileText, Copy, ArrowRightLeft, Eye, EyeOff, CheckCircle2, Search, Table, FolderPlus,
+  Sliders, RotateCcw, Type, DollarSign, Hash, Edit3, LayoutTemplate
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category } from '../../types';
+import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category, CardTheme } from '../../types';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { normalizeImageUrl, resolveProductImage, resolveProductTitle } from '../../utils/imageUtils';
 import { resolveFieldLabel } from '../../utils/fieldUtils';
@@ -539,10 +540,104 @@ export const GridStudioPanel: React.FC = () => {
     mediaItems, adminAssets, addMedia, fetchMedia, addElement,
     setEditorTab, applyProductGridToPage, reflowCatalogPages,
     swapPageSections, deletePageSection, addInteriorPageWithInheritedLayout,
-    autoGenerateCatalogFromAllCategories, uiTheme
+    autoGenerateCatalogFromAllCategories, uiTheme, setSelectedElementIds
   } = useStore();
 
   const isDark = uiTheme === 'dark';
+
+  // Single Product Properties Customizer Modal State
+  const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
+  const [customCardTheme, setCustomCardTheme] = useState<CardTheme>('classic-stack');
+  const [customShowName, setCustomShowName] = useState(true);
+  const [customTitle, setCustomTitle] = useState('');
+  const [customTitleColor, setCustomTitleColor] = useState('#F1F1F1');
+  const [customTitleFontSize, setCustomTitleFontSize] = useState(13);
+  const [customShowPrice, setCustomShowPrice] = useState(true);
+  const [customPrice, setCustomPrice] = useState('');
+  const [customPriceColor, setCustomPriceColor] = useState('#00a651');
+  const [customPriceFontSize, setCustomPriceFontSize] = useState(14);
+  const [customShowSku, setCustomShowSku] = useState(true);
+  const [customSku, setCustomSku] = useState('');
+  const [customFill, setCustomFill] = useState('#181818');
+  const [customStroke, setCustomStroke] = useState('#2e2e2e');
+  const [customBorderRadius, setCustomBorderRadius] = useState(4);
+  const [customVisibleFieldKeys, setCustomVisibleFieldKeys] = useState<string[]>([]);
+  const [customFieldOverrides, setCustomFieldOverrides] = useState<Record<string, { label?: string; value?: string }>>({});
+  const [customEditingFieldKey, setCustomEditingFieldKey] = useState<string | null>(null);
+
+  const openProductPropertiesCustomizer = (product: Product) => {
+    setCustomizingProduct(product);
+    setCustomCardTheme('classic-stack');
+    setCustomShowName(true);
+    setCustomTitle(product.name || '');
+    setCustomTitleColor(isDark ? '#F1F1F1' : '#0f172a');
+    setCustomTitleFontSize(13);
+    setCustomShowPrice(true);
+    setCustomPrice(product.price ? `${product.currency || '₹'}${product.price}` : '');
+    setCustomPriceColor('#00a651');
+    setCustomPriceFontSize(14);
+    setCustomShowSku(true);
+    setCustomSku(product.sku || '');
+    setCustomFill(isDark ? '#181818' : '#ffffff');
+    setCustomStroke(isDark ? '#2e2e2e' : '#e2e8f0');
+    setCustomBorderRadius(4);
+
+    const keys: string[] = ['name', 'price'];
+    if (product.sku) keys.push('sku');
+    if (product.description) keys.push('description');
+    if (product.customFields && typeof product.customFields === 'object') {
+      Object.keys(product.customFields).forEach(k => {
+        if (!keys.includes(k)) keys.push(k);
+      });
+    }
+    setCustomVisibleFieldKeys(keys);
+    setCustomFieldOverrides({});
+    setCustomEditingFieldKey(null);
+  };
+
+  const handleInsertCustomizedProduct = () => {
+    if (!customizingProduct) return;
+    const timestamp = Date.now();
+    const placement = calculateElementPlacement(260, 320);
+    const newId = `product-block-${customizingProduct.id}-${timestamp}`;
+
+    addElement(currentPageIndex, {
+      id: newId,
+      type: 'product-block',
+      x: placement.x,
+      y: placement.y,
+      width: placement.width,
+      height: placement.height,
+      rotation: 0,
+      opacity: 1,
+      productId: customizingProduct.id,
+      productData: customizingProduct,
+      cardTheme: customCardTheme,
+      showName: customShowName,
+      customTitle: customTitle !== customizingProduct.name ? customTitle : undefined,
+      titleColor: customTitleColor,
+      titleFontSize: customTitleFontSize,
+      showPrice: customShowPrice,
+      customPrice: customPrice || undefined,
+      priceColor: customPriceColor,
+      priceFontSize: customPriceFontSize,
+      showSku: customShowSku,
+      customSku: customSku || undefined,
+      fill: customFill,
+      stroke: customStroke,
+      borderRadius: customBorderRadius,
+      visibleFieldKeys: customVisibleFieldKeys,
+      fieldOverrides: Object.keys(customFieldOverrides).length > 0 ? customFieldOverrides : undefined,
+      zIndex: 20
+    });
+
+    if (setSelectedElementIds) {
+      setSelectedElementIds([newId]);
+    }
+
+    showSingleFeedback(`Customized card for "${customizingProduct.name}" added to Page ${currentPageIndex + 1}!`);
+    setCustomizingProduct(null);
+  };
 
   const [viewMode, setViewMode] = useState<'editor' | 'overview' | 'single-items'>('editor');
   const [showPageSelector, setShowPageSelector] = useState(false);
@@ -581,9 +676,7 @@ export const GridStudioPanel: React.FC = () => {
     if (page?.type === 'cover' || page?.type === 'index' || page?.type === 'closing') {
       return [];
     }
-    const extracted = extractSectionsFromPage(page);
-    if (extracted.length >= 1) return extracted;
-    return generateSectionsFromRealProducts(page, currentPageIndex, products, categories);
+    return extractSectionsFromPage(page);
   });
 
   const sectionsRef = useRef(sections);
@@ -649,11 +742,7 @@ export const GridStudioPanel: React.FC = () => {
         return;
       }
       const extracted = extractSectionsFromPage(page);
-      if (extracted.length >= 1) {
-        setSections(extracted);
-      } else {
-        setSections(generateSectionsFromRealProducts(page, currentPageIndex, products, categories));
-      }
+      setSections(extracted);
     }
   }, [currentPageIndex, catalog?.pages, products, categories]);
 
@@ -1696,45 +1785,33 @@ export const GridStudioPanel: React.FC = () => {
           )}
         </div>
 
-        {/* Mode Tabs: [ ✏️ 3-Grid Editor ] | [ 📦 Single Items ] | [ 🗂️ Grid Map ] */}
+        {/* Mode Tabs: [ ✏️ 3-Grid Editor ] | [ 🗂️ Grid Map ] */}
         <div className={`flex items-center border rounded-[4px] p-0.5 gap-0.5 ${
           isDark ? 'bg-[#1e1e1e] border-[#333]' : 'bg-slate-100 border-slate-200'
         }`}>
           <button
             type="button"
             onClick={() => setViewMode('editor')}
-            className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
               viewMode === 'editor'
                 ? 'bg-[#0F3D3E] text-white shadow-sm'
                 : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
             }`}
             title="3-Product Section Grid Editor"
           >
-            <Grid size={10} /> 3-Grid Editor
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode('single-items')}
-            className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
-              viewMode === 'single-items'
-                ? 'bg-[#0F3D3E] text-[#E2DCC8] shadow-sm border border-[#E2DCC8]/30'
-                : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
-            }`}
-            title="Browse and place individual product cards, photos, or spec tables"
-          >
-            <Package size={10} /> Single Items
+            <Grid size={11} /> 3-Grid Editor
           </button>
           <button
             type="button"
             onClick={() => setViewMode('overview')}
-            className={`px-2 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
+            className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase tracking-wider transition-all flex items-center gap-1 ${
               viewMode === 'overview'
                 ? 'bg-[#0F3D3E] text-white shadow-sm'
                 : (isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
             }`}
             title="Multi-page Grid Organizer"
           >
-            <Layers size={10} /> Grid Map
+            <Layers size={11} /> Grid Map
           </button>
         </div>
 
@@ -1773,31 +1850,10 @@ export const GridStudioPanel: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setAddCategoryTargetPageIdx(null);
-                  setShowAddCategoryModal(true);
-                }}
-                className={`px-2.5 py-1 rounded text-[9px] font-bold uppercase flex items-center gap-1.5 transition-all shadow-sm ${
-                  unincludedCategories.length > 0
-                    ? 'bg-[#00a651] hover:bg-[#009247] text-white shadow-[#00a651]/20'
-                    : (isDark ? 'bg-[#202020] text-slate-400 border border-[#333]' : 'bg-slate-100 text-slate-500 border border-slate-200')
-                }`}
-                title="Add a category not already included in this catalog"
-              >
-                <Plus size={11} /> Add Category
-                {unincludedCategories.length > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-black/25 text-[8px] font-mono font-bold">
-                    {unincludedCategories.length}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
                   addInteriorPageWithInheritedLayout();
                   navigateToPage(catalog.pages.length);
                 }}
-                className={`px-2 py-1 border rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-all ${
+                className={`px-2.5 py-1 border rounded text-[9px] font-bold uppercase flex items-center gap-1 transition-all ${
                   isDark ? 'bg-[#202020] hover:bg-[#282828] border-[#333] text-[#E2DCC8]' : 'bg-white hover:bg-slate-100 border-slate-200 text-slate-700 shadow-sm'
                 }`}
               >
@@ -1870,7 +1926,7 @@ export const GridStudioPanel: React.FC = () => {
                       Cover & closing pages do not contain standard product grids.
                     </div>
                   ) : pSections.length === 0 ? (
-                    <div className={`py-4 px-2 text-center text-[9px] rounded border space-y-1 ${
+                    <div className={`py-4 px-2 text-center text-[9px] rounded border space-y-1.5 ${
                       isDark ? 'text-slate-500 bg-[#111] border-[#222]' : 'text-slate-500 bg-slate-100/50 border-slate-200'
                     }`}>
                       <p>No grid sections on this page.</p>
@@ -1878,14 +1934,11 @@ export const GridStudioPanel: React.FC = () => {
                         type="button"
                         onClick={() => {
                           navigateToPage(pIdx);
-                          const generated = generateSectionsFromRealProducts(p, pIdx, products, categories);
-                          applyProductGridToPage(pIdx, generated);
-                          setSections(generated);
                           setViewMode('editor');
                         }}
-                        className="px-2 py-0.5 bg-[#0F3D3E] text-white rounded text-[8px] font-bold uppercase"
+                        className="px-2.5 py-1 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded text-[8px] font-bold uppercase transition-all"
                       >
-                        + Initialize Product Grid
+                        Edit Page
                       </button>
                     </div>
                   ) : (
@@ -2239,59 +2292,32 @@ export const GridStudioPanel: React.FC = () => {
                     </div>
 
                     {/* Quick Action Buttons */}
-                    <div className={`space-y-1.5 pt-2 border-t ${isDark ? 'border-[#252525]' : 'border-slate-100'}`}>
+                    <div className={`flex items-center gap-1.5 pt-2 border-t ${isDark ? 'border-[#252525]' : 'border-slate-100'}`}>
                       {/* Primary: Add Card Block */}
                       <button
                         type="button"
                         onClick={() => handleAddSingleCard(product)}
-                        className="w-full py-1.5 px-2 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm border border-[#E2DCC8]/25"
+                        className="flex-1 py-1.5 px-2 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1.5 transition-all shadow-sm border border-[#E2DCC8]/25 cursor-pointer"
                         title={`Add full product card to Page ${currentPageIndex + 1}`}
                       >
                         <Package size={11} /> + Add Card Block
                       </button>
 
-                      {/* Secondary Actions Grid */}
-                      <div className="grid grid-cols-2 gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleAddSingleImage(product)}
-                          disabled={!imgUrl}
-                          className={`py-1 px-1.5 disabled:opacity-30 rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border transition-all ${
-                            isDark 
-                              ? 'bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' 
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
-                          title="Drop high-res photo only"
-                        >
-                          <ImageIcon size={10} /> + Photo
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => handleAddSingleTable(product)}
-                          className={`py-1 px-1.5 rounded-[3px] text-[9px] font-medium flex items-center justify-center gap-1 border transition-all ${
-                            isDark 
-                              ? 'bg-[#202020] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' 
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
-                          title="Drop specification / variant table"
-                        >
-                          <Table size={10} /> + Specs
-                        </button>
-                      </div>
-
-                      {/* Full Section Row */}
+                      {/* Customize Properties Button */}
                       <button
                         type="button"
-                        onClick={() => handleAddSingleFullSection(product)}
-                        className={`w-full py-1 px-2 rounded-[3px] text-[8.5px] font-bold uppercase tracking-wider flex items-center justify-center gap-1 border transition-all ${
-                          isDark 
-                            ? 'bg-[#1c1c1c] hover:bg-[#242424] text-slate-300 hover:text-white border-[#2e2e2e]' 
-                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 hover:text-slate-900 border-slate-200'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openProductPropertiesCustomizer(product);
+                        }}
+                        className={`p-1.5 rounded-[3px] border transition-all flex items-center justify-center shrink-0 cursor-pointer ${
+                          isDark
+                            ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333] hover:border-[#0F3D3E] hover:text-white'
+                            : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300 hover:border-[#0F3D3E]'
                         }`}
-                        title="Add complete row with Photo + Title + Specs Table"
+                        title="Tune Card Properties & Variables (Theme, Fields, Colors, Sizes)"
                       >
-                        <Sparkles size={9} className="text-[#00a651]" /> Full Line Showcase
+                        <Sliders size={13} />
                       </button>
                     </div>
                   </div>
@@ -2346,19 +2372,35 @@ export const GridStudioPanel: React.FC = () => {
                 </button>
               </div>
 
-              <div className={`pt-4 border-t ${isDark ? 'border-[#222]' : 'border-slate-100'}`}>
+            </div>
+          ) : sections.length === 0 ? (
+            <div className={`p-6 text-center rounded-xl border border-dashed flex flex-col items-center justify-center gap-3 ${
+              isDark ? 'border-[#262626] bg-[#141414]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                isDark ? 'bg-[#1e1e1e] text-slate-400' : 'bg-white text-slate-500 shadow-sm'
+              }`}>
+                <LayoutTemplate size={24} />
+              </div>
+              <div>
+                <h4 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                  Page {currentPageIndex + 1} is Empty
+                </h4>
+                <p className={`text-[11px] mt-1 max-w-[240px] leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                  This page has no grid sections yet. Click below to add a category section.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2 w-full mt-2">
                 <button
                   type="button"
                   onClick={() => {
-                    if (confirm("Transform this cover page into a 3-product grid page? This will replace the current page layout with product series.")) {
-                      const newSecs = generateSectionsFromRealProducts(activePage, currentPageIndex, products, categories);
-                      applyProductGridToPage(currentPageIndex, newSecs);
-                      setSections(newSecs);
-                    }
+                    setAddCategoryTargetPageIdx(currentPageIndex);
+                    setShowAddCategoryModal(true);
                   }}
-                  className={`text-[10px] underline transition-colors ${isDark ? 'text-slate-500 hover:text-amber-400' : 'text-slate-400 hover:text-amber-600'}`}
+                  className="w-full py-2.5 px-3 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-lg text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 shadow-sm transition-all active:scale-95"
                 >
-                  Convert this page into a 3-Product Grid anyway
+                  <Plus size={14} className="text-[#00a651]" />
+                  <span>Pick Category Section</span>
                 </button>
               </div>
             </div>
@@ -3094,7 +3136,7 @@ export const GridStudioPanel: React.FC = () => {
             );
           }))}
 
-          {!isSpecialPage && sections.length < 3 && (
+          {!isSpecialPage && sections.length > 0 && sections.length < 3 && (
             <button
               type="button"
               onClick={() => {
@@ -4068,6 +4110,665 @@ export const GridStudioPanel: React.FC = () => {
                   );
                 });
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ================= SINGLE PRODUCT PROPERTIES & CUSTOMIZER MODAL ================= */}
+      {customizingProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`w-full max-w-3xl max-h-[90vh] rounded-xl border flex flex-col shadow-2xl overflow-hidden ${
+            isDark ? 'bg-[#121212] border-[#2e2e2e]' : 'bg-white border-slate-200'
+          }`}>
+            {/* Modal Header */}
+            <div className={`px-5 py-4 border-b flex items-center justify-between ${
+              isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#0F3D3E] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-sm">
+                  <Sliders size={16} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className={`text-sm font-black uppercase tracking-wider ${isDark ? 'text-[#F1F1F1]' : 'text-slate-900'}`}>
+                      Single Product Properties
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/20">
+                      Target: Page {currentPageIndex + 1}
+                    </span>
+                  </div>
+                  <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                    Customize card theme, fields, typography, and styling before placing on page.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setCustomizingProduct(null)}
+                className={`p-1.5 rounded-lg border transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white border-[#333] hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-800 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Body: 2 Columns (Controls + Live Preview) */}
+            <div className="flex-1 overflow-y-auto p-5 grid grid-cols-1 md:grid-cols-12 gap-5 custom-scrollbar">
+              {/* Left Column: Properties Controls (7 cols) */}
+              <div className="md:col-span-7 space-y-4">
+                {/* 1. Card Theme Selector */}
+                <div className={`p-3.5 rounded-lg border space-y-2.5 ${isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'}`}>
+                  <label className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                    <LayoutTemplate size={12} className="text-[#00a651]" /> Card Theme / Layout
+                  </label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {[
+                      { id: 'classic-stack', label: 'Classic Stack', desc: 'Standard top image' },
+                      { id: 'split-row', label: 'Split Row', desc: 'Side-by-side' },
+                      { id: 'editorial-overlay', label: 'Editorial', desc: 'Badge overlay' },
+                      { id: 'minimal-image', label: 'Minimal', desc: 'Clean photo focus' },
+                      { id: 'minimal-pill', label: 'Minimal Pill', desc: 'Pill tags' },
+                    ].map((t) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => setCustomCardTheme(t.id as CardTheme)}
+                        className={`p-2 rounded border text-left transition-all ${
+                          customCardTheme === t.id
+                            ? 'bg-[#0F3D3E] text-[#E2DCC8] border-[#E2DCC8]/50 shadow-sm ring-1 ring-[#0F3D3E]'
+                            : (isDark ? 'bg-[#141414] text-slate-400 border-[#2a2a2a] hover:bg-[#1c1c1c] hover:text-white' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100')
+                        }`}
+                      >
+                        <div className="text-[10px] font-bold leading-tight">{t.label}</div>
+                        <div className="text-[8px] opacity-60 mt-0.5">{t.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Title & Typography */}
+                <div className={`p-3.5 rounded-lg border space-y-3 ${isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'}`}>
+                  <div className="flex items-center justify-between">
+                    <label className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                      <Type size={12} className="text-[#00a651]" /> Product Title
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={customShowName}
+                        onChange={(e) => setCustomShowName(e.target.checked)}
+                        className="rounded accent-[#0F3D3E]"
+                      />
+                      <span className={`text-[9px] font-bold ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Show</span>
+                    </label>
+                  </div>
+
+                  {customShowName && (
+                    <div className="space-y-2">
+                      <input
+                        type="text"
+                        value={customTitle}
+                        onChange={(e) => setCustomTitle(e.target.value)}
+                        placeholder="Product title..."
+                        className={`w-full px-3 py-1.5 text-xs rounded border outline-none font-bold ${
+                          isDark ? 'bg-[#141414] border-[#333] text-[#F1F1F1] focus:border-[#0F3D3E]' : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                        }`}
+                      />
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className={`text-[9px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Color:</span>
+                          <input
+                            type="color"
+                            value={customTitleColor}
+                            onChange={(e) => setCustomTitleColor(e.target.value)}
+                            className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent"
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className={`text-[9px] font-medium ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Size: {customTitleFontSize}px</span>
+                          <input
+                            type="range"
+                            min={9}
+                            max={22}
+                            value={customTitleFontSize}
+                            onChange={(e) => setCustomTitleFontSize(parseInt(e.target.value, 10))}
+                            className="w-20 accent-[#0F3D3E]"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 3. Price & SKU */}
+                <div className={`p-3.5 rounded-lg border grid grid-cols-2 gap-3 ${isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'}`}>
+                  {/* Price */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                        <DollarSign size={11} className="text-[#00a651]" /> Price
+                      </label>
+                      <input
+                        type="checkbox"
+                        checked={customShowPrice}
+                        onChange={(e) => setCustomShowPrice(e.target.checked)}
+                        className="rounded accent-[#0F3D3E]"
+                      />
+                    </div>
+                    {customShowPrice && (
+                      <input
+                        type="text"
+                        value={customPrice}
+                        onChange={(e) => setCustomPrice(e.target.value)}
+                        placeholder="₹290"
+                        className={`w-full px-2.5 py-1 text-xs rounded border outline-none font-mono font-bold ${
+                          isDark ? 'bg-[#141414] border-[#333] text-[#00a651] focus:border-[#0F3D3E]' : 'bg-white border-slate-300 text-[#00a651] focus:border-[#0F3D3E]'
+                        }`}
+                      />
+                    )}
+                  </div>
+
+                  {/* SKU */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <label className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                        <Hash size={11} className="text-[#00a651]" /> SKU / Model
+                      </label>
+                      <input
+                        type="checkbox"
+                        checked={customShowSku}
+                        onChange={(e) => setCustomShowSku(e.target.checked)}
+                        className="rounded accent-[#0F3D3E]"
+                      />
+                    </div>
+                    {customShowSku && (
+                      <input
+                        type="text"
+                        value={customSku}
+                        onChange={(e) => setCustomSku(e.target.value)}
+                        placeholder="SKU-100"
+                        className={`w-full px-2.5 py-1 text-xs rounded border outline-none font-mono ${
+                          isDark ? 'bg-[#141414] border-[#333] text-[#F1F1F1] focus:border-[#0F3D3E]' : 'bg-white border-slate-300 text-slate-800 focus:border-[#0F3D3E]'
+                        }`}
+                      />
+                    )}
+                  </div>
+                </div>
+
+                {/* 4. Card Shell Styling */}
+                <div className={`p-3.5 rounded-lg border space-y-2.5 ${isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'}`}>
+                  <label className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                    <Palette size={12} className="text-[#00a651]" /> Card Style & Corners
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <span className={`text-[9px] block mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Fill Color</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="color"
+                          value={customFill}
+                          onChange={(e) => setCustomFill(e.target.value)}
+                          className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent"
+                        />
+                        <span className="text-[9px] font-mono opacity-80">{customFill}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className={`text-[9px] block mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Border Color</span>
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="color"
+                          value={customStroke}
+                          onChange={(e) => setCustomStroke(e.target.value)}
+                          className="w-5 h-5 rounded cursor-pointer border border-slate-600 bg-transparent"
+                        />
+                        <span className="text-[9px] font-mono opacity-80">{customStroke}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <span className={`text-[9px] block mb-1 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Radius</span>
+                      <div className="flex gap-1">
+                        {[0, 4, 8, 16].map(r => (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() => setCustomBorderRadius(r)}
+                            className={`px-1.5 py-0.5 rounded text-[8px] font-bold border transition-colors ${
+                              customBorderRadius === r
+                                ? 'bg-[#0F3D3E] text-[#E2DCC8] border-[#E2DCC8]/40'
+                                : (isDark ? 'bg-[#141414] text-slate-400 border-[#333]' : 'bg-white text-slate-600 border-slate-200')
+                            }`}
+                          >
+                            {r}px
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 5. Visible Fields & Custom Variables */}
+                {customizingProduct.customFields && Object.keys(customizingProduct.customFields).length > 0 && (
+                  <div className={`p-3.5 rounded-lg border space-y-2.5 ${isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'}`}>
+                    <label className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                      <Layers size={12} className="text-[#00a651]" /> Dynamic Custom Fields
+                    </label>
+                    <div className="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar">
+                      {Object.entries(customizingProduct.customFields).map(([k, v]) => {
+                        const isVisible = customVisibleFieldKeys.includes(k);
+                        const resolvedLabel = resolveFieldLabel(k, categories, customizingProduct) || k;
+                        const overrideVal = customFieldOverrides[k]?.value !== undefined ? customFieldOverrides[k].value : String(v || '');
+
+                        return (
+                          <div
+                            key={k}
+                            className={`p-2 rounded border flex items-center justify-between gap-2 transition-all ${
+                              isVisible
+                                ? (isDark ? 'bg-[#141414] border-[#333]' : 'bg-white border-slate-200')
+                                : (isDark ? 'bg-[#141414]/40 border-[#222] opacity-50' : 'bg-slate-100 border-slate-200 opacity-50')
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0 flex-1">
+                              <input
+                                type="checkbox"
+                                checked={isVisible}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setCustomVisibleFieldKeys([...customVisibleFieldKeys, k]);
+                                  } else {
+                                    setCustomVisibleFieldKeys(customVisibleFieldKeys.filter(x => x !== k));
+                                  }
+                                }}
+                                className="rounded accent-[#0F3D3E]"
+                              />
+                              <span className={`text-[9.5px] font-bold truncate ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                                {resolvedLabel}:
+                              </span>
+                              {customEditingFieldKey === k ? (
+                                <input
+                                  type="text"
+                                  value={overrideVal}
+                                  onChange={(e) => setCustomFieldOverrides({
+                                    ...customFieldOverrides,
+                                    [k]: { ...customFieldOverrides[k], value: e.target.value }
+                                  })}
+                                  onBlur={() => setCustomEditingFieldKey(null)}
+                                  autoFocus
+                                  className={`flex-1 px-1.5 py-0.5 text-[9px] rounded border outline-none ${
+                                    isDark ? 'bg-[#1c1c1c] border-[#0F3D3E] text-white' : 'bg-white border-[#0F3D3E] text-black'
+                                  }`}
+                                />
+                              ) : (
+                                <span className={`text-[9px] truncate font-mono ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                  {overrideVal || '-'}
+                                </span>
+                              )}
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setCustomEditingFieldKey(customEditingFieldKey === k ? null : k)}
+                              className="text-[8.5px] font-bold text-[#00a651] hover:underline shrink-0"
+                            >
+                              {customEditingFieldKey === k ? 'Done' : 'Edit'}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Right Column: Live Visual Card Preview (5 cols) */}
+              <div className="md:col-span-5 flex flex-col">
+                <div className={`p-4 rounded-xl border flex-1 flex flex-col justify-between ${
+                  isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'
+                }`}>
+                  <div>
+                    <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200 dark:border-[#2e2e2e]">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${isDark ? 'text-[#E2DCC8]' : 'text-slate-700'}`}>
+                          Live Card Preview
+                        </span>
+                        <span className="text-[8px] font-mono px-1.5 py-0.2 rounded bg-slate-500/20 text-slate-400">
+                          1:1 Real Canvas
+                        </span>
+                      </div>
+                      <span className="text-[8.5px] font-mono uppercase bg-emerald-500/15 text-[#00a651] border border-emerald-500/30 px-2 py-0.5 rounded font-bold">
+                        {customCardTheme.replace('-', ' ')}
+                      </span>
+                    </div>
+
+                    {/* Resolved Product Image */}
+                    {(() => {
+                      const cat = categories.find(c => String(c.id) === String(customizingProduct.categoryId));
+                      const img = resolveProductImage(customizingProduct, cat as any, products);
+                      const displayPrice = customPrice || (customizingProduct.price ? `${customizingProduct.currency || '₹'}${customizingProduct.price}` : '');
+                      const displaySku = customSku || customizingProduct.sku || '';
+                      const displayTitle = customTitle || customizingProduct.name || 'Product Title';
+
+                      const activeCustomFields = customVisibleFieldKeys
+                        .filter(k => k !== 'name' && k !== 'price' && k !== 'sku')
+                        .map(k => {
+                          const lbl = resolveFieldLabel(k, categories, customizingProduct) || k;
+                          const val = customFieldOverrides[k]?.value !== undefined
+                            ? customFieldOverrides[k].value
+                            : (k === 'description' ? customizingProduct.description : customizingProduct.customFields?.[k]);
+                          return { key: k, label: lbl, value: val || '-' };
+                        })
+                        .filter(f => f.value !== '-');
+
+                      return (
+                        <div
+                          className="shadow-xl transition-all overflow-hidden relative"
+                          style={{
+                            backgroundColor: customFill,
+                            borderColor: customStroke,
+                            borderWidth: 1.5,
+                            borderRadius: `${customBorderRadius}px`
+                          }}
+                        >
+                          {/* THEME 1: SPLIT ROW */}
+                          {customCardTheme === 'split-row' ? (
+                            <div className="p-3 grid grid-cols-12 gap-3 items-center min-h-[170px]">
+                              {/* Left Image */}
+                              <div className={`col-span-5 h-36 rounded overflow-hidden flex items-center justify-center border ${
+                                isDark ? 'bg-[#0d0d0d] border-[#222]' : 'bg-slate-100 border-slate-200'
+                              }`}>
+                                {img ? (
+                                  <img src={img} alt={displayTitle} className="w-full h-full object-contain p-1" />
+                                ) : (
+                                  <div className="flex flex-col items-center gap-1 text-slate-500">
+                                    <Package size={22} />
+                                    <span className="text-[7.5px] uppercase">No Image</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Right Content */}
+                              <div className="col-span-7 flex flex-col justify-between h-full space-y-2">
+                                <div>
+                                  {customShowName && (
+                                    <h4
+                                      className="font-bold line-clamp-2 leading-tight"
+                                      style={{ color: customTitleColor, fontSize: `${customTitleFontSize}px` }}
+                                    >
+                                      {displayTitle}
+                                    </h4>
+                                  )}
+                                  {customShowSku && displaySku && (
+                                    <div className="text-[8.5px] font-mono mt-0.5 opacity-60">
+                                      SKU: {displaySku}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {customShowPrice && displayPrice && (
+                                  <div
+                                    className="font-black font-mono"
+                                    style={{ color: customPriceColor, fontSize: `${customPriceFontSize}px` }}
+                                  >
+                                    {displayPrice}
+                                  </div>
+                                )}
+
+                                {activeCustomFields.length > 0 && (
+                                  <div className="border-t border-white/10 pt-1.5 space-y-0.5">
+                                    {activeCustomFields.slice(0, 3).map(f => (
+                                      <div key={f.key} className="flex justify-between text-[8px] font-mono">
+                                        <span className="opacity-60">{f.label}:</span>
+                                        <span className="font-bold truncate max-w-[80px]">{String(f.value)}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : customCardTheme === 'editorial-overlay' ? (
+                            /* THEME 2: EDITORIAL OVERLAY */
+                            <div className="relative min-h-[220px] flex flex-col justify-between p-3 overflow-hidden">
+                              {/* Background Image / Hero */}
+                              <div className="absolute inset-0 z-0">
+                                {img ? (
+                                  <img src={img} alt={displayTitle} className="w-full h-full object-cover opacity-80" />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center bg-[#0d0d0d] text-slate-600">
+                                    <Package size={40} />
+                                  </div>
+                                )}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent" />
+                              </div>
+
+                              {/* Floating Top Header Badges */}
+                              <div className="relative z-10 flex items-center justify-between gap-2">
+                                {customShowSku && displaySku ? (
+                                  <span className="px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-black/60 backdrop-blur-md text-white border border-white/20">
+                                    {displaySku}
+                                  </span>
+                                ) : <div />}
+                                {customShowPrice && displayPrice && (
+                                  <span
+                                    className="px-2.5 py-0.5 rounded text-[10px] font-black font-mono shadow-md"
+                                    style={{ backgroundColor: customPriceColor, color: '#000000' }}
+                                  >
+                                    {displayPrice}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Bottom Details Overlay */}
+                              <div className="relative z-10 mt-16 p-2 rounded bg-black/70 backdrop-blur-md border border-white/10 space-y-1">
+                                {customShowName && (
+                                  <h4
+                                    className="font-bold line-clamp-2 leading-tight text-white"
+                                    style={{ fontSize: `${customTitleFontSize}px` }}
+                                  >
+                                    {displayTitle}
+                                  </h4>
+                                )}
+                                {activeCustomFields.length > 0 && (
+                                  <div className="flex flex-wrap gap-1 pt-1">
+                                    {activeCustomFields.slice(0, 3).map(f => (
+                                      <span key={f.key} className="text-[7.5px] font-mono bg-white/10 text-slate-200 px-1.5 py-0.5 rounded">
+                                        {f.label}: {String(f.value)}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ) : customCardTheme === 'minimal-image' ? (
+                            /* THEME 3: MINIMAL IMAGE */
+                            <div className="p-2.5 space-y-2">
+                              <div className={`w-full h-44 rounded overflow-hidden flex items-center justify-center border ${
+                                isDark ? 'bg-[#0d0d0d] border-[#222]' : 'bg-slate-100 border-slate-200'
+                              }`}>
+                                {img ? (
+                                  <img src={img} alt={displayTitle} className="w-full h-full object-contain p-2" />
+                                ) : (
+                                  <Package size={32} className="text-slate-500" />
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between gap-2 px-1">
+                                {customShowName && (
+                                  <h4
+                                    className="font-bold truncate flex-1 leading-tight"
+                                    style={{ color: customTitleColor, fontSize: `${customTitleFontSize}px` }}
+                                  >
+                                    {displayTitle}
+                                  </h4>
+                                )}
+                                {customShowPrice && displayPrice && (
+                                  <span
+                                    className="font-bold font-mono shrink-0"
+                                    style={{ color: customPriceColor, fontSize: `${customPriceFontSize}px` }}
+                                  >
+                                    {displayPrice}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : customCardTheme === 'minimal-pill' ? (
+                            /* THEME 4: MINIMAL PILL */
+                            <div className="p-3 space-y-2.5">
+                              <div className={`w-full h-32 rounded overflow-hidden flex items-center justify-center border ${
+                                isDark ? 'bg-[#0d0d0d] border-[#222]' : 'bg-slate-100 border-slate-200'
+                              }`}>
+                                {img ? (
+                                  <img src={img} alt={displayTitle} className="w-full h-full object-contain p-1" />
+                                ) : (
+                                  <Package size={26} className="text-slate-500" />
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between">
+                                {customShowName && (
+                                  <h4
+                                    className="font-bold truncate leading-tight"
+                                    style={{ color: customTitleColor, fontSize: `${customTitleFontSize}px` }}
+                                  >
+                                    {displayTitle}
+                                  </h4>
+                                )}
+                                {customShowPrice && displayPrice && (
+                                  <span
+                                    className="font-bold font-mono shrink-0"
+                                    style={{ color: customPriceColor, fontSize: `${customPriceFontSize}px` }}
+                                  >
+                                    {displayPrice}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex flex-wrap gap-1 pt-1">
+                                {customShowSku && displaySku && (
+                                  <span className="px-2 py-0.5 rounded-full text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/30">
+                                    SKU: {displaySku}
+                                  </span>
+                                )}
+                                {activeCustomFields.map(f => (
+                                  <span key={f.key} className="px-2 py-0.5 rounded-full text-[8px] font-mono bg-emerald-500/10 text-[#00a651] border border-emerald-500/30">
+                                    {f.label}: {String(f.value)}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ) : (
+                            /* THEME 5: CLASSIC STACK (DEFAULT) */
+                            <div className="p-3 space-y-2.5">
+                              {/* Product Image Frame */}
+                              <div className={`w-full h-32 rounded overflow-hidden flex items-center justify-center border ${
+                                isDark ? 'bg-[#0f0f0f] border-[#222]' : 'bg-slate-100 border-slate-200'
+                              }`}>
+                                {img ? (
+                                  <img src={img} alt={displayTitle} className="w-full h-full object-contain p-1" />
+                                ) : (
+                                  <div className="flex flex-col items-center gap-1 text-slate-500">
+                                    <Package size={26} />
+                                    <span className="text-[8px] uppercase font-mono">No Image</span>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* Title */}
+                              {customShowName && (
+                                <h4
+                                  className="font-bold line-clamp-2 leading-snug"
+                                  style={{ color: customTitleColor, fontSize: `${customTitleFontSize}px` }}
+                                >
+                                  {displayTitle}
+                                </h4>
+                              )}
+
+                              {/* Price and SKU Bar */}
+                              <div className="flex items-center justify-between gap-1">
+                                {customShowPrice && displayPrice && (
+                                  <span
+                                    className="font-black font-mono"
+                                    style={{ color: customPriceColor, fontSize: `${customPriceFontSize}px` }}
+                                  >
+                                    {displayPrice}
+                                  </span>
+                                )}
+                                {customShowSku && displaySku && (
+                                  <span className={`text-[8.5px] font-mono px-1.5 py-0.5 rounded border ${
+                                    isDark ? 'text-slate-400 bg-[#141414] border-[#262626]' : 'text-slate-600 bg-slate-100 border-slate-200'
+                                  }`}>
+                                    {displaySku}
+                                  </span>
+                                )}
+                              </div>
+
+                              {/* Specification / Field Rows (Exact 2-Column Spec Layout) */}
+                              {activeCustomFields.length > 0 && (
+                                <div className={`pt-2 border-t space-y-1 ${
+                                  isDark ? 'border-[#262626]' : 'border-slate-200'
+                                }`}>
+                                  {activeCustomFields.map((f, idx) => (
+                                    <div
+                                      key={f.key}
+                                      className={`flex items-center justify-between px-1.5 py-0.5 rounded text-[8.5px] font-mono ${
+                                        idx % 2 === 1 ? (isDark ? 'bg-[#141414]/60' : 'bg-slate-100/60') : ''
+                                      }`}
+                                    >
+                                      <span className={`uppercase font-semibold tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                                        {f.label}:
+                                      </span>
+                                      <span className={`font-bold truncate max-w-[120px] ${isDark ? 'text-[#E2DCC8]' : 'text-slate-800'}`}>
+                                        {String(f.value)}
+                                      </span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  <div className={`mt-4 pt-3 border-t text-center text-[9px] ${isDark ? 'border-[#262626] text-slate-500' : 'border-slate-200 text-slate-400'}`}>
+                    Real-time preview reflects chosen layout theme and canvas properties.
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer Actions */}
+            <div className={`px-5 py-3.5 border-t flex items-center justify-between ${
+              isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <button
+                type="button"
+                onClick={() => openProductPropertiesCustomizer(customizingProduct)}
+                className={`px-3 py-1.5 rounded text-[10px] font-bold flex items-center gap-1.5 transition-colors ${
+                  isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <RotateCcw size={12} /> Reset to Defaults
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCustomizingProduct(null)}
+                  className={`px-3.5 py-1.5 rounded-[4px] border text-xs font-bold transition-colors ${
+                    isDark ? 'border-[#333] hover:bg-[#252525] text-slate-300' : 'border-slate-300 hover:bg-slate-100 text-slate-700'
+                  }`}
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleInsertCustomizedProduct}
+                  className="px-4 py-1.5 rounded-[4px] bg-[#0F3D3E] hover:bg-[#155455] text-[#E2DCC8] border border-[#E2DCC8]/30 text-xs font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer"
+                >
+                  <Package size={14} /> + Add Customized Card Block to Page {currentPageIndex + 1}
+                </button>
+              </div>
             </div>
           </div>
         </div>

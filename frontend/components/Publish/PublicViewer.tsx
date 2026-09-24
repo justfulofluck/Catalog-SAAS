@@ -177,11 +177,11 @@ export const PublicViewer: React.FC = () => {
           const pageHasHeader =
             page.hasHeader !== undefined
               ? page.hasHeader
-              : catalog.hasHeader && page.type !== 'cover';
+              : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
           const pageHasFooter =
             page.hasFooter !== undefined
               ? page.hasFooter
-              : catalog.hasFooter && page.type !== 'cover';
+              : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
           const footerYOffset =
             PAGE_HEIGHT - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
 
@@ -419,21 +419,70 @@ export const PublicViewer: React.FC = () => {
     }
   };
 
-  // Dimensions & Dynamic Viewport Sizing (Large & Prominent)
-  const pageAspect = PAGE_WIDTH / PAGE_HEIGHT; // ~0.707
-  const availH = Math.max(480, windowDimensions.height - 160); // screen height minus headers/dock
-  const availW = Math.max(700, windowDimensions.width - 96);
+  const touchStartRef = useRef<{ x: number; y: number } | null>(null);
 
-  // Book takes up ~84% of available vertical stage by default
-  let baseH = Math.round(Math.min(availH * 0.88, 880));
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartRef.current = {
+        x: e.touches[0].clientX,
+        y: e.touches[0].clientY,
+      };
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStartRef.current || e.changedTouches.length === 0) return;
+    const startX = touchStartRef.current.x;
+    const startY = touchStartRef.current.y;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    touchStartRef.current = null;
+
+    if (Math.abs(deltaX) > 40 && Math.abs(deltaX) > Math.abs(deltaY) * 1.4) {
+      if (deltaX < 0) {
+        flipNext();
+      } else {
+        flipPrev();
+      }
+    }
+  };
+
+  // Dimensions & Dynamic Viewport Sizing (Responsive across all screen sizes)
+  const isMobile = windowDimensions.width < 768;
+  const headerH = isMobile ? 48 : 56;
+  const dockH = isMobile ? 52 : 64;
+  const marginH = isMobile ? 16 : 32;
+  const marginW = isMobile ? 16 : 96;
+
+  const pageAspect = PAGE_WIDTH / PAGE_HEIGHT; // ~0.707
+  const availH = Math.max(240, windowDimensions.height - headerH - dockH - marginH);
+  const availW = Math.max(280, windowDimensions.width - marginW);
+
+  // Book takes up available vertical stage by default
+  const maxBookH = isMobile ? Math.min(availH * 0.95, 600) : Math.min(availH * 0.88, 880);
+  let baseH = Math.round(maxBookH);
   let baseW = Math.round(baseH * pageAspect);
 
-  if (viewMode === '3d' && baseW * 2 > availW) {
-    baseW = Math.floor(availW / 2);
-    baseH = Math.round(baseW / pageAspect);
-  } else if (viewMode === 'single' && baseW > availW) {
-    baseW = Math.floor(availW);
-    baseH = Math.round(baseW / pageAspect);
+  if (viewMode === '3d') {
+    if (baseW * 2 > availW) {
+      baseW = Math.floor(availW / 2);
+      baseH = Math.round(baseW / pageAspect);
+    }
+    if (baseH > availH) {
+      baseH = Math.floor(availH);
+      baseW = Math.round(baseH * pageAspect);
+    }
+  } else if (viewMode === 'single') {
+    if (baseW > availW) {
+      baseW = Math.floor(availW);
+      baseH = Math.round(baseW / pageAspect);
+    }
+    if (baseH > availH) {
+      baseH = Math.floor(availH);
+      baseW = Math.round(baseH * pageAspect);
+    }
   }
 
   // Active spread page indices
@@ -647,63 +696,63 @@ export const PublicViewer: React.FC = () => {
       `}</style>
 
       {/* ── Top Bar ──────────────────────────────────────────────────────── */}
-      <div className="h-14 bg-[#111317] border-b border-[#1f242d] flex items-center justify-between px-5 shrink-0 z-50">
-        <div className="flex items-center gap-3">
+      <div className="h-12 sm:h-14 bg-[#111317] border-b border-[#1f242d] flex items-center justify-between px-2.5 sm:px-5 shrink-0 z-50">
+        <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
           <button
             onClick={handleExit}
-            className="px-3 py-1.5 bg-[#181c23] hover:bg-[#222731] border border-[#262c38] text-slate-300 hover:text-white rounded-[4px] text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all"
+            className="px-2 sm:px-3 py-1 sm:py-1.5 bg-[#181c23] hover:bg-[#222731] border border-[#262c38] text-slate-300 hover:text-white rounded-[4px] text-[11px] sm:text-xs font-bold uppercase tracking-widest flex items-center gap-1 transition-all shrink-0"
           >
-            <ArrowLeft size={14} /> Exit
+            <ArrowLeft size={13} /> <span className="hidden xs:inline">Exit</span>
           </button>
-          <div className="h-5 w-px bg-[#262c36]" />
-          <div className="flex items-center gap-2">
-            <BookOpen size={16} className="text-[#3b82f6]" />
-            <h1 className="font-space font-bold text-sm text-white truncate max-w-xs md:max-w-md">
+          <div className="h-4 sm:h-5 w-px bg-[#262c36] shrink-0" />
+          <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+            <BookOpen size={15} className="text-[#3b82f6] shrink-0" />
+            <h1 className="font-space font-bold text-xs sm:text-sm text-white truncate max-w-[80px] xs:max-w-[130px] sm:max-w-xs md:max-w-md">
               {catalog.name}
             </h1>
-            <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/50">
+            <span className="hidden md:inline-block text-[9px] sm:text-[10px] font-bold uppercase tracking-widest px-1.5 sm:px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-400 border border-emerald-800/50 shrink-0">
               3D Live
             </span>
           </div>
         </div>
 
         {/* Action Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2 shrink-0">
           {/* Mode Switcher */}
           <div className="flex items-center bg-[#181c23] rounded-[4px] p-0.5 border border-[#262c38]">
             <button
               onClick={() => setViewMode('3d')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-[3px] transition-all flex items-center gap-1 ${
+              className={`px-1.5 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-[3px] transition-all flex items-center gap-1 ${
                 viewMode === '3d' ? 'bg-[#0F3D3E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
               title="3D Flipbook Magazine View"
             >
-              <BookOpen size={13} /> 3D Flip
+              <BookOpen size={12} /> <span className="hidden xs:inline">3D Flip</span>
             </button>
             <button
               onClick={() => setViewMode('single')}
-              className={`px-2.5 py-1 text-xs font-bold rounded-[3px] transition-all flex items-center gap-1 ${
+              className={`px-1.5 sm:px-2.5 py-1 text-[11px] sm:text-xs font-bold rounded-[3px] transition-all flex items-center gap-1 ${
                 viewMode === 'single' ? 'bg-[#0F3D3E] text-white shadow-sm' : 'text-slate-400 hover:text-white'
               }`}
               title="Single Page Slide View"
             >
-              <Layers size={13} /> Single
+              <Layers size={12} /> <span className="hidden xs:inline">Single</span>
             </button>
           </div>
 
           {/* Sound FX Toggle */}
           <button
             onClick={() => setSoundEnabled(prev => !prev)}
-            className={`p-2 rounded-[4px] border transition-all ${
+            className={`p-1.5 sm:p-2 rounded-[4px] border transition-all ${
               soundEnabled ? 'bg-[#181c23] border-[#262c38] text-slate-300 hover:text-white' : 'bg-[#181c23] border-[#262c38] text-slate-500'
             }`}
             title={soundEnabled ? 'Mute page-flip sound' : 'Enable page-flip sound'}
           >
-            {soundEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            {soundEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
           </button>
 
-          {/* Zoom Controls */}
-          <div className="hidden sm:flex items-center bg-[#181c23] rounded-[4px] p-0.5 border border-[#262c38]">
+          {/* Zoom Controls (Desktop Only) */}
+          <div className="hidden md:flex items-center bg-[#181c23] rounded-[4px] p-0.5 border border-[#262c38]">
             <button
               onClick={() => setZoom(prev => Math.max(0.5, Math.round((prev - 0.1) * 10) / 10))}
               className="p-1.5 text-slate-400 hover:text-white hover:bg-[#222731] rounded"
@@ -726,19 +775,19 @@ export const PublicViewer: React.FC = () => {
           {/* Share Link */}
           <button
             onClick={handleCopyLink}
-            className="p-2 bg-[#181c23] hover:bg-[#222731] border border-[#262c38] text-slate-300 hover:text-white rounded-[4px] transition-all"
+            className="p-1.5 sm:p-2 bg-[#181c23] hover:bg-[#222731] border border-[#262c38] text-slate-300 hover:text-white rounded-[4px] transition-all"
             title="Share Public Link"
           >
-            {copiedLink ? <Check size={15} className="text-emerald-400" /> : <Share2 size={15} />}
+            {copiedLink ? <Check size={14} className="text-emerald-400" /> : <Share2 size={14} />}
           </button>
 
           {/* Download Dropdown */}
           <div className="relative group">
             <button
               disabled={isDownloading}
-              className="px-3 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold uppercase tracking-widest flex items-center gap-1.5 transition-all shadow-md"
+              className="px-2 sm:px-3 py-1 sm:py-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-[11px] sm:text-xs font-bold uppercase tracking-widest flex items-center gap-1 sm:gap-1.5 transition-all shadow-md"
             >
-              {isDownloading ? <Loader2 size={13} className="animate-spin" /> : <FileDown size={14} />}
+              {isDownloading ? <Loader2 size={12} className="animate-spin" /> : <FileDown size={13} />}
               <span>{isDownloading ? 'Saving...' : 'PDF'}</span>
             </button>
             <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#14161a] border border-[#2b313b] rounded-[4px] shadow-2xl overflow-hidden hidden group-hover:block z-50">
@@ -766,16 +815,20 @@ export const PublicViewer: React.FC = () => {
           {/* Fullscreen Toggle */}
           <button
             onClick={toggleFullscreen}
-            className="p-2 bg-[#181c23] hover:bg-[#222731] border border-[#262c38] text-slate-300 hover:text-white rounded-[4px] transition-all"
+            className="p-1.5 sm:p-2 bg-[#181c23] hover:bg-[#222731] border border-[#262c38] text-slate-300 hover:text-white rounded-[4px] transition-all"
             title={isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
           >
-            {isFullscreen ? <Minimize2 size={15} /> : <Maximize2 size={15} />}
+            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           </button>
         </div>
       </div>
 
-      {/* ── Main Stage Area (3D Flipbook / Single Canvas) ─────────────── */}
-      <div className="flex-1 overflow-hidden relative flex items-center justify-center p-2 sm:p-6 bg-[#07080a]">
+      {/* ── Main Stage Area (3D Flipbook / Single Canvas with Touch Gestures) ── */}
+      <div
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        className="flex-1 overflow-hidden relative flex items-center justify-center p-1.5 sm:p-6 bg-[#07080a] touch-pan-y"
+      >
         {/* Soft Ambient Studio Lighting & Shadow */}
         <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_center,rgba(28,34,44,0.45)_0%,rgba(7,8,10,0.98)_75%)]" />
 
@@ -957,10 +1010,10 @@ export const PublicViewer: React.FC = () => {
         <button
           onClick={flipPrev}
           disabled={viewMode === '3d' ? currentSpread === 0 : singlePageIndex === 0}
-          className="absolute left-6 top-1/2 -translate-y-1/2 p-4 bg-[#14161a]/85 hover:bg-[#1f242d] text-white rounded-full border border-[#2b313b] shadow-2xl backdrop-blur-md disabled:opacity-15 disabled:pointer-events-none transition-all hover:scale-110 active:scale-95 z-30"
+          className="absolute left-1.5 sm:left-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center bg-[#14161a]/85 hover:bg-[#1f242d] text-white rounded-full border border-[#2b313b] shadow-2xl backdrop-blur-md disabled:opacity-0 disabled:pointer-events-none transition-all hover:scale-110 active:scale-95 z-30"
           title="Previous Page (Left Arrow)"
         >
-          <ChevronLeft size={24} />
+          <ChevronLeft size={isMobile ? 18 : 22} />
         </button>
 
         <button
@@ -970,16 +1023,16 @@ export const PublicViewer: React.FC = () => {
               ? currentSpread >= totalSpreads - 1
               : singlePageIndex >= totalPages - 1
           }
-          className="absolute right-6 top-1/2 -translate-y-1/2 p-4 bg-[#14161a]/85 hover:bg-[#1f242d] text-white rounded-full border border-[#2b313b] shadow-2xl backdrop-blur-md disabled:opacity-15 disabled:pointer-events-none transition-all hover:scale-110 active:scale-95 z-30"
+          className="absolute right-1.5 sm:right-6 top-1/2 -translate-y-1/2 w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center bg-[#14161a]/85 hover:bg-[#1f242d] text-white rounded-full border border-[#2b313b] shadow-2xl backdrop-blur-md disabled:opacity-0 disabled:pointer-events-none transition-all hover:scale-110 active:scale-95 z-30"
           title="Next Page (Right Arrow)"
         >
-          <ChevronRight size={24} />
+          <ChevronRight size={isMobile ? 18 : 22} />
         </button>
       </div>
 
       {/* ── THUMBNAILS FILMSTRIP DRAWER (Toggleable) ──────────────────── */}
       {showThumbDrawer && (
-        <div className="h-44 bg-[#14161a] border-t border-[#22262e] p-4 shrink-0 overflow-x-auto flex items-center gap-4 z-40 animate-in slide-in-from-bottom duration-200">
+        <div className="h-32 sm:h-44 bg-[#14161a] border-t border-[#22262e] p-2.5 sm:p-4 shrink-0 overflow-x-auto flex items-center gap-2.5 sm:gap-4 z-40 animate-in slide-in-from-bottom duration-200">
           {pages.map((p, idx) => {
             const isSelected = viewMode === '3d'
               ? (currentSpread === 0 ? idx === 0 : (idx === leftPageIdx || idx === rightPageIdx))
@@ -989,12 +1042,12 @@ export const PublicViewer: React.FC = () => {
               <div
                 key={p.id || idx}
                 onClick={() => jumpToPage(idx)}
-                className={`relative shrink-0 flex flex-col items-center gap-1.5 cursor-pointer group transition-all ${
+                className={`relative shrink-0 flex flex-col items-center gap-1 sm:gap-1.5 cursor-pointer group transition-all ${
                   isSelected ? 'scale-105' : 'opacity-70 hover:opacity-100'
                 }`}
               >
                 <div
-                  className={`w-20 h-28 rounded-[3px] overflow-hidden border transition-all shadow-md ${
+                  className={`w-14 h-20 sm:w-20 sm:h-28 rounded-[3px] overflow-hidden border transition-all shadow-md ${
                     isSelected ? 'ring-2 ring-[#0F3D3E] border-[#E2DCC8]' : 'border-[#2b313b] group-hover:border-slate-400'
                   }`}
                 >
@@ -1006,7 +1059,7 @@ export const PublicViewer: React.FC = () => {
                     </div>
                   )}
                 </div>
-                <span className={`text-[10px] font-mono font-bold ${isSelected ? 'text-[#E2DCC8]' : 'text-slate-400'}`}>
+                <span className={`text-[9px] sm:text-[10px] font-mono font-bold ${isSelected ? 'text-[#E2DCC8]' : 'text-slate-400'}`}>
                   {idx === 0 ? 'Cover' : `Page ${idx + 1}`}
                 </span>
               </div>
@@ -1016,33 +1069,34 @@ export const PublicViewer: React.FC = () => {
       )}
 
       {/* ── Bottom Floating Dock Toolbar ─────────────────────────────── */}
-      <div className="h-16 bg-[#14161a] border-t border-[#22262e] flex items-center justify-between px-6 shrink-0 z-40">
+      <div className="h-13 sm:h-16 bg-[#14161a] border-t border-[#22262e] flex items-center justify-between px-2.5 sm:px-6 shrink-0 z-40">
         {/* Left: Thumbnail Grid Drawer Trigger */}
         <button
           onClick={() => setShowThumbDrawer(prev => !prev)}
-          className={`px-3 py-1.5 rounded-[4px] border text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+          className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-[4px] border text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 transition-all ${
             showThumbDrawer
               ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/30 shadow-md'
               : 'bg-[#1c2026] text-slate-300 hover:text-white border-[#2b313b] hover:bg-[#282e37]'
           }`}
         >
-          <Layers size={14} />
-          <span>Pages ({totalPages})</span>
+          <Layers size={13} />
+          <span className="hidden xs:inline">Pages</span>
+          <span>({totalPages})</span>
         </button>
 
         {/* Center: Flip Controls & Current Spread Indicator */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-1.5 sm:gap-4">
           <button
             onClick={flipPrev}
             disabled={viewMode === '3d' ? currentSpread === 0 : singlePageIndex === 0}
-            className="p-2 bg-[#1c2026] hover:bg-[#282e37] border border-[#2b313b] rounded-full text-white disabled:opacity-20 disabled:hover:bg-[#1c2026] transition-all"
+            className="p-1.5 sm:p-2 bg-[#1c2026] hover:bg-[#282e37] border border-[#2b313b] rounded-full text-white disabled:opacity-20 disabled:hover:bg-[#1c2026] transition-all"
             title="Previous"
           >
-            <ChevronLeft size={16} />
+            <ChevronLeft size={14} className="sm:w-4 sm:h-4" />
           </button>
 
-          <div className="text-center min-w-[170px]">
-            <span className="text-white font-mono font-bold text-xs">
+          <div className="text-center min-w-[95px] sm:min-w-[170px]">
+            <span className="text-white font-mono font-bold text-[10px] sm:text-xs">
               {spreadLabel}
             </span>
           </div>
@@ -1050,25 +1104,25 @@ export const PublicViewer: React.FC = () => {
           <button
             onClick={flipNext}
             disabled={viewMode === '3d' ? currentSpread >= totalSpreads - 1 : singlePageIndex >= totalPages - 1}
-            className="p-2 bg-[#1c2026] hover:bg-[#282e37] border border-[#2b313b] rounded-full text-white disabled:opacity-20 disabled:hover:bg-[#1c2026] transition-all"
+            className="p-1.5 sm:p-2 bg-[#1c2026] hover:bg-[#282e37] border border-[#2b313b] rounded-full text-white disabled:opacity-20 disabled:hover:bg-[#1c2026] transition-all"
             title="Next"
           >
-            <ChevronRight size={16} />
+            <ChevronRight size={14} className="sm:w-4 sm:h-4" />
           </button>
         </div>
 
         {/* Right: Auto-Play Slideshow & Reset */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <button
             onClick={() => setIsPlaying(prev => !prev)}
-            className={`px-3 py-1.5 rounded-[4px] border text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all ${
+            className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-[4px] border text-[11px] sm:text-xs font-bold uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 transition-all ${
               isPlaying
                 ? 'bg-amber-600/90 text-white border-amber-500 shadow-md animate-pulse'
                 : 'bg-[#1c2026] text-slate-300 hover:text-white border-[#2b313b] hover:bg-[#282e37]'
             }`}
             title={isPlaying ? 'Pause Auto-Play' : 'Start Auto-Flip Slideshow'}
           >
-            {isPlaying ? <Pause size={13} /> : <Play size={13} />}
+            {isPlaying ? <Pause size={12} /> : <Play size={12} />}
             <span className="hidden sm:inline">{isPlaying ? 'Pause' : 'Auto Play'}</span>
           </button>
 
@@ -1078,10 +1132,10 @@ export const PublicViewer: React.FC = () => {
               setSinglePageIndex(0);
               if (soundEnabled) playFlipSound();
             }}
-            className="p-2 bg-[#1c2026] hover:bg-[#282e37] border border-[#2b313b] text-slate-300 hover:text-white rounded-[4px] transition-all"
+            className="p-1.5 sm:p-2 bg-[#1c2026] hover:bg-[#282e37] border border-[#2b313b] text-slate-300 hover:text-white rounded-[4px] transition-all"
             title="Restart from Cover"
           >
-            <RotateCcw size={14} />
+            <RotateCcw size={13} />
           </button>
         </div>
       </div>

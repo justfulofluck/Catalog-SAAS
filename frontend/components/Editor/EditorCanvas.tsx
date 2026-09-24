@@ -12,6 +12,7 @@ import { CatalogPage, PageType } from '../../types';
 import { normalizeImageUrl } from '../../utils/imageUtils';
 
 const Divider = () => <div className="w-[1px] h-4 bg-slate-200 mx-1" />;
+const EMPTY_ARRAY: any[] = [];
 
 interface PageSectionSummary {
   index: number;
@@ -241,10 +242,7 @@ const EditorCanvas: React.FC = () => {
     return () => window.removeEventListener('catalog:scrollToPage', handler);
   }, [scrollToPageIndex]);
 
-  // Automatically smoothly pan to currentPageIndex whenever it changes (e.g. from page navigator / sidebar)
-  useEffect(() => {
-    scrollToPageIndex(currentPageIndex);
-  }, [currentPageIndex, scrollToPageIndex]);
+
 
   const saveContent = useCallback((shouldClose = false) => {
     if (textDebounceTimerRef.current) {
@@ -955,11 +953,10 @@ const EditorCanvas: React.FC = () => {
       }
     } else {
       setSelectedElements([id]);
-      setIsPropertyPanelOpen(true);
     }
     setEditingId(null);
     setEditConfig(null);
-  }, [catalog.pages, currentPageIndex, catalog.headerElements, catalog.footerElements, setSelectedElements, selectedElementIds, setIsPropertyPanelOpen]);
+  }, [catalog.pages, currentPageIndex, catalog.headerElements, catalog.footerElements, setSelectedElements, selectedElementIds]);
 
   // Drag & drop
   const getDragCoords = (e: React.DragEvent) => {
@@ -1277,8 +1274,8 @@ const EditorCanvas: React.FC = () => {
                 >
                   {/* Floating Labels and Boundaries */}
                   {(() => {
-                    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
-                    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+                    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
+                    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
 
                     return (
                       <>
@@ -1377,8 +1374,8 @@ const EditorCanvas: React.FC = () => {
                           zoom={zoom}
                           editingId={isActive ? editingId : null}
                           canvasBg={page.backgroundColor || catalog.backgroundColor || theme?.backgroundColor || '#ffffff'}
-                          headerElements={pageHasHeader ? catalog.headerElements : []}
-                          footerElements={pageHasFooter ? (catalog.footerElements || []) : []}
+                          headerElements={pageHasHeader ? (catalog.headerElements || EMPTY_ARRAY) : EMPTY_ARRAY}
+                          footerElements={pageHasFooter ? (catalog.footerElements || EMPTY_ARRAY) : EMPTY_ARRAY}
                           footerHeight={catalog.footerHeight || 38}
                         />
                       </>

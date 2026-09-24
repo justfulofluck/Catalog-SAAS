@@ -532,13 +532,11 @@ export const HeaderDesignerModal: React.FC = () => {
       setHeaderBg('#ffffff');
       setElements(JSON.parse(JSON.stringify(catalog.headerElements)));
     } else {
-      // Default to Corporate Split preset (Standard 30mm)
-      const defaultPreset = PRESET_HEADER_THEMES[0];
-      setTemplateName('Corporate Minimal Header');
-      setCategory(defaultPreset.category);
+      setTemplateName('Master Header');
+      setCategory('General');
       setHeaderHeight(toPx(30));
-      setHeaderBg(defaultPreset.backgroundColor);
-      setElements(JSON.parse(JSON.stringify(defaultPreset.elements)));
+      setHeaderBg('#ffffff');
+      setElements([]);
     }
   }, [isHeaderDesignerOpen, editingHeaderTemplate]);
 
@@ -1520,14 +1518,6 @@ export const HeaderDesignerModal: React.FC = () => {
     }, 150);
   };
 
-  const applyPreset = (preset: typeof PRESET_HEADER_THEMES[0]) => {
-    setTemplateName(preset.name);
-    setCategory(preset.category);
-    setHeaderHeight(preset.height);
-    setHeaderBg(preset.backgroundColor);
-    setElements(JSON.parse(JSON.stringify(preset.elements)));
-    setSelectedId(null);
-  };
 
   if (!isHeaderDesignerOpen) return null;
 
@@ -2104,53 +2094,6 @@ export const HeaderDesignerModal: React.FC = () => {
                   );
                 })()}
 
-                {/* Starter Header Themes */}
-                <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Starter Header Themes
-                  </h4>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Select a curated layout to start or customize.
-                  </p>
-                </div>
-
-                {PRESET_HEADER_THEMES.map(preset => (
-                  <div
-                    key={preset.id}
-                    onClick={() => applyPreset(preset)}
-                    className={`p-3 border rounded-[6px] cursor-pointer transition-all group ${isDark
-                      ? 'bg-[#18181b] hover:bg-[#202024] border-[#2a2a2e] hover:border-[#0F3D3E]'
-                      : 'bg-slate-50 hover:bg-white border-slate-200 hover:border-[#0F3D3E] shadow-sm'
-                      }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className={`text-xs font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>
-                        {preset.name}
-                      </span>
-                      <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E]'
-                        }`}>
-                        {preset.category}
-                      </span>
-                    </div>
-
-                    {/* Preview Strip */}
-                    <div
-                      className="w-full h-8 rounded border border-black/20 my-1.5 flex items-center justify-between px-3 text-[9px] font-mono truncate"
-                      style={{ background: preset.backgroundColor }}
-                    >
-                      <span className={preset.backgroundColor === '#ffffff' || preset.backgroundColor === '#fafafa' ? 'text-slate-800 font-bold' : 'text-white font-bold'}>
-                        {preset.name.toUpperCase()}
-                      </span>
-                      <span className={preset.backgroundColor === '#ffffff' || preset.backgroundColor === '#fafafa' ? 'text-slate-500' : 'text-cyan-400'}>
-                        PAGE 1
-                      </span>
-                    </div>
-
-                    <span className={`text-[10px] ${isDark ? 'text-[#888] group-hover:text-slate-300' : 'text-slate-500 group-hover:text-slate-700'}`}>
-                      Click to load layout into designer
-                    </span>
-                  </div>
-                ))}
               </div>
             )}
           </div>

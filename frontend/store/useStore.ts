@@ -179,8 +179,8 @@ interface State {
   setGuides: (guides: { orientation: 'H' | 'V'; position: number }[]) => void;
   setDragPosition: (pos: { x: number; y: number } | null) => void;
 
-  editorTab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null;
-  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null) => void;
+  editorTab: 'pages' | 'products' | 'grid-studio' | 'single-items' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null;
+  setEditorTab: (tab: 'pages' | 'products' | 'grid-studio' | 'single-items' | 'media' | 'templates' | 'layers' | 'components' | 'buttons' | 'stock' | 'header-footer' | 'text' | 'colors' | 'properties' | null) => void;
   colorPickerTarget: {
     type: 'background' | 'fill' | 'stroke' | 'text';
     elementId?: string;
@@ -544,7 +544,7 @@ export const useStore = create<State>((set, get) => ({
 
   pushHistory: () => {
     const now = Date.now();
-    if (_lastPushHistoryTime && now - _lastPushHistoryTime < 200) {
+    if (_lastPushHistoryTime && now - _lastPushHistoryTime < 300) {
       return;
     }
     _lastPushHistoryTime = now;
@@ -552,7 +552,7 @@ export const useStore = create<State>((set, get) => ({
     try {
       const currentSnapshot = JSON.parse(JSON.stringify(catalog));
       set({
-        undoStack: [currentSnapshot, ...undoStack].slice(0, 25),
+        undoStack: [currentSnapshot, ...undoStack].slice(0, 12),
         redoStack: []
       });
     } catch (e) {
@@ -1622,15 +1622,13 @@ export const useStore = create<State>((set, get) => ({
   setEditingProductId: (id) => set({ editingProductId: id }),
   setEditingCategoryId: (id) => set({ editingCategoryId: id }),
 
-  setSelectedElementIds: (ids) => set((state) => ({
-    selectedElementIds: ids,
-    isPropertyPanelOpen: ids.length > 0 ? true : state.isPropertyPanelOpen
+  setSelectedElementIds: (ids) => set(() => ({
+    selectedElementIds: ids
   })),
   setHoveredElementId: (id) => set({ hoveredElementId: id }),
-  setIsPropertyPanelOpen: (isOpen) => set((state) => ({
-    isPropertyPanelOpen: isOpen,
-    ...(isOpen ? { editorTab: 'properties' as const, isSidebarExpanded: true } : {})
-  })),
+  setIsPropertyPanelOpen: (isOpen) => set({
+    isPropertyPanelOpen: isOpen
+  }),
   setIsTableEditorOpen: (isOpen, elementId = null) => set({
     isTableEditorOpen: isOpen,
     editingTableElementId: isOpen ? (elementId || null) : null
@@ -2728,6 +2726,8 @@ export const useStore = create<State>((set, get) => ({
         pageNumber: state.catalog.pages.length + 1,
         elements,
         type,
+        hasHeader: type !== 'cover' ? (state.catalog.hasHeader !== false && (state.catalog.headerElements?.length || 0) > 0) : false,
+        hasFooter: type !== 'cover' ? (state.catalog.hasFooter !== false && (state.catalog.footerElements?.length || 0) > 0) : false,
         orientation: 'portrait'
       };
       return {
@@ -2760,6 +2760,8 @@ export const useStore = create<State>((set, get) => ({
         pageNumber: state.catalog.pages.length + 1,
         elements: inheritedElements,
         type: 'interior',
+        hasHeader: state.catalog.hasHeader !== false && (state.catalog.headerElements?.length || 0) > 0,
+        hasFooter: state.catalog.hasFooter !== false && (state.catalog.footerElements?.length || 0) > 0,
         categoryId: lastInteriorPage?.categoryId,
         orientation: 'portrait'
       };
@@ -2922,7 +2924,7 @@ export const useStore = create<State>((set, get) => ({
       const coverTemplate = COVER_TEMPLATES[0];
 
       // Filter out redundant background shapes (x=0, y=0, w=794, h=1123)
-      const globalCoverElements = coverTemplate.elements
+      const globalCoverElements = (coverTemplate?.elements || [])
         .filter(el => !(el.type === 'shape' && el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT))
         .map((el, idx) => {
           const id = `cover-el-${Date.now()}-${idx}`;
@@ -3720,69 +3722,75 @@ export const useStore = create<State>((set, get) => ({
       if (pageIndex === null) {
         // Apply cover template to all cover pages
         const coverTemplate = COVER_TEMPLATES[0];
-        currentCatalogPages.forEach((p, i) => {
-          if (p.type === 'cover') {
-            const themedElements = coverTemplate.elements.map((el, eIdx) => {
-              const id = `cover-el-${Date.now()}-${i}-${eIdx}`;
-              const base = { rotation: 0, opacity: 1, ...el, id };
-              if (el.type === 'text') {
-                const isHeading = el.fontSize && el.fontSize >= 30;
-                return {
-                  ...base,
-                  fontFamily: el.fontFamily || theme.fontFamily,
-                  fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
-                  fontWeight: el.fontWeight || (isHeading ? '900' : '400')
-                };
-              }
-              return base;
-            });
-            currentCatalogPages[i] = { ...p, elements: themedElements as CanvasElement[] };
-          }
-        });
+        if (coverTemplate) {
+          currentCatalogPages.forEach((p, i) => {
+            if (p.type === 'cover') {
+              const themedElements = coverTemplate.elements.map((el, eIdx) => {
+                const id = `cover-el-${Date.now()}-${i}-${eIdx}`;
+                const base = { rotation: 0, opacity: 1, ...el, id };
+                if (el.type === 'text') {
+                  const isHeading = el.fontSize && el.fontSize >= 30;
+                  return {
+                    ...base,
+                    fontFamily: el.fontFamily || theme.fontFamily,
+                    fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
+                    fontWeight: el.fontWeight || (isHeading ? '900' : '400')
+                  };
+                }
+                return base;
+              });
+              currentCatalogPages[i] = { ...p, elements: themedElements as CanvasElement[] };
+            }
+          });
+        }
 
         // Apply index template to all index pages
         const indexTemplate = INDEX_TEMPLATES[0];
-        currentCatalogPages.forEach((p, i) => {
-          if (p.type === 'index') {
-            const themedElements = indexTemplate.elements.map((el, eIdx) => {
-              const id = `index-el-${Date.now()}-${i}-${eIdx}`;
-              const base = { rotation: 0, opacity: 1, ...el, id };
-              if (el.type === 'text') {
-                const isHeading = el.fontSize && el.fontSize >= 30;
-                return {
-                  ...base,
-                  fontFamily: el.fontFamily || (isHeading ? theme.headingFont : theme.fontFamily),
-                  fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
-                  fontWeight: el.fontWeight || (isHeading ? '900' : '400')
-                };
-              }
-              return base;
-            });
-            currentCatalogPages[i] = { ...p, elements: themedElements as CanvasElement[] };
-          }
-        });
+        if (indexTemplate) {
+          currentCatalogPages.forEach((p, i) => {
+            if (p.type === 'index') {
+              const themedElements = indexTemplate.elements.map((el, eIdx) => {
+                const id = `index-el-${Date.now()}-${i}-${eIdx}`;
+                const base = { rotation: 0, opacity: 1, ...el, id };
+                if (el.type === 'text') {
+                  const isHeading = el.fontSize && el.fontSize >= 30;
+                  return {
+                    ...base,
+                    fontFamily: el.fontFamily || (isHeading ? theme.headingFont : theme.fontFamily),
+                    fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
+                    fontWeight: el.fontWeight || (isHeading ? '900' : '400')
+                  };
+                }
+                return base;
+              });
+              currentCatalogPages[i] = { ...p, elements: themedElements as CanvasElement[] };
+            }
+          });
+        }
 
         // Apply closing template to all closing pages
         const closingTemplate = CLOSING_TEMPLATES[0];
-        currentCatalogPages.forEach((p, i) => {
-          if (p.type === 'closing') {
-            const themedElements = closingTemplate.elements.map((el, eIdx) => {
-              const id = `closing-el-${Date.now()}-${i}-${eIdx}`;
-              const base = { rotation: 0, opacity: 1, ...el, id };
-              if (el.type === 'text') {
-                const isHeading = el.fontSize && el.fontSize >= 30;
-                return {
-                  ...base,
-                  fontFamily: el.fontFamily || (isHeading ? theme.headingFont : theme.fontFamily),
-                  fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
-                  fontWeight: el.fontWeight || (isHeading ? '900' : '400')
-                };
-              }
-              return base;
-            });
-            currentCatalogPages[i] = { ...p, elements: themedElements as CanvasElement[] };
-          }
-        });
+        if (closingTemplate) {
+          currentCatalogPages.forEach((p, i) => {
+            if (p.type === 'closing') {
+              const themedElements = closingTemplate.elements.map((el, eIdx) => {
+                const id = `closing-el-${Date.now()}-${i}-${eIdx}`;
+                const base = { rotation: 0, opacity: 1, ...el, id };
+                if (el.type === 'text') {
+                  const isHeading = el.fontSize && el.fontSize >= 30;
+                  return {
+                    ...base,
+                    fontFamily: el.fontFamily || (isHeading ? theme.headingFont : theme.fontFamily),
+                    fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
+                    fontWeight: el.fontWeight || (isHeading ? '900' : '400')
+                  };
+                }
+                return base;
+              });
+              currentCatalogPages[i] = { ...p, elements: themedElements as CanvasElement[] };
+            }
+          });
+        }
       }
 
       // If pageIndex is NOT null, we ONLY update that specific single page!
@@ -4168,8 +4176,8 @@ export const useStore = create<State>((set, get) => ({
       const targetPage = catalog.pages[pageIndex];
       if (!targetPage) return state;
 
-      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader && targetPage.type !== 'cover');
-      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter && targetPage.type !== 'cover');
+      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
 
       const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
       const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
@@ -4390,8 +4398,8 @@ export const useStore = create<State>((set, get) => ({
       // Helper to lay out sections on a page
       const layoutSections = (sections: ProductGridSection[], page: CatalogPage, timestamp: number): CanvasElement[] => {
         if (sections.length === 0) return [];
-        const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
-        const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+        const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
+        const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
 
         const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
         const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
@@ -4419,6 +4427,8 @@ export const useStore = create<State>((set, get) => ({
         const leftMargin = catalog.marginLeft || 35;
         const rightMargin = catalog.marginRight || 35;
         const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+        const rightX = leftMargin + 255;
+        const rightWidth = Math.max(200, contentWidth - 255);
 
         const newElements: CanvasElement[] = [];
         let curY = topBound;
@@ -4469,7 +4479,7 @@ export const useStore = create<State>((set, get) => ({
 
           // Right Column: Title — calculate dynamic height based on text wrapping
           const titleFontSize = sec.titleFontSize || 22;
-          const titleText = sec.title || `SERIES ${idx + 1}`;
+          const titleText = String(sec.title || `SERIES ${idx + 1}`);
           // Estimate title height based on text wrapping
           const titleAvgCharWidth = titleFontSize * 0.72; // bold uppercase
           const titleCharsPerLine = Math.max(5, Math.floor(rightWidth / titleAvgCharWidth));
@@ -4686,8 +4696,8 @@ export const useStore = create<State>((set, get) => ({
       sections[secIdxB] = temp;
 
       const timestamp = Date.now();
-      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader && targetPage.type !== 'cover');
-      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter && targetPage.type !== 'cover');
+      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
 
       const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
       const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
@@ -4874,8 +4884,8 @@ export const useStore = create<State>((set, get) => ({
         };
       } else {
         const timestamp = Date.now();
-        const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader && targetPage.type !== 'cover');
-        const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter && targetPage.type !== 'cover');
+        const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+        const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
 
         const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
         const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;

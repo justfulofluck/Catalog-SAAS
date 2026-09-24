@@ -21,28 +21,48 @@ import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { normalizeImageUrl } from '../../utils/imageUtils';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
+const publishThumbImageCache = new Map<string, HTMLImageElement>();
+
+const getCachedPublishImage = (rawSrc: string, onLoaded: () => void): HTMLImageElement => {
+  const src = normalizeImageUrl(rawSrc);
+  const existing = publishThumbImageCache.get(src);
+  if (existing) {
+    if (!existing.complete) {
+      existing.addEventListener('load', onLoaded, { once: true });
+    }
+    return existing;
+  }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.addEventListener('load', onLoaded, { once: true });
+  img.src = src;
+  publishThumbImageCache.set(src, img);
+  return img;
+};
+
 const CatalogThumbnailPreview: React.FC<{
   catalog: any;
   products: any[];
   isDark: boolean;
-}> = ({ catalog, products, isDark }) => {
+}> = React.memo(({ catalog, products, isDark }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [renderTrigger, setRenderTrigger] = useState(0);
 
   const page = catalog?.pages?.[0];
   const thumbW = 192;
   const thumbH = Math.round(thumbW * (PAGE_HEIGHT / PAGE_WIDTH));
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas || !page) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     let isMounted = true;
-    const scale = thumbW / PAGE_WIDTH;
 
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const renderCanvas = () => {
+      const canvas = canvasRef.current;
+      if (!canvas || !page) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const scale = thumbW / PAGE_WIDTH;
+
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, thumbW, thumbH);
 
     ctx.fillStyle = page.backgroundColor || catalog.backgroundColor || '#ffffff';
@@ -50,8 +70,8 @@ const CatalogThumbnailPreview: React.FC<{
 
     ctx.scale(scale, scale);
 
-    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
-    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
+    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
     const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || 38) - (catalog.marginBottom || 0);
     const pageCategory = getPageCategoryName(page, [], products, catalog);
     const dynamicContext = {
@@ -176,16 +196,11 @@ const CatalogThumbnailPreview: React.FC<{
           ctx.fillText(line, textX, idx * lineHeight, el.width);
         });
       } else if (el.type === 'image' && el.src) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = normalizeImageUrl(el.src);
+        const img = getCachedPublishImage(el.src, () => {
+          if (isMounted) renderCanvas();
+        });
         if (img.complete && img.naturalWidth > 0) {
           ctx.drawImage(img, 0, 0, el.width, el.height);
-        } else {
-          img.onload = () => {
-            if (!isMounted) return;
-            setRenderTrigger(prev => prev + 1);
-          };
         }
       } else if (el.type === 'table' || el.tableData) {
         const td = el.tableData || {
@@ -251,27 +266,25 @@ const CatalogThumbnailPreview: React.FC<{
         const imgSrc = el.src || prod?.image;
         const imgH = Math.max(20, el.height * 0.45);
         if (imgSrc) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.src = normalizeImageUrl(imgSrc);
+          const img = getCachedPublishImage(imgSrc, () => {
+            if (isMounted) renderCanvas();
+          });
           if (img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, 6, 6, el.width - 12, imgH);
-          } else {
-            img.onload = () => {
-              if (!isMounted) return;
-              setRenderTrigger(prev => prev + 1);
-            };
           }
         }
       }
 
       ctx.restore();
     });
+    };
+
+    renderCanvas();
 
     return () => {
       isMounted = false;
     };
-  }, [page, catalog, products, thumbW, thumbH, renderTrigger]);
+  }, [page, catalog?.hasHeader, catalog?.hasFooter, catalog?.headerHeight, catalog?.footerHeight, catalog?.marginBottom, catalog?.name, products, thumbW, thumbH]);
 
   if (!page) {
     return (
@@ -292,7 +305,7 @@ const CatalogThumbnailPreview: React.FC<{
       />
     </div>
   );
-};
+});
 
 const PublishView: React.FC = () => {
   const { savedCatalogs, loadCatalog, setView, updateSavedCatalog, publishCatalog, deleteCatalog, openPublicViewer, products, uiTheme, showConfirm, showToast } = useStore();

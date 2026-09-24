@@ -15,7 +15,6 @@ import CatalogSetup from './components/Setup/CatalogSetup';
 import EditorToolbar from './components/Toolbar/EditorToolbar';
 import EditorCanvas from './components/Editor/EditorCanvas';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
-import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import StockImagesPanel from './components/Sidebar/StockImagesPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
 import ProjectSettingsPanel from './components/Sidebar/ProjectSettingsPanel';
@@ -24,9 +23,9 @@ import HeaderFooterPanel from './components/Sidebar/HeaderFooterPanel';
 import TextPanel from './components/Sidebar/TextPanel';
 import ColorPanel from './components/Sidebar/ColorPanel';
 import GridStudioPanel from './components/Sidebar/GridStudioPanel';
+import SingleItemsPanel from './components/Sidebar/SingleItemsPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
-import PropertyPanel from './components/Properties/PropertyPanel';
 import { CreateProductModal } from './components/Products/CreateProductModal';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
@@ -58,7 +57,8 @@ import {
   MousePointer2,
   Image as ImageIcon,
   Type,
-  Sliders
+  Sliders,
+  Package
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -303,6 +303,24 @@ const App: React.FC = () => {
                 </button>
                 <button
                   onClick={() => {
+                    if (editorTab === 'single-items' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('single-items');
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'single-items' && isSidebarExpanded 
+                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
+                  title="Single Items / Products Placement"
+                >
+                  <Package size={20} />
+                </button>
+                <button
+                  onClick={() => {
                     if (editorTab === 'text' && isSidebarExpanded) {
                       setSidebarExpanded(false);
                     } else {
@@ -375,42 +393,22 @@ const App: React.FC = () => {
                 >
                   <LayoutTemplate size={20} />
                 </button>
-
-                <button
-                  onClick={() => {
-                    if (editorTab === 'properties' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('properties');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'properties' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Element & Card Properties"
-                >
-                  <Sliders size={20} />
-                </button>
               </div>
             </div>
 
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
-                editorTab === 'grid-studio' ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors' || editorTab === 'properties') ? 'w-[360px]' : 'w-[330px]'
+                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'grid-studio' && <GridStudioPanel />}
+                {editorTab === 'single-items' && <SingleItemsPanel />}
                 {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
-                {editorTab === 'templates' && <TemplatesPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
                 {editorTab === 'header-footer' && <HeaderFooterPanel />}
                 {editorTab === 'colors' && <ColorPanel />}
-                {editorTab === 'properties' && <PropertyPanel />}
               </div>
             )}
           </div>

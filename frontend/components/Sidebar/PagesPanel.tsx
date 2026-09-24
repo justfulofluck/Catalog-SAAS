@@ -7,27 +7,46 @@ import { THEMES, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from '../Editor/fabricRenderer';
 import { normalizeImageUrl } from '../../utils/imageUtils';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
-import TemplatesPanel from './TemplatesPanel';
 
 const THUMB_BASE = 140;
 
-const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any; products: any[]; pageNum: number }> = ({ page, canvasBg, catalog, products, pageNum }) => {
+const thumbImageCache = new Map<string, HTMLImageElement>();
+
+const getCachedThumbImage = (rawSrc: string, onLoaded: () => void): HTMLImageElement => {
+  const src = normalizeImageUrl(rawSrc);
+  const existing = thumbImageCache.get(src);
+  if (existing) {
+    if (!existing.complete) {
+      existing.addEventListener('load', onLoaded, { once: true });
+    }
+    return existing;
+  }
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.addEventListener('load', onLoaded, { once: true });
+  img.src = src;
+  thumbImageCache.set(src, img);
+  return img;
+};
+
+const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any; products: any[]; pageNum: number }> = React.memo(({ page, canvasBg, catalog, products, pageNum }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const uiTheme = useStore(state => state.uiTheme);
   const isDark = uiTheme === 'dark';
 
   const thumbW = THUMB_BASE;
   const thumbH = Math.round(thumbW * (PAGE_HEIGHT / PAGE_WIDTH));
-  const [renderTrigger, setRenderTrigger] = useState(0);
 
   useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
     let isMounted = true;
-    const scale = thumbW / PAGE_WIDTH;
+
+    const renderCanvas = () => {
+      const canvas = canvasRef.current;
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      const scale = thumbW / PAGE_WIDTH;
 
     // Reset transform & clear
     ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -40,8 +59,8 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
     // Scale to thumbnail coordinates
     ctx.scale(scale, scale);
 
-    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader && page.type !== 'cover');
-    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter && page.type !== 'cover');
+    const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
+    const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
     const footerBaseY = PAGE_HEIGHT - (catalog.footerHeight || 38) - (catalog.marginBottom || 0);
     const pageCategory = getPageCategoryName(page, [], products, catalog);
     const dynamicContext = {
@@ -183,16 +202,11 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
           ctx.fillText(line, textX, idx * lineHeight, el.width);
         });
       } else if (el.type === 'image' && el.src) {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.src = normalizeImageUrl(el.src);
+        const img = getCachedThumbImage(el.src, () => {
+          if (isMounted) renderCanvas();
+        });
         if (img.complete && img.naturalWidth > 0) {
           ctx.drawImage(img, 0, 0, el.width, el.height);
-        } else {
-          img.onload = () => {
-            if (!isMounted) return;
-            setRenderTrigger(prev => prev + 1);
-          };
         }
       } else if (el.type === 'table' || el.tableData) {
         const td = el.tableData || {
@@ -381,16 +395,11 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
         const imgSrc = el.src || prod?.image;
         const imgH = Math.max(30, el.height * 0.48);
         if (imgSrc) {
-          const img = new Image();
-          img.crossOrigin = 'anonymous';
-          img.src = normalizeImageUrl(imgSrc);
+          const img = getCachedThumbImage(imgSrc, () => {
+            if (isMounted) renderCanvas();
+          });
           if (img.complete && img.naturalWidth > 0) {
             ctx.drawImage(img, 8, 8, el.width - 16, imgH - 12);
-          } else {
-            img.onload = () => {
-              if (!isMounted) return;
-              setRenderTrigger(prev => prev + 1);
-            };
           }
         }
 
@@ -415,11 +424,14 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
 
       ctx.restore();
     });
+    };
+
+    renderCanvas();
 
     return () => {
       isMounted = false;
     };
-  }, [page, canvasBg, catalog, products, pageNum, thumbW, thumbH, renderTrigger]);
+  }, [page, canvasBg, catalog?.hasHeader, catalog?.hasFooter, catalog?.headerHeight, catalog?.footerHeight, catalog?.marginBottom, catalog?.name, products, pageNum, thumbW, thumbH]);
 
   return (
     <div className={`flex justify-center items-center py-2 w-full rounded-[4px] overflow-hidden ${isDark ? 'bg-[#121212]' : 'bg-slate-50/50'}`}>
@@ -432,7 +444,7 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
       />
     </div>
   );
-};
+});
 
 const PagesPanel: React.FC = () => {
   const {
@@ -486,46 +498,24 @@ const PagesPanel: React.FC = () => {
     setDropTargetIndex(index);
   };
 
-  const [activeTab, setActiveTab] = useState<'pages' | 'templates'>('pages');
-
   return (
-    <div className={`flex flex-col h-full w-full border-r overflow-hidden ${isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'}`}>
-      {/* Header with Segmented Tabs for Pages & Templates */}
-      <div className={`p-2.5 border-b shrink-0 ${isDark ? 'border-[#262626]' : 'border-slate-100'}`}>
-        <div className={`flex rounded-[4px] p-0.5 ${isDark ? 'bg-[#121212] border border-[#262626]' : 'bg-slate-100'}`}>
-          <button
-            onClick={() => setActiveTab('pages')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-[3px] text-[11px] font-bold transition-all ${
-              activeTab === 'pages'
-                ? 'bg-[#0F3D3E] text-white shadow-sm'
-                : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
+    <div className={`w-full h-full flex flex-col ${isDark ? 'bg-[#121212]' : 'bg-slate-50/50'}`}>
+      {/* Header */}
+      <div className={`h-12 px-3 border-b shrink-0 flex items-center justify-between transition-colors ${isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-100 bg-white'}`}>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-white shadow-sm">
             <FileText size={13} />
-            <span>Pages ({catalog.pages.length})</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-[3px] text-[11px] font-bold transition-all ${
-              activeTab === 'templates'
-                ? 'bg-[#0F3D3E] text-white shadow-sm'
-                : isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <LayoutTemplate size={13} />
-            <span>Templates</span>
-          </button>
+          </div>
+          <div>
+            <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              Pages ({catalog.pages.length})
+            </h3>
+          </div>
         </div>
       </div>
 
-      {activeTab === 'templates' ? (
-        <div className="flex-1 overflow-hidden">
-          <TemplatesPanel hideHeader={true} />
-        </div>
-      ) : (
-        <>
-          {/* Pages List — Drag & Drop */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
+      {/* Pages List — Drag & Drop */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
             {catalog.pages.map((page, index) => {
               const isActive = currentPageIndex === index;
               const isDropTarget = dropTargetIndex === index && dragPageIndex !== null && dragPageIndex !== index;
@@ -742,8 +732,6 @@ const PagesPanel: React.FC = () => {
               )}
             </div>
           </div>
-        </>
-      )}
     </div>
   );
 };

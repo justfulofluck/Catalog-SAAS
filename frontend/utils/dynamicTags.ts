@@ -11,9 +11,9 @@ export interface DynamicTagContext {
  * Replace dynamic smart tags in text like {{page_number}}, {{total_pages}},
  * {{catalog_name}}, {{category_name}}, {{company_name}}, {{current_year}}.
  */
-export function resolveDynamicText(text: string | undefined | null, context: DynamicTagContext): string {
-  if (!text) return '';
-  let result = text;
+export function resolveDynamicText(text: any, context: DynamicTagContext): string {
+  if (text === undefined || text === null) return '';
+  let result = String(text);
   const pNum = String(context.pageNumber ?? 1);
   const totalP = String(context.totalPages ?? 1);
   const catName = context.catalogName || 'Catalog';

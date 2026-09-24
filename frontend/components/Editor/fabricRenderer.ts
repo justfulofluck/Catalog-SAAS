@@ -9,6 +9,41 @@ import { applyCanvaSelectionStyle } from '../../utils/canvaControls';
 // Ensure all fabric images are loaded with crossOrigin = 'anonymous' to prevent tainted canvases
 config.imageProperties = { ...config.imageProperties, crossOrigin: 'anonymous' };
 
+// In-memory global HTMLImageElement bitmap cache with LRU eviction to prevent memory leaks and UI freezing
+const MAX_IMAGE_CACHE_SIZE = 120;
+const htmlImageCache = new Map<string, Promise<HTMLImageElement>>();
+
+export function getCachedImageElement(src: string): Promise<HTMLImageElement> {
+  const cached = htmlImageCache.get(src);
+  if (cached) return cached;
+
+  // Evict oldest entries if cache exceeds maximum allowed size
+  if (htmlImageCache.size >= MAX_IMAGE_CACHE_SIZE) {
+    const firstKey = htmlImageCache.keys().next().value;
+    if (firstKey) htmlImageCache.delete(firstKey);
+  }
+
+  const promise = new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      // Retry without crossOrigin if CORS headers are missing
+      const fallback = new Image();
+      fallback.onload = () => resolve(fallback);
+      fallback.onerror = (e) => {
+        htmlImageCache.delete(src);
+        reject(e);
+      };
+      fallback.src = src;
+    };
+    img.src = src;
+  });
+
+  htmlImageCache.set(src, promise);
+  return promise;
+}
+
 // ── Custom shape classes ──────────────────────────────────────────────
 class CloudShape extends Rect {
   _render(ctx: CanvasRenderingContext2D) {
@@ -228,6 +263,39 @@ export function isDarkColor(colorStr?: string): boolean {
   // Perceived luminance using HSP formula
   const hsp = Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b));
   return hsp < 140;
+}
+
+export function measureWrappedTextHeight(text: any, width: number, fontSize: number, lineHeight: number = 1.2, fontWeight: string = 'normal'): number {
+  if (text === null || text === undefined || text === '') return 0;
+  const clean = String(text).trim();
+  const isBold = fontWeight === 'bold' || fontWeight === '700' || fontWeight === '800' || fontWeight === '900';
+  const avgCharW = fontSize * (isBold ? 0.62 : 0.55);
+  const usableW = Math.max(10, width);
+  const charsPerLine = Math.max(1, Math.floor(usableW / avgCharW));
+
+  const words = clean.split(/\s+/);
+  let lines = 1;
+  let curLineLen = 0;
+  words.forEach(word => {
+    if (word.length > charsPerLine) {
+      if (curLineLen > 0) lines++;
+      lines += Math.ceil(word.length / charsPerLine) - 1;
+      curLineLen = word.length % charsPerLine || charsPerLine;
+    } else if (curLineLen + word.length > charsPerLine) {
+      lines++;
+      curLineLen = word.length;
+    } else {
+      curLineLen += word.length + 1;
+    }
+  });
+  return Math.ceil(lines * fontSize * lineHeight);
+}
+
+export function estimateTextWidth(text: any, fontSize: number, fontWeight: string = 'normal'): number {
+  if (text === null || text === undefined || text === '') return 0;
+  const str = String(text);
+  const isBold = fontWeight === 'bold' || fontWeight === '700' || fontWeight === '800' || fontWeight === '900';
+  return Math.ceil(str.length * fontSize * (isBold ? 0.62 : 0.55));
 }
 
 export function parseGradient(fillStr: string, w: number, h: number): { stops: { offset: number; color: string }[]; coords: { x1: number; y1: number; x2: number; y2: number } } | null {
@@ -772,12 +840,8 @@ async function _elementToFabricObject(
         }
       }
 
-      let img: FabricImage;
-      try {
-        img = await FabricImage.fromURL(finalSrc, { crossOrigin: 'anonymous' });
-      } catch {
-        img = await FabricImage.fromURL(finalSrc);
-      }
+      const htmlImg = await getCachedImageElement(finalSrc);
+      const img = new FabricImage(htmlImg);
       img.set({
         ...common,
         scaleX: el.width / (img.width || 1),
@@ -872,22 +936,37 @@ async function _elementToFabricObject(
   if (elType === 'product-block') {
     const objs: any[] = [];
 
-    const cardFill = el.fill || '#ffffff';
+    const theme = (el as any).cardTheme || (el as any).productData?.cardTheme || 'classic-stack';
+    const cardFill = el.fill || (theme === 'editorial-overlay' ? '#0f172a' : '#ffffff');
     const cardStroke = el.stroke && el.stroke !== 'transparent' ? el.stroke : '#e2e8f0';
     const cardStrokeWidth = el.stroke && el.stroke !== 'transparent'
-      ? (el.strokeWidth !== undefined ? el.strokeWidth : 2)
-      : (el.stroke === 'transparent' ? 0 : 1.5);
+      ? (el.strokeWidth !== undefined ? el.strokeWidth : 1.5)
+      : (el.stroke === 'transparent' ? 0 : 1);
     const cardRx = (el as any).borderRadius !== undefined ? (el as any).borderRadius : 4;
 
     const isDark = isDarkColor(cardFill);
     const defaultTitleColor = isDark ? '#ffffff' : '#0f172a';
-    const defaultPriceColor = isDark ? '#38bdf8' : '#4f46e5';
-    const defaultTextColor = isDark ? '#cbd5e1' : '#475569';
+    const defaultPriceColor = isDark ? '#34d399' : '#00a651';
+    const defaultTextColor = isDark ? '#cbd5e1' : '#334155';
 
-    const titleColor = el.titleColor || defaultTitleColor;
-    const priceColor = el.priceColor || defaultPriceColor;
-    const textColor = el.textColor || defaultTextColor;
+    // Auto-contrast: If text is light on light card or dark on dark card, automatically adapt
+    let titleColor = el.titleColor || defaultTitleColor;
+    if (isDark && isDarkColor(titleColor)) {
+      titleColor = '#ffffff';
+    } else if (!isDark && !isDarkColor(titleColor)) {
+      titleColor = '#0f172a';
+    }
 
+    let textColor = el.textColor || defaultTextColor;
+    if (isDark && isDarkColor(textColor)) {
+      textColor = '#cbd5e1';
+    } else if (!isDark && !isDarkColor(textColor)) {
+      textColor = '#334155';
+    }
+
+    let priceColor = el.priceColor || defaultPriceColor;
+
+    // Base card background rect
     objs.push(new Rect({
       left: 0, top: 0, width: el.width, height: el.height,
       originX: 'left', originY: 'top',
@@ -896,166 +975,736 @@ async function _elementToFabricObject(
       strokeWidth: cardStrokeWidth,
       rx: cardRx,
       ry: cardRx,
+      objectCaching: false,
     }));
-    const product = products.find(p => p.id === el.productId);
-    if (product) {
-      const cardPadding = Math.max(6, Math.min(14, el.width * 0.04));
-      const contentWidth = el.width - cardPadding * 2;
 
-      // Prepare Details, SKU & Custom Fields first so we can gauge content volume
-      let detailLines: string[] = [];
-      if (el.customDesc) {
-        detailLines = el.customDesc.split('\n');
+    const product = products.find(p => String(p.id) === String(el.productId)) || (el as any).productData;
+    if (product) {
+      const cardPadding = Math.max(10, Math.min(18, Math.round(el.width * 0.045)));
+      const contentWidth = el.width - cardPadding * 2;
+      const categories = useStore.getState().categories || [];
+
+      const displayName = String(el.customTitle !== undefined ? el.customTitle : (product.name || 'Product Title'));
+      const displayPrice = String(el.customPrice !== undefined ? el.customPrice : (product.price ? `${product.currency || '₹'}${product.price}` : '₹0.00'));
+      const displaySku = String(el.customSku !== undefined ? el.customSku : (product.sku || ''));
+      const catObj = product.categoryId ? categories.find(c => String(c.id) === String(product.categoryId)) : null;
+      const categoryName = String(catObj?.name || (product as any).categoryName || 'FEATURED');
+
+      const showTitle = el.showName !== false && (el.visibleFieldKeys ? (el.visibleFieldKeys.includes('name') || el.visibleFieldKeys.includes('title')) : true);
+      const showPrice = el.showPrice !== false && (el.visibleFieldKeys ? el.visibleFieldKeys.includes('price') : true);
+      const showSku = el.showSku !== false && (el.visibleFieldKeys ? el.visibleFieldKeys.includes('sku') : true) && Boolean(displaySku);
+
+      const cardFontFamily = (el as any).fontFamily || (catalog as any).fontFamily || 'Inter';
+      const autoTitleFontSize = Math.max(11, Math.min(18, Math.round(el.width * 0.062)));
+      const titleFontSize = el.titleFontSize || autoTitleFontSize;
+      const autoPriceFontSize = Math.max(11, Math.min(16, Math.round(el.width * 0.055)));
+      const priceFontSize = el.priceFontSize || autoPriceFontSize;
+      const specsFontSize = el.fontSize || 8.5;
+
+      // Extract structured spec items according to user visibleFieldKeys order
+      const specItems: { label: string; value: string }[] = [];
+      if (el.visibleFieldKeys && el.visibleFieldKeys.length > 0) {
+        el.visibleFieldKeys.forEach(k => {
+          if (k === 'name' || k === 'title' || k === 'price') return;
+          const override = el.fieldOverrides?.[k];
+          if (override?.enabled === false) return;
+
+          if (k === 'sku') {
+            if (showSku && displaySku) {
+              specItems.push({ label: String(override?.label || 'SKU'), value: displaySku });
+            }
+          } else if (k === 'description') {
+            const val = override?.value !== undefined ? override.value : product.description;
+            if (val) specItems.push({ label: String(override?.label || 'Description'), value: String(val) });
+          } else {
+            const label = override?.label || resolveFieldLabel(k, categories, product) || k;
+            const val = override?.value !== undefined ? override.value : product.customFields?.[k];
+            if (val !== undefined && val !== null && val !== '') {
+              specItems.push({ label: String(label), value: String(val) });
+            }
+          }
+        });
       } else {
-        const effectiveSku = el.customSku !== undefined ? el.customSku : product.sku;
-        if (catalog?.showSKU !== false && effectiveSku) {
-          detailLines.push(`SKU: ${effectiveSku}`);
+        if (showSku && displaySku) {
+          specItems.push({ label: 'SKU', value: displaySku });
         }
         if (product.description) {
-          detailLines.push(product.description);
+          specItems.push({ label: 'Description', value: String(product.description) });
         }
-
-        if (product.customFields && Object.keys(product.customFields).length > 0) {
-          const categories = useStore.getState().categories || [];
-          const catId = product.categoryId ? String(product.categoryId) : '';
-          const visibleParamKeys: string[] | null =
-            (catalog?.categoryVisibleParams && (
-              catalog.categoryVisibleParams[catId] ||
-              catalog.categoryVisibleParams[String(product.categoryId)] ||
-              Object.entries(catalog.categoryVisibleParams).find(([k]) => String(k) === catId)?.[1]
-            )) || null;
-
-          const fields = Object.entries(product.customFields)
-            .filter(([k, v]) => {
-              if (v === undefined || v === null || v === '' || typeof v === 'object') return false;
-              if (visibleParamKeys !== null) {
-                const label = resolveFieldLabel(k, categories, product);
-                const normLabel = label ? label.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
-                const normKey = k.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-                const isMatch = visibleParamKeys.some(vk => {
-                  const normVk = vk.toLowerCase().replace(/[^a-z0-9]/g, '');
-                  return vk === k || normVk === normKey || (normLabel && normVk === normLabel);
-                });
-                return isMatch;
-              }
-              return true;
-            })
-            .map(([k, v]) => {
-              const label = resolveFieldLabel(k, categories, product);
-              if (!label) return null;
-              return `• ${label}: ${v}`;
-            })
-            .filter(Boolean) as string[];
-
-          if (fields.length > 0) {
-            detailLines = detailLines.concat(fields);
-          }
-        }
-      }
-
-      // Proportional Balancing:
-      const lineCount = detailLines.length;
-      let imgRatio = 0.44;
-      if (lineCount <= 4) {
-        imgRatio = 0.52;
-      } else if (lineCount <= 7) {
-        imgRatio = 0.48;
-      } else if (lineCount > 11) {
-        imgRatio = 0.38;
-      }
-
-      const maxImgH = Math.max(40, el.height * imgRatio);
-      const imgTop = cardPadding;
-
-      if (product.image || el.src) {
-        try {
-          const rawUrl = el.src || product.image;
-          const imgUrl = normalizeImageUrl(rawUrl);
-          let img: FabricImage;
-          try {
-            img = await FabricImage.fromURL(imgUrl, { crossOrigin: 'anonymous' });
-          } catch {
-            img = await FabricImage.fromURL(imgUrl);
-          }
-
-          const naturalW = img.width || 1;
-          const naturalH = img.height || 1;
-          const availableImgW = contentWidth;
-          const availableImgH = maxImgH - cardPadding;
-          const imgScale = Math.min(availableImgW / naturalW, availableImgH / naturalH, 1.8);
-
-          const renderedW = naturalW * imgScale;
-          const renderedH = naturalH * imgScale;
-
-          const imgLeft = cardPadding + (contentWidth - renderedW) / 2;
-          const imgY = imgTop + (availableImgH - renderedH) / 2;
-
-          img.set({
-            left: imgLeft,
-            top: imgY,
-            originX: 'left',
-            originY: 'top',
-            scaleX: imgScale,
-            scaleY: imgScale,
+        if (product.customFields) {
+          Object.entries(product.customFields).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '' && typeof v !== 'object') {
+              const label = resolveFieldLabel(k, categories, product) || k;
+              specItems.push({ label: String(label), value: String(v) });
+            }
           });
-          objs.push(img);
+        }
+      }
+
+      // Load Product Image if available
+      const rawImgUrl = el.src || product.image || (product.customFields && Object.values(product.customFields).find((v: any) => typeof v === 'string' && (v.startsWith('/media') || v.startsWith('http'))));
+      let loadedImg: FabricImage | null = null;
+      if (rawImgUrl) {
+        try {
+          const imgUrl = normalizeImageUrl(rawImgUrl);
+          const htmlImg = await getCachedImageElement(imgUrl);
+          loadedImg = new FabricImage(htmlImg);
         } catch { }
       }
 
-      let currentTop = imgTop + maxImgH + 6;
-      const cardFontFamily = (el as any).fontFamily || (catalog as any).fontFamily || 'Inter';
+      // ─────────────────────────────────────────────────────────────
+      // THEME 1: Clean Badge Layout (Top Badge + Top Price + Centered Image + Title + 2-Column Spec Badges)
+      // ─────────────────────────────────────────────────────────────
+      if (theme === 'clean-badge') {
+        let curY = cardPadding;
 
-      // Product Title / Name - Bada, Prominent aur Customizable
-      if (catalog?.showTitle !== false) {
-        const autoTitleFontSize = Math.max(11, Math.min(16, Math.round(el.width * 0.065)));
-        const titleFontSize = el.titleFontSize || autoTitleFontSize;
-        const displayName = el.customTitle !== undefined ? el.customTitle : (product.name || 'Unnamed Product');
-        const nameText = new Textbox(displayName, {
-          left: cardPadding, top: currentTop, width: contentWidth,
-          originX: 'left', originY: 'top',
-          fontSize: titleFontSize,
-          fontFamily: cardFontFamily, fontWeight: 'bold', fill: titleColor, splitByGrapheme: false,
-          lineHeight: 1.2,
+        // Header Row: Category Badge (Left) & Price (Right)
+        const badgeW = estimateTextWidth(categoryName.toUpperCase(), 7.5, 'bold') + 14;
+        const badgeH = 16;
+        const badgeRect = new Rect({
+          left: cardPadding,
+          top: curY,
+          width: badgeW,
+          height: badgeH,
+          fill: isDark ? 'rgba(99, 102, 241, 0.18)' : 'rgba(99, 102, 241, 0.1)',
+          stroke: isDark ? 'rgba(99, 102, 241, 0.35)' : 'rgba(99, 102, 241, 0.25)',
+          strokeWidth: 1,
+          rx: 3,
+          ry: 3,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false
         });
-        objs.push(nameText);
-        currentTop += (nameText.height || (titleFontSize * 1.25)) + 4;
+        objs.push(badgeRect);
+
+        const badgeText = new Textbox(categoryName.toUpperCase(), {
+          left: cardPadding + 6,
+          top: curY + 2.5,
+          width: badgeW - 8,
+          fontSize: 7.5,
+          fontFamily: cardFontFamily,
+          fontWeight: 'bold',
+          fill: isDark ? '#a5b4fc' : '#4f46e5',
+          originX: 'left',
+          originY: 'top',
+          splitByGrapheme: false,
+          objectCaching: false
+        });
+        if (typeof (badgeText as any).initDimensions === 'function') (badgeText as any).initDimensions();
+        objs.push(badgeText);
+
+        if (showPrice) {
+          const priceText = new Textbox(displayPrice, {
+            left: cardPadding,
+            top: curY - 1,
+            width: contentWidth,
+            fontSize: priceFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: priceColor,
+            textAlign: 'right',
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (priceText as any).initDimensions === 'function') (priceText as any).initDimensions();
+          objs.push(priceText);
+        }
+
+        curY += badgeH + 8;
+
+        // Image Box Container
+        const imageBoxH = Math.max(50, Math.min(el.height * 0.36, 140));
+        const imgBgRect = new Rect({
+          left: cardPadding,
+          top: curY,
+          width: contentWidth,
+          height: imageBoxH,
+          fill: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+          rx: 3,
+          ry: 3,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false
+        });
+        objs.push(imgBgRect);
+
+        if (loadedImg) {
+          const natW = loadedImg.width || 1;
+          const natH = loadedImg.height || 1;
+          const scale = Math.min((contentWidth - 10) / natW, (imageBoxH - 10) / natH, 1.5);
+          const rW = natW * scale;
+          const rH = natH * scale;
+          loadedImg.set({
+            left: cardPadding + (contentWidth - rW) / 2,
+            top: curY + (imageBoxH - rH) / 2,
+            scaleX: scale,
+            scaleY: scale,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false
+          });
+          objs.push(loadedImg);
+        }
+
+        curY += imageBoxH + 8;
+
+        // Product Title
+        if (showTitle) {
+          const titleH = measureWrappedTextHeight(displayName, contentWidth, titleFontSize, 1.15, 'bold');
+          const titleText = new Textbox(displayName, {
+            left: cardPadding,
+            top: curY,
+            width: contentWidth,
+            fontSize: titleFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: titleColor,
+            lineHeight: 1.15,
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (titleText as any).initDimensions === 'function') (titleText as any).initDimensions();
+          objs.push(titleText);
+          curY += Math.max(titleText.height || 0, titleH) + 6;
+        }
+
+        // Specs 2-Column Grid
+        if (specItems.length > 0 && el.height - curY > 15) {
+          const colW = (contentWidth - 6) / 2;
+          const boxH = Math.max(26, specsFontSize * 2 + 8);
+          const maxRows = Math.floor((el.height - curY - cardPadding) / (boxH + 4));
+
+          specItems.slice(0, maxRows * 2).forEach((item, idx) => {
+            const col = idx % 2;
+            const row = Math.floor(idx / 2);
+            const boxX = cardPadding + col * (colW + 6);
+            const boxY = curY + row * (boxH + 4);
+
+            const specBox = new Rect({
+              left: boxX,
+              top: boxY,
+              width: colW,
+              height: boxH,
+              fill: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+              stroke: isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.05)',
+              strokeWidth: 1,
+              rx: 3,
+              ry: 3,
+              originX: 'left',
+              originY: 'top',
+              objectCaching: false
+            });
+            objs.push(specBox);
+
+            const labelText = new Textbox(item.label.toUpperCase(), {
+              left: boxX + 4,
+              top: boxY + 2.5,
+              width: colW - 8,
+              fontSize: 6.8,
+              fontFamily: cardFontFamily,
+              fontWeight: '600',
+              fill: isDark ? '#94a3b8' : '#64748b',
+              originX: 'left',
+              originY: 'top',
+              splitByGrapheme: false,
+              objectCaching: false
+            });
+            if (typeof (labelText as any).initDimensions === 'function') (labelText as any).initDimensions();
+            objs.push(labelText);
+
+            const valText = new Textbox(item.value, {
+              left: boxX + 4,
+              top: boxY + 11.5,
+              width: colW - 8,
+              fontSize: specsFontSize,
+              fontFamily: cardFontFamily,
+              fontWeight: 'bold',
+              fill: textColor,
+              originX: 'left',
+              originY: 'top',
+              splitByGrapheme: false,
+              objectCaching: false
+            });
+            if (typeof (valText as any).initDimensions === 'function') (valText as any).initDimensions();
+            objs.push(valText);
+          });
+        }
       }
 
-      // Price - Bada, Clear aur Customizable
-      if (catalog?.showPrice !== false) {
-        const autoPriceFontSize = Math.max(11, Math.min(15, Math.round(el.width * 0.058)));
-        const priceFontSize = el.priceFontSize || autoPriceFontSize;
-        const displayPrice = el.customPrice !== undefined ? el.customPrice : `${product.currency || '₹'}${product.price || '0'}`;
-        const priceText = new Textbox(displayPrice, {
-          left: cardPadding, top: currentTop, width: contentWidth,
-          originX: 'left', originY: 'top',
-          fontSize: priceFontSize,
-          fontFamily: cardFontFamily, fill: priceColor, fontWeight: 'bold', splitByGrapheme: false,
-          lineHeight: 1.15,
+      // ─────────────────────────────────────────────────────────────
+      // THEME 2: Editorial Overlay (Hero Background Image + Dark Gradient + Overlay Details)
+      // ─────────────────────────────────────────────────────────────
+      else if (theme === 'editorial-overlay') {
+        if (loadedImg) {
+          const natW = loadedImg.width || 1;
+          const natH = loadedImg.height || 1;
+          const scale = Math.max(el.width / natW, el.height / natH);
+          const rW = natW * scale;
+          const rH = natH * scale;
+          loadedImg.set({
+            left: (el.width - rW) / 2,
+            top: (el.height - rH) / 2,
+            scaleX: scale,
+            scaleY: scale,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false
+          });
+          objs.push(loadedImg);
+        }
+
+        // True Linear Dark Gradient Overlay from transparent top to rich dark bottom
+        const gradOverlay = new Rect({
+          left: 0,
+          top: 0,
+          width: el.width,
+          height: el.height,
+          originX: 'left',
+          originY: 'top',
+          fill: new Gradient({
+            type: 'linear',
+            coords: { x1: 0, y1: 0, x2: 0, y2: el.height },
+            colorStops: [
+              { offset: 0, color: 'rgba(0, 0, 0, 0.0)' },
+              { offset: 0.38, color: 'rgba(0, 0, 0, 0.08)' },
+              { offset: 0.60, color: 'rgba(0, 0, 0, 0.62)' },
+              { offset: 0.85, color: 'rgba(0, 0, 0, 0.92)' },
+              { offset: 1, color: 'rgba(0, 0, 0, 0.98)' }
+            ]
+          }),
+          objectCaching: false
         });
-        objs.push(priceText);
-        currentTop += (priceText.height || (priceFontSize * 1.2)) + 6;
+        objs.push(gradOverlay);
+
+        // Pre-create and measure all text blocks to compute exact layout without collision
+        const chipsToRender = specItems.filter(s => s.label !== 'SKU').slice(0, 3);
+
+        const priceH = showPrice ? Math.ceil((priceFontSize + 2) * 1.3) + 4 : 0;
+        const titleEstimatedH = showTitle ? measureWrappedTextHeight(displayName, contentWidth, titleFontSize, 1.15, 'bold') + 4 : 0;
+        const skuEstimatedH = (showSku && displaySku) ? measureWrappedTextHeight(`SKU: ${displaySku}`, contentWidth, 8.5, 1.2, 'normal') + 4 : 0;
+
+        // Calculate chips rows & total height
+        let chipsRows = 0;
+        if (chipsToRender.length > 0) {
+          let tempX = cardPadding;
+          chipsRows = 1;
+          chipsToRender.forEach(c => {
+            const textContent = `${c.label}: ${c.value}`;
+            const chipW = Math.min(estimateTextWidth(textContent, 7.5, 'normal') + 12, contentWidth);
+            if (tempX + chipW > cardPadding + contentWidth && tempX > cardPadding) {
+              tempX = cardPadding;
+              chipsRows++;
+            }
+            tempX += chipW + 4;
+          });
+        }
+        const chipsTotalH = chipsRows * 20;
+
+        const totalContentH = priceH + titleEstimatedH + skuEstimatedH + chipsTotalH;
+        let currentStackY = Math.max(cardPadding, el.height - cardPadding - totalContentH);
+
+        // 1. Render Price
+        if (showPrice) {
+          const priceTextObj = new Textbox(displayPrice, {
+            left: cardPadding,
+            top: currentStackY,
+            width: contentWidth,
+            fontSize: priceFontSize + 2,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: priceColor,
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (priceTextObj as any).initDimensions === 'function') (priceTextObj as any).initDimensions();
+          objs.push(priceTextObj);
+          currentStackY += priceH;
+        }
+
+        // 2. Render Title
+        if (showTitle) {
+          const titleTextObj = new Textbox(displayName, {
+            left: cardPadding,
+            top: currentStackY,
+            width: contentWidth,
+            fontSize: titleFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: '#ffffff',
+            lineHeight: 1.15,
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (titleTextObj as any).initDimensions === 'function') (titleTextObj as any).initDimensions();
+          objs.push(titleTextObj);
+          const actualTitleH = Math.max(titleTextObj.height || 0, titleEstimatedH);
+          currentStackY += actualTitleH;
+        }
+
+        // 3. Render SKU
+        if (showSku && displaySku) {
+          const skuTextObj = new Textbox(`SKU: ${displaySku}`, {
+            left: cardPadding,
+            top: currentStackY,
+            width: contentWidth,
+            fontSize: 8.5,
+            fontFamily: cardFontFamily,
+            fill: '#e2e8f0',
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (skuTextObj as any).initDimensions === 'function') (skuTextObj as any).initDimensions();
+          objs.push(skuTextObj);
+          const actualSkuH = Math.max(skuTextObj.height || 0, skuEstimatedH);
+          currentStackY += actualSkuH;
+        }
+
+        // 4. Render Chips / Spec Badges
+        if (chipsToRender.length > 0 && currentStackY + 16 <= el.height) {
+          let chipX = cardPadding;
+          let chipY = currentStackY + 2;
+          const chipH = 16;
+          const chipGap = 4;
+
+          chipsToRender.forEach(c => {
+            const textContent = `${c.label}: ${c.value}`;
+            const textW = estimateTextWidth(textContent, 7.5, 'normal');
+            const chipW = Math.min(textW + 12, contentWidth);
+
+            if (chipX + chipW > cardPadding + contentWidth && chipX > cardPadding) {
+              chipX = cardPadding;
+              chipY += chipH + chipGap;
+            }
+
+            if (chipY + chipH <= el.height - 4) {
+              const chipRect = new Rect({
+                left: chipX,
+                top: chipY,
+                width: chipW,
+                height: chipH,
+                fill: 'rgba(255, 255, 255, 0.22)',
+                rx: 3,
+                ry: 3,
+                originX: 'left',
+                originY: 'top',
+                objectCaching: false
+              });
+              objs.push(chipRect);
+
+              const chipText = new Textbox(textContent, {
+                left: chipX + 5,
+                top: chipY + 2.5,
+                width: chipW - 8,
+                fontSize: 7.5,
+                fontFamily: cardFontFamily,
+                fill: '#ffffff',
+                originX: 'left',
+                originY: 'top',
+                splitByGrapheme: false,
+                objectCaching: false
+              });
+              if (typeof (chipText as any).initDimensions === 'function') (chipText as any).initDimensions();
+              objs.push(chipText);
+
+              chipX += chipW + chipGap;
+            }
+          });
+        }
       }
 
-      const fullText = detailLines.join('\n');
-      if (fullText.trim() && (el.height - currentTop) > 10) {
-        const availableTextH = el.height - currentTop - cardPadding;
-        const targetLineHeight = lineCount <= 5 ? 1.35 : (lineCount <= 8 ? 1.25 : 1.18);
-        const autoFontSize = Math.min(
-          11,
-          Math.max(7.5, Math.floor(availableTextH / Math.max(1, lineCount * targetLineHeight)))
-        );
-        const descFontSize = el.fontSize || autoFontSize;
+      // ─────────────────────────────────────────────────────────────
+      // THEME 3: Minimal Row Layout (Thumbnail on Left, Info on Right)
+      // ─────────────────────────────────────────────────────────────
+      else if (theme === 'minimal-row') {
+        const thumbW = Math.max(60, el.width * 0.32);
+        const thumbH = el.height - cardPadding * 2;
 
-        const descText = new Textbox(fullText, {
-          left: cardPadding, top: currentTop, width: contentWidth,
-          originX: 'left', originY: 'top',
-          fontSize: descFontSize,
-          fontFamily: cardFontFamily, fill: textColor, splitByGrapheme: false,
-          lineHeight: targetLineHeight,
+        const thumbBg = new Rect({
+          left: cardPadding,
+          top: cardPadding,
+          width: thumbW,
+          height: thumbH,
+          fill: isDark ? 'rgba(255, 255, 255, 0.04)' : 'rgba(0, 0, 0, 0.03)',
+          rx: 3,
+          ry: 3,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false
         });
-        objs.push(descText);
+        objs.push(thumbBg);
+
+        if (loadedImg) {
+          const natW = loadedImg.width || 1;
+          const natH = loadedImg.height || 1;
+          const scale = Math.min((thumbW - 8) / natW, (thumbH - 8) / natH, 1.5);
+          const rW = natW * scale;
+          const rH = natH * scale;
+          loadedImg.set({
+            left: cardPadding + (thumbW - rW) / 2,
+            top: cardPadding + (thumbH - rH) / 2,
+            scaleX: scale,
+            scaleY: scale,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false
+          });
+          objs.push(loadedImg);
+        }
+
+        const rightX = cardPadding + thumbW + 10;
+        const rightW = el.width - rightX - cardPadding;
+        let rightY = cardPadding + 2;
+
+        if (showTitle) {
+          const titleH = measureWrappedTextHeight(displayName, rightW, titleFontSize, 1.15, 'bold');
+          const titleText = new Textbox(displayName, {
+            left: rightX,
+            top: rightY,
+            width: rightW,
+            fontSize: titleFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: titleColor,
+            lineHeight: 1.15,
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (titleText as any).initDimensions === 'function') (titleText as any).initDimensions();
+          objs.push(titleText);
+          rightY += Math.max(titleText.height || 0, titleH) + 4;
+        }
+
+        if (showPrice) {
+          const priceText = new Textbox(displayPrice, {
+            left: rightX,
+            top: rightY,
+            width: rightW,
+            fontSize: priceFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: priceColor,
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (priceText as any).initDimensions === 'function') (priceText as any).initDimensions();
+          objs.push(priceText);
+          rightY += Math.max(priceText.height || 0, priceFontSize * 1.2) + 4;
+        }
+
+        if (showSku && displaySku) {
+          const skuText = new Textbox(`SKU: ${displaySku}`, {
+            left: rightX,
+            top: rightY,
+            width: rightW,
+            fontSize: 8,
+            fontFamily: cardFontFamily,
+            fill: isDark ? '#94a3b8' : '#64748b',
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (skuText as any).initDimensions === 'function') (skuText as any).initDimensions();
+          objs.push(skuText);
+          rightY += Math.max(skuText.height || 0, 11) + 4;
+        }
+
+        if (specItems.length > 0 && el.height - rightY > 12) {
+          const remainingSpecs = specItems.filter(s => s.label !== 'SKU').slice(0, 4);
+          remainingSpecs.forEach(s => {
+            if (el.height - rightY < 12) return;
+            const specText = new Textbox(`${s.label}: ${s.value}`, {
+              left: rightX,
+              top: rightY,
+              width: rightW,
+              fontSize: 7.8,
+              fontFamily: cardFontFamily,
+              fill: textColor,
+              originX: 'left',
+              originY: 'top',
+              splitByGrapheme: false,
+              objectCaching: false
+            });
+            if (typeof (specText as any).initDimensions === 'function') (specText as any).initDimensions();
+            objs.push(specText);
+            rightY += 12;
+          });
+        }
+      }
+
+      // ─────────────────────────────────────────────────────────────
+      // THEME 4: Classic Stack (Image on Top + Overlaid Price Pill + Title + Specs List)
+      // ─────────────────────────────────────────────────────────────
+      else {
+        const imgH = Math.max(50, Math.min(el.height * 0.44, 160));
+        const imgBox = new Rect({
+          left: cardPadding,
+          top: cardPadding,
+          width: contentWidth,
+          height: imgH,
+          fill: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+          rx: 3,
+          ry: 3,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false
+        });
+        objs.push(imgBox);
+
+        if (loadedImg) {
+          const natW = loadedImg.width || 1;
+          const natH = loadedImg.height || 1;
+          const scale = Math.min((contentWidth - 10) / natW, (imgH - 10) / natH, 1.5);
+          const rW = natW * scale;
+          const rH = natH * scale;
+          loadedImg.set({
+            left: cardPadding + (contentWidth - rW) / 2,
+            top: cardPadding + (imgH - rH) / 2,
+            scaleX: scale,
+            scaleY: scale,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false
+          });
+          objs.push(loadedImg);
+        }
+
+        // Price Pill over Image
+        if (showPrice) {
+          const pillW = estimateTextWidth(displayPrice, priceFontSize, 'bold') + 14;
+          const pillH = priceFontSize + 6;
+          const pillBg = new Rect({
+            left: cardPadding + contentWidth - pillW - 4,
+            top: cardPadding + imgH - pillH - 4,
+            width: pillW,
+            height: pillH,
+            fill: isDark ? 'rgba(0, 0, 0, 0.85)' : 'rgba(255, 255, 255, 0.95)',
+            rx: 3,
+            ry: 3,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false
+          });
+          objs.push(pillBg);
+
+          const pillText = new Textbox(displayPrice, {
+            left: cardPadding + contentWidth - 8,
+            top: cardPadding + imgH - pillH - 2,
+            width: pillW,
+            fontSize: priceFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: priceColor,
+            originX: 'right',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (pillText as any).initDimensions === 'function') (pillText as any).initDimensions();
+          objs.push(pillText);
+        }
+
+        let curY = cardPadding + imgH + 8;
+
+        if (showTitle) {
+          const titleH = measureWrappedTextHeight(displayName, contentWidth, titleFontSize, 1.15, 'bold');
+          const titleText = new Textbox(displayName, {
+            left: cardPadding,
+            top: curY,
+            width: contentWidth,
+            fontSize: titleFontSize,
+            fontFamily: cardFontFamily,
+            fontWeight: 'bold',
+            fill: titleColor,
+            lineHeight: 1.15,
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (titleText as any).initDimensions === 'function') (titleText as any).initDimensions();
+          objs.push(titleText);
+          curY += Math.max(titleText.height || 0, titleH) + 5;
+        }
+
+        if (showSku && displaySku) {
+          const skuText = new Textbox(`SKU: ${displaySku}`, {
+            left: cardPadding,
+            top: curY,
+            width: contentWidth,
+            fontSize: 8.5,
+            fontFamily: cardFontFamily,
+            fill: isDark ? '#94a3b8' : '#64748b',
+            originX: 'left',
+            originY: 'top',
+            splitByGrapheme: false,
+            objectCaching: false
+          });
+          if (typeof (skuText as any).initDimensions === 'function') (skuText as any).initDimensions();
+          objs.push(skuText);
+          curY += Math.max(skuText.height || 0, 12) + 5;
+        }
+
+        if (specItems.length > 0 && el.height - curY > 12) {
+          // Divider line
+          objs.push(new Line([cardPadding, curY, cardPadding + contentWidth, curY], {
+            stroke: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)',
+            strokeWidth: 1,
+            originX: 'left',
+            originY: 'top',
+            objectCaching: false
+          }));
+          curY += 5;
+
+          const remainingSpecs = specItems.filter(s => s.label !== 'SKU');
+          remainingSpecs.forEach(s => {
+            if (el.height - curY < 12) return;
+            const specH = Math.max(12, specsFontSize + 3);
+            const specLabel = new Textbox(`${s.label}:`, {
+              left: cardPadding,
+              top: curY,
+              width: contentWidth * 0.5,
+              fontSize: specsFontSize,
+              fontFamily: cardFontFamily,
+              fill: isDark ? '#94a3b8' : '#64748b',
+              originX: 'left',
+              originY: 'top',
+              splitByGrapheme: false,
+              objectCaching: false
+            });
+            const specVal = new Textbox(s.value, {
+              left: cardPadding + contentWidth,
+              top: curY,
+              width: contentWidth * 0.5,
+              fontSize: specsFontSize,
+              fontFamily: cardFontFamily,
+              fontWeight: 'bold',
+              fill: textColor,
+              textAlign: 'right',
+              originX: 'right',
+              originY: 'top',
+              splitByGrapheme: false,
+              objectCaching: false
+            });
+            objs.push(specLabel);
+            objs.push(specVal);
+            curY += specH;
+          });
+        }
       }
     } else {
       objs.push(new Textbox('EMPTY SLOT', {
@@ -1063,16 +1712,9 @@ async function _elementToFabricObject(
         originX: 'left', originY: 'top',
         fontSize: 12, fontFamily: 'Inter', fontWeight: 'bold', fill: '#94a3b8',
         textAlign: 'center', splitByGrapheme: false,
+        objectCaching: false
       }));
     }
-
-    // Add clipPath to the group to ensure nothing bleeds out of the card
-    const clipPath = new Rect({
-      left: -el.width / 2, top: -el.height / 2, // Group clipPath is relative to group center
-      width: el.width, height: el.height,
-      originX: 'left', originY: 'top',
-      rx: 0, ry: 0
-    });
 
     const group = new Group(objs, {
       left: el.x,
@@ -1082,13 +1724,13 @@ async function _elementToFabricObject(
       height: el.height,
       originX: 'left',
       originY: 'top',
-      clipPath: clipPath,
       opacity: el.opacity ?? 1,
       objectCaching: false,
       subTargetCheck: true,
     });
 
     (group as any).id = el.id;
+    (group as any)._cardTheme = theme;
     return group;
   }
 
@@ -1140,9 +1782,9 @@ async function _elementToFabricObject(
     }
 
     // Measure approximate wrapped lines for any cell text given available column width
-    const estimateLines = (text: string, colW: number, fontSize: number): number => {
-      if (!text) return 1;
-      const clean = text.toString().trim();
+    const estimateLines = (text: any, colW: number, fontSize: number): number => {
+      if (text === null || text === undefined || text === '') return 1;
+      const clean = String(text).trim();
       // Use more conservative char width — uppercase/bold fonts render wider
       const hasUppercase = clean === clean.toUpperCase();
       const avgCharWidth = fontSize * (hasUppercase ? 0.72 : 0.65);
@@ -1180,7 +1822,7 @@ async function _elementToFabricObject(
     const rowHeights: number[] = [];
     (td.rows || []).forEach(row => {
       let maxLinesInRow = 1;
-      row.forEach((cellText, colIdx) => {
+      (row || []).forEach((cellText: any, colIdx: number) => {
         const l = estimateLines(cellText, colWidths[colIdx] || (el.width / numCols), dynamicBodyFontSize);
         if (l > maxLinesInRow) maxLinesInRow = l;
       });
@@ -1208,7 +1850,8 @@ async function _elementToFabricObject(
     let currentX = 0;
     td.headers.forEach((headerText, colIdx) => {
       const colW = colWidths[colIdx];
-      const headerTb = new Textbox(headerText.toUpperCase(), {
+      const hStr = String(headerText ?? '');
+      const headerTb = new Textbox(hStr.toUpperCase(), {
         left: currentX + cellPadding,
         top: cellPadding + 1,
         width: colW - cellPadding * 2,
@@ -1258,9 +1901,10 @@ async function _elementToFabricObject(
       }));
 
       let cellX = 0;
-      row.forEach((cellText, colIdx) => {
+      (row || []).forEach((cellText: any, colIdx: number) => {
         const colW = colWidths[colIdx];
-        const cellTb = new Textbox(cellText || '-', {
+        const cellStr = cellText !== undefined && cellText !== null && String(cellText).trim() !== '' ? String(cellText) : '-';
+        const cellTb = new Textbox(cellStr, {
           left: cellX + cellPadding,
           top: curY + cellPadding + 1,
           width: colW - cellPadding * 2,

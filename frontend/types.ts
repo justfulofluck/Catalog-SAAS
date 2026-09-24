@@ -109,6 +109,8 @@ export interface CanvasElement {
   priceColor?: string;
   textColor?: string;
   borderRadius?: number;
+  visibleFieldKeys?: string[];
+  fieldOverrides?: Record<string, { label?: string; value?: string; enabled?: boolean }>;
   filters?: {
     brightness?: number;
     blur?: number;

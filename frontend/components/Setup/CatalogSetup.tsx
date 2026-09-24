@@ -167,11 +167,19 @@ const CatalogSetup: React.FC = () => {
 
   const handleGenerate = async () => {
     if (name && selectedCategoryIds.length > 0) {
-      const defaultTemplate = GRID_TEMPLATES[1]; // 2x2 grid
+      const defaultTemplate = GRID_TEMPLATES[1] || {
+        id: 'grid-2x2',
+        name: '2x2 Grid',
+        rows: 2,
+        cols: 2,
+        spacing: 20,
+        padding: 40,
+        cardTheme: 'classic-stack'
+      };
       
       generateCatalogFromTemplate(
         name,
-        defaultTemplate,
+        defaultTemplate as any,
         selectedCategoryIds,
         { 
           includeCover: true, 

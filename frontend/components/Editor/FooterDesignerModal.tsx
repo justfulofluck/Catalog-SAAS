@@ -554,13 +554,11 @@ export const FooterDesignerModal: React.FC = () => {
       setFooterBg('#ffffff');
       setElements(JSON.parse(JSON.stringify(catalog.footerElements)));
     } else {
-      // Default to B2B Standard Page Counter preset
-      const defaultPreset = PRESET_FOOTER_THEMES[0];
-      setTemplateName('B2B Standard Page Counter');
-      setCategory(defaultPreset.category);
+      setTemplateName('Master Footer');
+      setCategory('General');
       setFooterHeight(toPx(20));
-      setFooterBg(defaultPreset.backgroundColor);
-      setElements(JSON.parse(JSON.stringify(defaultPreset.elements)));
+      setFooterBg('#ffffff');
+      setElements([]);
     }
   }, [isFooterDesignerOpen, editingFooterTemplate]);
 
@@ -1533,14 +1531,6 @@ export const FooterDesignerModal: React.FC = () => {
     }, 150);
   };
 
-  const applyPreset = (preset: typeof PRESET_FOOTER_THEMES[0]) => {
-    setTemplateName(preset.name);
-    setCategory(preset.category);
-    setFooterHeight(preset.height);
-    setFooterBg(preset.backgroundColor);
-    setElements(JSON.parse(JSON.stringify(preset.elements)));
-    setSelectedId(null);
-  };
 
   if (!isFooterDesignerOpen) return null;
 
@@ -2110,55 +2100,6 @@ export const FooterDesignerModal: React.FC = () => {
                   );
                 })()}
 
-                {/* Built-in Preset Starters */}
-                <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Design Starters
-                  </h4>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Click any curated footer template to load it as your starter design.
-                  </p>
-
-                  <div className="space-y-2.5">
-                    {PRESET_FOOTER_THEMES.map((preset) => (
-                      <div
-                        key={preset.id}
-                        onClick={() => applyPreset(preset)}
-                        className={`p-3 rounded-[6px] border cursor-pointer transition-all group shadow-sm ${
-                          isDark
-                            ? 'bg-[#18181a] hover:bg-[#202024] border-[#2a2a2e] hover:border-[#E2DCC8]'
-                            : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1.5">
-                          <span className={`text-xs font-black ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>
-                            {preset.name}
-                          </span>
-                          <span className={`text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
-                            isDark
-                              ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
-                              : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/20'
-                          }`}>
-                            {preset.category}
-                          </span>
-                        </div>
-
-                        {/* Visual miniature stripe */}
-                        <div
-                          className="h-7 w-full rounded border border-black/10 dark:border-white/10 flex items-center px-2 justify-between text-[9px] font-mono overflow-hidden shadow-inner"
-                          style={{ background: preset.backgroundColor }}
-                        >
-                          <span className="truncate opacity-75 text-slate-700 dark:text-slate-200">
-                            {preset.elements[1]?.text || 'Footer Content'}
-                          </span>
-                          <span className="font-bold opacity-90 text-slate-900 dark:text-white shrink-0 ml-2">
-                            {toMm(preset.height)}mm
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </div>
             )}
           </div>
