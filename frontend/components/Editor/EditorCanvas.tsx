@@ -1182,7 +1182,7 @@ const EditorCanvas: React.FC = () => {
               >
                 {/* Canva-style Contextual Top Bar for Page */}
                 <div
-                  className="relative z-[70] flex items-center justify-between px-1 mb-1.5 transition-all select-none"
+                  className="relative z-10 flex items-center justify-between px-1 mb-1.5 transition-all select-none"
                   style={{ width: curW * zoom }}
                 >
                   <div className="flex items-center gap-2">
@@ -1270,7 +1270,7 @@ const EditorCanvas: React.FC = () => {
                       ? (isDragOver ? 'ring-4 ring-[#0F3D3E] shadow-[0_25px_70px_rgba(0,0,0,0.6)]' : 'ring-2 ring-[#0F3D3E] shadow-[0_25px_60px_rgba(0,0,0,0.55)]')
                       : 'opacity-90 hover:opacity-100 cursor-pointer shadow-[0_15px_40px_rgba(0,0,0,0.4)] border border-[#2a2a2a]'
                   }`}
-                  style={{ width: curW * zoom, height: curH * zoom, backgroundColor: page.backgroundColor || '#ffffff', zIndex: isActive ? 20 : 1 }}
+                  style={{ width: curW * zoom, height: curH * zoom, backgroundColor: page.backgroundColor || '#ffffff', zIndex: isActive ? 50 : 1 }}
                 >
                   {/* Floating Labels and Boundaries */}
                   {(() => {
