@@ -95,10 +95,12 @@ const FloatingToolbar: React.FC<Props> = ({
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLinkPopover, setShowLinkPopover] = useState(false);
   const [showOverlayPopover, setShowOverlayPopover] = useState(false);
+  const [showOpacityPopover, setShowOpacityPopover] = useState(false);
   const [tempLink, setTempLink] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const linkPopoverRef = useRef<HTMLDivElement>(null);
   const overlayPopoverRef = useRef<HTMLDivElement>(null);
+  const opacityPopoverRef = useRef<HTMLDivElement>(null);
   const fillInputRef = useRef<HTMLInputElement>(null);
   const strokeInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
@@ -120,10 +122,11 @@ const FloatingToolbar: React.FC<Props> = ({
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setShowMoreMenu(false);
       if (linkPopoverRef.current && !linkPopoverRef.current.contains(e.target as Node)) setShowLinkPopover(false);
       if (overlayPopoverRef.current && !overlayPopoverRef.current.contains(e.target as Node)) setShowOverlayPopover(false);
+      if (opacityPopoverRef.current && !opacityPopoverRef.current.contains(e.target as Node)) setShowOpacityPopover(false);
     };
-    if (showMoreMenu || showLinkPopover || showOverlayPopover) document.addEventListener('mousedown', handleClickOutside);
+    if (showMoreMenu || showLinkPopover || showOverlayPopover || showOpacityPopover) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu, showLinkPopover, showOverlayPopover]);
+  }, [showMoreMenu, showLinkPopover, showOverlayPopover, showOpacityPopover]);
 
   if (selectedElements.length === 0) return null;
 
@@ -752,6 +755,44 @@ const FloatingToolbar: React.FC<Props> = ({
       </div>
 
       <div className="w-[1px] h-5 bg-[#E2DCC8]/20 mx-0.5" />
+
+      {/* Opacity / Transparency Popover */}
+      <div className="relative" ref={opacityPopoverRef}>
+        <button
+          className={`${btnClass} ${(element.opacity !== undefined && element.opacity < 1) ? 'text-[#0F3D3E] bg-[#E2DCC8] shadow-sm' : ''}`}
+          title={`Transparency: ${Math.round((element.opacity ?? 1) * 100)}%`}
+          onClick={() => setShowOpacityPopover(!showOpacityPopover)}
+        >
+          <Sliders size={16} strokeWidth={2} />
+        </button>
+
+        {showOpacityPopover && (
+          <div
+            className={`absolute left-1/2 -translate-x-1/2 p-3 bg-[#18181b]/95 backdrop-blur-xl border border-[#2c2c30] rounded-[6px] shadow-2xl w-52 z-[999] flex flex-col gap-2 animate-popover-center ${
+              isPopoverOffTop ? 'top-full mt-2' : 'bottom-full mb-2'
+            }`}
+          >
+            <div className="flex items-center justify-between text-[11px] font-bold text-white">
+              <span>Transparency</span>
+              <span className="font-mono text-slate-400">{Math.round((element.opacity ?? 1) * 100)}%</span>
+            </div>
+            <input
+              type="range"
+              min={10}
+              max={100}
+              step={5}
+              value={Math.round((element.opacity ?? 1) * 100)}
+              onChange={(e) => {
+                const val = Number(e.target.value) / 100;
+                selectedElementIds.forEach(id => {
+                  updateElement(currentPageIndex, id, { opacity: val });
+                });
+              }}
+              className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#0F3D3E] bg-zinc-700"
+            />
+          </div>
+        )}
+      </div>
 
       {/* Lock */}
       <button

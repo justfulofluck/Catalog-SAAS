@@ -4,7 +4,8 @@ import {
   AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, Minus, Plus, ChevronDown,
   Trash2, Bold, Italic, Underline, MousePointer2, CheckSquare, Check, Sparkles, SlidersHorizontal, ListTodo,
   Image as ImageIcon, Layers, Sliders,
-  ArrowRight, ArrowLeft, ArrowDown, ArrowUp
+  ArrowRight, ArrowLeft, ArrowDown, ArrowUp,
+  Link as LinkIcon, Globe, Phone, Mail, MessageCircle
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
@@ -30,6 +31,7 @@ const PropertyPanel: React.FC = () => {
   const isPageSettings = selectedElementIds.length === 0;
   const isText = !isPageSettings && selectedElement?.type === 'text';
   const isImage = !isPageSettings && selectedElement?.type === 'image';
+  const isIcon = !isPageSettings && Boolean(selectedElement?.iconConfig);
 
   const isDark = uiTheme === 'dark';
 
@@ -144,11 +146,11 @@ const PropertyPanel: React.FC = () => {
             <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center shadow-sm ${
               isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8]' : 'bg-teal-50 text-[#0F3D3E]'
             }`}>
-              {isImage ? <ImageIcon size={18} /> : (isText ? <Type size={18} /> : <Palette size={18} />)}
+              {isImage ? <ImageIcon size={18} /> : (isText ? <Type size={18} /> : (isIcon ? <Sparkles size={18} /> : <Palette size={18} />))}
             </div>
             <div>
               <h3 className={`text-xs font-black tracking-wider uppercase ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : (isImage ? 'IMAGE' : 'ELEMENT'))}
+                {isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : (isImage ? 'IMAGE' : (isIcon ? 'ICON & BUTTON' : 'ELEMENT')))}
               </h3>
               <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-400'}`}>
                 {isPageSettings ? 'No Element Selected' : 'Instance Properties'}
@@ -673,6 +675,258 @@ const PropertyPanel: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              </section>
+            )}
+
+            {/* Interactive Icon & Button Properties Section */}
+            {isIcon && selectedElement && (
+              <section className="space-y-4">
+                {renderSectionHeader("ICON & BUTTON PROPERTIES", <Sparkles size={11} />)}
+
+                {/* 1. Background Shape & Style Selector */}
+                <div className={`p-4 rounded-[12px] border space-y-3 ${
+                  isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-white border-slate-200/90 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                      Shape & Background Style
+                    </span>
+                    <span className={`text-[10px] font-mono capitalize ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                      {selectedElement.shapeType === 'none' || ((!selectedElement.fill || selectedElement.fill === 'transparent') && (!selectedElement.stroke || selectedElement.stroke === 'transparent'))
+                        ? 'Transparent (None)'
+                        : (selectedElement.shapeType || 'circle')}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {[
+                      { id: 'none', label: 'Transparent', shape: 'none', fill: 'transparent', stroke: 'transparent' },
+                      { id: 'circle', label: 'Circle', shape: 'circle', fill: selectedElement.fill && selectedElement.fill !== 'transparent' ? selectedElement.fill : '#0F3D3E', stroke: 'transparent' },
+                      { id: 'outline-circle', label: 'Outlined Circle', shape: 'circle', fill: 'transparent', stroke: selectedElement.iconConfig?.color || '#0F3D3E', strokeWidth: 2.5 },
+                      { id: 'roundedRect', label: 'Rounded', shape: 'roundedRect', fill: selectedElement.fill && selectedElement.fill !== 'transparent' ? selectedElement.fill : '#0F3D3E', stroke: 'transparent' },
+                      { id: 'rect', label: 'Square', shape: 'rect', fill: selectedElement.fill && selectedElement.fill !== 'transparent' ? selectedElement.fill : '#0F3D3E', stroke: 'transparent' },
+                      { id: 'outline-rect', label: 'Outlined Square', shape: 'rect', fill: 'transparent', stroke: selectedElement.iconConfig?.color || '#0F3D3E', strokeWidth: 2.5 },
+                      { id: 'pill', label: 'Pill', shape: 'pill', fill: selectedElement.fill && selectedElement.fill !== 'transparent' ? selectedElement.fill : '#0F3D3E', stroke: 'transparent' },
+                    ].map(styleOpt => {
+                      const isCurrent = styleOpt.id === 'none'
+                        ? (selectedElement.shapeType === 'none' || (selectedElement.fill === 'transparent' && (!selectedElement.stroke || selectedElement.stroke === 'transparent')))
+                        : styleOpt.id === 'outline-circle'
+                          ? (selectedElement.shapeType === 'circle' && selectedElement.fill === 'transparent' && selectedElement.stroke && selectedElement.stroke !== 'transparent')
+                          : styleOpt.id === 'outline-rect'
+                            ? (selectedElement.shapeType === 'rect' && selectedElement.fill === 'transparent' && selectedElement.stroke && selectedElement.stroke !== 'transparent')
+                            : (selectedElement.shapeType === styleOpt.shape && selectedElement.fill !== 'transparent');
+
+                      return (
+                        <button
+                          key={styleOpt.id}
+                          type="button"
+                          onClick={() => {
+                            updateElement(currentPageIndex, selectedElement.id, {
+                              shapeType: styleOpt.shape as any,
+                              fill: styleOpt.fill,
+                              stroke: styleOpt.stroke,
+                              strokeWidth: (styleOpt as any).strokeWidth || 0,
+                            });
+                          }}
+                          className={`py-1.5 px-1 flex flex-col items-center justify-center rounded-[4px] border text-[9px] font-semibold transition-all ${
+                            isCurrent
+                              ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/40 shadow-sm'
+                              : (isDark ? 'bg-[#222] border-[#333] text-slate-400 hover:text-white hover:bg-[#282828]' : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900')
+                          }`}
+                        >
+                          <span>{styleOpt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Color Controls Card */}
+                <div className={`p-4 rounded-[12px] border space-y-3.5 ${
+                  isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-white border-slate-200/90 shadow-sm'
+                }`}>
+                  <span className={`text-xs font-bold block ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                    Colors & Transparency
+                  </span>
+
+                  {/* Icon Color */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Icon Glyph Color</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <label
+                        className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105 shrink-0"
+                        style={{ backgroundColor: selectedElement.iconConfig?.color || '#ffffff' }}
+                      >
+                        <input
+                          type="color"
+                          value={selectedElement.iconConfig?.color || '#ffffff'}
+                          onChange={(e) => {
+                            updateElement(currentPageIndex, selectedElement.id, {
+                              iconConfig: { ...selectedElement.iconConfig!, color: e.target.value }
+                            });
+                          }}
+                          className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                        />
+                      </label>
+                      <span className={`text-xs font-mono font-bold uppercase ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                        {selectedElement.iconConfig?.color || '#ffffff'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Shape Background Fill Color (if not transparent) */}
+                  {selectedElement.shapeType !== 'none' && (
+                    <div className="flex items-center justify-between pt-2 border-t border-black/5 dark:border-white/5">
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Shape Background Fill</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <label
+                          className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105 shrink-0"
+                          style={{ backgroundColor: selectedElement.fill || '#0F3D3E' }}
+                        >
+                          <input
+                            type="color"
+                            value={selectedElement.fill === 'transparent' ? '#0F3D3E' : (selectedElement.fill || '#0F3D3E')}
+                            onChange={(e) => {
+                              updateElement(currentPageIndex, selectedElement.id, {
+                                fill: e.target.value
+                              });
+                            }}
+                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                          />
+                        </label>
+                        <span className={`text-xs font-mono font-bold uppercase ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                          {selectedElement.fill || '#0F3D3E'}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Icon Size Slider */}
+                  <div className="space-y-1.5 pt-2 border-t border-black/5 dark:border-white/5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Icon Size</span>
+                      <span className="font-mono text-[10px] text-slate-400">
+                        {Math.round(selectedElement.iconConfig?.size || selectedElement.width * 0.5)}px
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={12}
+                      max={150}
+                      value={selectedElement.iconConfig?.size || selectedElement.width * 0.5}
+                      onChange={(e) => {
+                        updateElement(currentPageIndex, selectedElement.id, {
+                          iconConfig: { ...selectedElement.iconConfig!, size: Number(e.target.value) }
+                        });
+                      }}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#0F3D3E] bg-slate-200 dark:bg-zinc-700"
+                    />
+                  </div>
+
+                  {/* Element Opacity Slider */}
+                  <div className="space-y-1.5 pt-2 border-t border-black/5 dark:border-white/5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Overall Opacity / Transparency</span>
+                      <span className="font-mono text-[10px] text-slate-400">
+                        {Math.round((selectedElement.opacity ?? 1) * 100)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range"
+                      min={10}
+                      max={100}
+                      value={Math.round((selectedElement.opacity ?? 1) * 100)}
+                      onChange={(e) => {
+                        updateElement(currentPageIndex, selectedElement.id, {
+                          opacity: Number(e.target.value) / 100
+                        });
+                      }}
+                      className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-[#0F3D3E] bg-slate-200 dark:bg-zinc-700"
+                    />
+                  </div>
+                </div>
+
+                {/* 3. Interactive Link / Action Card */}
+                <div className={`p-4 rounded-[12px] border space-y-3 ${
+                  isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-white border-slate-200/90 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-1.5">
+                      <LinkIcon size={14} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
+                      <span className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                        Interactive Action / Link
+                      </span>
+                    </div>
+                    {(selectedElement.linkUrl || selectedElement.iconConfig?.linkUrl) && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateElement(currentPageIndex, selectedElement.id, {
+                            linkUrl: undefined,
+                            linkType: undefined,
+                            iconConfig: { ...selectedElement.iconConfig!, linkUrl: undefined, linkType: undefined }
+                          });
+                        }}
+                        className="text-[9px] font-bold text-red-400 hover:underline"
+                      >
+                        Remove Action
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Action Link Types */}
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      { id: 'url', label: 'Web URL', icon: Globe },
+                      { id: 'whatsapp', label: 'WhatsApp', icon: MessageCircle },
+                      { id: 'phone', label: 'Call', icon: Phone },
+                      { id: 'email', label: 'Email', icon: Mail },
+                    ].map(lt => {
+                      const IconComp = lt.icon;
+                      const isCurrent = (selectedElement.linkType || selectedElement.iconConfig?.linkType || 'url') === lt.id;
+                      return (
+                        <button
+                          key={lt.id}
+                          type="button"
+                          onClick={() => {
+                            updateElement(currentPageIndex, selectedElement.id, {
+                              linkType: lt.id as any,
+                              iconConfig: { ...selectedElement.iconConfig!, linkType: lt.id as any }
+                            });
+                          }}
+                          className={`py-1.5 px-1 flex flex-col items-center gap-1 rounded-[4px] border text-[9px] font-medium transition-all ${
+                            isCurrent
+                              ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/30 shadow-sm'
+                              : (isDark ? 'bg-[#222] text-slate-400 border-[#333] hover:text-white' : 'bg-slate-50 text-slate-600 border-slate-200 hover:text-slate-900')
+                          }`}
+                        >
+                          <IconComp size={11} />
+                          <span>{lt.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <input
+                    type="text"
+                    value={selectedElement.linkUrl || selectedElement.iconConfig?.linkUrl || ''}
+                    placeholder="https://wa.me/..., tel:..., sales@brand.com"
+                    onChange={(e) => {
+                      const val = e.target.value.trim() || undefined;
+                      updateElement(currentPageIndex, selectedElement.id, {
+                        linkUrl: val,
+                        iconConfig: { ...selectedElement.iconConfig!, linkUrl: val }
+                      });
+                    }}
+                    className={`w-full px-2.5 py-1.5 text-xs rounded-[4px] outline-none border focus:border-[#0F3D3E] ${
+                      isDark ? 'bg-[#121212] border-[#333] text-white placeholder-slate-500' : 'bg-white border-slate-200 text-slate-800 placeholder-slate-400'
+                    }`}
+                  />
                 </div>
               </section>
             )}
