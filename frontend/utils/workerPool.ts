@@ -40,7 +40,17 @@ class WorkerPool {
     filters?: { brightness?: number; contrast?: number; saturation?: number; grayscale?: boolean; blur?: number },
     targetWidth?: number,
     targetHeight?: number,
-    overlay?: { enabled?: boolean; color?: string; opacity?: number }
+    overlay?: {
+      enabled?: boolean;
+      type?: 'solid' | 'gradient';
+      color?: string;
+      opacity?: number;
+      direction?: 'to-right' | 'to-left' | 'to-bottom' | 'to-top' | 'to-bottom-right' | 'to-top-right';
+      startColor?: string;
+      endColor?: string;
+      startOpacity?: number;
+      endOpacity?: number;
+    }
   ): Promise<{ processedUrl: string; width: number; height: number }> {
     if (!this.worker) {
       return { processedUrl: imageUrl, width: targetWidth || 0, height: targetHeight || 0 };

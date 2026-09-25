@@ -3,7 +3,7 @@ import { CanvasElement, ElementType, Product, Catalog } from '../../types';
 import { workerPool } from '../../utils/workerPool';
 import { useStore } from '../../store/useStore';
 import { resolveFieldLabel } from '../../utils/fieldUtils';
-import { normalizeImageUrl } from '../../utils/imageUtils';
+import { normalizeImageUrl, colorToRgba } from '../../utils/imageUtils';
 import { applyCanvaSelectionStyle } from '../../utils/canvaControls';
 
 // Ensure all fabric images are loaded with crossOrigin = 'anonymous' to prevent tainted canvases
@@ -880,8 +880,45 @@ async function _elementToFabricObject(
       }
 
       if (el.overlayEnabled) {
-        const overlayColor = el.overlayColor || '#ea580c';
-        const overlayOpacity = (el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100;
+        const isGradient = el.overlayType === 'gradient';
+        let overlayFill: any;
+        let overlayGroupOpacity = 1;
+
+        if (isGradient) {
+          const dir = el.overlayGradientDirection || 'to-right';
+          const startColor = el.overlayGradientStartColor || el.overlayColor || '#000000';
+          const endColor = el.overlayGradientEndColor || el.overlayColor || startColor;
+          const startAlpha = el.overlayGradientStartOpacity !== undefined ? el.overlayGradientStartOpacity : (el.overlayOpacity !== undefined ? el.overlayOpacity : 80);
+          const endAlpha = el.overlayGradientEndOpacity !== undefined ? el.overlayGradientEndOpacity : 0;
+
+          const startRgba = colorToRgba(startColor, startAlpha);
+          const endRgba = colorToRgba(endColor, endAlpha);
+
+          let coords = { x1: 0, y1: 0, x2: el.width, y2: 0 };
+          switch (dir) {
+            case 'to-right': coords = { x1: 0, y1: 0, x2: el.width, y2: 0 }; break;
+            case 'to-left': coords = { x1: el.width, y1: 0, x2: 0, y2: 0 }; break;
+            case 'to-bottom': coords = { x1: 0, y1: 0, x2: 0, y2: el.height }; break;
+            case 'to-top': coords = { x1: 0, y1: el.height, x2: 0, y2: 0 }; break;
+            case 'to-bottom-right': coords = { x1: 0, y1: 0, x2: el.width, y2: el.height }; break;
+            case 'to-top-right': coords = { x1: 0, y1: el.height, x2: el.width, y2: 0 }; break;
+            default: coords = { x1: 0, y1: 0, x2: el.width, y2: 0 };
+          }
+
+          overlayFill = new Gradient({
+            type: 'linear',
+            gradientUnits: 'pixels',
+            coords,
+            colorStops: [
+              { offset: 0, color: startRgba },
+              { offset: 1, color: endRgba }
+            ]
+          });
+          overlayGroupOpacity = 1;
+        } else {
+          overlayFill = el.overlayColor || '#ea580c';
+          overlayGroupOpacity = (el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100;
+        }
 
         const baseImg = new FabricImage(htmlImg, {
           left: 0,
@@ -902,8 +939,8 @@ async function _elementToFabricObject(
           top: 0,
           width: el.width,
           height: el.height,
-          fill: overlayColor,
-          opacity: overlayOpacity,
+          fill: overlayFill,
+          opacity: overlayGroupOpacity,
           rx: el.borderRadius || 0,
           ry: el.borderRadius || 0,
           selectable: false,
@@ -925,8 +962,14 @@ async function _elementToFabricObject(
         (group as any).id = el.id;
         (group as any)._src = el.src;
         (group as any)._overlayEnabled = el.overlayEnabled;
+        (group as any)._overlayType = el.overlayType;
         (group as any)._overlayColor = el.overlayColor;
         (group as any)._overlayOpacity = el.overlayOpacity;
+        (group as any)._overlayGradientDirection = el.overlayGradientDirection;
+        (group as any)._overlayGradientStartColor = el.overlayGradientStartColor;
+        (group as any)._overlayGradientEndColor = el.overlayGradientEndColor;
+        (group as any)._overlayGradientStartOpacity = el.overlayGradientStartOpacity;
+        (group as any)._overlayGradientEndOpacity = el.overlayGradientEndOpacity;
         return group;
       }
 

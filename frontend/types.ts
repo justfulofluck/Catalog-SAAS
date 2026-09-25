@@ -162,8 +162,14 @@ export interface CanvasElement {
     saturation?: number;
   };
   overlayEnabled?: boolean;
+  overlayType?: 'solid' | 'gradient';
   overlayColor?: string;
   overlayOpacity?: number; // 0 - 100 percentage
+  overlayGradientDirection?: 'to-right' | 'to-left' | 'to-bottom' | 'to-top' | 'to-bottom-right' | 'to-top-right';
+  overlayGradientStartColor?: string;
+  overlayGradientEndColor?: string;
+  overlayGradientStartOpacity?: number; // 0 - 100 percentage
+  overlayGradientEndOpacity?: number; // 0 - 100 percentage
   iconConfig?: {
     iconName: string;
     iconLibrary: 'fontawesome';
