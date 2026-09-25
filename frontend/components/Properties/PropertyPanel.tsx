@@ -3,11 +3,13 @@ import {
   X, Type, Palette, AlignLeft, AlignCenter,
   AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, Minus, Plus, ChevronDown,
   Trash2, Bold, Italic, Underline, MousePointer2, CheckSquare, Check, Sparkles, SlidersHorizontal, ListTodo,
-  Image as ImageIcon, Layers, Sliders
+  Image as ImageIcon, Layers, Sliders,
+  ArrowRight, ArrowLeft, ArrowDown, ArrowUp
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { toggleStyle } from '../../utils/textStyleSelection';
+import { colorToRgba } from '../../utils/imageUtils';
 import { ChecklistRow, ChecklistData } from '../../types';
 
 const PropertyPanel: React.FC = () => {
@@ -681,14 +683,17 @@ const PropertyPanel: React.FC = () => {
                 {renderSectionHeader("IMAGE ADJUSTMENTS", <ImageIcon size={11} />)}
 
                 {/* Overlay Card - Pixel Perfect Match */}
-                <div className={`p-4 rounded-[12px] border transition-all ${
+                <div className={`p-4 rounded-[12px] border space-y-3 transition-all ${
                   isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-white border-slate-200/90 shadow-sm'
                 }`}>
                   {/* Overlay Header with Switch */}
-                  <div className="flex items-center justify-between">
-                    <span className={`text-xs font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                      Overlay
-                    </span>
+                  <div className="flex items-center justify-between pb-2 border-b border-black/5 dark:border-white/10">
+                    <div className="flex items-center gap-1.5">
+                      <Layers size={14} className="text-blue-500" />
+                      <span className={`text-xs font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                        Image Overlay
+                      </span>
+                    </div>
                     <button
                       type="button"
                       role="switch"
@@ -697,16 +702,22 @@ const PropertyPanel: React.FC = () => {
                         const newEnabled = !selectedElement.overlayEnabled;
                         updateElement(currentPageIndex, selectedElement.id, {
                           overlayEnabled: newEnabled,
+                          overlayType: selectedElement.overlayType || 'solid',
                           overlayColor: selectedElement.overlayColor || '#ea580c',
-                          overlayOpacity: selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22
+                          overlayOpacity: selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22,
+                          overlayGradientDirection: selectedElement.overlayGradientDirection || 'to-right',
+                          overlayGradientStartColor: selectedElement.overlayGradientStartColor || selectedElement.overlayColor || '#000000',
+                          overlayGradientEndColor: selectedElement.overlayGradientEndColor || selectedElement.overlayColor || '#000000',
+                          overlayGradientStartOpacity: selectedElement.overlayGradientStartOpacity !== undefined ? selectedElement.overlayGradientStartOpacity : 80,
+                          overlayGradientEndOpacity: selectedElement.overlayGradientEndOpacity !== undefined ? selectedElement.overlayGradientEndOpacity : 0
                         });
                       }}
-                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
                         selectedElement.overlayEnabled ? 'bg-blue-600' : (isDark ? 'bg-zinc-700' : 'bg-slate-300')
                       }`}
                     >
                       <span
-                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
                           selectedElement.overlayEnabled ? 'translate-x-5' : 'translate-x-0'
                         }`}
                       />
@@ -714,74 +725,303 @@ const PropertyPanel: React.FC = () => {
                   </div>
 
                   {/* Overlay Controls Body */}
-                  <div className={`pt-4 space-y-4 transition-all ${
+                  <div className={`space-y-3 transition-all ${
                     selectedElement.overlayEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
                   }`}>
-                    {/* Color Row */}
-                    <div className="flex items-center justify-between">
-                      <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                        Color
-                      </span>
-                      <div className="relative flex items-center">
-                        <label
-                          className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105"
-                          style={{ backgroundColor: selectedElement.overlayColor || '#ea580c' }}
-                        >
-                          <input
-                            type="color"
-                            value={selectedElement.overlayColor || '#ea580c'}
-                            onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayColor: e.target.value })}
-                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                          />
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Quick Swatch Presets */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      {['#ea580c', '#3b82f6', '#10b981', '#6366f1', '#ec4899', '#f59e0b', '#000000', '#ffffff', '#0f172a'].map(c => (
-                        <button
-                          key={c}
-                          type="button"
-                          onClick={() => updateElement(currentPageIndex, selectedElement.id, { overlayColor: c })}
-                          className={`w-4 h-4 rounded-full border transition-transform hover:scale-110 ${
-                            (selectedElement.overlayColor || '#ea580c').toLowerCase() === c.toLowerCase() ? 'ring-2 ring-blue-500 ring-offset-1 border-white' : 'border-black/10'
-                          }`}
-                          style={{ backgroundColor: c }}
-                          title={c}
-                        />
-                      ))}
-                    </div>
-
-                    {/* Opacity Row */}
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-medium w-14 shrink-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                        Opacity
-                      </span>
-                      <div className="flex-1 relative flex items-center">
-                        <input
-                          type="range"
-                          min={0}
-                          max={100}
-                          value={selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22}
-                          onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayOpacity: Number(e.target.value) })}
-                          className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-zinc-700"
-                        />
-                      </div>
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        value={selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22}
-                        onChange={(e) => {
-                          const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
-                          updateElement(currentPageIndex, selectedElement.id, { overlayOpacity: val });
-                        }}
-                        className={`w-14 px-2 py-1 border rounded-[6px] text-center text-xs font-semibold outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
-                          isDark ? 'bg-[#222] border-[#333] text-white' : 'bg-white border-slate-300 text-slate-800'
+                    {/* Mode Selector */}
+                    <div className="flex items-center p-0.5 bg-slate-100 dark:bg-zinc-900 rounded-[6px] border border-black/5 dark:border-white/10">
+                      <button
+                        type="button"
+                        onClick={() => updateElement(currentPageIndex, selectedElement.id, { overlayType: 'solid' })}
+                        className={`flex-1 py-1 text-[11px] font-semibold rounded-[4px] transition-all ${
+                          selectedElement.overlayType !== 'gradient'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : (isDark ? 'text-zinc-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
                         }`}
-                      />
+                      >
+                        Solid
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => updateElement(currentPageIndex, selectedElement.id, {
+                          overlayType: 'gradient',
+                          overlayGradientDirection: selectedElement.overlayGradientDirection || 'to-right',
+                          overlayGradientStartColor: selectedElement.overlayGradientStartColor || selectedElement.overlayColor || '#000000',
+                          overlayGradientEndColor: selectedElement.overlayGradientEndColor || selectedElement.overlayColor || '#000000',
+                          overlayGradientStartOpacity: selectedElement.overlayGradientStartOpacity !== undefined ? selectedElement.overlayGradientStartOpacity : 80,
+                          overlayGradientEndOpacity: selectedElement.overlayGradientEndOpacity !== undefined ? selectedElement.overlayGradientEndOpacity : 0
+                        })}
+                        className={`flex-1 py-1 text-[11px] font-semibold rounded-[4px] transition-all ${
+                          selectedElement.overlayType === 'gradient'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : (isDark ? 'text-zinc-400 hover:text-white' : 'text-slate-600 hover:text-slate-900')
+                        }`}
+                      >
+                        Gradient
+                      </button>
                     </div>
+
+                    {/* SOLID CONTROLS */}
+                    {selectedElement.overlayType !== 'gradient' ? (
+                      <>
+                        <div className="flex items-center justify-between">
+                          <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                            Color
+                          </span>
+                          <div className="relative flex items-center">
+                            <label
+                              className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105"
+                              style={{ backgroundColor: selectedElement.overlayColor || '#ea580c' }}
+                            >
+                              <input
+                                type="color"
+                                value={selectedElement.overlayColor || '#ea580c'}
+                                onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayColor: e.target.value })}
+                                className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                              />
+                            </label>
+                          </div>
+                        </div>
+
+                        {/* Quick Swatch Presets */}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {['#ea580c', '#3b82f6', '#10b981', '#6366f1', '#ec4899', '#f59e0b', '#000000', '#ffffff', '#0f172a'].map(c => (
+                            <button
+                              key={c}
+                              type="button"
+                              onClick={() => updateElement(currentPageIndex, selectedElement.id, { overlayColor: c })}
+                              className={`w-4 h-4 rounded-full border transition-transform hover:scale-110 ${
+                                (selectedElement.overlayColor || '#ea580c').toLowerCase() === c.toLowerCase() ? 'ring-2 ring-blue-500 ring-offset-1 border-white' : 'border-black/10'
+                              }`}
+                              style={{ backgroundColor: c }}
+                              title={c}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Opacity Row */}
+                        <div className="flex items-center gap-3">
+                          <span className={`text-xs font-medium w-14 shrink-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                            Opacity
+                          </span>
+                          <div className="flex-1 relative flex items-center">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22}
+                              onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayOpacity: Number(e.target.value) })}
+                              className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-zinc-700"
+                            />
+                          </div>
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            value={selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22}
+                            onChange={(e) => {
+                              const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                              updateElement(currentPageIndex, selectedElement.id, { overlayOpacity: val });
+                            }}
+                            className={`w-14 px-2 py-1 border rounded-[6px] text-center text-xs font-semibold outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+                              isDark ? 'bg-[#222] border-[#333] text-white' : 'bg-white border-slate-300 text-slate-800'
+                            }`}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      /* GRADIENT CONTROLS */
+                      <>
+                        {/* Direction Buttons */}
+                        <div className="space-y-1.5">
+                          <span className={`text-[11px] font-medium ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                            Gradient Direction
+                          </span>
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {[
+                              { id: 'to-right', label: 'Left → Right', icon: <ArrowRight size={14} /> },
+                              { id: 'to-left', label: 'Right → Left', icon: <ArrowLeft size={14} /> },
+                              { id: 'to-bottom', label: 'Top → Bottom', icon: <ArrowDown size={14} /> },
+                              { id: 'to-top', label: 'Bottom → Top', icon: <ArrowUp size={14} /> }
+                            ].map(dir => (
+                              <button
+                                key={dir.id}
+                                type="button"
+                                title={dir.label}
+                                onClick={() => updateElement(currentPageIndex, selectedElement.id, { overlayGradientDirection: dir.id as any })}
+                                className={`flex items-center justify-center gap-1 py-1.5 rounded-[6px] border text-xs font-medium transition-all ${
+                                  (selectedElement.overlayGradientDirection || 'to-right') === dir.id
+                                    ? 'bg-blue-600 border-blue-500 text-white shadow-sm'
+                                    : (isDark
+                                        ? 'bg-zinc-800/80 border-white/10 text-zinc-300 hover:text-white hover:bg-zinc-700'
+                                        : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200')
+                                }`}
+                              >
+                                {dir.icon}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Colors */}
+                        <div className="grid grid-cols-2 gap-2">
+                          {/* Start Color */}
+                          <div className="space-y-1">
+                            <span className={`text-[10px] font-medium ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                              Start Color
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <label
+                                className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105 shrink-0"
+                                style={{ backgroundColor: selectedElement.overlayGradientStartColor || selectedElement.overlayColor || '#000000' }}
+                              >
+                                <input
+                                  type="color"
+                                  value={selectedElement.overlayGradientStartColor || selectedElement.overlayColor || '#000000'}
+                                  onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayGradientStartColor: e.target.value })}
+                                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                />
+                              </label>
+                              <span className={`text-[10px] font-mono truncate ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
+                                {selectedElement.overlayGradientStartColor || selectedElement.overlayColor || '#000000'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* End Color */}
+                          <div className="space-y-1">
+                            <span className={`text-[10px] font-medium ${isDark ? 'text-zinc-400' : 'text-slate-500'}`}>
+                              End Color
+                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <label
+                                className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105 shrink-0"
+                                style={{ backgroundColor: selectedElement.overlayGradientEndColor || selectedElement.overlayColor || '#000000' }}
+                              >
+                                <input
+                                  type="color"
+                                  value={selectedElement.overlayGradientEndColor || selectedElement.overlayColor || '#000000'}
+                                  onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayGradientEndColor: e.target.value })}
+                                  className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                                />
+                              </label>
+                              <span className={`text-[10px] font-mono truncate ${isDark ? 'text-zinc-300' : 'text-slate-700'}`}>
+                                {selectedElement.overlayGradientEndColor || selectedElement.overlayColor || '#000000'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Quick Presets */}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {[
+                            { name: 'Dark Fade', start: '#000000', end: '#000000', sOp: 85, eOp: 0 },
+                            { name: 'White Fade', start: '#ffffff', end: '#ffffff', sOp: 85, eOp: 0 },
+                            { name: 'Warm Sunset', start: '#ea580c', end: '#f59e0b', sOp: 75, eOp: 15 },
+                            { name: 'Ocean Blue', start: '#1e3a8a', end: '#3b82f6', sOp: 80, eOp: 10 },
+                            { name: 'Neon Purple', start: '#581c87', end: '#ec4899', sOp: 75, eOp: 20 },
+                          ].map(preset => (
+                            <button
+                              key={preset.name}
+                              type="button"
+                              onClick={() => updateElement(currentPageIndex, selectedElement.id, {
+                                overlayGradientStartColor: preset.start,
+                                overlayGradientEndColor: preset.end,
+                                overlayGradientStartOpacity: preset.sOp,
+                                overlayGradientEndOpacity: preset.eOp
+                              })}
+                              className="h-5 px-1.5 py-0.5 rounded-[4px] border border-black/10 dark:border-white/10 text-[9px] font-medium text-slate-700 dark:text-zinc-300 hover:text-blue-600 dark:hover:text-white transition-transform hover:scale-105"
+                              style={{
+                                background: `linear-gradient(to right, ${preset.start}, ${preset.end})`
+                              }}
+                              title={preset.name}
+                            >
+                              <span className="drop-shadow-sm text-white">{preset.name}</span>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Start Opacity Slider */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className={isDark ? 'text-zinc-300' : 'text-slate-600'}>Start Opacity (Side 1)</span>
+                            <span className="font-mono text-[10px] text-slate-500">
+                              {selectedElement.overlayGradientStartOpacity !== undefined ? selectedElement.overlayGradientStartOpacity : (selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 80)}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={selectedElement.overlayGradientStartOpacity !== undefined ? selectedElement.overlayGradientStartOpacity : (selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 80)}
+                              onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayGradientStartOpacity: Number(e.target.value) })}
+                              className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-zinc-700"
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={selectedElement.overlayGradientStartOpacity !== undefined ? selectedElement.overlayGradientStartOpacity : (selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 80)}
+                              onChange={(e) => {
+                                const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                updateElement(currentPageIndex, selectedElement.id, { overlayGradientStartOpacity: val });
+                              }}
+                              className={`w-12 px-1.5 py-0.5 border rounded-[4px] text-center text-xs font-semibold outline-none focus:border-blue-500 ${
+                                isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-slate-300 text-slate-800'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* End Opacity Slider */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-[11px]">
+                            <span className={isDark ? 'text-zinc-300' : 'text-slate-600'}>End Opacity (Side 2)</span>
+                            <span className="font-mono text-[10px] text-slate-500">
+                              {selectedElement.overlayGradientEndOpacity !== undefined ? selectedElement.overlayGradientEndOpacity : 0}%
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="range"
+                              min={0}
+                              max={100}
+                              value={selectedElement.overlayGradientEndOpacity !== undefined ? selectedElement.overlayGradientEndOpacity : 0}
+                              onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayGradientEndOpacity: Number(e.target.value) })}
+                              className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-zinc-700"
+                            />
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              value={selectedElement.overlayGradientEndOpacity !== undefined ? selectedElement.overlayGradientEndOpacity : 0}
+                              onChange={(e) => {
+                                const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                                updateElement(currentPageIndex, selectedElement.id, { overlayGradientEndOpacity: val });
+                              }}
+                              className={`w-12 px-1.5 py-0.5 border rounded-[4px] text-center text-xs font-semibold outline-none focus:border-blue-500 ${
+                                isDark ? 'bg-zinc-800 border-zinc-700 text-white' : 'bg-white border-slate-300 text-slate-800'
+                              }`}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Live Gradient Preview Bar */}
+                        <div className="pt-0.5">
+                          <div
+                            className="w-full h-3 rounded-[3px] border border-black/10 dark:border-white/15 shadow-inner"
+                            style={{
+                              background: `linear-gradient(${
+                                selectedElement.overlayGradientDirection === 'to-left' ? 'to left' :
+                                selectedElement.overlayGradientDirection === 'to-bottom' ? 'to bottom' :
+                                selectedElement.overlayGradientDirection === 'to-top' ? 'to top' : 'to right'
+                              }, ${colorToRgba(selectedElement.overlayGradientStartColor || selectedElement.overlayColor || '#000000', selectedElement.overlayGradientStartOpacity !== undefined ? selectedElement.overlayGradientStartOpacity : 80)}, ${colorToRgba(selectedElement.overlayGradientEndColor || selectedElement.overlayColor || '#000000', selectedElement.overlayGradientEndOpacity !== undefined ? selectedElement.overlayGradientEndOpacity : 0)})`
+                            }}
+                          />
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

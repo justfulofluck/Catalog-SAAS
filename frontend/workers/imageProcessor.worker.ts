@@ -13,11 +13,34 @@ interface ProcessImageMessage {
   };
   overlay?: {
     enabled?: boolean;
+    type?: 'solid' | 'gradient';
     color?: string;
     opacity?: number;
+    direction?: 'to-right' | 'to-left' | 'to-bottom' | 'to-top' | 'to-bottom-right' | 'to-top-right';
+    startColor?: string;
+    endColor?: string;
+    startOpacity?: number;
+    endOpacity?: number;
   };
   targetWidth?: number;
   targetHeight?: number;
+}
+
+function workerColorToRgba(color?: string | null, opacityPercent: number = 100): string {
+  const alpha = Math.max(0, Math.min(1, opacityPercent / 100));
+  if (!color) return `rgba(0, 0, 0, ${alpha})`;
+  const trimmed = color.trim();
+  if (trimmed.startsWith('rgba(')) return trimmed.replace(/,\s*[\d\.]+\)$/, `, ${alpha})`);
+  if (trimmed.startsWith('rgb(')) return trimmed.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  let hex = trimmed.replace('#', '');
+  if (hex.length === 3) hex = hex.split('').map(c => c + c).join('');
+  if (hex.length >= 6) {
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return `rgba(0, 0, 0, ${alpha})`;
 }
 
 self.onmessage = async (e: MessageEvent<ProcessImageMessage>) => {
@@ -66,9 +89,36 @@ self.onmessage = async (e: MessageEvent<ProcessImageMessage>) => {
           if (overlay && overlay.enabled) {
             ctx.filter = 'none';
             ctx.save();
-            ctx.fillStyle = overlay.color || '#f97316';
-            ctx.globalAlpha = (overlay.opacity !== undefined ? overlay.opacity : 22) / 100;
-            ctx.fillRect(0, 0, width, height);
+            if (overlay.type === 'gradient') {
+              const dir = overlay.direction || 'to-right';
+              const startColor = overlay.startColor || overlay.color || '#000000';
+              const endColor = overlay.endColor || overlay.color || startColor;
+              const startAlpha = overlay.startOpacity !== undefined ? overlay.startOpacity : (overlay.opacity !== undefined ? overlay.opacity : 80);
+              const endAlpha = overlay.endOpacity !== undefined ? overlay.endOpacity : 0;
+
+              const startRgba = workerColorToRgba(startColor, startAlpha);
+              const endRgba = workerColorToRgba(endColor, endAlpha);
+
+              let grad: CanvasGradient;
+              switch (dir) {
+                case 'to-right': grad = ctx.createLinearGradient(0, 0, width, 0); break;
+                case 'to-left': grad = ctx.createLinearGradient(width, 0, 0, 0); break;
+                case 'to-bottom': grad = ctx.createLinearGradient(0, 0, 0, height); break;
+                case 'to-top': grad = ctx.createLinearGradient(0, height, 0, 0); break;
+                case 'to-bottom-right': grad = ctx.createLinearGradient(0, 0, width, height); break;
+                case 'to-top-right': grad = ctx.createLinearGradient(0, height, width, 0); break;
+                default: grad = ctx.createLinearGradient(0, 0, width, 0);
+              }
+              grad.addColorStop(0, startRgba);
+              grad.addColorStop(1, endRgba);
+              ctx.fillStyle = grad;
+              ctx.globalAlpha = 1;
+              ctx.fillRect(0, 0, width, height);
+            } else {
+              ctx.fillStyle = overlay.color || '#f97316';
+              ctx.globalAlpha = (overlay.opacity !== undefined ? overlay.opacity : 22) / 100;
+              ctx.fillRect(0, 0, width, height);
+            }
             ctx.restore();
           }
 

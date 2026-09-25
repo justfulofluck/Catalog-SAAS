@@ -153,4 +153,30 @@ export function resolveProductTitle(
   return name.toUpperCase();
 }
 
+/**
+ * Converts a hex or rgb color and an opacity percentage (0-100) into a valid rgba() string.
+ */
+export function colorToRgba(color?: string | null, opacityPercent: number = 100): string {
+  const alpha = Math.max(0, Math.min(1, opacityPercent / 100));
+  if (!color) return `rgba(0, 0, 0, ${alpha})`;
+  const trimmed = color.trim();
+  if (trimmed.startsWith('rgba(')) {
+    return trimmed.replace(/,\s*[\d\.]+\)$/, `, ${alpha})`);
+  }
+  if (trimmed.startsWith('rgb(')) {
+    return trimmed.replace('rgb(', 'rgba(').replace(')', `, ${alpha})`);
+  }
+  let hex = trimmed.replace('#', '');
+  if (hex.length === 3) {
+    hex = hex.split('').map(c => c + c).join('');
+  }
+  if (hex.length >= 6) {
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+  return `rgba(0, 0, 0, ${alpha})`;
+}
+
 

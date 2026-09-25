@@ -2405,20 +2405,6 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  toggleLockElement: (elementId) => {
-    const pageIndex = get().currentPageIndex;
-    get().toggleLock(pageIndex, elementId);
-  },
-
-  toggleVisibilityElement: (elementId) => {
-    const pageIndex = get().currentPageIndex;
-    const page = get().catalog.pages[pageIndex];
-    if (!page) return;
-    const el = page.elements.find(e => e.id === elementId);
-    if (!el) return;
-    get().updateElement(pageIndex, elementId, { hidden: !(el as any).hidden });
-  },
-
   reorderElement: (pageIndex, elementId, direction) => set((state) => {
     get().pushHistory();
     const newPages = [...state.catalog.pages];

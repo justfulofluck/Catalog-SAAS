@@ -4,8 +4,7 @@ import { Canvas, Textbox } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PageType, CatalogPage, CanvasElement } from '../../types';
 import { THEMES, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
-import { elementToFabricObject } from '../Editor/fabricRenderer';
-import { normalizeImageUrl } from '../../utils/imageUtils';
+import { normalizeImageUrl, colorToRgba } from '../../utils/imageUtils';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 
 const THUMB_BASE = 140;
@@ -209,9 +208,36 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
           ctx.drawImage(img, 0, 0, el.width, el.height);
           if (el.overlayEnabled) {
             ctx.save();
-            ctx.fillStyle = el.overlayColor || '#ea580c';
-            ctx.globalAlpha = ((el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100);
-            ctx.fillRect(0, 0, el.width, el.height);
+            if (el.overlayType === 'gradient') {
+              const dir = el.overlayGradientDirection || 'to-right';
+              const startColor = el.overlayGradientStartColor || el.overlayColor || '#000000';
+              const endColor = el.overlayGradientEndColor || el.overlayColor || startColor;
+              const startAlpha = el.overlayGradientStartOpacity !== undefined ? el.overlayGradientStartOpacity : (el.overlayOpacity !== undefined ? el.overlayOpacity : 80);
+              const endAlpha = el.overlayGradientEndOpacity !== undefined ? el.overlayGradientEndOpacity : 0;
+
+              const startRgba = colorToRgba(startColor, startAlpha);
+              const endRgba = colorToRgba(endColor, endAlpha);
+
+              let grad: CanvasGradient;
+              switch (dir) {
+                case 'to-right': grad = ctx.createLinearGradient(0, 0, el.width, 0); break;
+                case 'to-left': grad = ctx.createLinearGradient(el.width, 0, 0, 0); break;
+                case 'to-bottom': grad = ctx.createLinearGradient(0, 0, 0, el.height); break;
+                case 'to-top': grad = ctx.createLinearGradient(0, el.height, 0, 0); break;
+                case 'to-bottom-right': grad = ctx.createLinearGradient(0, 0, el.width, el.height); break;
+                case 'to-top-right': grad = ctx.createLinearGradient(0, el.height, el.width, 0); break;
+                default: grad = ctx.createLinearGradient(0, 0, el.width, 0);
+              }
+              grad.addColorStop(0, startRgba);
+              grad.addColorStop(1, endRgba);
+              ctx.fillStyle = grad;
+              ctx.globalAlpha = 1;
+              ctx.fillRect(0, 0, el.width, el.height);
+            } else {
+              ctx.fillStyle = el.overlayColor || '#ea580c';
+              ctx.globalAlpha = ((el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100);
+              ctx.fillRect(0, 0, el.width, el.height);
+            }
             ctx.restore();
           }
         }

@@ -1091,8 +1091,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               const isImageRebuild = el.type === 'image' && (
                 el.src !== (existingObj as any)._src ||
                 Boolean(el.overlayEnabled) !== Boolean((existingObj as any)._overlayEnabled) ||
+                el.overlayType !== (existingObj as any)._overlayType ||
                 el.overlayColor !== (existingObj as any)._overlayColor ||
-                el.overlayOpacity !== (existingObj as any)._overlayOpacity
+                el.overlayOpacity !== (existingObj as any)._overlayOpacity ||
+                el.overlayGradientDirection !== (existingObj as any)._overlayGradientDirection ||
+                el.overlayGradientStartColor !== (existingObj as any)._overlayGradientStartColor ||
+                el.overlayGradientEndColor !== (existingObj as any)._overlayGradientEndColor ||
+                el.overlayGradientStartOpacity !== (existingObj as any)._overlayGradientStartOpacity ||
+                el.overlayGradientEndOpacity !== (existingObj as any)._overlayGradientEndOpacity
               );
 
               if (isTableRebuild || isProductRebuild || isShapeRebuild || isImageRebuild) {
