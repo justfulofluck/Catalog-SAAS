@@ -20,7 +20,9 @@ import {
   Edit3,
   Type,
   RotateCcw,
-  X
+  X,
+  Layers,
+  Image as ImageIcon
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH } from '../../constants';
@@ -87,9 +89,11 @@ const FloatingToolbar: React.FC<Props> = ({
 
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const [showLinkPopover, setShowLinkPopover] = useState(false);
+  const [showOverlayPopover, setShowOverlayPopover] = useState(false);
   const [tempLink, setTempLink] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const linkPopoverRef = useRef<HTMLDivElement>(null);
+  const overlayPopoverRef = useRef<HTMLDivElement>(null);
   const fillInputRef = useRef<HTMLInputElement>(null);
   const strokeInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
@@ -110,10 +114,11 @@ const FloatingToolbar: React.FC<Props> = ({
     const handleClickOutside = (e: MouseEvent) => {
       if (moreMenuRef.current && !moreMenuRef.current.contains(e.target as Node)) setShowMoreMenu(false);
       if (linkPopoverRef.current && !linkPopoverRef.current.contains(e.target as Node)) setShowLinkPopover(false);
+      if (overlayPopoverRef.current && !overlayPopoverRef.current.contains(e.target as Node)) setShowOverlayPopover(false);
     };
-    if (showMoreMenu || showLinkPopover) document.addEventListener('mousedown', handleClickOutside);
+    if (showMoreMenu || showLinkPopover || showOverlayPopover) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu, showLinkPopover]);
+  }, [showMoreMenu, showLinkPopover, showOverlayPopover]);
 
   if (selectedElements.length === 0) return null;
 
@@ -152,6 +157,7 @@ const FloatingToolbar: React.FC<Props> = ({
   const toolbarHeight = 44; // Approx height of horizontal bar
   let toolbarTop = minY * zoom - toolbarHeight - 45; // Increased offset to clear rotate handle
   const isOffTop = toolbarTop < 10;
+  const isPopoverOffTop = toolbarTop < 240;
 
   if (isOffTop) {
     toolbarTop = maxY * zoom + 12;
@@ -246,100 +252,155 @@ const FloatingToolbar: React.FC<Props> = ({
       onMouseDown={(e) => e.stopPropagation()}
     >
 
-      {/* Fill color */}
-      <button
-        className={btnClass}
-        title="Fill Color"
-        onClick={() => {
-          useStore.getState().openColorPicker({
-            type: 'fill',
-            color: activeFill,
-            title: 'Fill Color',
-            onChange: (color) => {
-              onFillChange?.(color);
-              selectedElementIds.forEach(id => {
-                const el = selectedElements.find(item => item.id === id);
-                const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line';
-                internalUpdate(id, isLine ? { fill: color, stroke: color } : { fill: color });
-              });
-            }
-          });
-        }}
-      >
-        <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: activeFill }} />
-      </button>
+      {/* Fill color (for shapes/non-image elements) */}
+      {element.type !== 'image' && (
+        <button
+          className={btnClass}
+          title="Fill Color"
+          onClick={() => {
+            useStore.getState().openColorPicker({
+              type: 'fill',
+              color: activeFill,
+              title: 'Fill Color',
+              onChange: (color) => {
+                onFillChange?.(color);
+                selectedElementIds.forEach(id => {
+                  const el = selectedElements.find(item => item.id === id);
+                  const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line';
+                  internalUpdate(id, isLine ? { fill: color, stroke: color } : { fill: color });
+                });
+              }
+            });
+          }}
+        >
+          <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: activeFill }} />
+        </button>
+      )}
 
-      {/* Stroke color */}
-      <button
-        className={btnClass}
-        title="Stroke / Border Color"
-        onClick={() => {
-          useStore.getState().openColorPicker({
-            type: 'stroke',
-            color: activeStroke === 'transparent' ? '#000000' : activeStroke,
-            title: 'Border / Stroke Color',
-            onChange: (color) => {
-              onStrokeChange?.(color);
-              selectedElementIds.forEach(id => {
-                const el = selectedElements.find(item => item.id === id);
-                const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line';
-                internalUpdate(id, isLine
-                  ? { stroke: color, fill: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) }
-                  : { stroke: color, strokeWidth: Math.max(element.strokeWidth || 0, 2) }
-                );
-              });
-            }
-          });
-        }}
-      >
-        <div className="w-5 h-5 rounded-[2px] border-2" style={{ borderColor: activeStroke === 'transparent' ? '#666' : activeStroke, backgroundColor: 'transparent' }}>
-          {activeStroke === 'transparent' && <div className="w-full h-full flex items-center justify-center text-red-400 text-[10px] font-bold leading-none">\</div>}
-        </div>
-      </button>
-
-      {/* Product Block specific: Text Color, Quick Font Size Stepper, and Edit Content Button */}
-      {element.type === 'product-block' && (
-        <>
-          {/* Card Text Color */}
+      {/* Image Overlay Controls */}
+      {element.type === 'image' && (
+        <div className="relative" ref={overlayPopoverRef}>
           <button
-            className={btnClass}
-            title="Card Text & Title Color"
-            onClick={() => {
-              const defaultColor = isDarkColor(element.fill) ? '#ffffff' : '#0f172a';
-              useStore.getState().openColorPicker({
-                type: 'text',
-                color: element.titleColor || defaultColor,
-                title: 'Card Text Color',
-                onChange: (color) => {
-                  internalUpdate(element.id, {
-                    titleColor: color,
-                    textColor: color
-                  });
-                }
-              });
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-[11px] font-bold tracking-tight transition-all active:scale-95 ${
+              element.overlayEnabled
+                ? 'bg-blue-600 text-white shadow-sm ring-1 ring-white/20'
+                : 'text-[#E2DCC8]/90 hover:text-white bg-[#0F3D3E]/40 hover:bg-[#0F3D3E]/60 border border-[#E2DCC8]/20'
+            }`}
+            title="Image Overlay Settings"
+            onClick={(e) => {
+              e.stopPropagation();
+              setShowOverlayPopover(!showOverlayPopover);
             }}
           >
-            <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm flex items-center justify-center bg-[#18181b]">
-              <Type size={13} className="text-white" />
+            <Layers size={14} strokeWidth={2.2} />
+            <span>Overlay</span>
+            {element.overlayEnabled && (
+              <div
+                className="w-2.5 h-2.5 rounded-full border border-white/40 shadow-sm ml-0.5"
+                style={{ backgroundColor: element.overlayColor || '#ea580c' }}
+              />
+            )}
+          </button>
+
+          {/* Floating Toolbar Overlay Popover */}
+          {showOverlayPopover && (
+            <div
+              className={`absolute left-1/2 -translate-x-1/2 w-64 p-4 rounded-[12px] bg-[#18181b] border border-white/10 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-[2000] animate-in zoom-in-95 duration-150 backdrop-blur-xl ${
+                isPopoverOffTop ? 'top-full mt-2' : 'bottom-full mb-2'
+              }`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header with Switch */}
+              <div className="flex items-center justify-between pb-3 border-b border-white/10">
+                <div className="flex items-center gap-1.5">
+                  <Layers size={14} className="text-blue-400" />
+                  <span className="text-xs font-bold tracking-tight text-white">Image Overlay</span>
+                </div>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={element.overlayEnabled ?? false}
+                  onClick={() => {
+                    const newEnabled = !element.overlayEnabled;
+                    updateElement(currentPageIndex, element.id, {
+                      overlayEnabled: newEnabled,
+                      overlayColor: element.overlayColor || '#ea580c',
+                      overlayOpacity: element.overlayOpacity !== undefined ? element.overlayOpacity : 22
+                    });
+                  }}
+                  className={`relative inline-flex h-5 w-10 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    element.overlayEnabled ? 'bg-blue-600' : 'bg-zinc-700'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                      element.overlayEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Controls */}
+              <div className={`pt-3 space-y-3 ${element.overlayEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                {/* Color Row */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-zinc-300">Color</span>
+                  <label
+                    className="w-7 h-7 rounded-[4px] border border-white/20 shadow-sm cursor-pointer block relative transition-transform hover:scale-105"
+                    style={{ backgroundColor: element.overlayColor || '#ea580c' }}
+                  >
+                    <input
+                      type="color"
+                      value={element.overlayColor || '#ea580c'}
+                      onChange={(e) => updateElement(currentPageIndex, element.id, { overlayColor: e.target.value })}
+                      className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                    />
+                  </label>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {['#ea580c', '#3b82f6', '#10b981', '#6366f1', '#ec4899', '#f59e0b', '#000000', '#ffffff'].map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => updateElement(currentPageIndex, element.id, { overlayColor: c })}
+                      className={`w-3.5 h-3.5 rounded-full border transition-transform hover:scale-110 ${
+                        (element.overlayColor || '#ea580c').toLowerCase() === c.toLowerCase() ? 'ring-2 ring-blue-500 ring-offset-1 border-white' : 'border-white/10'
+                      }`}
+                      style={{ backgroundColor: c }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+
+                {/* Opacity Row */}
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium text-zinc-300 w-12 shrink-0">Opacity</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={element.overlayOpacity !== undefined ? element.overlayOpacity : 22}
+                    onChange={(e) => updateElement(currentPageIndex, element.id, { overlayOpacity: Number(e.target.value) })}
+                    className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-zinc-700"
+                  />
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    value={element.overlayOpacity !== undefined ? element.overlayOpacity : 22}
+                    onChange={(e) => {
+                      const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                      updateElement(currentPageIndex, element.id, { overlayOpacity: val });
+                    }}
+                    className="w-12 px-1.5 py-0.5 bg-zinc-800 border border-zinc-700 rounded-[4px] text-center text-xs font-semibold text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
             </div>
-          </button>
-
-          {/* Re-edit Card in Single Items Button */}
-          <button
-            className={`${btnClass} text-indigo-400 hover:text-indigo-300`}
-            title="Edit Card Layout & Variables"
-            onClick={() => {
-              useStore.getState().setSelectedElementIds([element.id]);
-              useStore.getState().setEditorTab('single-items');
-              useStore.getState().setSidebarExpanded(true);
-              window.dispatchEvent(new CustomEvent('catalog:editProductCard', {
-                detail: { id: element.id, pageIndex: currentPageIndex }
-              }));
-            }}
-          >
-            <Sliders size={15} strokeWidth={2} />
-          </button>
-        </>
+          )}
+        </div>
       )}
 
       {/* Icon color (if element has icons) */}

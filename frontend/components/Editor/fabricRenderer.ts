@@ -863,17 +863,11 @@ async function _elementToFabricObject(
       }
 
       const htmlImg = await getCachedImageElement(finalSrc);
-      const img = new FabricImage(htmlImg);
-      img.set({
-        ...common,
-        scaleX: el.width / (img.width || 1),
-        scaleY: el.height / (img.height || 1),
-        stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
-        strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
-      });
+      const naturalW = htmlImg.naturalWidth || htmlImg.width || 1;
+      const naturalH = htmlImg.naturalHeight || htmlImg.height || 1;
 
+      const fabricFilters: any[] = [];
       if (finalSrc === el.src && el.filters) {
-        const fabricFilters: any[] = [];
         if (el.filters.brightness !== undefined && el.filters.brightness !== 0) {
           fabricFilters.push(new filters.Brightness({ brightness: el.filters.brightness / 100 }));
         }
@@ -883,13 +877,79 @@ async function _elementToFabricObject(
         if (el.filters.contrast !== undefined && el.filters.contrast !== 0) {
           fabricFilters.push(new filters.Contrast({ contrast: el.filters.contrast / 100 }));
         }
-        if (fabricFilters.length > 0) {
-          (img as any).filters = fabricFilters;
-          img.applyFilters();
-        }
       }
+
+      if (el.overlayEnabled) {
+        const overlayColor = el.overlayColor || '#ea580c';
+        const overlayOpacity = (el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100;
+
+        const baseImg = new FabricImage(htmlImg, {
+          left: 0,
+          top: 0,
+          scaleX: el.width / naturalW,
+          scaleY: el.height / naturalH,
+          selectable: false,
+          evented: false,
+        });
+
+        if (fabricFilters.length > 0) {
+          (baseImg as any).filters = fabricFilters;
+          baseImg.applyFilters();
+        }
+
+        const overlayRect = new Rect({
+          left: 0,
+          top: 0,
+          width: el.width,
+          height: el.height,
+          fill: overlayColor,
+          opacity: overlayOpacity,
+          rx: el.borderRadius || 0,
+          ry: el.borderRadius || 0,
+          selectable: false,
+          evented: false,
+        });
+
+        const group = new Group([baseImg, overlayRect], {
+          left: el.x,
+          top: el.y,
+          angle: el.rotation || 0,
+          originX: 'left',
+          originY: 'top',
+          width: el.width,
+          height: el.height,
+          opacity: el.opacity ?? 1,
+          stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+          strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+        });
+        (group as any).id = el.id;
+        (group as any)._src = el.src;
+        (group as any)._overlayEnabled = el.overlayEnabled;
+        (group as any)._overlayColor = el.overlayColor;
+        (group as any)._overlayOpacity = el.overlayOpacity;
+        return group;
+      }
+
+      const img = new FabricImage(htmlImg);
+      img.set({
+        ...common,
+        scaleX: el.width / naturalW,
+        scaleY: el.height / naturalH,
+        stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+        strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+      });
+
+      if (fabricFilters.length > 0) {
+        (img as any).filters = fabricFilters;
+        img.applyFilters();
+      }
+      (img as any)._src = el.src;
+      (img as any)._overlayEnabled = el.overlayEnabled;
+      (img as any)._overlayColor = el.overlayColor;
+      (img as any)._overlayOpacity = el.overlayOpacity;
       return img;
-    } catch {
+    } catch (err) {
+      console.error('Failed to render image on canvas:', err, el.src);
       // Fallback if image fails to load (CORS, broken link, etc.)
       const rect = new Rect({ ...common, fill: '#e2e8f0', stroke: '#94a3b8', strokeWidth: 1, strokeDashArray: [5, 5] });
       return rect;

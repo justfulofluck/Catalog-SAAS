@@ -11,12 +11,17 @@ interface ProcessImageMessage {
     grayscale?: boolean;
     blur?: number;
   };
+  overlay?: {
+    enabled?: boolean;
+    color?: string;
+    opacity?: number;
+  };
   targetWidth?: number;
   targetHeight?: number;
 }
 
 self.onmessage = async (e: MessageEvent<ProcessImageMessage>) => {
-  const { id, type, imageUrl, filters, targetWidth, targetHeight } = e.data;
+  const { id, type, imageUrl, filters, overlay, targetWidth, targetHeight } = e.data;
 
   if (type === 'PROCESS_IMAGE') {
     try {
@@ -56,6 +61,16 @@ self.onmessage = async (e: MessageEvent<ProcessImageMessage>) => {
           }
 
           ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+          // Apply overlay on offscreen canvas if enabled
+          if (overlay && overlay.enabled) {
+            ctx.filter = 'none';
+            ctx.save();
+            ctx.fillStyle = overlay.color || '#f97316';
+            ctx.globalAlpha = (overlay.opacity !== undefined ? overlay.opacity : 22) / 100;
+            ctx.fillRect(0, 0, width, height);
+            ctx.restore();
+          }
 
           const resultBlob = await offscreen.convertToBlob({ type: 'image/webp', quality: 0.92 });
           const processedUrl = URL.createObjectURL(resultBlob);

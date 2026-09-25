@@ -1088,8 +1088,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               const isTableRebuild = el.type === 'table' && needsRebuild(el, existingObj);
               const isProductRebuild = el.type === 'product-block' && needsRebuild(el, existingObj);
               const isShapeRebuild = (el.type === 'shape' || el.type === 'comment') && needsRebuild(el, existingObj);
+              const isImageRebuild = el.type === 'image' && (
+                el.src !== (existingObj as any)._src ||
+                Boolean(el.overlayEnabled) !== Boolean((existingObj as any)._overlayEnabled) ||
+                el.overlayColor !== (existingObj as any)._overlayColor ||
+                el.overlayOpacity !== (existingObj as any)._overlayOpacity
+              );
 
-              if (isTableRebuild || isProductRebuild || isShapeRebuild) {
+              if (isTableRebuild || isProductRebuild || isShapeRebuild || isImageRebuild) {
                 if (isActiveObj) {
                   canvas.discardActiveObject();
                 }

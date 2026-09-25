@@ -161,6 +161,9 @@ export interface CanvasElement {
     contrast?: number;
     saturation?: number;
   };
+  overlayEnabled?: boolean;
+  overlayColor?: string;
+  overlayOpacity?: number; // 0 - 100 percentage
   iconConfig?: {
     iconName: string;
     iconLibrary: 'fontawesome';

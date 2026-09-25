@@ -201,6 +201,13 @@ const CatalogThumbnailPreview: React.FC<{
         });
         if (img.complete && img.naturalWidth > 0) {
           ctx.drawImage(img, 0, 0, el.width, el.height);
+          if (el.overlayEnabled) {
+            ctx.save();
+            ctx.fillStyle = el.overlayColor || '#ea580c';
+            ctx.globalAlpha = ((el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100);
+            ctx.fillRect(0, 0, el.width, el.height);
+            ctx.restore();
+          }
         }
       } else if (el.type === 'table' || el.tableData) {
         const td = el.tableData || {

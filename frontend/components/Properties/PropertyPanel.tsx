@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import {
   X, Type, Palette, AlignLeft, AlignCenter,
   AlignRight, AlignVerticalJustifyStart, AlignVerticalJustifyCenter, AlignVerticalJustifyEnd, Minus, Plus, ChevronDown,
-  Trash2, Bold, Italic, Underline, MousePointer2, CheckSquare, Check, Sparkles, SlidersHorizontal, ListTodo
+  Trash2, Bold, Italic, Underline, MousePointer2, CheckSquare, Check, Sparkles, SlidersHorizontal, ListTodo,
+  Image as ImageIcon, Layers, Sliders
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CATEGORIZED_FONTS, PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
@@ -26,6 +27,7 @@ const PropertyPanel: React.FC = () => {
 
   const isPageSettings = selectedElementIds.length === 0;
   const isText = !isPageSettings && selectedElement?.type === 'text';
+  const isImage = !isPageSettings && selectedElement?.type === 'image';
 
   const isDark = uiTheme === 'dark';
 
@@ -140,11 +142,11 @@ const PropertyPanel: React.FC = () => {
             <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center shadow-sm ${
               isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8]' : 'bg-teal-50 text-[#0F3D3E]'
             }`}>
-              {isText ? <Type size={18} /> : <Palette size={18} />}
+              {isImage ? <ImageIcon size={18} /> : (isText ? <Type size={18} /> : <Palette size={18} />)}
             </div>
             <div>
               <h3 className={`text-xs font-black tracking-wider uppercase ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                {isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : 'ELEMENT')}
+                {isPageSettings ? 'PROPERTIES' : (isText ? 'TEXT' : (isImage ? 'IMAGE' : 'ELEMENT'))}
               </h3>
               <p className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-400'}`}>
                 {isPageSettings ? 'No Element Selected' : 'Instance Properties'}
@@ -669,6 +671,136 @@ const PropertyPanel: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              </section>
+            )}
+
+            {/* Image Adjustments & Overlay Section */}
+            {isImage && selectedElement && (
+              <section className="space-y-4">
+                {renderSectionHeader("IMAGE ADJUSTMENTS", <ImageIcon size={11} />)}
+
+                {/* Overlay Card - Pixel Perfect Match */}
+                <div className={`p-4 rounded-[12px] border transition-all ${
+                  isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-white border-slate-200/90 shadow-sm'
+                }`}>
+                  {/* Overlay Header with Switch */}
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                      Overlay
+                    </span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={selectedElement.overlayEnabled ?? false}
+                      onClick={() => {
+                        const newEnabled = !selectedElement.overlayEnabled;
+                        updateElement(currentPageIndex, selectedElement.id, {
+                          overlayEnabled: newEnabled,
+                          overlayColor: selectedElement.overlayColor || '#ea580c',
+                          overlayOpacity: selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22
+                        });
+                      }}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                        selectedElement.overlayEnabled ? 'bg-blue-600' : (isDark ? 'bg-zinc-700' : 'bg-slate-300')
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                          selectedElement.overlayEnabled ? 'translate-x-5' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Overlay Controls Body */}
+                  <div className={`pt-4 space-y-4 transition-all ${
+                    selectedElement.overlayEnabled ? 'opacity-100' : 'opacity-40 pointer-events-none'
+                  }`}>
+                    {/* Color Row */}
+                    <div className="flex items-center justify-between">
+                      <span className={`text-xs font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                        Color
+                      </span>
+                      <div className="relative flex items-center">
+                        <label
+                          className="w-7 h-7 rounded-[4px] border border-black/15 shadow-sm cursor-pointer block relative transition-transform hover:scale-105"
+                          style={{ backgroundColor: selectedElement.overlayColor || '#ea580c' }}
+                        >
+                          <input
+                            type="color"
+                            value={selectedElement.overlayColor || '#ea580c'}
+                            onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayColor: e.target.value })}
+                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                          />
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* Quick Swatch Presets */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {['#ea580c', '#3b82f6', '#10b981', '#6366f1', '#ec4899', '#f59e0b', '#000000', '#ffffff', '#0f172a'].map(c => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => updateElement(currentPageIndex, selectedElement.id, { overlayColor: c })}
+                          className={`w-4 h-4 rounded-full border transition-transform hover:scale-110 ${
+                            (selectedElement.overlayColor || '#ea580c').toLowerCase() === c.toLowerCase() ? 'ring-2 ring-blue-500 ring-offset-1 border-white' : 'border-black/10'
+                          }`}
+                          style={{ backgroundColor: c }}
+                          title={c}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Opacity Row */}
+                    <div className="flex items-center gap-3">
+                      <span className={`text-xs font-medium w-14 shrink-0 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
+                        Opacity
+                      </span>
+                      <div className="flex-1 relative flex items-center">
+                        <input
+                          type="range"
+                          min={0}
+                          max={100}
+                          value={selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22}
+                          onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { overlayOpacity: Number(e.target.value) })}
+                          className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-zinc-700"
+                        />
+                      </div>
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={selectedElement.overlayOpacity !== undefined ? selectedElement.overlayOpacity : 22}
+                        onChange={(e) => {
+                          const val = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                          updateElement(currentPageIndex, selectedElement.id, { overlayOpacity: val });
+                        }}
+                        className={`w-14 px-2 py-1 border rounded-[6px] text-center text-xs font-semibold outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 ${
+                          isDark ? 'bg-[#222] border-[#333] text-white' : 'bg-white border-slate-300 text-slate-800'
+                        }`}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Additional Image Styling Controls */}
+                <div className={`p-4 rounded-[12px] border space-y-3 ${
+                  isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-white border-slate-200/90 shadow-sm'
+                }`}>
+                  <div className="flex items-center justify-between">
+                    <span className={`text-xs font-semibold ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>Corner Radius</span>
+                    <span className="text-xs font-mono font-bold text-slate-500">{selectedElement.borderRadius || 0}px</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={60}
+                    value={selectedElement.borderRadius || 0}
+                    onChange={(e) => updateElement(currentPageIndex, selectedElement.id, { borderRadius: Number(e.target.value) })}
+                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer accent-blue-600 bg-slate-200 dark:bg-zinc-700"
+                  />
                 </div>
               </section>
             )}

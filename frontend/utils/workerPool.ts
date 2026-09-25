@@ -39,7 +39,8 @@ class WorkerPool {
     imageUrl: string,
     filters?: { brightness?: number; contrast?: number; saturation?: number; grayscale?: boolean; blur?: number },
     targetWidth?: number,
-    targetHeight?: number
+    targetHeight?: number,
+    overlay?: { enabled?: boolean; color?: string; opacity?: number }
   ): Promise<{ processedUrl: string; width: number; height: number }> {
     if (!this.worker) {
       return { processedUrl: imageUrl, width: targetWidth || 0, height: targetHeight || 0 };
@@ -69,6 +70,7 @@ class WorkerPool {
         type: 'PROCESS_IMAGE',
         imageUrl,
         filters,
+        overlay,
         targetWidth,
         targetHeight
       });
