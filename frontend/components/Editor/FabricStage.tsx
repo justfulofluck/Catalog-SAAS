@@ -609,19 +609,36 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
       }
     });
 
-    canvas.on('object:scaling', (e: any) => {
-      const obj = e.target as any;
-      if (obj) {
-        const objW = (obj.width || 0) * (obj.scaleX || 1);
-        const objH = (obj.height || 0) * (obj.scaleY || 1);
-        const isMulti = obj instanceof ActiveSelection || obj.type === 'ActiveSelection' || obj.type === 'activeSelection' || 'multiSelectionStacking' in obj;
-        setActiveDimensions({
-          x: Math.round(isMulti ? (obj.left || 0) - objW / 2 : (obj.left || 0)),
-          y: Math.round(isMulti ? (obj.top || 0) - objH / 2 : (obj.top || 0)),
-          w: Math.round(objW),
-          h: Math.round(objH),
-        });
+    const updateDimensionsTooltip = (obj: any) => {
+      if (!obj) return;
+      const isMulti = obj instanceof ActiveSelection || obj.type === 'ActiveSelection' || obj.type === 'activeSelection' || 'multiSelectionStacking' in obj;
+      const sx = Math.abs(obj.scaleX || 1);
+      const sy = Math.abs(obj.scaleY || 1);
+      const objW = (obj.width || 0) * sx;
+      const objH = (obj.height || 0) * sy;
+
+      let left = obj.left || 0;
+      let top = obj.top || 0;
+      if (isMulti || obj.originX === 'center') {
+        left = left - objW / 2;
       }
+      if (isMulti || obj.originY === 'center') {
+        top = top - objH / 2;
+      }
+      setActiveDimensions({
+        x: Math.round(left),
+        y: Math.round(top),
+        w: Math.round(objW),
+        h: Math.round(objH),
+      });
+    };
+
+    canvas.on('object:scaling', (e: any) => {
+      updateDimensionsTooltip(e.target);
+    });
+
+    canvas.on('object:resizing', (e: any) => {
+      updateDimensionsTooltip(e.target);
     });
 
     canvas.on('object:modified', (e: any) => {
@@ -1562,21 +1579,26 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             pointerEvents: 'none',
             zIndex: 10001,
             left: `${(activeDimensions.x + activeDimensions.w) * zoom + 12}px`,
-            top: `${(activeDimensions.y + activeDimensions.h / 2) * zoom}px`,
-            transform: 'translateY(-50%)',
-            backgroundColor: '#1e293b',
+            top: `${(activeDimensions.y + activeDimensions.h) * zoom + 12}px`,
+            backgroundColor: '#20232a',
             color: '#ffffff',
-            fontSize: '10px',
-            fontFamily: 'monospace',
+            fontSize: '11px',
+            fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
             fontWeight: 700,
-            padding: '3px 7px',
-            borderRadius: '6px',
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.3)',
-            border: '1px solid rgba(255,255,255,0.1)',
+            padding: '4px 9px',
+            borderRadius: '7px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+            border: '1px solid rgba(255,255,255,0.12)',
             whiteSpace: 'nowrap',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            userSelect: 'none',
+            letterSpacing: '0.02em',
           }}
         >
-          w: {activeDimensions.w} h: {activeDimensions.h}
+          <span>w: {activeDimensions.w}</span>
+          <span className="text-slate-400">h: {activeDimensions.h}</span>
         </div>
       )}
     </div>

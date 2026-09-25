@@ -35,12 +35,18 @@ export function renderCanvaCornerControl(
   left: number,
   top: number,
   _styleOverride: any,
-  _fabricObject: any
+  fabricObject: any
 ) {
   ctx.save();
   ctx.translate(left, top);
 
   const radius = (this.sizeX || CANVA_THEME.cornerSize) / 2;
+  const controlKey = (this as any).controlKey;
+  const isDraggingThis = !!controlKey && (
+    fabricObject?.canvas?._currentTransform?.corner === controlKey ||
+    (fabricObject?.canvas?._currentTransform?.target === fabricObject &&
+      fabricObject?.canvas?._currentTransform?.corner === controlKey)
+  );
 
   // Soft elevation shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
@@ -50,14 +56,23 @@ export function renderCanvaCornerControl(
 
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
 
-  // Subtle clean border for contrast against white backgrounds
-  ctx.shadowColor = 'transparent';
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
-  ctx.stroke();
+  if (isDraggingThis) {
+    // Active dragging node turns solid purple with clean white border (matching Screenshot 2)
+    ctx.fillStyle = CANVA_THEME.borderColor;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+    ctx.stroke();
+  }
 
   ctx.restore();
 }
@@ -342,7 +357,7 @@ export function renderCanvaMoveButton(
  * - No top mtr stick, no top/bottom middle handles
  */
 export function createCanvaControls(isTextbox: boolean = false): Record<string, Control> {
-  return {
+  const controls: Record<string, Control> = {
     // 4 Corner Circles
     tl: new Control({
       x: -0.5,
@@ -477,6 +492,12 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       touchSizeY: CANVA_THEME.actionButtonSize + 8,
     }),
   };
+
+  Object.entries(controls).forEach(([key, ctrl]) => {
+    (ctrl as any).controlKey = key;
+  });
+
+  return controls;
 }
 
 /**
