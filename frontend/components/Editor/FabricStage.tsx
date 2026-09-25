@@ -756,8 +756,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         } else if (el && el.type === 'image') {
           const newW = (obj.width || el.width || 0) * sx;
           const newH = (obj.height || el.height || 0) * sy;
-          updates.width = newW;
-          updates.height = newH;
+          updates.width = Math.round(newW);
+          updates.height = Math.round(newH);
+          if (obj.cropX !== undefined) updates.cropX = Math.round(obj.cropX);
+          if (obj.cropY !== undefined) updates.cropY = Math.round(obj.cropY);
+          if (obj.width !== undefined) updates.cropWidth = Math.round(obj.width);
+          if (obj.height !== undefined) updates.cropHeight = Math.round(obj.height);
         } else if (el && el.type === 'product-block') {
           const newW = (obj.width || el.width || 0) * sx;
           const newH = (obj.height || el.height || 0) * sy;
@@ -1115,7 +1119,11 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 el.overlayGradientStartColor !== (existingObj as any)._overlayGradientStartColor ||
                 el.overlayGradientEndColor !== (existingObj as any)._overlayGradientEndColor ||
                 el.overlayGradientStartOpacity !== (existingObj as any)._overlayGradientStartOpacity ||
-                el.overlayGradientEndOpacity !== (existingObj as any)._overlayGradientEndOpacity
+                el.overlayGradientEndOpacity !== (existingObj as any)._overlayGradientEndOpacity ||
+                (el.cropX !== undefined && el.cropX !== (existingObj as any).cropX) ||
+                (el.cropY !== undefined && el.cropY !== (existingObj as any).cropY) ||
+                (el.cropWidth !== undefined && el.cropWidth !== (existingObj as any).width) ||
+                (el.cropHeight !== undefined && el.cropHeight !== (existingObj as any).height)
               );
 
               if (isTableRebuild || isProductRebuild || isShapeRebuild || isImageRebuild) {
@@ -1203,6 +1211,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                     strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
                   });
                   if (!isActiveObj) {
+                    if (el.cropX !== undefined) existingObj.set('cropX', el.cropX);
+                    if (el.cropY !== undefined) existingObj.set('cropY', el.cropY);
+                    if (el.cropWidth !== undefined) existingObj.set('width', el.cropWidth);
+                    if (el.cropHeight !== undefined) existingObj.set('height', el.cropHeight);
                     const unscaledW = (existingObj as any).width || 1;
                     const unscaledH = (existingObj as any).height || 1;
                     existingObj.set({ scaleX: el.width / unscaledW, scaleY: el.height / unscaledH });

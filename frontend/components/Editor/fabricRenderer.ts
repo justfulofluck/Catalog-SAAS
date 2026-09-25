@@ -922,11 +922,20 @@ async function _elementToFabricObject(
           overlayGroupOpacity = (el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100;
         }
 
+        const cropX = el.cropX !== undefined ? el.cropX : 0;
+        const cropY = el.cropY !== undefined ? el.cropY : 0;
+        const cropW = el.cropWidth !== undefined ? el.cropWidth : naturalW;
+        const cropH = el.cropHeight !== undefined ? el.cropHeight : naturalH;
+
         const baseImg = new FabricImage(htmlImg, {
           left: 0,
           top: 0,
-          scaleX: el.width / naturalW,
-          scaleY: el.height / naturalH,
+          cropX,
+          cropY,
+          width: cropW,
+          height: cropH,
+          scaleX: el.width / cropW,
+          scaleY: el.height / cropH,
           selectable: false,
           evented: false,
         });
@@ -975,11 +984,19 @@ async function _elementToFabricObject(
         return group;
       }
 
-      const img = new FabricImage(htmlImg);
-      img.set({
+      const cropX = el.cropX !== undefined ? el.cropX : 0;
+      const cropY = el.cropY !== undefined ? el.cropY : 0;
+      const cropW = el.cropWidth !== undefined ? el.cropWidth : naturalW;
+      const cropH = el.cropHeight !== undefined ? el.cropHeight : naturalH;
+
+      const img = new FabricImage(htmlImg, {
         ...common,
-        scaleX: el.width / naturalW,
-        scaleY: el.height / naturalH,
+        cropX,
+        cropY,
+        width: cropW,
+        height: cropH,
+        scaleX: el.width / cropW,
+        scaleY: el.height / cropH,
         stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
         strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
       });
