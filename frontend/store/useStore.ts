@@ -245,10 +245,10 @@ interface State {
   alignElements: (pageIndex: number, ids: string[], type: 'left' | 'center' | 'right' | 'top' | 'middle' | 'bottom') => void;
   distributeElements: (pageIndex: number, ids: string[], direction: 'horizontal' | 'vertical') => void;
 
-  addPage: (type?: PageType) => void;
-  addInteriorPageWithInheritedLayout: () => void;
-  removePage: (index: number) => void;
-  duplicatePage: (index: number) => void;
+  addPage: (type?: PageType, insertAfterIndex?: number) => void;
+  addInteriorPageWithInheritedLayout: (insertAfterIndex?: number) => void;
+  removePage: (indexOrId: number | string) => void;
+  duplicatePage: (indexOrId: number | string) => void;
   reorderPages: (newPageIds: string[]) => void;
   setPageOrientation: (pageIndex: number, orientation: 'portrait' | 'landscape') => void;
   setCatalogOrientation: (orientation: 'portrait' | 'landscape') => void;
@@ -2728,7 +2728,7 @@ export const useStore = create<State>((set, get) => ({
     });
   },
 
-  addPage: (type: PageType = 'interior') => {
+  addPage: (type: PageType = 'interior', insertAfterIndex?: number) => {
     get().pushHistory();
     set((state) => {
       const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
@@ -2746,7 +2746,7 @@ export const useStore = create<State>((set, get) => ({
             rotation: 0,
             opacity: 1,
             ...el,
-            id: `page-el-${Date.now()}-${idx}`,
+            id: `page-el-${Date.now()}-${idx}-${Math.random().toString(36).substr(2, 5)}`,
             fontFamily: el.fontFamily || (el.type === 'text' ? (isHeading ? theme.headingFont : theme.fontFamily) : undefined),
             fill: el.fill || (el.type === 'text' ? (isHeading ? theme.headingColor : theme.bodyColor) : undefined)
           } as CanvasElement;
@@ -2754,22 +2754,32 @@ export const useStore = create<State>((set, get) => ({
       }
 
       const newPage: CatalogPage = {
-        id: `page-${Date.now()}`,
-        pageNumber: state.catalog.pages.length + 1,
+        id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        pageNumber: 1,
         elements,
         type,
         hasHeader: type !== 'cover' ? (state.catalog.hasHeader !== false && (state.catalog.headerElements?.length || 0) > 0) : false,
         hasFooter: type !== 'cover' ? (state.catalog.hasFooter !== false && (state.catalog.footerElements?.length || 0) > 0) : false,
         orientation: 'portrait'
       };
+
+      const newPages = [...state.catalog.pages];
+      const targetIndex = insertAfterIndex !== undefined
+        ? Math.min(Math.max(0, insertAfterIndex + 1), newPages.length)
+        : newPages.length;
+
+      newPages.splice(targetIndex, 0, newPage);
+      const renumberedPages = newPages.map((p, i) => ({ ...p, pageNumber: i + 1 }));
+
       return {
-        catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
-        currentPageIndex: state.catalog.pages.length
+        catalog: { ...state.catalog, pages: renumberedPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: targetIndex,
+        selectedElementIds: []
       };
     });
   },
 
-  addInteriorPageWithInheritedLayout: () => {
+  addInteriorPageWithInheritedLayout: (insertAfterIndex?: number) => {
     get().pushHistory();
     set((state) => {
       const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
@@ -2780,7 +2790,7 @@ export const useStore = create<State>((set, get) => ({
         slots.forEach((el, idx) => {
           inheritedElements.push({
             ...JSON.parse(JSON.stringify(el)),
-            id: `inherited-slot-${idx}-${Date.now()}`,
+            id: `inherited-slot-${idx}-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
             productId: undefined,
             src: undefined,
             text: el.type === 'text' ? (el.id.includes('txt-n') ? 'Product Name' : el.id.includes('txt-p') ? '$0.00' : el.text) : el.text
@@ -2788,8 +2798,8 @@ export const useStore = create<State>((set, get) => ({
         });
       }
       const newPage: CatalogPage = {
-        id: `page-inherited-${Date.now()}`,
-        pageNumber: state.catalog.pages.length + 1,
+        id: `page-inherited-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        pageNumber: 1,
         elements: inheritedElements,
         type: 'interior',
         hasHeader: state.catalog.hasHeader !== false && (state.catalog.headerElements?.length || 0) > 0,
@@ -2797,30 +2807,65 @@ export const useStore = create<State>((set, get) => ({
         categoryId: lastInteriorPage?.categoryId,
         orientation: 'portrait'
       };
+
+      const newPages = [...state.catalog.pages];
+      const targetIndex = insertAfterIndex !== undefined
+        ? Math.min(Math.max(0, insertAfterIndex + 1), newPages.length)
+        : newPages.length;
+
+      newPages.splice(targetIndex, 0, newPage);
+      const renumberedPages = newPages.map((p, i) => ({ ...p, pageNumber: i + 1 }));
+
       return {
-        catalog: { ...state.catalog, pages: [...state.catalog.pages, newPage], updatedAt: new Date().toISOString() },
-        currentPageIndex: state.catalog.pages.length
+        catalog: { ...state.catalog, pages: renumberedPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: targetIndex,
+        selectedElementIds: []
       };
     });
   },
 
-  removePage: (index) => {
+  removePage: (indexOrId) => {
     get().pushHistory();
     set((state) => {
       if (state.catalog.pages.length <= 1) return state;
+      let targetIndex: number;
+      if (typeof indexOrId === 'string') {
+        targetIndex = state.catalog.pages.findIndex(p => p.id === indexOrId);
+      } else {
+        targetIndex = indexOrId;
+      }
+      if (targetIndex < 0 || targetIndex >= state.catalog.pages.length) return state;
+
       const newPages = state.catalog.pages
-        .filter((_, i) => i !== index)
+        .filter((_, i) => i !== targetIndex)
         .map((p, i) => ({ ...p, pageNumber: i + 1 }));
+
+      let nextPageIndex = state.currentPageIndex;
+      if (state.currentPageIndex === targetIndex) {
+        nextPageIndex = Math.min(targetIndex, newPages.length - 1);
+      } else if (state.currentPageIndex > targetIndex) {
+        nextPageIndex = state.currentPageIndex - 1;
+      }
+      nextPageIndex = Math.max(0, Math.min(nextPageIndex, newPages.length - 1));
+
       return {
         catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
-        currentPageIndex: Math.min(Math.max(0, index), newPages.length - 1)
+        currentPageIndex: nextPageIndex,
+        selectedElementIds: []
       };
     });
   },
 
-  duplicatePage: (index) => {
+  duplicatePage: (indexOrId) => {
     const { catalog } = get();
     get().pushHistory();
+    let index: number;
+    if (typeof indexOrId === 'string') {
+      index = catalog.pages.findIndex(p => p.id === indexOrId);
+    } else {
+      index = indexOrId;
+    }
+    if (index === -1 || !catalog.pages[index]) return;
     const pageToDuplicate = catalog.pages[index];
     const newPage = JSON.parse(JSON.stringify(pageToDuplicate));
     newPage.id = `page-dup-${Date.now()}`;
@@ -2828,12 +2873,15 @@ export const useStore = create<State>((set, get) => ({
       ...el,
       id: `el-pdup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
     }));
-    const newPages = [...catalog.pages];
-    newPages.splice(index + 1, 0, newPage);
-    const renumberedPages = newPages.map((p, i) => ({ ...p, pageNumber: i + 1 }));
-    set({
-      catalog: { ...catalog, pages: renumberedPages, updatedAt: new Date().toISOString() },
-      currentPageIndex: index + 1
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      newPages.splice(index + 1, 0, newPage);
+      const renumberedPages = newPages.map((p, i) => ({ ...p, pageNumber: i + 1 }));
+      return {
+        catalog: { ...state.catalog, pages: renumberedPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: index + 1,
+        selectedElementIds: []
+      };
     });
   },
 

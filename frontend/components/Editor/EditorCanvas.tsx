@@ -1182,7 +1182,7 @@ const EditorCanvas: React.FC = () => {
               >
                 {/* Canva-style Contextual Top Bar for Page */}
                 <div
-                  className="relative z-10 flex items-center justify-between px-1 mb-1.5 transition-all select-none"
+                  className="relative z-[60] flex items-center justify-between px-1 mb-1.5 transition-all select-none pointer-events-auto"
                   style={{ width: curW * zoom }}
                 >
                   <div className="flex items-center gap-2">
@@ -1197,10 +1197,18 @@ const EditorCanvas: React.FC = () => {
                   </div>
 
                   {/* Contextual Action Pills */}
-                  <div className="flex items-center gap-1.5 bg-[#141416]/95 border border-[#E2DCC8]/20 backdrop-blur-md rounded-full px-2.5 py-1 shadow-lg">
+                  <div
+                    className="flex items-center gap-1.5 bg-[#141416]/95 border border-[#E2DCC8]/20 backdrop-blur-md rounded-full px-2.5 py-1 shadow-lg relative z-[60] pointer-events-auto"
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
                     {/* Page Background Color Swatch Button (Canva-style) */}
                     <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
                         openColorPicker({
                           type: 'background',
@@ -1208,7 +1216,7 @@ const EditorCanvas: React.FC = () => {
                           title: `Page ${pageIdx + 1} Background`
                         });
                       }}
-                      className="flex items-center gap-1.5 hover:opacity-85 transition-all group"
+                      className="flex items-center gap-1.5 hover:opacity-85 transition-all group cursor-pointer"
                       title="Change page background color"
                     >
                       <div
@@ -1220,29 +1228,36 @@ const EditorCanvas: React.FC = () => {
                       </span>
                     </button>
 
-
                     <div className="w-px h-3.5 bg-white/15 mx-0.5" />
 
                     {/* Quick duplicate */}
                     <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
-                        duplicatePage(pageIdx);
+                        duplicatePage(page.id);
                       }}
-                      className="p-1 text-white/70 hover:text-white transition-colors"
+                      className="p-1 text-white/70 hover:text-white transition-colors active:scale-95 cursor-pointer"
                       title="Duplicate Page"
                     >
                       <Copy size={13} />
                     </button>
 
-                    {/* Quick Add page */}
+                    {/* Quick Add page right next to current page */}
                     <button
+                      type="button"
+                      onMouseDown={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
                       onClick={(e) => {
+                        e.preventDefault();
                         e.stopPropagation();
-                        addPage('interior');
+                        addPage('interior', pageIdx);
                       }}
-                      className="p-1 text-white/70 hover:text-white transition-colors"
-                      title="Add Page"
+                      className="p-1 text-white/70 hover:text-white transition-colors active:scale-95 cursor-pointer"
+                      title="Add Page Next"
                     >
                       <Plus size={13} />
                     </button>
@@ -1250,11 +1265,15 @@ const EditorCanvas: React.FC = () => {
                     {/* Quick delete page if > 1 page */}
                     {catalog.pages.length > 1 && (
                       <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onPointerDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
+                          e.preventDefault();
                           e.stopPropagation();
-                          removePage(pageIdx);
+                          removePage(page.id);
                         }}
-                        className="p-1 text-white/70 hover:text-red-400 transition-colors"
+                        className="p-1 text-white/70 hover:text-red-400 hover:bg-red-500/20 rounded-[3px] transition-colors active:scale-95 cursor-pointer"
                         title="Delete Page"
                       >
                         <Trash2 size={13} />
