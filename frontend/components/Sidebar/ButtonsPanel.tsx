@@ -151,8 +151,9 @@ const ButtonsPanel: React.FC = () => {
     const isDark = uiTheme === 'dark';
     const [selectedCategory, setSelectedCategory] = useState<string>('all');
     const [searchQuery, setSearchQuery] = useState<string>('');
-    const [selectedStyle, setSelectedStyle] = useState<'solid-circle' | 'outline-circle' | 'solid-square' | 'outline-square' | 'rounded-square'>('solid-circle');
+    const [selectedStyle, setSelectedStyle] = useState<'transparent' | 'solid-circle' | 'outline-circle' | 'rounded-square' | 'solid-square' | 'outline-square' | 'pill'>('solid-circle');
     const [buttonColor, setButtonColor] = useState<string>('#0F3D3E');
+    const [buttonOpacity, setButtonOpacity] = useState<number>(100);
     const [buttonSize, setButtonSize] = useState<number>(48);
 
     // Optional Action / Link setup
@@ -179,28 +180,44 @@ const ButtonsPanel: React.FC = () => {
         let fill = buttonColor;
         let stroke = 'transparent';
         let strokeWidth = 0;
+        let iconColor = buttonColor;
 
-        if (selectedStyle === 'outline-circle') {
+        if (selectedStyle === 'transparent') {
+            shapeType = 'none';
+            fill = 'transparent';
+            stroke = 'transparent';
+            strokeWidth = 0;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : buttonColor;
+        } else if (selectedStyle === 'outline-circle') {
             shapeType = 'circle';
             fill = 'transparent';
             stroke = buttonColor;
             strokeWidth = 2.5;
+            iconColor = buttonColor;
         } else if (selectedStyle === 'solid-square') {
             shapeType = 'rect';
             fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
         } else if (selectedStyle === 'outline-square') {
             shapeType = 'rect';
             fill = 'transparent';
             stroke = buttonColor;
             strokeWidth = 2.5;
+            iconColor = buttonColor;
         } else if (selectedStyle === 'rounded-square') {
             shapeType = 'roundedRect';
             fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        } else if (selectedStyle === 'pill') {
+            shapeType = 'pill';
+            fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        } else {
+            // solid-circle
+            shapeType = 'circle';
+            fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
         }
-
-        const iconColor = (selectedStyle === 'outline-circle' || selectedStyle === 'outline-square')
-            ? buttonColor
-            : (buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF');
 
         // Automatically format link if specified
         let finalLinkUrl = targetLink.trim();
@@ -217,6 +234,8 @@ const ButtonsPanel: React.FC = () => {
             }
         }
 
+        const iconSize = selectedStyle === 'transparent' ? size * 0.75 : size * 0.48;
+
         const newElement: CanvasElement = {
             id,
             type: 'shape',
@@ -226,7 +245,7 @@ const ButtonsPanel: React.FC = () => {
             width: size,
             height: size,
             rotation: 0,
-            opacity: 1,
+            opacity: buttonOpacity / 100,
             fill,
             stroke,
             strokeWidth,
@@ -237,7 +256,7 @@ const ButtonsPanel: React.FC = () => {
                 iconName: icon.unicode,
                 iconLibrary: 'fontawesome',
                 color: iconColor,
-                size: size * 0.48,
+                size: iconSize,
                 fontWeight: icon.library === 'brands' ? '400' : '900',
                 fontFamily: icon.library === 'brands' ? 'Font Awesome 6 Brands' : 'Font Awesome 6 Free',
                 linkUrl: finalLinkUrl || undefined,
@@ -317,42 +336,81 @@ const ButtonsPanel: React.FC = () => {
 
                 {/* Shape & Style Selector */}
                 <div>
-                    <span className={`block text-[9px] font-bold uppercase tracking-wider mb-1.5 ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Button Shape & Style</span>
+                    <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Button Shape & Style</span>
+                        <span className={`text-[10px] font-medium capitalize ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
+                            {selectedStyle === 'transparent' ? 'Icon Only (Transparent)' : selectedStyle.replace('-', ' ')}
+                        </span>
+                    </div>
                     <div className={`flex border rounded-[4px] overflow-hidden h-9 ${isDark ? 'border-[#262626] bg-[#121212]' : 'border-slate-200 bg-slate-50'}`}>
+                        {/* 1. Transparent / Icon Only */}
                         <button
+                            type="button"
+                            onClick={() => setSelectedStyle('transparent')}
+                            className={`flex-1 flex flex-col items-center justify-center transition-all ${selectedStyle === 'transparent' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
+                            title="Icon Only (Transparent - No Background)"
+                        >
+                            <span className="text-[10px] font-black uppercase tracking-tight">None</span>
+                        </button>
+
+                        {/* 2. Solid Circle */}
+                        <button
+                            type="button"
                             onClick={() => setSelectedStyle('solid-circle')}
-                            className={`flex-1 flex items-center justify-center transition-all ${selectedStyle === 'solid-circle' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
+                            className={`flex-1 flex items-center justify-center border-l transition-all ${isDark ? 'border-[#262626]' : 'border-slate-200'} ${selectedStyle === 'solid-circle' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
                             title="Solid Circle"
                         >
                             <div className="w-3.5 h-3.5 rounded-full bg-current" />
                         </button>
+
+                        {/* 3. Outline Circle */}
                         <button
+                            type="button"
                             onClick={() => setSelectedStyle('outline-circle')}
                             className={`flex-1 flex items-center justify-center border-l transition-all ${isDark ? 'border-[#262626]' : 'border-slate-200'} ${selectedStyle === 'outline-circle' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
                             title="Outline Circle"
                         >
                             <div className="w-3.5 h-3.5 rounded-full border-2 border-current" />
                         </button>
+
+                        {/* 4. Rounded Square */}
                         <button
+                            type="button"
                             onClick={() => setSelectedStyle('rounded-square')}
                             className={`flex-1 flex items-center justify-center border-l transition-all ${isDark ? 'border-[#262626]' : 'border-slate-200'} ${selectedStyle === 'rounded-square' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
                             title="Rounded Square"
                         >
                             <div className="w-3.5 h-3.5 rounded-[4px] bg-current" />
                         </button>
+
+                        {/* 5. Solid Square */}
                         <button
+                            type="button"
                             onClick={() => setSelectedStyle('solid-square')}
                             className={`flex-1 flex items-center justify-center border-l transition-all ${isDark ? 'border-[#262626]' : 'border-slate-200'} ${selectedStyle === 'solid-square' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
                             title="Solid Square"
                         >
                             <div className="w-3.5 h-3.5 rounded-[1px] bg-current" />
                         </button>
+
+                        {/* 6. Outline Square */}
                         <button
+                            type="button"
                             onClick={() => setSelectedStyle('outline-square')}
                             className={`flex-1 flex items-center justify-center border-l transition-all ${isDark ? 'border-[#262626]' : 'border-slate-200'} ${selectedStyle === 'outline-square' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
                             title="Outline Square"
                         >
                             <div className="w-3.5 h-3.5 rounded-[1px] border-2 border-current" />
+                        </button>
+
+                        {/* 7. Pill */}
+                        <button
+                            type="button"
+                            onClick={() => setSelectedStyle('pill')}
+                            className={`flex-1 flex items-center justify-center border-l transition-all ${isDark ? 'border-[#262626]' : 'border-slate-200'} ${selectedStyle === 'pill' ? 'bg-[#0F3D3E] text-white' : (isDark ? 'text-[#888] hover:bg-[#1a1a1a] hover:text-white' : 'text-slate-400 hover:bg-slate-100 hover:text-slate-800')}`}
+                            title="Pill Shape"
+                        >
+                            <div className="w-4 h-2.5 rounded-full bg-current" />
                         </button>
                     </div>
                 </div>
@@ -360,13 +418,16 @@ const ButtonsPanel: React.FC = () => {
                 {/* Color Palette & Custom Picker */}
                 <div>
                     <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Button Color</span>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
+                            {selectedStyle === 'transparent' ? 'Icon Color' : 'Button / Icon Color'}
+                        </span>
                         <span className={`text-[10px] font-mono ${isDark ? 'text-[#aaa]' : 'text-slate-600'}`}>{buttonColor}</span>
                     </div>
                     <div className="flex items-center gap-1.5 flex-wrap">
                         {COLOR_PRESETS.map(preset => (
                             <button
                                 key={preset.name}
+                                type="button"
                                 onClick={() => setButtonColor(preset.color)}
                                 className={`w-6 h-6 rounded-[3px] border transition-all ${
                                     buttonColor.toLowerCase() === preset.color.toLowerCase()
@@ -384,7 +445,7 @@ const ButtonsPanel: React.FC = () => {
                             <span className="text-[10px] font-bold text-slate-400">+</span>
                             <input
                                 type="color"
-                                value={buttonColor}
+                                value={buttonColor === 'transparent' ? '#0F3D3E' : buttonColor}
                                 onChange={(e) => setButtonColor(e.target.value)}
                                 className="opacity-0 absolute inset-0 cursor-pointer w-full h-full"
                             />
@@ -392,20 +453,44 @@ const ButtonsPanel: React.FC = () => {
                     </div>
                 </div>
 
+                {/* Opacity / Transparency Slider */}
+                <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Transparency / Opacity</span>
+                        <span className="text-[10px] font-mono text-slate-400">{buttonOpacity}%</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="range"
+                            min={10}
+                            max={100}
+                            step={5}
+                            value={buttonOpacity}
+                            onChange={(e) => setButtonOpacity(Number(e.target.value))}
+                            className="flex-1 h-1.5 rounded-lg appearance-none cursor-pointer accent-[#0F3D3E] bg-slate-200 dark:bg-zinc-700"
+                        />
+                        <span className={`text-[10px] font-mono w-8 text-right ${isDark ? 'text-slate-300' : 'text-slate-700'}`}>
+                            {buttonOpacity}%
+                        </span>
+                    </div>
+                </div>
+
                 {/* Button Size Preset */}
                 <div>
                     <div className="flex items-center justify-between mb-1.5">
-                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Button Size</span>
+                        <span className={`text-[9px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Size</span>
                         <span className="text-[10px] text-slate-400">{buttonSize}px</span>
                     </div>
-                    <div className="grid grid-cols-3 gap-1.5">
+                    <div className="grid grid-cols-4 gap-1.5">
                         {[
-                            { label: 'Small', size: 36 },
+                            { label: 'XS', size: 32 },
+                            { label: 'Small', size: 40 },
                             { label: 'Medium', size: 48 },
                             { label: 'Large', size: 60 }
                         ].map(s => (
                             <button
                                 key={s.size}
+                                type="button"
                                 onClick={() => setButtonSize(s.size)}
                                 className={`py-1 text-[10px] font-semibold rounded-[4px] border transition-all ${
                                     buttonSize === s.size

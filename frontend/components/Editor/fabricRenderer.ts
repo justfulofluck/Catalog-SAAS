@@ -1,4 +1,4 @@
-import { Rect, Textbox, Image as FabricImage, Circle, Polygon, Line, Group, Shadow, Gradient, filters, config } from 'fabric';
+import { Rect, Textbox, FabricText, Image as FabricImage, Circle, Polygon, Line, Group, Shadow, Gradient, filters, config } from 'fabric';
 import { CanvasElement, ElementType, Product, Catalog } from '../../types';
 import { workerPool } from '../../utils/workerPool';
 import { useStore } from '../../store/useStore';
@@ -531,6 +531,8 @@ export function buildShape(
   const shapeProps: Record<string, any> = { stroke, strokeWidth };
 
   switch (shapeType) {
+    case 'none':
+      return null;
     case 'rect':
       return new Rect({ ...shapeProps, width: w, height: h, fill: fillColor });
     case 'roundedRect': {
@@ -1011,18 +1013,54 @@ async function _elementToFabricObject(
 
     if (el.iconConfig) {
       const ic = el.iconConfig;
-      const iconSize = ic.size || (Math.min(w, h) * 0.5);
-      const children: any[] = [];
-      const shapeObj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill);
-      if (shapeObj) children.push(shapeObj);
+      const isTransparentBg = shapeType === 'none' || (!el.fill || el.fill === 'transparent' || el.fill === 'none') && (!strokeColor || strokeColor === 'transparent' || strokeWidth === 0);
+      const iconSize = ic.size || (isTransparentBg ? Math.min(w, h) * 0.75 : Math.min(w, h) * 0.5);
       const iconFontFamily = (ic as any).fontFamily || (ic.iconLibrary === 'fontawesome' ? 'Font Awesome 6 Free' : 'Inter');
       const iconFontWeight = (ic as any).fontWeight || ('900' as any);
-      children.push(new Textbox(ic.iconName, {
-        left: 0, top: Math.max(0, (h - iconSize * 1.15) / 2), width: w, height: h,
-        fontSize: iconSize, fontFamily: iconFontFamily,
-        fill: ic.color || '#ffffff', textAlign: 'center', text: ic.iconName,
-        fontWeight: iconFontWeight, selectable: false, evented: false,
-      }));
+
+      const children: any[] = [];
+      if (!isTransparentBg && shapeType !== 'none') {
+        const shapeObj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill);
+        if (shapeObj) {
+          shapeObj.set({
+            originX: 'center',
+            originY: 'center',
+            left: 0,
+            top: 0
+          });
+          children.push(shapeObj);
+        }
+      } else {
+        // Invisible hit target to ensure smooth click/drag selection on canvas
+        const hitTarget = new Rect({
+          width: w,
+          height: h,
+          fill: 'rgba(0,0,0,0.001)',
+          stroke: 'transparent',
+          strokeWidth: 0,
+          originX: 'center',
+          originY: 'center',
+          left: 0,
+          top: 0
+        });
+        children.push(hitTarget);
+      }
+
+      const iconText = new FabricText(ic.iconName, {
+        originX: 'center',
+        originY: 'center',
+        left: 0,
+        top: 0,
+        fontSize: iconSize,
+        fontFamily: iconFontFamily,
+        fill: ic.color || '#ffffff',
+        fontWeight: iconFontWeight,
+        textAlign: 'center',
+        selectable: false,
+        evented: false,
+      });
+      children.push(iconText);
+
       const group = new Group(children, {
         left: el.x,
         top: el.y,
@@ -1032,6 +1070,7 @@ async function _elementToFabricObject(
         opacity: el.opacity ?? 1,
       });
       (group as any).id = el.id;
+      applyCanvaSelectionStyle(group);
       return group;
     }
 

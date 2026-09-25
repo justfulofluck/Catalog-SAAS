@@ -127,7 +127,9 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
         };
 
         ctx.fillStyle = getCanvasFill();
-        if (el.shapeType === 'circle') {
+        if (el.shapeType === 'none' || el.fill === 'transparent') {
+          // Transparent / Icon only - do not draw background fill
+        } else if (el.shapeType === 'circle') {
           const r = Math.min(el.width, el.height) / 2;
           ctx.beginPath();
           ctx.arc(r, r, r, 0, Math.PI * 2);
