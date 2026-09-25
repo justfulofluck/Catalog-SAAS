@@ -25,40 +25,37 @@ const getPageSectionsSummary = (page: CatalogPage | undefined): PageSectionSumma
   if (!page || !page.elements || page.elements.length === 0) return [];
   if (page.type === 'cover' || page.type === 'index' || page.type === 'closing') return [];
 
-  const titles = page.elements.filter(el => el.type === 'text' && (el.fontSize || 0) >= 16);
   const tables = page.elements.filter(el => el.type === 'table' && el.tableData);
-  const shapes = page.elements.filter(el => el.type === 'shape' && (el.width || 0) >= 500);
+  // Only pages with actual product tables/grid sections have sections
+  if (tables.length === 0) return [];
 
-  if (titles.length < 1 && tables.length < 1) return [];
-
-  if (titles.length > 0) {
-    const sortedTitles = [...titles].sort((a, b) => a.y - b.y);
-    return sortedTitles.map((t, idx) => {
-      const nearestTable = tables.find(tbl => Math.abs(tbl.y - t.y) < 180);
-      const nearestShape = shapes.find(s => Math.abs(s.y - t.y) < 180);
-      const minY = Math.min(t.y, nearestShape ? nearestShape.y : t.y);
-      const maxY = Math.max(
-        t.y + (t.height || 30),
-        nearestTable ? nearestTable.y + (nearestTable.height || 60) : t.y + 100,
-        nearestShape ? nearestShape.y + (nearestShape.height || 120) : t.y + 100
-      );
-
-      return {
-        index: idx,
-        y: minY,
-        height: Math.max(80, maxY - minY),
-        title: t.text?.replace(/<[^>]*>/g, '') || `Section ${idx + 1}`
-      };
-    });
-  }
+  const titles = page.elements.filter(el => el.type === 'text' && (el.fontSize || 0) >= 14);
+  const shapes = page.elements.filter(el => el.type === 'shape' && (el.width || 0) >= 400);
 
   const sortedTables = [...tables].sort((a, b) => a.y - b.y);
-  return sortedTables.map((tbl, idx) => ({
-    index: idx,
-    y: Math.max(0, tbl.y - 30),
-    height: Math.max(80, (tbl.height || 80) + 40),
-    title: `Section ${idx + 1}`
-  }));
+  return sortedTables.map((tbl, idx) => {
+    const titleCandidates = titles.filter(t => t.y <= tbl.y + 40 && Math.abs(tbl.y - t.y) < 220);
+    const nearestTitle = titleCandidates.sort((a, b) => Math.abs(tbl.y - a.y) - Math.abs(tbl.y - b.y))[0];
+    const nearestShape = shapes.find(s => Math.abs(s.y - tbl.y) < 180);
+
+    const minY = Math.min(
+      tbl.y,
+      nearestTitle ? nearestTitle.y : tbl.y,
+      nearestShape ? nearestShape.y : tbl.y
+    );
+    const maxY = Math.max(
+      tbl.y + (tbl.height || 60),
+      nearestTitle ? nearestTitle.y + (nearestTitle.height || 30) : tbl.y,
+      nearestShape ? nearestShape.y + (nearestShape.height || 120) : tbl.y
+    );
+
+    return {
+      index: idx,
+      y: minY,
+      height: Math.max(80, maxY - minY),
+      title: nearestTitle?.text?.replace(/<[^>]*>/g, '') || `Section ${idx + 1}`
+    };
+  });
 };
 
 const EditorCanvas: React.FC = () => {
@@ -73,7 +70,7 @@ const EditorCanvas: React.FC = () => {
     isGridStudioOpen, gridStudioPageIndex, setIsGridStudioOpen,
     applyProductGridToPage, reflowCatalogPages,
     swapPageSections, deletePageSection,
-    setEditorTab, setSidebarExpanded,
+    editorTab, setEditorTab, setSidebarExpanded,
     addPage, setCurrentPageIndex, guides, activeDragPosition,
     isProjectSettingsOpen, setIsProjectSettingsOpen, updateProjectSettings,
     setSelectedPageIndex, setSelectedCategoryId,
@@ -1617,8 +1614,8 @@ const EditorCanvas: React.FC = () => {
                   )
                   }
 
-                  {/* Right-Side Floating Section Quick-Action Docks (for interior/product pages) */}
-                  {isActive && (page.type === 'interior' || (page.type !== 'cover' && page.type !== 'index' && page.type !== 'closing')) && (() => {
+                  {/* Right-Side Floating Section Quick-Action Docks (only shown when Grid Studio is active for product grid pages) */}
+                  {isActive && editorTab === 'grid-studio' && (page.type === 'interior' || (page.type !== 'cover' && page.type !== 'index' && page.type !== 'closing')) && (() => {
                     const sectionsSummary = getPageSectionsSummary(page);
                     if (sectionsSummary.length < 1) return null;
 
