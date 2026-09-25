@@ -78,93 +78,25 @@ export function renderCanvaCornerControl(
 }
 
 /**
- * Action handler for cropping images via the 4 side pill handles (ml, mr, mt, mb).
- * Clips / crops the visible image viewport without squishing, stretching or distorting pixels (Canva Screenshot 5).
+ * Action handler for changing object height (mt, mb) for non-destructive frame cropping.
  */
-export function createImageCropActionHandler(side: 'ml' | 'mr' | 'mt' | 'mb') {
-  return function (eventData: MouseEvent, transform: any, x: number, y: number): boolean {
-    const target = transform.target;
-    if (!target) return false;
-
-    const naturalW = target._element?.naturalWidth || target.naturalWidth || target.width || 1000;
-    const naturalH = target._element?.naturalHeight || target.naturalHeight || target.height || 1000;
-
-    const oldW = target.width || naturalW;
-    const oldH = target.height || naturalH;
-    const oldCropX = target.cropX || 0;
-    const oldCropY = target.cropY || 0;
-
-    // Transform mouse canvas coordinate into unrotated local object coordinate space
-    const localPoint = target.toLocalPoint
-      ? target.toLocalPoint(new Point(x, y), 'center', 'center')
-      : new Point(0, 0);
-
-    if (side === 'mr') {
-      // Right handle: Left edge is fixed anchor ('left', 'center')
-      const anchorWorld = target.getPointByOrigin('left', 'center');
-      let newW = localPoint.x + oldW / 2;
-      const maxW = naturalW - oldCropX;
-      newW = Math.max(15, Math.min(newW, maxW));
-
-      target.set('width', Math.round(newW));
-      target.setPositionByOrigin(anchorWorld, 'left', 'center');
-    } else if (side === 'ml') {
-      // Left handle: Right edge is fixed anchor ('right', 'center')
-      const anchorWorld = target.getPointByOrigin('right', 'center');
-      let newW = (oldW / 2) - localPoint.x;
-      newW = Math.max(15, newW);
-      const delta = oldW - newW;
-      let newCropX = oldCropX + delta;
-      if (newCropX < 0) {
-        newW = oldW + oldCropX;
-        newCropX = 0;
-      }
-      if (newCropX + newW > naturalW) {
-        newCropX = naturalW - newW;
-      }
-
-      target.set({
-        width: Math.round(newW),
-        cropX: Math.round(Math.max(0, newCropX))
-      });
-      target.setPositionByOrigin(anchorWorld, 'right', 'center');
-    } else if (side === 'mb') {
-      // Bottom handle: Top edge is fixed anchor ('center', 'top')
-      const anchorWorld = target.getPointByOrigin('center', 'top');
-      let newH = localPoint.y + oldH / 2;
-      const maxH = naturalH - oldCropY;
-      newH = Math.max(15, Math.min(newH, maxH));
-
-      target.set('height', Math.round(newH));
-      target.setPositionByOrigin(anchorWorld, 'center', 'top');
-    } else if (side === 'mt') {
-      // Top handle: Bottom edge is fixed anchor ('center', 'bottom')
-      const anchorWorld = target.getPointByOrigin('center', 'bottom');
-      let newH = (oldH / 2) - localPoint.y;
-      newH = Math.max(15, newH);
-      const delta = oldH - newH;
-      let newCropY = oldCropY + delta;
-      if (newCropY < 0) {
-        newH = oldH + oldCropY;
-        newCropY = 0;
-      }
-      if (newCropY + newH > naturalH) {
-        newCropY = naturalH - newH;
-      }
-
-      target.set({
-        height: Math.round(newH),
-        cropY: Math.round(Math.max(0, newCropY))
-      });
-      target.setPositionByOrigin(anchorWorld, 'center', 'bottom');
-    }
-
+export function changeObjectHeight(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+  if (typeof (controlsUtils as any).changeHeight === 'function') {
+    return (controlsUtils as any).changeHeight(eventData, transform, x, y);
+  }
+  const localPoint = controlsUtils.getLocalPoint
+    ? controlsUtils.getLocalPoint(transform, transform.originX, transform.originY, x, y)
+    : target.toLocalPoint(new Point(x, y), transform.originX, transform.originY);
+  const newHeight = Math.max(15, Math.abs(localPoint.y));
+  if (Math.round(target.height) !== Math.round(newHeight)) {
+    target.set('height', Math.round(newHeight));
     target.setCoords();
-    if (target.canvas) {
-      target.canvas.requestRenderAll();
-    }
+    if (target.canvas) target.canvas.requestRenderAll();
     return true;
-  };
+  }
+  return false;
 }
 
 /**
@@ -524,18 +456,14 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       touchSizeY: 24,
     }),
 
-    // Side Pill Handles (Width Resizing for Text, Cropping for Images, Scaling for others)
+    // Side Pill Handles (Width Resizing for Text & Images, Scaling for others)
     ml: new Control({
       x: -0.5,
       y: 0,
-      actionHandler: isImage
-        ? createImageCropActionHandler('ml')
-        : isTextbox
-          ? controlsUtils.changeWidth
-          : controlsUtils.scalingXOrSkewingY,
+      actionHandler: (isTextbox || isImage) ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'crop' : isTextbox ? 'resizing' : undefined,
-      getActionName: isImage ? () => 'crop' : isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+      actionName: (isTextbox || isImage) ? 'resizing' : undefined,
+      getActionName: (isTextbox || isImage) ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -545,14 +473,10 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
     mr: new Control({
       x: 0.5,
       y: 0,
-      actionHandler: isImage
-        ? createImageCropActionHandler('mr')
-        : isTextbox
-          ? controlsUtils.changeWidth
-          : controlsUtils.scalingXOrSkewingY,
+      actionHandler: (isTextbox || isImage) ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'crop' : isTextbox ? 'resizing' : undefined,
-      getActionName: isImage ? () => 'crop' : isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+      actionName: (isTextbox || isImage) ? 'resizing' : undefined,
+      getActionName: (isTextbox || isImage) ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -560,16 +484,16 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       touchSizeY: 28,
     }),
 
-    // Top & Bottom Horizontal Pill Handles (Height Resizing & Expansion / Cropping for Images)
+    // Top & Bottom Horizontal Pill Handles (Height Resizing for Images, Scaling for others)
     mt: new Control({
       x: 0,
       y: -0.5,
       actionHandler: isImage
-        ? createImageCropActionHandler('mt')
+        ? changeObjectHeight
         : controlsUtils.scalingYOrSkewingX,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'crop' : undefined,
-      getActionName: isImage ? () => 'crop' : controlsUtils.scaleOrSkewActionName,
+      actionName: isImage ? 'resizing' : undefined,
+      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaTopBottomPillControl,
       sizeX: CANVA_THEME.topPillWidth + 4,
       sizeY: CANVA_THEME.topPillHeight + 4,
@@ -580,11 +504,11 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0,
       y: 0.5,
       actionHandler: isImage
-        ? createImageCropActionHandler('mb')
+        ? changeObjectHeight
         : controlsUtils.scalingYOrSkewingX,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'crop' : undefined,
-      getActionName: isImage ? () => 'crop' : controlsUtils.scaleOrSkewActionName,
+      actionName: isImage ? 'resizing' : undefined,
+      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaTopBottomPillControl,
       sizeX: CANVA_THEME.topPillWidth + 4,
       sizeY: CANVA_THEME.topPillHeight + 4,

@@ -922,23 +922,33 @@ async function _elementToFabricObject(
           overlayGroupOpacity = (el.overlayOpacity !== undefined ? el.overlayOpacity : 22) / 100;
         }
 
-        const cropX = el.cropX !== undefined ? el.cropX : 0;
-        const cropY = el.cropY !== undefined ? el.cropY : 0;
-        const cropW = el.cropWidth !== undefined ? el.cropWidth : naturalW;
-        const cropH = el.cropHeight !== undefined ? el.cropHeight : naturalH;
-
         const baseImg = new FabricImage(htmlImg, {
           left: 0,
           top: 0,
-          cropX,
-          cropY,
-          width: cropW,
-          height: cropH,
-          scaleX: el.width / cropW,
-          scaleY: el.height / cropH,
+          width: el.width,
+          height: el.height,
+          scaleX: 1,
+          scaleY: 1,
           selectable: false,
           evented: false,
         });
+
+        baseImg._render = function (ctx: CanvasRenderingContext2D) {
+          const imageElement = (this as any)._element;
+          if (!imageElement) return;
+          const nw = imageElement.naturalWidth || imageElement.width || 1;
+          const nh = imageElement.naturalHeight || imageElement.height || 1;
+          const w = (this as any).width || 1;
+          const h = (this as any).height || 1;
+
+          const scale = Math.max(w / nw, h / nh);
+          const sw = Math.min(nw, w / scale);
+          const sh = Math.min(nh, h / scale);
+          const sx = Math.max(0, (nw - sw) / 2);
+          const sy = Math.max(0, (nh - sh) / 2);
+
+          ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+        };
 
         if (fabricFilters.length > 0) {
           (baseImg as any).filters = fabricFilters;
@@ -984,22 +994,32 @@ async function _elementToFabricObject(
         return group;
       }
 
-      const cropX = el.cropX !== undefined ? el.cropX : 0;
-      const cropY = el.cropY !== undefined ? el.cropY : 0;
-      const cropW = el.cropWidth !== undefined ? el.cropWidth : naturalW;
-      const cropH = el.cropHeight !== undefined ? el.cropHeight : naturalH;
-
       const img = new FabricImage(htmlImg, {
         ...common,
-        cropX,
-        cropY,
-        width: cropW,
-        height: cropH,
-        scaleX: el.width / cropW,
-        scaleY: el.height / cropH,
+        width: el.width,
+        height: el.height,
+        scaleX: 1,
+        scaleY: 1,
         stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
         strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
       });
+
+      img._render = function (ctx: CanvasRenderingContext2D) {
+        const imageElement = (this as any)._element;
+        if (!imageElement) return;
+        const nw = imageElement.naturalWidth || imageElement.width || 1;
+        const nh = imageElement.naturalHeight || imageElement.height || 1;
+        const w = (this as any).width || 1;
+        const h = (this as any).height || 1;
+
+        const scale = Math.max(w / nw, h / nh);
+        const sw = Math.min(nw, w / scale);
+        const sh = Math.min(nh, h / scale);
+        const sx = Math.max(0, (nw - sw) / 2);
+        const sy = Math.max(0, (nh - sh) / 2);
+
+        ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+      };
 
       if (fabricFilters.length > 0) {
         (img as any).filters = fabricFilters;
