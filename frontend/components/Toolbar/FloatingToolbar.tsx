@@ -22,6 +22,7 @@ import {
   RotateCcw,
   X,
   Layers,
+  Crop as CropIcon,
   Image as ImageIcon,
   ArrowRight,
   ArrowLeft,
@@ -282,6 +283,21 @@ const FloatingToolbar: React.FC<Props> = ({
           }}
         >
           <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: activeFill }} />
+        </button>
+      )}
+
+      {/* Image Crop Button */}
+      {element.type === 'image' && (
+        <button
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-[11px] font-bold tracking-tight text-[#E2DCC8]/90 hover:text-white bg-[#0F3D3E]/40 hover:bg-[#0F3D3E]/60 border border-[#E2DCC8]/20 transition-all active:scale-95"
+          title="Crop Image (Double click on image or click here)"
+          onClick={(e) => {
+            e.stopPropagation();
+            useStore.getState().startCropMode(element.id);
+          }}
+        >
+          <CropIcon size={14} strokeWidth={2.2} />
+          <span>Crop</span>
         </button>
       )}
 

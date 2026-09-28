@@ -58,6 +58,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   const products = useStore((state) => state.products);
   const categories = useStore((state) => state.categories);
   const user = useStore((state) => state.user);
+  const activeCropElementId = useStore((state) => state.activeCropElementId);
 
   // Keep latest page, pageIdx and isActive in refs so event listener closures never access stale props
   const pageRef = useRef(page);
@@ -75,6 +76,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
   // Artboard bleed padding: allows selection outline, handles, and elements to extend freely outside the sheet into the workspace
   const CANVAS_PAD_X = 500;
   const CANVAS_PAD_Y = 80;
+
+  useEffect(() => {
+    if (activeCropElementId && fabricCanvasRef.current) {
+      fabricCanvasRef.current.discardActiveObject();
+      fabricCanvasRef.current.requestRenderAll();
+    }
+  }, [activeCropElementId]);
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -365,7 +373,9 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         }
 
         // Regular text elements — open inline text editor
-        if (el.type === 'text') {
+        if (el.type === 'image') {
+          useStore.getState().startCropMode(el.id);
+        } else if (el.type === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'product-block') {
           window.dispatchEvent(new CustomEvent('catalog:editProductCard', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
@@ -758,6 +768,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const newH = Math.round((obj.height || el.height || 0) * sy);
           updates.width = newW;
           updates.height = newH;
+          if (obj.cropX !== undefined) updates.cropX = Math.round(obj.cropX);
+          if (obj.cropY !== undefined) updates.cropY = Math.round(obj.cropY);
+          if (obj.cropWidth !== undefined) updates.cropWidth = Math.round(obj.cropWidth);
+          if (obj.cropHeight !== undefined) updates.cropHeight = Math.round(obj.cropHeight);
+          if (obj.naturalWidth !== undefined) updates.naturalWidth = obj.naturalWidth;
+          if (obj.naturalHeight !== undefined) updates.naturalHeight = obj.naturalHeight;
+          delete obj._cropTransformStart;
           obj.set({
             width: newW,
             height: newH,
@@ -1114,6 +1131,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
               const isShapeRebuild = (el.type === 'shape' || el.type === 'comment') && needsRebuild(el, existingObj);
               const isImageRebuild = el.type === 'image' && (
                 el.src !== (existingObj as any)._src ||
+                el.cropX !== (existingObj as any).cropX ||
+                el.cropY !== (existingObj as any).cropY ||
+                el.cropWidth !== (existingObj as any).cropWidth ||
+                el.cropHeight !== (existingObj as any).cropHeight ||
                 Boolean(el.overlayEnabled) !== Boolean((existingObj as any)._overlayEnabled) ||
                 el.overlayType !== (existingObj as any)._overlayType ||
                 el.overlayColor !== (existingObj as any)._overlayColor ||
@@ -1122,7 +1143,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 el.overlayGradientStartColor !== (existingObj as any)._overlayGradientStartColor ||
                 el.overlayGradientEndColor !== (existingObj as any)._overlayGradientEndColor ||
                 el.overlayGradientStartOpacity !== (existingObj as any)._overlayGradientStartOpacity ||
-                el.overlayGradientEndOpacity !== (existingObj as any)._overlayGradientEndOpacity
+                el.overlayGradientEndOpacity !== (existingObj as any)._overlayGradientEndOpacity ||
+                (existingObj as any)._wasCropActive === true
               );
 
               if (isTableRebuild || isProductRebuild || isShapeRebuild || isImageRebuild) {
@@ -1131,7 +1153,10 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 }
                 canvas.remove(existingObj);
               } else {
-                const isCurrentlyEditing = isActive && el.id === editingId;
+                const isCurrentlyEditing = isActive && (el.id === editingId || el.id === activeCropElementId);
+                if (isCurrentlyEditing && el.type === 'image') {
+                  (existingObj as any)._wasCropActive = true;
+                }
                 existingObj.set({
                   opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
                   visible: isCurrentlyEditing ? false : (el.visible !== false),
@@ -1208,9 +1233,39 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                   existingObj.set({
                     stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
                     strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+                    objectCaching: false,
                   });
+                  (existingObj as any).cropX = el.cropX;
+                  (existingObj as any).cropY = el.cropY;
+                  (existingObj as any).cropWidth = el.cropWidth;
+                  (existingObj as any).cropHeight = el.cropHeight;
+                  if (el.naturalWidth) (existingObj as any).naturalWidth = el.naturalWidth;
+                  if (el.naturalHeight) (existingObj as any).naturalHeight = el.naturalHeight;
+
+                  if ((existingObj as any)._objects && (existingObj as any)._objects.length > 0) {
+                    const baseImg = (existingObj as any)._objects[0];
+                    if (baseImg) {
+                      baseImg.set({ width: el.width, height: el.height, objectCaching: false });
+                      baseImg.cropX = el.cropX;
+                      baseImg.cropY = el.cropY;
+                      baseImg.cropWidth = el.cropWidth;
+                      baseImg.cropHeight = el.cropHeight;
+                      if (el.naturalWidth) baseImg.naturalWidth = el.naturalWidth;
+                      if (el.naturalHeight) baseImg.naturalHeight = el.naturalHeight;
+                      baseImg.dirty = true;
+                    }
+                    const overlayRect = (existingObj as any)._objects[1];
+                    if (overlayRect) {
+                      overlayRect.set({ width: el.width, height: el.height, rx: el.borderRadius || 0, ry: el.borderRadius || 0 });
+                      overlayRect.dirty = true;
+                    }
+                  }
+
                   if (!isActiveObj) {
                     existingObj.set({
+                      left: el.x,
+                      top: el.y,
+                      angle: el.rotation || 0,
                       width: el.width,
                       height: el.height,
                       scaleX: 1,
@@ -1218,6 +1273,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                     });
                     existingObj.setCoords();
                   }
+                  existingObj.dirty = true;
                 } else if (el.type === 'product-block') {
                   existingObj._productId = el.productId;
                   existingObj._src = el.src;
@@ -1264,7 +1320,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             }
             const obj = await elementToFabricObject(tempEl, products, catalog);
             if (obj) {
-              const isCurrentlyEditing = isActive && el.id === editingId;
+              const isCurrentlyEditing = isActive && (el.id === editingId || el.id === activeCropElementId);
               obj.set('zIndex', getEffectiveZIndex(el, elIdx));
               obj.set({
                 opacity: isCurrentlyEditing ? 0 : (el.opacity ?? 1),
@@ -1423,7 +1479,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     canvasInstance,
     page.elements, page.type, page.backgroundColor, canvasBg, headerElements, footerElements,
     footerHeight, catalog?.footerHeight, catalog?.marginBottom,
-    isActive, editingId, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU,
+    isActive, editingId, activeCropElementId, products, pageIdx, page.pageNumber, catalog?.showTitle, catalog?.showPrice, catalog?.showSKU,
     catalog?.fontFamily,
     JSON.stringify(catalog?.categoryVisibleParams)
   ]);

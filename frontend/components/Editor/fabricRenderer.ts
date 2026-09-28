@@ -931,21 +931,34 @@ async function _elementToFabricObject(
           scaleY: 1,
           selectable: false,
           evented: false,
+          objectCaching: false,
         });
 
+        (baseImg as any)._element = htmlImg;
+        (baseImg as any).cropX = el.cropX;
+        (baseImg as any).cropY = el.cropY;
+        (baseImg as any).cropWidth = el.cropWidth;
+        (baseImg as any).cropHeight = el.cropHeight;
+        (baseImg as any).naturalWidth = naturalW;
+        (baseImg as any).naturalHeight = naturalH;
+
         baseImg._render = function (ctx: CanvasRenderingContext2D) {
-          const imageElement = (this as any)._element;
+          const imageElement = (this as any)._element || (this as any).getElement?.() || htmlImg;
           if (!imageElement) return;
-          const nw = imageElement.naturalWidth || imageElement.width || 1;
-          const nh = imageElement.naturalHeight || imageElement.height || 1;
+          const nw = (this as any).naturalWidth || imageElement.naturalWidth || imageElement.width || 1;
+          const nh = (this as any).naturalHeight || imageElement.naturalHeight || imageElement.height || 1;
           const w = (this as any).width || 1;
           const h = (this as any).height || 1;
 
-          const scale = Math.max(w / nw, h / nh);
-          const sw = Math.min(nw, w / scale);
-          const sh = Math.min(nh, h / scale);
-          const sx = Math.max(0, (nw - sw) / 2);
-          const sy = Math.max(0, (nh - sh) / 2);
+          let cropX = (this as any).cropX !== undefined ? (this as any).cropX : 0;
+          let cropY = (this as any).cropY !== undefined ? (this as any).cropY : 0;
+          let cropW = (this as any).cropWidth !== undefined ? (this as any).cropWidth : nw;
+          let cropH = (this as any).cropHeight !== undefined ? (this as any).cropHeight : nh;
+
+          const sx = Math.max(0, Math.min(nw - 1, cropX));
+          const sy = Math.max(0, Math.min(nh - 1, cropY));
+          const sw = Math.max(1, Math.min(nw - sx, cropW));
+          const sh = Math.max(1, Math.min(nh - sy, cropH));
 
           ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
         };
@@ -966,6 +979,7 @@ async function _elementToFabricObject(
           ry: el.borderRadius || 0,
           selectable: false,
           evented: false,
+          objectCaching: false,
         });
 
         const group = new Group([baseImg, overlayRect], {
@@ -979,9 +993,16 @@ async function _elementToFabricObject(
           opacity: el.opacity ?? 1,
           stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
           strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+          objectCaching: false,
         });
         (group as any).id = el.id;
         (group as any)._src = el.src;
+        (group as any).cropX = el.cropX;
+        (group as any).cropY = el.cropY;
+        (group as any).cropWidth = el.cropWidth;
+        (group as any).cropHeight = el.cropHeight;
+        (group as any).naturalWidth = naturalW;
+        (group as any).naturalHeight = naturalH;
         (group as any)._overlayEnabled = el.overlayEnabled;
         (group as any)._overlayType = el.overlayType;
         (group as any)._overlayColor = el.overlayColor;
@@ -1002,21 +1023,34 @@ async function _elementToFabricObject(
         scaleY: 1,
         stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
         strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+        objectCaching: false,
       });
 
+      (img as any)._element = htmlImg;
+      (img as any).cropX = el.cropX;
+      (img as any).cropY = el.cropY;
+      (img as any).cropWidth = el.cropWidth;
+      (img as any).cropHeight = el.cropHeight;
+      (img as any).naturalWidth = naturalW;
+      (img as any).naturalHeight = naturalH;
+
       img._render = function (ctx: CanvasRenderingContext2D) {
-        const imageElement = (this as any)._element;
+        const imageElement = (this as any)._element || (this as any).getElement?.() || htmlImg;
         if (!imageElement) return;
-        const nw = imageElement.naturalWidth || imageElement.width || 1;
-        const nh = imageElement.naturalHeight || imageElement.height || 1;
+        const nw = (this as any).naturalWidth || imageElement.naturalWidth || imageElement.width || 1;
+        const nh = (this as any).naturalHeight || imageElement.naturalHeight || imageElement.height || 1;
         const w = (this as any).width || 1;
         const h = (this as any).height || 1;
 
-        const scale = Math.max(w / nw, h / nh);
-        const sw = Math.min(nw, w / scale);
-        const sh = Math.min(nh, h / scale);
-        const sx = Math.max(0, (nw - sw) / 2);
-        const sy = Math.max(0, (nh - sh) / 2);
+        let cropX = (this as any).cropX !== undefined ? (this as any).cropX : 0;
+        let cropY = (this as any).cropY !== undefined ? (this as any).cropY : 0;
+        let cropW = (this as any).cropWidth !== undefined ? (this as any).cropWidth : nw;
+        let cropH = (this as any).cropHeight !== undefined ? (this as any).cropHeight : nh;
+
+        const sx = Math.max(0, Math.min(nw - 1, cropX));
+        const sy = Math.max(0, Math.min(nh - 1, cropY));
+        const sw = Math.max(1, Math.min(nw - sx, cropW));
+        const sh = Math.max(1, Math.min(nh - sy, cropH));
 
         ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
       };

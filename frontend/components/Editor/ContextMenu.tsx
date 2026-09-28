@@ -11,7 +11,8 @@ import {
   Ungroup,
   ChevronRight,
   LayoutGrid,
-  Zap
+  Zap,
+  Crop
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { CanvasElement } from '../../types';
@@ -584,6 +585,16 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
           <MenuItem icon={Clipboard} label="Paste" shortcut="Ctrl+V" onClick={handlePaste} />
           <MenuItem icon={Copy} label="Duplicate" shortcut="Ctrl+D" onClick={handleDuplicateElement} />
           <MenuItem icon={Trash2} label="Delete" shortcut="DELETE" onClick={handleDeleteElement} />
+
+          {selectedElements.length === 1 && selectedElements[0].type === 'image' && (
+            <MenuItem
+              icon={Crop}
+              label="Crop"
+              onClick={() => execute(() => {
+                useStore.getState().startCropMode(selectedElements[0].id);
+              })}
+            />
+          )}
 
           {(canGroup || hasGrouped) && <Divider />}
 

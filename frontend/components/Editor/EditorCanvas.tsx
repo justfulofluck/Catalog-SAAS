@@ -3,6 +3,7 @@ import { Plus, Sparkles, Zap, BookOpen, List, FileText, Settings, ChevronUp, Che
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES } from '../../constants';
 import FabricStage from './FabricStage';
+import ImageCropOverlay from './ImageCropOverlay';
 import ContextMenu from './ContextMenu';
 import { FloatingTextToolbar } from '../Toolbar/FloatingTextToolbar';
 import FloatingToolbar from '../Toolbar/FloatingToolbar';
@@ -78,7 +79,8 @@ const EditorCanvas: React.FC = () => {
     updateHeaderElement, updateFooterElement,
     removeHeaderElement, removeFooterElement,
     copySelectedElements, pasteElements, addInteriorPageWithInheritedLayout,
-    duplicatePage, removePage, openColorPicker
+    duplicatePage, removePage, openColorPicker,
+    activeCropElementId
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -1394,6 +1396,10 @@ const EditorCanvas: React.FC = () => {
                           footerElements={pageHasFooter ? (catalog.footerElements || EMPTY_ARRAY) : EMPTY_ARRAY}
                           footerHeight={catalog.footerHeight || 38}
                         />
+
+                        {isActive && activeCropElementId && (
+                          <ImageCropOverlay zoom={zoom} />
+                        )}
                       </>
                     );
                   })()}
