@@ -33,6 +33,7 @@ import {
   Underline,
   Minus,
   Plus,
+  Square,
   AlignLeft,
   AlignCenter,
   AlignRight,
@@ -110,6 +111,8 @@ const FloatingToolbar: React.FC<Props> = ({
   const [isFontMenuOpen, setIsFontMenuOpen] = useState(false);
   const [fontSearch, setFontSearch] = useState('');
   const [showTableColorsPopover, setShowTableColorsPopover] = useState(false);
+  const [showShapeBorderPopover, setShowShapeBorderPopover] = useState(false);
+  const [showShapeFillPopover, setShowShapeFillPopover] = useState(false);
   const [tempLink, setTempLink] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const linkPopoverRef = useRef<HTMLDivElement>(null);
@@ -117,6 +120,8 @@ const FloatingToolbar: React.FC<Props> = ({
   const opacityPopoverRef = useRef<HTMLDivElement>(null);
   const fontMenuRef = useRef<HTMLDivElement>(null);
   const tableColorsRef = useRef<HTMLDivElement>(null);
+  const shapeBorderRef = useRef<HTMLDivElement>(null);
+  const shapeFillRef = useRef<HTMLDivElement>(null);
   const fontScrollRef = useRef<HTMLDivElement>(null);
   const fillInputRef = useRef<HTMLInputElement>(null);
   const strokeInputRef = useRef<HTMLInputElement>(null);
@@ -142,12 +147,14 @@ const FloatingToolbar: React.FC<Props> = ({
       if (opacityPopoverRef.current && !opacityPopoverRef.current.contains(e.target as Node)) setShowOpacityPopover(false);
       if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) setIsFontMenuOpen(false);
       if (tableColorsRef.current && !tableColorsRef.current.contains(e.target as Node)) setShowTableColorsPopover(false);
+      if (shapeBorderRef.current && !shapeBorderRef.current.contains(e.target as Node)) setShowShapeBorderPopover(false);
+      if (shapeFillRef.current && !shapeFillRef.current.contains(e.target as Node)) setShowShapeFillPopover(false);
     };
-    if (showMoreMenu || showLinkPopover || showOverlayPopover || showOpacityPopover || isFontMenuOpen || showTableColorsPopover) {
+    if (showMoreMenu || showLinkPopover || showOverlayPopover || showOpacityPopover || isFontMenuOpen || showTableColorsPopover || showShapeBorderPopover || showShapeFillPopover) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu, showLinkPopover, showOverlayPopover, showOpacityPopover, isFontMenuOpen, showTableColorsPopover]);
+  }, [showMoreMenu, showLinkPopover, showOverlayPopover, showOpacityPopover, isFontMenuOpen, showTableColorsPopover, showShapeBorderPopover, showShapeFillPopover]);
 
   useEffect(() => {
     const stopProp = (e: WheelEvent) => e.stopPropagation();
@@ -302,6 +309,21 @@ const FloatingToolbar: React.FC<Props> = ({
   const isTableItalic = td.fontStyle === 'italic';
   const isTableUnderline = !!(td.textDecoration?.includes('underline'));
   const tableAlign = td.textAlign || 'center';
+
+  const isShapeElement = (element.type === 'shape' || !!element.shapeType || element.type === 'comment') && !isTableElement;
+  const shapeFillColor = element.fill !== undefined ? element.fill : '#cbd5e1';
+  const isShapeFillTransparent = !element.fill || element.fill === 'transparent' || element.fill === 'none';
+  const shapeStrokeColor = element.stroke && element.stroke !== 'transparent' && element.stroke !== 'none' ? element.stroke : '#000000';
+  const shapeStrokeWidth = (element.stroke && element.stroke !== 'transparent' && element.stroke !== 'none')
+    ? (element.strokeWidth !== undefined ? element.strokeWidth : 2)
+    : (element.strokeWidth || 0);
+  const hasShapeBorder = shapeStrokeWidth > 0 && element.stroke !== 'transparent' && element.stroke !== 'none';
+  const shapeStrokeDash = element.strokeDashArray || [];
+  const shapeBorderStyle = (!hasShapeBorder || shapeStrokeDash.length === 0)
+    ? (hasShapeBorder ? 'solid' : 'none')
+    : (shapeStrokeDash[0] <= 3 ? 'dotted' : 'dashed');
+  const shapeCornerRadius = element.rx !== undefined ? element.rx : (element.cornerRadius || 0);
+  const supportsCornerRadius = element.shapeType === 'rect' || element.shapeType === 'roundedRect' || !element.shapeType || element.shapeType === 'square';
 
   return (
     <div
@@ -690,8 +712,341 @@ const FloatingToolbar: React.FC<Props> = ({
         </>
       )}
 
-      {/* Fill color (for shapes/non-image/non-video/non-table elements) */}
-      {element.type !== 'image' && element.type !== 'video' && !isTableElement && (
+      {/* SHAPE CONTROLS (Fill, Border Style/Weight, Border Color) */}
+      {isShapeElement && (
+        <>
+          {/* 1. Shape Fill Color */}
+          <div className="relative" ref={shapeFillRef}>
+            <button
+              className={`${btnClass} ${showShapeFillPopover ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30' : ''}`}
+              title={isShapeFillTransparent ? "Fill Color (Transparent / No Fill)" : "Fill Color"}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowShapeFillPopover(!showShapeFillPopover);
+              }}
+            >
+              <div
+                className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm relative overflow-hidden flex items-center justify-center"
+                style={{ background: isShapeFillTransparent ? '#ffffff' : shapeFillColor }}
+              >
+                {isShapeFillTransparent && (
+                  <div className="w-full h-[1.5px] bg-red-500 -rotate-45" />
+                )}
+              </div>
+            </button>
+
+            {showShapeFillPopover && (
+              <div
+                className={`absolute left-0 w-60 p-3 rounded-[8px] bg-[#18181b]/95 backdrop-blur-xl border border-[#E2DCC8]/20 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-[2100] animate-in zoom-in-95 duration-150 ${
+                  isPopoverOffTop ? 'top-full mt-2' : 'bottom-full mb-2'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-[11px] font-black uppercase tracking-wider text-[#E2DCC8]/80 pb-2 mb-2.5 border-b border-[#E2DCC8]/15 flex items-center justify-between">
+                  <span>Shape Fill Color</span>
+                </div>
+
+                {/* 1-Click No Fill / Outline Only Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    selectedElementIds.forEach(id => {
+                      const width = shapeStrokeWidth > 0 ? shapeStrokeWidth : 2;
+                      const strokeC = shapeStrokeColor || '#000000';
+                      internalUpdate(id, {
+                        fill: 'transparent',
+                        stroke: strokeC,
+                        strokeWidth: width
+                      });
+                    });
+                    setShowShapeFillPopover(false);
+                  }}
+                  className={`w-full py-2 px-3 rounded-[6px] border flex items-center gap-2.5 text-xs font-bold transition-all mb-3 ${
+                    isShapeFillTransparent
+                      ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow-md'
+                      : 'bg-white/5 border-white/10 text-gray-200 hover:bg-white/10 hover:border-white/30'
+                  }`}
+                >
+                  <div className="w-5 h-5 rounded-[3px] bg-white border border-gray-300 relative flex items-center justify-center shrink-0">
+                    <div className="w-full h-[2px] bg-red-500 -rotate-45" />
+                  </div>
+                  <div className="flex flex-col text-left">
+                    <span>No Color (Transparent)</span>
+                    <span className="text-[9px] font-normal text-gray-400">Outline / Border only</span>
+                  </div>
+                </button>
+
+                {/* Quick Color Palette */}
+                <div className="text-[9px] font-bold uppercase tracking-wider text-gray-400 mb-1.5 px-0.5">
+                  Solid Colors
+                </div>
+                <div className="grid grid-cols-6 gap-1.5 mb-3">
+                  {[
+                    '#000000', '#334155', '#64748B', '#94A3B8', '#CBD5E1', '#FFFFFF',
+                    '#EF4444', '#F97316', '#F59E0B', '#10B981', '#06B6D4', '#3B82F6',
+                    '#6366F1', '#8B5CF6', '#D946EF', '#F43F5E', '#0F3D3E', '#14B8A6'
+                  ].map(c => (
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => {
+                        selectedElementIds.forEach(id => {
+                          internalUpdate(id, { fill: c });
+                        });
+                        setShowShapeFillPopover(false);
+                      }}
+                      className={`w-7 h-7 rounded-[4px] border shadow-sm transition-transform hover:scale-110 flex items-center justify-center ${
+                        !isShapeFillTransparent && shapeFillColor.toLowerCase() === c.toLowerCase()
+                          ? 'ring-2 ring-[#0F3D3E] ring-offset-1 ring-offset-[#18181b] border-white'
+                          : 'border-white/15 hover:border-white'
+                      }`}
+                      style={{ background: c }}
+                      title={c}
+                    />
+                  ))}
+                </div>
+
+                {/* Open Full Color Studio Button */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowShapeFillPopover(false);
+                    useStore.getState().openColorPicker({
+                      type: 'fill',
+                      color: isShapeFillTransparent ? '#cbd5e1' : shapeFillColor,
+                      title: 'Shape Fill Color',
+                      onChange: (color) => {
+                        onFillChange?.(color);
+                        selectedElementIds.forEach(id => {
+                          internalUpdate(id, { fill: color });
+                        });
+                      }
+                    });
+                  }}
+                  className="w-full py-1.5 px-3 rounded-[4px] bg-[#0F3D3E]/50 hover:bg-[#0F3D3E] text-white text-[11px] font-bold border border-[#E2DCC8]/20 flex items-center justify-center gap-1.5 transition-all"
+                >
+                  <Palette size={13} />
+                  <span>Open Color Studio...</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Shape Border Style & Weight & Corner Rounding Popover */}
+          <div className="relative" ref={shapeBorderRef}>
+            <button
+              type="button"
+              className={`flex items-center justify-center p-1.5 rounded-[4px] transition-all active:scale-95 ${
+                showShapeBorderPopover || hasShapeBorder
+                  ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30'
+                  : 'text-[#E2DCC8]/80 hover:text-white hover:bg-[#0F3D3E]/40 border border-transparent'
+              }`}
+              title="Border Style & Corner Rounding"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowShapeBorderPopover(!showShapeBorderPopover);
+              }}
+            >
+              {/* Border lines icon */}
+              <div className="w-5 h-5 flex flex-col justify-center gap-[3px] items-center">
+                <div
+                  className="w-4 rounded-full"
+                  style={{
+                    height: Math.max(1, Math.min(3, Math.round(shapeStrokeWidth / 2) || 1.5)),
+                    backgroundColor: hasShapeBorder ? 'currentColor' : '#94a3b8',
+                    borderStyle: shapeBorderStyle === 'dashed' ? 'dashed' : (shapeBorderStyle === 'dotted' ? 'dotted' : 'solid'),
+                    borderWidth: shapeBorderStyle !== 'solid' && shapeBorderStyle !== 'none' ? '1px 0 0 0' : 0,
+                  }}
+                />
+                <div
+                  className="w-4 rounded-full"
+                  style={{
+                    height: Math.max(1, Math.min(3, Math.round(shapeStrokeWidth / 2) || 1.5)),
+                    backgroundColor: hasShapeBorder ? 'currentColor' : '#94a3b8',
+                    borderStyle: shapeBorderStyle === 'dashed' ? 'dashed' : (shapeBorderStyle === 'dotted' ? 'dotted' : 'solid'),
+                    borderWidth: shapeBorderStyle !== 'solid' && shapeBorderStyle !== 'none' ? '1px 0 0 0' : 0,
+                  }}
+                />
+              </div>
+            </button>
+
+            {showShapeBorderPopover && (
+              <div
+                className={`absolute left-1/2 -translate-x-1/2 w-64 p-3.5 rounded-[8px] bg-[#18181b]/95 backdrop-blur-xl border border-[#E2DCC8]/20 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-[2100] animate-in zoom-in-95 duration-150 ${
+                  isPopoverOffTop ? 'top-full mt-2' : 'bottom-full mb-2'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-[11px] font-black uppercase tracking-wider text-[#E2DCC8]/80 pb-2 mb-2.5 border-b border-[#E2DCC8]/15 flex items-center justify-between">
+                  <span>Border style</span>
+                </div>
+
+                {/* 4 Border Style Options: None, Solid, Dashed, Dotted */}
+                <div className="grid grid-cols-4 gap-1.5 mb-3.5">
+                  {/* None */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectedElementIds.forEach(id => {
+                        internalUpdate(id, { stroke: 'transparent', strokeWidth: 0, strokeDashArray: [] });
+                      });
+                    }}
+                    className={`h-8 rounded-[4px] border flex items-center justify-center transition-all ${
+                      !hasShapeBorder ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow-sm' : 'border-white/10 hover:border-white/30 text-gray-400 hover:text-white bg-white/5'
+                    }`}
+                    title="No Border"
+                  >
+                    <div className="w-4 h-4 rounded-[2px] border border-gray-400 relative flex items-center justify-center">
+                      <div className="w-full h-[1.5px] bg-red-400 -rotate-45" />
+                    </div>
+                  </button>
+
+                  {/* Solid */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectedElementIds.forEach(id => {
+                        internalUpdate(id, {
+                          stroke: element.stroke && element.stroke !== 'transparent' ? element.stroke : '#000000',
+                          strokeWidth: shapeStrokeWidth > 0 ? shapeStrokeWidth : 2,
+                          strokeDashArray: []
+                        });
+                      });
+                    }}
+                    className={`h-8 rounded-[4px] border flex items-center justify-center transition-all ${
+                      hasShapeBorder && shapeBorderStyle === 'solid' ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow-sm' : 'border-white/10 hover:border-white/30 text-gray-400 hover:text-white bg-white/5'
+                    }`}
+                    title="Solid Border"
+                  >
+                    <div className="w-5 h-[2px] bg-current rounded-full" />
+                  </button>
+
+                  {/* Dashed */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectedElementIds.forEach(id => {
+                        internalUpdate(id, {
+                          stroke: element.stroke && element.stroke !== 'transparent' ? element.stroke : '#000000',
+                          strokeWidth: shapeStrokeWidth > 0 ? shapeStrokeWidth : 2,
+                          strokeDashArray: [6, 6]
+                        });
+                      });
+                    }}
+                    className={`h-8 rounded-[4px] border flex items-center justify-center transition-all ${
+                      hasShapeBorder && shapeBorderStyle === 'dashed' ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow-sm' : 'border-white/10 hover:border-white/30 text-gray-400 hover:text-white bg-white/5'
+                    }`}
+                    title="Dashed Border"
+                  >
+                    <div className="w-5 h-[2px] border-b-2 border-dashed border-current" />
+                  </button>
+
+                  {/* Dotted */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectedElementIds.forEach(id => {
+                        internalUpdate(id, {
+                          stroke: element.stroke && element.stroke !== 'transparent' ? element.stroke : '#000000',
+                          strokeWidth: shapeStrokeWidth > 0 ? shapeStrokeWidth : 2,
+                          strokeDashArray: [2, 4]
+                        });
+                      });
+                    }}
+                    className={`h-8 rounded-[4px] border flex items-center justify-center transition-all ${
+                      hasShapeBorder && shapeBorderStyle === 'dotted' ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow-sm' : 'border-white/10 hover:border-white/30 text-gray-400 hover:text-white bg-white/5'
+                    }`}
+                    title="Dotted Border"
+                  >
+                    <div className="w-5 h-[2px] border-b-2 border-dotted border-current" />
+                  </button>
+                </div>
+
+                {/* Border Weight Slider */}
+                <div className="space-y-1.5 mb-3.5">
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-zinc-300 font-medium">Border weight</span>
+                    <span className="text-zinc-400 font-mono text-[10px] bg-white/5 px-1.5 py-0.5 rounded-[3px] border border-white/10">{shapeStrokeWidth}</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={40}
+                    value={shapeStrokeWidth}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value) || 0;
+                      selectedElementIds.forEach(id => {
+                        internalUpdate(id, {
+                          strokeWidth: val,
+                          stroke: val > 0 ? (element.stroke && element.stroke !== 'transparent' ? element.stroke : '#000000') : 'transparent'
+                        });
+                      });
+                    }}
+                    className="w-full accent-[#0F3D3E] bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
+                  />
+                </div>
+
+                {/* Corner Rounding Slider (for rectangles / squares) */}
+                {supportsCornerRadius && (
+                  <div className="space-y-1.5 pt-2 border-t border-white/10">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-zinc-300 font-medium">Corner rounding</span>
+                      <span className="text-zinc-400 font-mono text-[10px] bg-white/5 px-1.5 py-0.5 rounded-[3px] border border-white/10">{Math.round(shapeCornerRadius)}</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      value={shapeCornerRadius}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0;
+                        selectedElementIds.forEach(id => {
+                          internalUpdate(id, { rx: val, ry: val, cornerRadius: val });
+                        });
+                      }}
+                      className="w-full accent-[#0F3D3E] bg-white/10 h-1.5 rounded-lg appearance-none cursor-pointer"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Shape Border Color */}
+          <button
+            className={btnClass}
+            title={hasShapeBorder ? `Border Color (${shapeStrokeColor})` : "Border Color (No Border)"}
+            onClick={() => {
+              useStore.getState().openColorPicker({
+                type: 'stroke',
+                color: hasShapeBorder ? shapeStrokeColor : '#000000',
+                title: 'Shape Border Color',
+                onChange: (color) => {
+                  onStrokeChange?.(color);
+                  selectedElementIds.forEach(id => {
+                    const width = shapeStrokeWidth > 0 ? shapeStrokeWidth : 2;
+                    internalUpdate(id, { stroke: color, strokeWidth: width });
+                  });
+                }
+              });
+            }}
+          >
+            <div
+              className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm relative overflow-hidden flex items-center justify-center"
+              style={{ background: hasShapeBorder ? shapeStrokeColor : '#ffffff' }}
+            >
+              {!hasShapeBorder && (
+                <div className="w-full h-[1.5px] bg-red-500 -rotate-45" />
+              )}
+            </div>
+          </button>
+
+          <div className="w-[1px] h-4 bg-[#E2DCC8]/20 mx-0.5" />
+        </>
+      )}
+
+      {/* Fill color (for other generic elements) */}
+      {!isShapeElement && element.type !== 'image' && element.type !== 'video' && !isTableElement && (
         <button
           className={btnClass}
           title="Fill Color"
@@ -703,9 +1058,7 @@ const FloatingToolbar: React.FC<Props> = ({
               onChange: (color) => {
                 onFillChange?.(color);
                 selectedElementIds.forEach(id => {
-                  const el = selectedElements.find(item => item.id === id);
-                  const isLine = el?.shapeType === 'line' || el?.shapeType === 'curved-line' || el?.shapeType === 'elbow-line';
-                  internalUpdate(id, isLine ? { fill: color, stroke: color } : { fill: color });
+                  internalUpdate(id, { fill: color });
                 });
               }
             });

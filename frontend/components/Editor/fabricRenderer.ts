@@ -526,21 +526,37 @@ export function buildShape(
   shapeType: string, w: number, h: number,
   stroke: string | undefined, strokeWidth: number,
   fill: string | undefined, fallbackFill: string | undefined,
+  strokeDashArray?: number[],
+  rx?: number,
+  ry?: number,
 ): any {
-  const fillColor = fill || fallbackFill || '#cbd5e1';
-  const shapeProps: Record<string, any> = { stroke, strokeWidth };
+  const isTransparentFill = !fill || fill === 'transparent' || fill === 'none';
+  const fillColor = isTransparentFill ? 'transparent' : (fill || fallbackFill || '#cbd5e1');
+  const hasStroke = stroke && stroke !== 'transparent' && stroke !== 'none';
+  const finalStrokeWidth = hasStroke ? (strokeWidth !== undefined && strokeWidth !== null ? strokeWidth : 2) : 0;
+
+  const shapeProps: Record<string, any> = {
+    stroke: hasStroke ? stroke : undefined,
+    strokeWidth: finalStrokeWidth,
+    strokeDashArray: (hasStroke && strokeDashArray && strokeDashArray.length > 0) ? strokeDashArray : undefined,
+    strokeUniform: true,
+    perPixelTargetFind: isTransparentFill,
+    targetFindTolerance: isTransparentFill ? Math.max(8, Math.min(16, Math.round((finalStrokeWidth || 2) * 1.5))) : 4,
+  };
 
   switch (shapeType) {
     case 'none':
       return null;
-    case 'rect':
-      return new Rect({ ...shapeProps, width: w, height: h, fill: fillColor });
+    case 'rect': {
+      const cornerR = rx !== undefined ? rx : 0;
+      return new Rect({ ...shapeProps, width: w, height: h, rx: cornerR, ry: cornerR, fill: fillColor });
+    }
     case 'roundedRect': {
-      const r = Math.min(w, h) * 0.15;
+      const r = rx !== undefined ? rx : Math.min(w, h) * 0.15;
       return new Rect({ ...shapeProps, width: w, height: h, rx: r, ry: r, fill: fillColor });
     }
     case 'pill': {
-      const pr = Math.min(w, h) / 2;
+      const pr = rx !== undefined ? rx : Math.min(w, h) / 2;
       return new Rect({ ...shapeProps, width: w, height: h, rx: pr, ry: pr, fill: fillColor });
     }
     case 'circle':
@@ -549,25 +565,28 @@ export function buildShape(
       return new HorizontalLineShape({
         width: w,
         height: Math.max(h, 12),
-        stroke: stroke || fillColor || '#cbd5e1',
+        stroke: stroke || (isTransparentFill ? '#000000' : fillColor) || '#cbd5e1',
         strokeWidth: strokeWidth || 2.5,
+        strokeDashArray: strokeDashArray,
         fill: 'transparent',
       });
     case 'curved-line':
       return new CurvedLineShape({
         width: w,
         height: Math.max(h, 20),
-        stroke: stroke || fillColor || '#000000',
+        stroke: stroke || (isTransparentFill ? '#000000' : fillColor) || '#000000',
         strokeWidth: strokeWidth || 3,
-        fill: stroke || fillColor || '#000000',
+        strokeDashArray: strokeDashArray,
+        fill: stroke || (isTransparentFill ? '#000000' : fillColor) || '#000000',
       });
     case 'elbow-line':
       return new ElbowLineShape({
         width: w,
         height: Math.max(h, 20),
-        stroke: stroke || fillColor || '#000000',
+        stroke: stroke || (isTransparentFill ? '#000000' : fillColor) || '#000000',
         strokeWidth: strokeWidth || 3,
-        fill: stroke || fillColor || '#000000',
+        strokeDashArray: strokeDashArray,
+        fill: stroke || (isTransparentFill ? '#000000' : fillColor) || '#000000',
       });
     case 'cloud':
       return new CloudShape({ ...shapeProps, width: w, height: h, fill: fillColor });
@@ -578,7 +597,7 @@ export function buildShape(
       const lx = w - headLen;
       return new Group([
         new Line([0, h / 2, lx, h / 2], {
-          stroke: stroke || fillColor, strokeWidth: strokeWidth || 4, fill: 'transparent',
+          stroke: stroke || fillColor, strokeWidth: strokeWidth || 4, fill: 'transparent', strokeDashArray: strokeDashArray,
         }),
         new Polygon([{ x: lx, y: h / 2 - headLen / 2 }, { x: w, y: h / 2 }, { x: lx, y: h / 2 + headLen / 2 }], {
           fill: stroke || fillColor, stroke: stroke || fillColor, strokeWidth: 1,
@@ -590,7 +609,7 @@ export function buildShape(
       const hl = a4Stroke * 4;
       return new Group([
         new Line([hl, h / 2, w - hl, h / 2], {
-          stroke: stroke || fillColor, strokeWidth: a4Stroke, fill: 'transparent',
+          stroke: stroke || fillColor, strokeWidth: a4Stroke, fill: 'transparent', strokeDashArray: strokeDashArray,
         }),
         new Polygon([{ x: w - hl, y: h / 2 - hl / 2 }, { x: w, y: h / 2 }, { x: w - hl, y: h / 2 + hl / 2 }], {
           fill: stroke || fillColor, stroke: stroke || fillColor, strokeWidth: 1,
@@ -603,7 +622,8 @@ export function buildShape(
     default: {
       const pts = getPolyPoints(shapeType, w, h);
       if (pts.length >= 3) return new Polygon(pts, { ...shapeProps, fill: fillColor });
-      return new Rect({ ...shapeProps, width: w, height: h, fill: fillColor });
+      const cornerR = rx !== undefined ? rx : 0;
+      return new Rect({ ...shapeProps, width: w, height: h, rx: cornerR, ry: cornerR, fill: fillColor });
     }
   }
 }
@@ -1128,7 +1148,10 @@ async function _elementToFabricObject(
     const w = el.width, h = el.height;
     const shapeType = el.shapeType || 'rect';
     const strokeColor = el.stroke || undefined;
-    const strokeWidth = el.strokeWidth || 0;
+    const strokeWidth = el.strokeWidth !== undefined ? el.strokeWidth : (el.stroke ? 2 : 0);
+    const strokeDashArray = el.strokeDashArray;
+    const rx = el.rx !== undefined ? el.rx : el.cornerRadius;
+    const ry = el.ry !== undefined ? el.ry : el.cornerRadius;
     const isGradient = el.fill?.includes('linear-gradient');
     const useSvgForGradient = isGradient && ['cloud', 'wave'].includes(shapeType);
     const isRichTextShape = el.fill?.includes('gradient');
@@ -1143,7 +1166,7 @@ async function _elementToFabricObject(
 
       const children: any[] = [];
       if (!isTransparentBg && shapeType !== 'none') {
-        const shapeObj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill);
+        const shapeObj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill, strokeDashArray, rx, ry);
         if (shapeObj) {
           shapeObj.set({
             originX: 'center',
@@ -1209,12 +1232,21 @@ async function _elementToFabricObject(
       }
     }
 
-    const obj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill);
+    const isTransparentFill = !el.fill || el.fill === 'transparent' || el.fill === 'none';
+    const obj = buildShape(shapeType, w, h, strokeColor, strokeWidth, el.fill, el.fill, strokeDashArray, rx, ry);
     if (obj) {
       setCommon(obj);
-      obj.set({ width: w, height: h });
+      obj.set({
+        width: w,
+        height: h,
+        perPixelTargetFind: isTransparentFill,
+        targetFindTolerance: isTransparentFill ? Math.max(8, Math.min(16, Math.round((strokeWidth || 2) * 1.5))) : 4,
+      });
       (obj as any).shapeType = shapeType;
       if (obj instanceof Circle) obj.set({ radius: Math.min(w, h) / 2 });
+      if (el.fill && el.fill.includes('gradient')) {
+        applyFill(obj, el.fill, w, h);
+      }
       applyCanvaSelectionStyle(obj);
     }
     return obj;

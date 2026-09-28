@@ -119,7 +119,7 @@ const EditorToolbar: React.FC = () => {
     setIsTextMenuOpen(false);
   };
 
-  const handleAddShape = (shapeType: ShapeType = 'rect') => {
+  const handleAddShape = (shapeType: ShapeType = 'rect', isHollow = false) => {
     addElement(currentPageIndex, {
       id: `shape-${Date.now()}`,
       type: 'shape',
@@ -130,7 +130,9 @@ const EditorToolbar: React.FC = () => {
       height: 100,
       rotation: 0,
       opacity: 1,
-      fill: '#cbd5e1',
+      fill: isHollow ? 'transparent' : '#cbd5e1',
+      stroke: isHollow ? '#0f172a' : undefined,
+      strokeWidth: isHollow ? 2 : 0,
       zIndex: 10
     });
     setIsShapeMenuOpen(false);
@@ -369,12 +371,41 @@ const EditorToolbar: React.FC = () => {
                 <ChevronDown size={12} />
               </button>
               {isShapeMenuOpen && (
-                <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 border rounded-[4px] z-[100] p-3 w-[220px] shadow-2xl ${
+                <div className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 border rounded-[6px] z-[100] p-3 w-[240px] shadow-2xl ${
                   isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200'
                 }`}>
+                  {/* Outline / Border Only Shapes */}
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#888888] mb-1.5 px-1 flex items-center justify-between">
+                    <span>Outline Shapes (Border Only)</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1.5 mb-3">
+                    {[
+                      { type: 'rect', label: 'Square Outline', icon: <div className="w-4 h-4 border-2 border-current rounded-[1px]" /> },
+                      { type: 'roundedRect', label: 'Rounded Square Outline', icon: <div className="w-4 h-4 border-2 border-current rounded-[4px]" /> },
+                      { type: 'circle', label: 'Circle Outline', icon: <div className="w-4 h-4 border-2 border-current rounded-full" /> },
+                      { type: 'triangle', label: 'Triangle Outline', icon: <Triangle size={18} /> },
+                      { type: 'diamond', label: 'Diamond Outline', icon: <Diamond size={18} /> }
+                    ].map(({ type, label, icon }) => (
+                      <button
+                        key={`outline-${type}`}
+                        onClick={() => handleAddShape(type as ShapeType, true)}
+                        className={`w-9 h-9 rounded-[4px] flex items-center justify-center transition-colors border ${
+                          isDark ? 'border-[#262626] hover:bg-[#0F3D3E] text-[#E2DCC8] hover:text-white' : 'border-slate-200 hover:bg-slate-100 text-slate-700 hover:text-slate-900'
+                        }`}
+                        title={label}
+                      >
+                        {icon}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Solid Shapes */}
+                  <div className="text-[10px] font-bold uppercase tracking-wider text-[#888888] mb-1.5 px-1">
+                    Solid Shapes
+                  </div>
                   <div className="grid grid-cols-5 gap-1.5">
-                    {[ { type: 'line', icon: <Minus size={18} /> }, { type: 'rect', icon: <Square size={18} /> }, { type: 'roundedRect', icon: <RectangleHorizontal size={18} /> }, { type: 'circle', icon: <Circle size={18} /> }, { type: 'triangle', icon: <Triangle size={18} /> }, { type: 'diamond', icon: <Diamond size={18} /> }, { type: 'pentagon', icon: <Pentagon size={18} /> }, { type: 'hexagon', icon: <Hexagon size={18} /> }, { type: 'octagon', icon: <Octagon size={18} /> }, { type: 'arrow', icon: <ArrowRight size={18} /> }, { type: 'arrow4', icon: <MoveHorizontal size={18} /> }, { type: 'star', icon: <Star size={18} /> }, { type: 'cloud', icon: <Cloud size={18} /> }, { type: 'wave', icon: <Flag size={18} /> }, { type: 'cross', icon: <PlusIcon size={18} /> } ].map(({ type, icon }) => (
-                      <button key={type} onClick={() => handleAddShape(type as ShapeType)} className={`w-9 h-9 rounded-[4px] flex items-center justify-center transition-colors ${
+                    {[ { type: 'line', icon: <Minus size={18} /> }, { type: 'rect', icon: <Square size={18} className="fill-current" /> }, { type: 'roundedRect', icon: <RectangleHorizontal size={18} className="fill-current" /> }, { type: 'circle', icon: <Circle size={18} className="fill-current" /> }, { type: 'triangle', icon: <Triangle size={18} className="fill-current" /> }, { type: 'diamond', icon: <Diamond size={18} className="fill-current" /> }, { type: 'pentagon', icon: <Pentagon size={18} className="fill-current" /> }, { type: 'hexagon', icon: <Hexagon size={18} className="fill-current" /> }, { type: 'octagon', icon: <Octagon size={18} className="fill-current" /> }, { type: 'arrow', icon: <ArrowRight size={18} /> }, { type: 'arrow4', icon: <MoveHorizontal size={18} /> }, { type: 'star', icon: <Star size={18} className="fill-current" /> }, { type: 'cloud', icon: <Cloud size={18} className="fill-current" /> }, { type: 'wave', icon: <Flag size={18} className="fill-current" /> }, { type: 'cross', icon: <PlusIcon size={18} /> } ].map(({ type, icon }) => (
+                      <button key={type} onClick={() => handleAddShape(type as ShapeType, false)} className={`w-9 h-9 rounded-[4px] flex items-center justify-center transition-colors ${
                         isDark ? 'text-[#888888] hover:bg-[#0F3D3E] hover:text-[#F1F1F1]' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                       }`}>{icon}</button>
                     ))}

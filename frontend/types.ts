@@ -107,6 +107,10 @@ export interface CanvasElement {
   fill?: string;
   stroke?: string;
   strokeWidth?: number;
+  strokeDashArray?: number[];
+  rx?: number;
+  ry?: number;
+  cornerRadius?: number;
   text?: string;
   fontSize?: number;
   fontFamily?: string;

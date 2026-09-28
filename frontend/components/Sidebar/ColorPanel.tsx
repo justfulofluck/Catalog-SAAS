@@ -126,7 +126,13 @@ export const ColorPanel: React.FC = () => {
       pushHistory();
       selectedElementIds.forEach(id => {
         if (targetType === 'stroke') {
-          updateElement(currentPageIndex, id, { stroke: color, strokeWidth: 2 });
+          if (color === 'transparent') {
+            updateElement(currentPageIndex, id, { stroke: 'transparent', strokeWidth: 0 });
+          } else {
+            const el = currentPage?.elements?.find(e => e.id === id);
+            const currentWidth = (el?.strokeWidth && el.strokeWidth > 0) ? el.strokeWidth : 2;
+            updateElement(currentPageIndex, id, { stroke: color, strokeWidth: currentWidth });
+          }
         } else {
           updateElement(currentPageIndex, id, { fill: color });
         }
@@ -259,6 +265,19 @@ export const ColorPanel: React.FC = () => {
               </div>
             </button>
 
+            {/* No Color / Transparent Button */}
+            <button
+              onClick={() => handleApplyColor('transparent')}
+              className={`w-9 h-9 rounded-[6px] border flex items-center justify-center shadow-sm transition-all hover:scale-105 shrink-0 overflow-hidden relative ${
+                currentColor === 'transparent' ? 'ring-2 ring-[#0F3D3E] border-white' : (isDark ? 'bg-[#222222] border-[#333] hover:border-[#0F3D3E]' : 'bg-slate-100 border-slate-200 hover:border-[#0F3D3E]')
+              }`}
+              title="No Color / Transparent"
+            >
+              <div className="w-full h-full bg-white relative flex items-center justify-center">
+                <div className="w-full h-[2px] bg-red-500 -rotate-45" />
+              </div>
+            </button>
+
             {/* Eyedropper Pipette */}
             <button
               onClick={handleEyedropper}
@@ -275,11 +294,17 @@ export const ColorPanel: React.FC = () => {
               className="flex-1 h-9 rounded-[6px] border px-3 flex items-center gap-2.5 shadow-inner border-[#333] bg-[#1a1a1a]"
             >
               <div
-                className="w-5 h-5 rounded-[4px] border border-white/20 shadow-sm shrink-0"
-                style={{ background: currentColor }}
-              />
+                className="w-5 h-5 rounded-[4px] border border-white/20 shadow-sm shrink-0 overflow-hidden relative"
+                style={{ background: currentColor === 'transparent' ? '#ffffff' : currentColor }}
+              >
+                {currentColor === 'transparent' && (
+                  <div className="w-full h-full relative flex items-center justify-center">
+                    <div className="w-full h-[1.5px] bg-red-500 -rotate-45" />
+                  </div>
+                )}
+              </div>
               <span className="text-[11px] font-mono font-bold uppercase truncate text-slate-200">
-                {currentColor}
+                {currentColor === 'transparent' ? 'No Color / Transparent' : currentColor}
               </span>
             </div>
           </div>
