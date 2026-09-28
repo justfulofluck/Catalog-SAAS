@@ -36,3 +36,15 @@ export interface VideoEmbedTemplate {
   getSvg: () => string;
   getCanvasElements: (groupId: string, videoUrl?: string) => CanvasElement[];
 }
+
+export interface TableTemplate {
+  id: string;
+  title: string;
+  category: 'outline' | 'header-fill' | 'zebra';
+  colorScheme: 'gray' | 'red' | 'amber' | 'blue' | 'purple';
+  width: number;
+  height: number;
+  getSvg: () => string;
+  getCanvasElements: (groupId: string) => CanvasElement[];
+}
+

@@ -37,6 +37,14 @@ export const ELEMENT_ITEMS: ElementCategoryItem[] = [
     description: 'Diamond collages, split matrices, and mosaic galleries',
     previewType: 'image-grids',
   },
+  {
+    id: 'tables',
+    title: 'Tables',
+    category: 'basic',
+    description: 'Data grids, price tables, matrix specifications, and comparisons',
+    badge: 'New',
+    previewType: 'tables',
+  },
 
   // Interactive elements
   {

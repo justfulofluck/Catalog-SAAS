@@ -3,6 +3,7 @@ import { useStore } from '../../store/useStore';
 import { TextBlockDetailView } from './Elements/views/TextBlockDetailView';
 import { ChecklistDetailView } from './Elements/views/ChecklistDetailView';
 import { VideoEmbedDetailView } from './Elements/views/VideoEmbedDetailView';
+import { TablesDetailView } from './Elements/views/TablesDetailView';
 import { ElementsOverview } from './Elements/views/ElementsOverview';
 
 export const ElementsPanel: React.FC = () => {
@@ -37,6 +38,16 @@ export const ElementsPanel: React.FC = () => {
   if (activeElementDetail === 'video-embed') {
     return (
       <VideoEmbedDetailView
+        isDark={isDark}
+        onBack={() => setActiveElementDetail(null)}
+        onClose={handleClose}
+      />
+    );
+  }
+
+  if (activeElementDetail === 'tables') {
+    return (
+      <TablesDetailView
         isDark={isDark}
         onBack={() => setActiveElementDetail(null)}
         onClose={handleClose}

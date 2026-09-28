@@ -69,11 +69,18 @@ export interface TableData {
   headerTextColor?: string;
   alternateRowBg?: string;
   rowBg?: string;
+  textColor?: string;
   borderColor?: string;
   fontSize?: number;
   headerFontSize?: number;
   cellPadding?: number;
   colWidths?: number[];
+  fontFamily?: string;
+  fontWeight?: string;
+  headerFontWeight?: string;
+  fontStyle?: 'normal' | 'italic';
+  textDecoration?: string;
+  textAlign?: 'left' | 'center' | 'right';
 }
 
 export interface ProductGridSection {

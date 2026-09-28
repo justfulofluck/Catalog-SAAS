@@ -11,6 +11,7 @@ import ProductGridStudioModal from './ProductGridStudioModal';
 import { CatalogPage, PageType } from '../../types';
 import { normalizeImageUrl } from '../../utils/imageUtils';
 import { parseVideoUrl } from '../../utils/videoUtils';
+import { TableOverlay } from './TableOverlay';
 import { X } from 'lucide-react';
 
 const Divider = () => <div className="w-[1px] h-4 bg-slate-200 mx-1" />;
@@ -142,6 +143,18 @@ const EditorCanvas: React.FC = () => {
     };
     window.addEventListener('catalog:playVideo', handlePlayVideo);
     return () => window.removeEventListener('catalog:playVideo', handlePlayVideo);
+  }, []);
+
+  // Listen for interactive table edit trigger (e.g. double clicking table element on canvas)
+  const [editingTableId, setEditingTableId] = useState<string | null>(null);
+  useEffect(() => {
+    const handleEditTable = (e: any) => {
+      if (e.detail?.id) {
+        setEditingTableId(e.detail.id);
+      }
+    };
+    window.addEventListener('catalog:editTable', handleEditTable);
+    return () => window.removeEventListener('catalog:editTable', handleEditTable);
   }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1611,6 +1624,17 @@ const EditorCanvas: React.FC = () => {
                       </div>
                     );
                   })}
+
+                  {/* Canva Interactive Table Overlay */}
+                  {page.elements?.filter(el => el.type === 'table' && !el.sectionTag && !el.id.startsWith('grid-sec-') && (el.id === editingTableId || (selectedElementIds.includes(el.id) && selectedElementIds.length === 1))).map(tblEl => (
+                    <TableOverlay
+                      key={`tbl-overlay-${tblEl.id}`}
+                      element={tblEl}
+                      pageIndex={pageIdx}
+                      zoom={zoom}
+                      onClose={() => setEditingTableId(null)}
+                    />
+                  ))}
 
                   {/* Floating text toolbar */}
                   {isActive && (editingId || selectedTextElement) && (
