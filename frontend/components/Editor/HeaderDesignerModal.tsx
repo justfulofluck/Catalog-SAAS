@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Canvas, IText, Rect, Line, Circle, Image as FabricImage, ActiveSelection, Gradient, Group } from 'fabric';
+import { Canvas, IText, Rect, Line, Circle, Image as FabricImage, ActiveSelection, Gradient, Group, util, Point } from 'fabric';
 import {
   Layout, X, Save, Check, Sparkles, Plus, Minus, Type, Square,
   Image as ImageIcon, Palette, Trash2, Copy, ArrowUp, ArrowDown,
@@ -760,11 +760,18 @@ export const HeaderDesignerModal: React.FC = () => {
       let posX = Math.round((obj.left || 0) - CANVAS_PAD_X);
       let posY = Math.round((obj.top || 0) - CANVAS_PAD_Y);
 
-      if (isDivider || obj.originX === 'center') {
-        const objW = Math.round((obj.width || 0) * sx);
-        const objH = Math.round((obj.height || 0) * sy);
-        posX = Math.round((obj.left || 0) - objW / 2 - CANVAS_PAD_X);
-        posY = Math.round((obj.top || 0) - objH / 2 - CANVAS_PAD_Y);
+      if (isDivider || obj.originX === 'center' || obj.originY === 'center') {
+        if (typeof obj.calcTransformMatrix === 'function') {
+          const matrix = obj.calcTransformMatrix();
+          const topLeft = util.transformPoint(new Point(-obj.width / 2, -obj.height / 2), matrix);
+          posX = Math.round(topLeft.x - CANVAS_PAD_X);
+          posY = Math.round(topLeft.y - CANVAS_PAD_Y);
+        } else {
+          const objW = Math.round((obj.width || 0) * sx);
+          const objH = Math.round((obj.height || 0) * sy);
+          posX = Math.round((obj.left || 0) - objW / 2 - CANVAS_PAD_X);
+          posY = Math.round((obj.top || 0) - objH / 2 - CANVAS_PAD_Y);
+        }
       }
 
       const updates: Partial<CanvasElement> = {

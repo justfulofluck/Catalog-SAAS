@@ -678,14 +678,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const normAngle = Math.round(((decomposed.angle % 360) + 360) % 360);
 
           // Absolute position from the full transform matrix.
-          // matrix[4] and matrix[5] are the center coordinates in canvas space.
-          // For originX:'left'/originY:'top', offset by half the scaled dimensions.
-          const childW = (child.width || 0) * Math.abs(decomposed.scaleX || 1);
-          const childH = (child.height || 0) * Math.abs(decomposed.scaleY || 1);
+          // Point (-child.width / 2, -child.height / 2) corresponds to top-left corner in local space.
+          const topLeft = util.transformPoint(new Point(-child.width / 2, -child.height / 2), matrix);
 
           const updates: any = {
-            x: Math.round(matrix[4] - childW / 2),
-            y: Math.round(matrix[5] - childH / 2),
+            x: Math.round(topLeft.x),
+            y: Math.round(topLeft.y),
             rotation: normAngle,
           };
 
@@ -720,11 +718,18 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         const isDivider = (typeof obj.id === 'string' && (obj.id.includes('line') || obj.id.includes('div'))) || el?.shapeType === 'line';
         let posX = obj.left || 0;
         let posY = obj.top || 0;
-        if (isDivider || obj.originX === 'center') {
-          const objW = (obj.width || 0) * (Math.abs(obj.scaleX || 1));
-          const objH = (obj.height || 0) * (Math.abs(obj.scaleY || 1));
-          posX = (obj.left || 0) - objW / 2;
-          posY = (obj.top || 0) - objH / 2;
+        if (obj.originX === 'center' || obj.originY === 'center' || isDivider) {
+          if (typeof obj.calcTransformMatrix === 'function') {
+            const matrix = obj.calcTransformMatrix();
+            const topLeft = util.transformPoint(new Point(-obj.width / 2, -obj.height / 2), matrix);
+            posX = topLeft.x;
+            posY = topLeft.y;
+          } else {
+            const objW = (obj.width || 0) * (Math.abs(obj.scaleX || 1));
+            const objH = (obj.height || 0) * (Math.abs(obj.scaleY || 1));
+            posX = (obj.left || 0) - objW / 2;
+            posY = (obj.top || 0) - objH / 2;
+          }
         }
 
         const updates: any = { x: Math.round(posX), y: Math.round(posY), rotation: Math.round(obj.angle || 0) };
