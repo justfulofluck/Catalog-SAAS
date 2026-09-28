@@ -200,6 +200,13 @@ export async function exportCatalogToPDF(
             const cleanSrc = await getCleanImageDataUrl(el.src);
             return { ...el, src: cleanSrc };
           }
+          if (el.type === 'video') {
+            const poster = el.videoPoster || el.src;
+            if (poster) {
+              const cleanSrc = await getCleanImageDataUrl(poster);
+              return { ...el, videoPoster: cleanSrc, src: cleanSrc };
+            }
+          }
           if (el.type === 'product-block' && el.src) {
             const cleanSrc = await getCleanImageDataUrl(el.src);
             return { ...el, src: cleanSrc };

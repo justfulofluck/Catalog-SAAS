@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useStore } from '../../store/useStore';
 import { TextBlockDetailView } from './Elements/views/TextBlockDetailView';
 import { ChecklistDetailView } from './Elements/views/ChecklistDetailView';
+import { VideoEmbedDetailView } from './Elements/views/VideoEmbedDetailView';
 import { ElementsOverview } from './Elements/views/ElementsOverview';
 
 export const ElementsPanel: React.FC = () => {
@@ -26,6 +27,16 @@ export const ElementsPanel: React.FC = () => {
   if (activeElementDetail === 'checklist') {
     return (
       <ChecklistDetailView
+        isDark={isDark}
+        onBack={() => setActiveElementDetail(null)}
+        onClose={handleClose}
+      />
+    );
+  }
+
+  if (activeElementDetail === 'video-embed') {
+    return (
+      <VideoEmbedDetailView
         isDark={isDark}
         onBack={() => setActiveElementDetail(null)}
         onClose={handleClose}

@@ -245,6 +245,14 @@ const CatalogThumbnailPreview: React.FC<{
             ctx.restore();
           }
         }
+      } else if (el.type === 'video') {
+        const posterUrl = el.videoPoster || el.src || 'https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&q=80&w=800';
+        const img = getCachedPublishImage(posterUrl, () => {
+          if (isMounted) renderCanvas();
+        });
+        if (img.complete && img.naturalWidth > 0) {
+          ctx.drawImage(img, 0, 0, el.width, el.height);
+        }
       } else if (el.type === 'table' || el.tableData) {
         const td = el.tableData || {
           headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING'],

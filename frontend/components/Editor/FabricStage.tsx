@@ -375,6 +375,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         // Regular text elements — open inline text editor
         if (el.type === 'image') {
           useStore.getState().startCropMode(el.id);
+        } else if (el.type === 'video') {
+          window.dispatchEvent(new CustomEvent('catalog:playVideo', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'product-block') {
@@ -763,7 +765,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             scaleY: 1
           });
           obj.setCoords();
-        } else if (el && el.type === 'image') {
+        } else if (el && (el.type === 'image' || el.type === 'video')) {
           const newW = Math.round((obj.width || el.width || 0) * sx);
           const newH = Math.round((obj.height || el.height || 0) * sy);
           updates.width = newW;
@@ -1146,8 +1148,12 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                 el.overlayGradientEndOpacity !== (existingObj as any)._overlayGradientEndOpacity ||
                 (existingObj as any)._wasCropActive === true
               );
+              const isVideoRebuild = el.type === 'video' && (
+                el.videoUrl !== (existingObj as any)._videoUrl ||
+                el.videoPoster !== (existingObj as any)._videoPoster
+              );
 
-              if (isTableRebuild || isProductRebuild || isShapeRebuild || isImageRebuild) {
+              if (isTableRebuild || isProductRebuild || isShapeRebuild || isImageRebuild || isVideoRebuild) {
                 if (isActiveObj) {
                   canvas.discardActiveObject();
                 }
@@ -1228,6 +1234,15 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                     if (el.shapeType === 'circle' && existingObj instanceof Circle) {
                       existingObj.set({ radius: Math.min(el.width, el.height) / 2 });
                     }
+                  }
+                } else if (el.type === 'video') {
+                  existingObj.set({
+                    stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+                    strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+                    objectCaching: false,
+                  });
+                  if (!isActiveObj) {
+                    existingObj.set({ width: el.width, height: el.height, scaleX: 1, scaleY: 1 });
                   }
                 } else if (el.type === 'image') {
                   existingObj.set({

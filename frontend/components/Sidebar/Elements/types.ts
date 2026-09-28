@@ -26,3 +26,13 @@ export interface ChecklistTemplate {
   getSvg: () => string;
   getCanvasElements: (groupId: string) => CanvasElement[];
 }
+
+export interface VideoEmbedTemplate {
+  id: string;
+  title: string;
+  width: number;
+  height: number;
+  category?: string;
+  getSvg: () => string;
+  getCanvasElements: (groupId: string, videoUrl?: string) => CanvasElement[];
+}

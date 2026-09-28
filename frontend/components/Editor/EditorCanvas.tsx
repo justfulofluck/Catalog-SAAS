@@ -8,9 +8,10 @@ import ContextMenu from './ContextMenu';
 import { FloatingTextToolbar } from '../Toolbar/FloatingTextToolbar';
 import FloatingToolbar from '../Toolbar/FloatingToolbar';
 import ProductGridStudioModal from './ProductGridStudioModal';
-import { saveSelection, restoreSelection } from '../../utils/textStyleSelection';
 import { CatalogPage, PageType } from '../../types';
 import { normalizeImageUrl } from '../../utils/imageUtils';
+import { parseVideoUrl } from '../../utils/videoUtils';
+import { X } from 'lucide-react';
 
 const Divider = () => <div className="w-[1px] h-4 bg-slate-200 mx-1" />;
 const EMPTY_ARRAY: any[] = [];
@@ -113,6 +114,7 @@ const EditorCanvas: React.FC = () => {
   }, [showAddPageMenu]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editConfig, setEditConfig] = useState<any | null>(null);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -129,6 +131,17 @@ const EditorCanvas: React.FC = () => {
     };
     window.addEventListener('catalog:openContextMenu', handleOpenContextMenu);
     return () => window.removeEventListener('catalog:openContextMenu', handleOpenContextMenu);
+  }, []);
+
+  // Listen for live video playback trigger (e.g. double clicking video or clicking Play Video toolbar button)
+  useEffect(() => {
+    const handlePlayVideo = (e: any) => {
+      if (e.detail?.id) {
+        setPlayingVideoId(e.detail.id);
+      }
+    };
+    window.addEventListener('catalog:playVideo', handlePlayVideo);
+    return () => window.removeEventListener('catalog:playVideo', handlePlayVideo);
   }, []);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1548,6 +1561,56 @@ const EditorCanvas: React.FC = () => {
                       />
                     </div>
                   )}
+
+                  {/* Active In-Place Live Video Player Overlay */}
+                  {page.elements?.filter(el => el.type === 'video' && el.id === playingVideoId).map(vidEl => {
+                    const parsed = parseVideoUrl(vidEl.videoUrl || '');
+                    return (
+                      <div
+                        key={`live-player-${vidEl.id}`}
+                        className="absolute z-[100] rounded-lg overflow-hidden shadow-2xl bg-black border-2 border-[#0084ff] animate-fadeIn"
+                        style={{
+                          left: vidEl.x * zoom,
+                          top: vidEl.y * zoom,
+                          width: vidEl.width * zoom,
+                          height: vidEl.height * zoom,
+                          transform: `rotate(${vidEl.rotation || 0}deg)`,
+                          transformOrigin: 'top left',
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setPlayingVideoId(null);
+                          }}
+                          className="absolute top-2 right-2 z-[110] p-1.5 rounded-full bg-black/80 hover:bg-black text-white hover:scale-110 transition-transform shadow-lg border border-white/20"
+                          title="Close Video Player"
+                        >
+                          <X size={14} />
+                        </button>
+
+                        {parsed.type === 'youtube' || parsed.type === 'vimeo' || parsed.type === 'loom' ? (
+                          <iframe
+                            src={parsed.embedUrl}
+                            className="w-full h-full border-0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                          />
+                        ) : (
+                          <video
+                            src={vidEl.videoUrl}
+                            poster={vidEl.videoPoster}
+                            controls
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-contain bg-black"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
 
                   {/* Floating text toolbar */}
                   {isActive && (editingId || selectedTextElement) && (
