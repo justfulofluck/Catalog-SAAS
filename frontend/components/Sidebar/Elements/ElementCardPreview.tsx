@@ -120,6 +120,31 @@ export const ElementCardPreview: React.FC<ElementCardPreviewProps> = ({ previewT
         </div>
       );
 
+    case 'tables':
+      return (
+        <div className="w-full h-24 flex items-center justify-center p-2.5 select-none">
+          <div className="w-20 h-14 rounded border border-purple-400/80 bg-purple-500/10 flex flex-col overflow-hidden shadow-sm">
+            <div className="h-4 bg-purple-600/80 flex items-center divide-x divide-purple-400/50">
+              <div className="flex-1 h-full"></div>
+              <div className="flex-1 h-full"></div>
+              <div className="flex-1 h-full"></div>
+            </div>
+            <div className="flex-1 flex flex-col divide-y divide-purple-300/40">
+              <div className="flex-1 flex divide-x divide-purple-300/40">
+                <div className="flex-1"></div>
+                <div className="flex-1"></div>
+                <div className="flex-1"></div>
+              </div>
+              <div className="flex-1 flex divide-x divide-purple-300/40 bg-purple-500/5">
+                <div className="flex-1"></div>
+                <div className="flex-1"></div>
+                <div className="flex-1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+
     case 'qr-code':
       return (
         <div className="w-full h-24 flex items-center justify-center select-none">

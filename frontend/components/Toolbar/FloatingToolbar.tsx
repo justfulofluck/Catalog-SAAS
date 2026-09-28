@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect, useMemo } from 'react';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -28,10 +27,20 @@ import {
   ArrowLeft,
   ArrowDown,
   ArrowUp,
-  Play
+  Play,
+  Bold,
+  Italic,
+  Underline,
+  Minus,
+  Plus,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  ChevronDown,
+  Search
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
-import { PAGE_WIDTH } from '../../constants';
+import { PAGE_WIDTH, CATEGORIZED_FONTS } from '../../constants';
 import { isDarkColor } from '../Editor/fabricRenderer';
 import { colorToRgba } from '../../utils/imageUtils';
 
@@ -98,11 +107,17 @@ const FloatingToolbar: React.FC<Props> = ({
   const [showLinkPopover, setShowLinkPopover] = useState(false);
   const [showOverlayPopover, setShowOverlayPopover] = useState(false);
   const [showOpacityPopover, setShowOpacityPopover] = useState(false);
+  const [isFontMenuOpen, setIsFontMenuOpen] = useState(false);
+  const [fontSearch, setFontSearch] = useState('');
+  const [showTableColorsPopover, setShowTableColorsPopover] = useState(false);
   const [tempLink, setTempLink] = useState('');
   const moreMenuRef = useRef<HTMLDivElement>(null);
   const linkPopoverRef = useRef<HTMLDivElement>(null);
   const overlayPopoverRef = useRef<HTMLDivElement>(null);
   const opacityPopoverRef = useRef<HTMLDivElement>(null);
+  const fontMenuRef = useRef<HTMLDivElement>(null);
+  const tableColorsRef = useRef<HTMLDivElement>(null);
+  const fontScrollRef = useRef<HTMLDivElement>(null);
   const fillInputRef = useRef<HTMLInputElement>(null);
   const strokeInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
@@ -125,10 +140,30 @@ const FloatingToolbar: React.FC<Props> = ({
       if (linkPopoverRef.current && !linkPopoverRef.current.contains(e.target as Node)) setShowLinkPopover(false);
       if (overlayPopoverRef.current && !overlayPopoverRef.current.contains(e.target as Node)) setShowOverlayPopover(false);
       if (opacityPopoverRef.current && !opacityPopoverRef.current.contains(e.target as Node)) setShowOpacityPopover(false);
+      if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) setIsFontMenuOpen(false);
+      if (tableColorsRef.current && !tableColorsRef.current.contains(e.target as Node)) setShowTableColorsPopover(false);
     };
-    if (showMoreMenu || showLinkPopover || showOverlayPopover || showOpacityPopover) document.addEventListener('mousedown', handleClickOutside);
+    if (showMoreMenu || showLinkPopover || showOverlayPopover || showOpacityPopover || isFontMenuOpen || showTableColorsPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showMoreMenu, showLinkPopover, showOverlayPopover, showOpacityPopover]);
+  }, [showMoreMenu, showLinkPopover, showOverlayPopover, showOpacityPopover, isFontMenuOpen, showTableColorsPopover]);
+
+  useEffect(() => {
+    const stopProp = (e: WheelEvent) => e.stopPropagation();
+    const fontEl = fontScrollRef.current;
+    if (isFontMenuOpen && fontEl) fontEl.addEventListener('wheel', stopProp, { passive: false });
+    return () => {
+      if (fontEl) fontEl.removeEventListener('wheel', stopProp);
+    };
+  }, [isFontMenuOpen]);
+
+  const filteredFonts = useMemo(() => {
+    return CATEGORIZED_FONTS.map(group => ({
+      ...group,
+      fonts: group.fonts.filter(f => f.toLowerCase().includes(fontSearch.toLowerCase()))
+    })).filter(group => group.fonts.length > 0);
+  }, [fontSearch]);
 
   if (selectedElements.length === 0) return null;
 
@@ -253,6 +288,20 @@ const FloatingToolbar: React.FC<Props> = ({
   const btnClass = 'p-1.5 rounded-[4px] text-[#E2DCC8]/80 hover:text-white hover:bg-[#0F3D3E]/40 transition-all active:scale-95';
 
   const isTableElement = element.type === 'table' || !!element.tableData;
+  const td = element.tableData || {
+    headers: ['', '', ''],
+    rows: [['', '', ''], ['', '', ''], ['', '', ''], ['', '', '']],
+  };
+  const tableFont = td.fontFamily || 'Inter';
+  const tableFontSize = Math.round(td.fontSize || 10);
+  const tableTextColor = td.textColor || '#0F172A';
+  const tableHeaderBg = td.headerBg || element.fill || '#cbd5e1';
+  const tableRowBg = td.rowBg || '#ffffff';
+  const tableBorderColor = td.borderColor || '#cbd5e1';
+  const isTableBold = td.fontWeight === 'bold' || td.fontWeight === '700' || td.fontWeight === '900';
+  const isTableItalic = td.fontStyle === 'italic';
+  const isTableUnderline = !!(td.textDecoration?.includes('underline'));
+  const tableAlign = td.textAlign || 'center';
 
   return (
     <div
@@ -262,8 +311,387 @@ const FloatingToolbar: React.FC<Props> = ({
       onMouseDown={(e) => e.stopPropagation()}
     >
 
-      {/* Fill color (for shapes/non-image/non-video elements) */}
-      {element.type !== 'image' && element.type !== 'video' && (
+      {/* TABLE TEXT CONTROLS */}
+      {isTableElement && (
+        <>
+          {/* 1. Font Family Dropdown */}
+          <div className="relative" ref={fontMenuRef}>
+            <button
+              type="button"
+              onClick={() => setIsFontMenuOpen(v => !v)}
+              onMouseDown={(e) => e.preventDefault()}
+              className={`flex items-center gap-1 px-2 py-1 rounded-[4px] text-[12px] font-bold tracking-tight transition-all active:scale-95 ${
+                isFontMenuOpen ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30' : 'text-[#F1F1F1] hover:bg-[#0F3D3E]/40 border border-transparent'
+              }`}
+              style={{ fontFamily: tableFont }}
+              title="Table Font Family"
+            >
+              <span className="max-w-[75px] truncate">{tableFont}</span>
+              <ChevronDown size={12} className="text-[#E2DCC8]/50 shrink-0" />
+            </button>
+            {isFontMenuOpen && (
+              <div
+                className={`absolute ${
+                  isPopoverOffTop ? 'top-full mt-2 animate-dropdown' : 'bottom-full mb-2 animate-popover'
+                } left-0 w-64 bg-[#18181b]/95 backdrop-blur-xl border border-[#E2DCC8]/20 rounded-[6px] shadow-2xl overflow-hidden z-[2100] flex flex-col text-[#EDEDED]`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Search Bar */}
+                <div className="p-2 border-b border-[#E2DCC8]/15 bg-[#121214] flex items-center gap-2 sticky top-0 z-10">
+                  <Search size={14} className="text-gray-400" />
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search fonts..."
+                    value={fontSearch}
+                    onChange={e => setFontSearch(e.target.value)}
+                    className="w-full bg-transparent border-none outline-none text-[12px] font-bold text-[#F1F1F1] placeholder:text-gray-500"
+                  />
+                </div>
+                {/* Font List */}
+                <div
+                  ref={fontScrollRef}
+                  className="max-h-[190px] overflow-y-auto custom-scrollbar p-1 flex flex-col gap-0.5 scroll-smooth overscroll-contain"
+                >
+                  {filteredFonts.map(group => (
+                    <div key={group.label} className="flex flex-col p-0.5 mb-1 last:mb-0">
+                      <div className="px-2 py-1 text-[8px] font-black text-[#E2DCC8]/50 uppercase tracking-widest bg-white/5 rounded-[4px] mb-0.5">
+                        {group.label}
+                      </div>
+                      <div className="flex flex-col">
+                        {group.fonts.map(f => (
+                          <button
+                            key={f}
+                            type="button"
+                            onMouseDown={(e) => e.preventDefault()}
+                            onClick={() => {
+                              updateElement(currentPageIndex, element.id, {
+                                tableData: { ...td, fontFamily: f }
+                              });
+                              setIsFontMenuOpen(false);
+                            }}
+                            className={`block w-full text-left px-2.5 py-1.5 text-[12px] rounded-[4px] transition-all ${
+                              f === tableFont ? 'bg-[#0F3D3E] text-white font-bold border border-[#E2DCC8]/30' : 'text-gray-300 hover:bg-[#0F3D3E]/30 hover:text-white'
+                            }`}
+                            style={{ fontFamily: f }}
+                          >
+                            {f}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  {filteredFonts.length === 0 && (
+                    <div className="py-8 text-center text-gray-500 text-[11px] font-bold uppercase tracking-widest">
+                      No fonts found
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="w-[1px] h-4 bg-[#E2DCC8]/20 mx-0.5" />
+
+          {/* 2. Font Size Controls */}
+          <div className="flex items-center gap-0.5 px-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                const newSize = Math.max(6, tableFontSize - 1);
+                const diff = newSize - tableFontSize;
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    fontSize: newSize,
+                    headerFontSize: Math.max(7, (td.headerFontSize || 11) + diff)
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 hover:bg-[#0F3D3E]/40 rounded-[4px] text-[#E2DCC8]/70 hover:text-white transition-all active:scale-90"
+              title="Decrease font size"
+            >
+              <Minus size={13} />
+            </button>
+            <input
+              type="number"
+              value={tableFontSize}
+              onChange={e => {
+                const newSize = Math.max(1, Number(e.target.value));
+                const diff = newSize - tableFontSize;
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    fontSize: newSize,
+                    headerFontSize: Math.max(1, (td.headerFontSize || 11) + diff)
+                  }
+                });
+              }}
+              onWheel={e => {
+                e.preventDefault();
+                const delta = e.deltaY < 0 ? 1 : -1;
+                const newSize = Math.max(6, tableFontSize + delta);
+                const diff = newSize - tableFontSize;
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    fontSize: newSize,
+                    headerFontSize: Math.max(7, (td.headerFontSize || 11) + diff)
+                  }
+                });
+              }}
+              className="w-8 text-center text-[12px] font-black text-[#F1F1F1] bg-[#100F0F] border border-[#E2DCC8]/20 rounded-[4px] py-0.5 outline-none focus:border-[#0F3D3E] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                const newSize = tableFontSize + 1;
+                const diff = newSize - tableFontSize;
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    fontSize: newSize,
+                    headerFontSize: (td.headerFontSize || 11) + diff
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 hover:bg-[#0F3D3E]/40 rounded-[4px] text-[#E2DCC8]/70 hover:text-white transition-all active:scale-90"
+              title="Increase font size"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
+
+          <div className="w-[1px] h-4 bg-[#E2DCC8]/20 mx-0.5" />
+
+          {/* 3. Text Color & Formatting */}
+          <div className="flex items-center gap-0.5 px-0.5">
+            {/* Text Color Picker */}
+            <button
+              type="button"
+              onClick={() => {
+                useStore.getState().openColorPicker({
+                  type: 'text',
+                  elementId: element.id,
+                  color: tableTextColor,
+                  title: 'Table Text Color',
+                  onChange: (newColor) => {
+                    updateElement(currentPageIndex, element.id, {
+                      tableData: {
+                        ...td,
+                        textColor: newColor,
+                        headerTextColor: newColor
+                      }
+                    });
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1 rounded-[4px] transition-all active:scale-95 hover:bg-[#0F3D3E]/40 text-[#F1F1F1]"
+              title="Text Color"
+            >
+              <div className="flex flex-col items-center">
+                <span className="font-serif font-black text-[13px] leading-tight" style={{ color: tableTextColor }}>A</span>
+                <div className="w-3.5 h-[2.5px] rounded-[1px]" style={{ backgroundColor: tableTextColor }} />
+              </div>
+            </button>
+
+            {/* Bold */}
+            <button
+              type="button"
+              onClick={() => {
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    fontWeight: isTableBold ? 'normal' : 'bold',
+                    headerFontWeight: isTableBold ? 'normal' : '900'
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${
+                isTableBold ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30 shadow-sm' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'
+              }`}
+              title="Bold"
+            >
+              <Bold size={14} strokeWidth={isTableBold ? 3 : 2} />
+            </button>
+
+            {/* Italic */}
+            <button
+              type="button"
+              onClick={() => {
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    fontStyle: isTableItalic ? 'normal' : 'italic'
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${
+                isTableItalic ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30 shadow-sm' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'
+              }`}
+              title="Italic"
+            >
+              <Italic size={14} strokeWidth={isTableItalic ? 3 : 2} />
+            </button>
+
+            {/* Underline */}
+            <button
+              type="button"
+              onClick={() => {
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    textDecoration: isTableUnderline ? 'none' : 'underline'
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className={`p-1.5 rounded-[4px] transition-all active:scale-95 ${
+                isTableUnderline ? 'bg-[#0F3D3E] text-white border border-[#E2DCC8]/30 shadow-sm' : 'hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white'
+              }`}
+              title="Underline"
+            >
+              <Underline size={14} strokeWidth={isTableUnderline ? 3 : 2} />
+            </button>
+
+            {/* Alignment */}
+            <button
+              type="button"
+              onClick={() => {
+                const nextAlign = tableAlign === 'center' ? 'left' : tableAlign === 'left' ? 'right' : 'center';
+                updateElement(currentPageIndex, element.id, {
+                  tableData: {
+                    ...td,
+                    textAlign: nextAlign
+                  }
+                });
+              }}
+              onMouseDown={(e) => e.preventDefault()}
+              className="p-1.5 rounded-[4px] hover:bg-[#0F3D3E]/40 text-[#E2DCC8]/80 hover:text-white transition-all active:scale-95"
+              title={`Alignment: ${tableAlign}`}
+            >
+              {tableAlign === 'left' && <AlignLeft size={14} />}
+              {tableAlign === 'center' && <AlignCenter size={14} />}
+              {tableAlign === 'right' && <AlignRight size={14} />}
+            </button>
+          </div>
+
+          <div className="w-[1px] h-4 bg-[#E2DCC8]/20 mx-0.5" />
+
+          {/* 4. Table Colors Popover */}
+          <div className="relative" ref={tableColorsRef}>
+            <button
+              type="button"
+              className={`flex items-center gap-1.5 px-2 py-1 rounded-[4px] text-[11px] font-bold tracking-tight text-[#E2DCC8]/90 hover:text-white bg-[#0F3D3E]/40 hover:bg-[#0F3D3E]/60 border border-[#E2DCC8]/20 transition-all active:scale-95 ${
+                showTableColorsPopover ? 'bg-[#0F3D3E] text-white' : ''
+              }`}
+              title="Table Colors (Header, Rows, Border)"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowTableColorsPopover(!showTableColorsPopover);
+              }}
+            >
+              <div className="w-3.5 h-3.5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: tableHeaderBg }} />
+              <span>Colors</span>
+            </button>
+
+            {showTableColorsPopover && (
+              <div
+                className={`absolute left-1/2 -translate-x-1/2 w-60 p-3 rounded-[8px] bg-[#18181b] border border-white/10 text-white shadow-[0_20px_60px_rgba(0,0,0,0.85)] z-[2100] animate-in zoom-in-95 duration-150 backdrop-blur-xl ${
+                  isPopoverOffTop ? 'top-full mt-2' : 'bottom-full mb-2'
+                }`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="text-xs font-bold text-white pb-2 mb-2 border-b border-white/10 flex items-center gap-1.5">
+                  <Palette size={13} className="text-[#8B5CF6]" />
+                  <span>Table Colors</span>
+                </div>
+                
+                <div className="space-y-2.5">
+                  {/* Header Background */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-zinc-300">Header Background</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        useStore.getState().openColorPicker({
+                          type: 'fill',
+                          color: tableHeaderBg,
+                          title: 'Header Background Color',
+                          onChange: (color) => {
+                            updateElement(currentPageIndex, element.id, {
+                              fill: color,
+                              tableData: { ...td, headerBg: color }
+                            });
+                          }
+                        });
+                      }}
+                      className="w-6 h-6 rounded-[3px] border border-white/20 shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                      style={{ backgroundColor: tableHeaderBg }}
+                      title="Change Header Background Color"
+                    />
+                  </div>
+
+                  {/* Row / Cell Background */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-zinc-300">Row Background</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        useStore.getState().openColorPicker({
+                          type: 'fill',
+                          color: tableRowBg,
+                          title: 'Row Background Color',
+                          onChange: (color) => {
+                            updateElement(currentPageIndex, element.id, {
+                              tableData: { ...td, rowBg: color }
+                            });
+                          }
+                        });
+                      }}
+                      className="w-6 h-6 rounded-[3px] border border-white/20 shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                      style={{ backgroundColor: tableRowBg }}
+                      title="Change Row Background Color"
+                    />
+                  </div>
+
+                  {/* Border Color */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-zinc-300">Border Color</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        useStore.getState().openColorPicker({
+                          type: 'stroke',
+                          color: tableBorderColor,
+                          title: 'Border Color',
+                          onChange: (color) => {
+                            updateElement(currentPageIndex, element.id, {
+                              stroke: color,
+                              tableData: { ...td, borderColor: color }
+                            });
+                          }
+                        });
+                      }}
+                      className="w-6 h-6 rounded-[3px] border border-white/20 shadow-sm transition-transform hover:scale-110 cursor-pointer"
+                      style={{ backgroundColor: tableBorderColor }}
+                      title="Change Border Color"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {/* Fill color (for shapes/non-image/non-video/non-table elements) */}
+      {element.type !== 'image' && element.type !== 'video' && !isTableElement && (
         <button
           className={btnClass}
           title="Fill Color"

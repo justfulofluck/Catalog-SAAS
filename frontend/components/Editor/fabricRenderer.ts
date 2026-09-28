@@ -2040,84 +2040,28 @@ async function _elementToFabricObject(
     const headerFontSize = td.headerFontSize || 9.5;
     const bodyFontSize = td.fontSize || 8.5;
 
-    const numCols = td.headers.length || 1;
-    const numRows = (td.rows?.length || 0);
+    const numCols = Math.max(1, td.headers?.length || 1);
+    const numRows = Math.max(1, td.rows?.length || 1);
+    const totalRowCount = numRows + 1; // 1 header + N body rows
 
     // Auto-adjust font size based on column count and element width with guaranteed legibility
     const dynamicHeaderFontSize = numCols > 6 ? Math.max(8.5, Math.min(headerFontSize, el.width / (numCols * 7.5))) : headerFontSize;
     const dynamicBodyFontSize = numCols > 6 ? Math.max(8.0, Math.min(bodyFontSize, el.width / (numCols * 8.0))) : bodyFontSize;
 
-    // Calculate col widths (custom or weighted by header/content type)
+    // Calculate col widths (custom or evenly distributed)
     const colWidths: number[] = [];
     if (td.colWidths && td.colWidths.length === numCols) {
       const totalRel = td.colWidths.reduce((a, b) => a + b, 0);
       td.colWidths.forEach(w => colWidths.push((w / totalRel) * el.width));
     } else {
-      // Weighted distribution: SKU (18%), Name/Spec (28%), remaining evenly divided
-      const weights = td.headers.map((h) => {
-        const lower = h.toLowerCase();
-        if (lower.includes('product') || lower.includes('spec') || lower.includes('name') || lower.includes('desc')) return 2.2;
-        if (lower.includes('model') || lower.includes('sku') || lower.includes('code')) return 1.5;
-        if (lower.includes('cut') || lower.includes('dim')) return 1.1;
-        if (lower.includes('color') || lower.includes('cct')) return 1.2;
-        if (lower.includes('price') || lower.includes('mrp')) return 1.1;
-        if (lower.includes('pack') || lower.includes('box')) return 1.1;
-        return 1.0;
-      });
-      const totalWeight = weights.reduce((a, b) => a + b, 0);
-      weights.forEach(w => colWidths.push((w / totalWeight) * el.width));
+      const evenW = el.width / numCols;
+      for (let i = 0; i < numCols; i++) colWidths.push(evenW);
     }
 
-    // Measure approximate wrapped lines for any cell text given available column width
-    const estimateLines = (text: any, colW: number, fontSize: number): number => {
-      if (text === null || text === undefined || text === '') return 1;
-      const clean = String(text).trim();
-      // Use more conservative char width — uppercase/bold fonts render wider
-      const hasUppercase = clean === clean.toUpperCase();
-      const avgCharWidth = fontSize * (hasUppercase ? 0.72 : 0.65);
-      const usableWidth = Math.max(15, colW - cellPadding * 2);
-      const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
-
-      const words = clean.split(/\s+/);
-      let lines = 1;
-      let curLineLen = 0;
-      words.forEach(word => {
-        // Handle long words that wrap mid-word (Fabric.js does this)
-        if (word.length > charsPerLine) {
-          if (curLineLen > 0) { lines++; }
-          lines += Math.ceil(word.length / charsPerLine) - 1;
-          curLineLen = word.length % charsPerLine || charsPerLine;
-        } else if (curLineLen + word.length > charsPerLine) {
-          lines++;
-          curLineLen = word.length;
-        } else {
-          curLineLen += word.length + 1;
-        }
-      });
-      return lines;
-    };
-
-    // Calculate header height based on longest wrapped header
-    let maxHeaderLines = 1;
-    td.headers.forEach((h, colIdx) => {
-      const l = estimateLines(h, colWidths[colIdx], dynamicHeaderFontSize);
-      if (l > maxHeaderLines) maxHeaderLines = l;
-    });
-    const headerRowHeight = Math.max(28, maxHeaderLines * (dynamicHeaderFontSize * 1.3) + cellPadding * 2);
-
-    // Calculate dynamic height for each body row
-    const rowHeights: number[] = [];
-    (td.rows || []).forEach(row => {
-      let maxLinesInRow = 1;
-      (row || []).forEach((cellText: any, colIdx: number) => {
-        const l = estimateLines(cellText, colWidths[colIdx] || (el.width / numCols), dynamicBodyFontSize);
-        if (l > maxLinesInRow) maxLinesInRow = l;
-      });
-      const calcH = Math.max(26, maxLinesInRow * (dynamicBodyFontSize * 1.45) + cellPadding * 2 + 4);
-      rowHeights.push(calcH);
-    });
-
-    const totalCalculatedTableHeight = headerRowHeight + rowHeights.reduce((a, b) => a + b, 0);
+    // Row heights: divide table height evenly across all rows
+    const rowHeight = el.height / totalRowCount;
+    const headerRowHeight = rowHeight;
+    const rHeight = rowHeight;
 
     const tableObjs: any[] = [];
 
@@ -2133,27 +2077,32 @@ async function _elementToFabricObject(
     });
     tableObjs.push(headerRect);
 
-    // 2. Render Headers with full text-wrapping
+    // 2. Render Headers
     let currentX = 0;
     td.headers.forEach((headerText, colIdx) => {
       const colW = colWidths[colIdx];
       const hStr = String(headerText ?? '');
-      const headerTb = new Textbox(hStr.toUpperCase(), {
-        left: currentX + cellPadding,
-        top: cellPadding + 1,
-        width: colW - cellPadding * 2,
-        originX: 'left',
-        originY: 'top',
-        fontSize: dynamicHeaderFontSize,
-        fontFamily: 'Montserrat',
-        fontWeight: '900',
-        fill: headerTextColor,
-        textAlign: colIdx === 0 || colIdx === 1 ? 'left' : 'center',
-        splitByGrapheme: false,
-        lineHeight: 1.15,
-        objectCaching: false,
-      });
-      tableObjs.push(headerTb);
+      if (hStr.trim() !== '') {
+        const vOffsetHeader = Math.max(2, (headerRowHeight - (dynamicHeaderFontSize * 1.3)) / 2);
+        const headerTb = new Textbox(hStr.toUpperCase(), {
+          left: currentX + cellPadding,
+          top: vOffsetHeader,
+          width: Math.max(10, colW - cellPadding * 2),
+          originX: 'left',
+          originY: 'top',
+          fontSize: dynamicHeaderFontSize,
+          fontFamily: td.fontFamily || 'Montserrat',
+          fontWeight: td.headerFontWeight || (td.fontWeight === 'normal' ? '600' : '900'),
+          fontStyle: td.fontStyle || 'normal',
+          underline: td.textDecoration?.includes('underline'),
+          fill: headerTextColor,
+          textAlign: td.textAlign || 'center',
+          splitByGrapheme: false,
+          lineHeight: 1.15,
+          objectCaching: false,
+        });
+        tableObjs.push(headerTb);
+      }
 
       // Header vertical border
       if (colIdx < numCols - 1) {
@@ -2169,10 +2118,9 @@ async function _elementToFabricObject(
       currentX += colW;
     });
 
-    // 3. Render Body Rows with dynamic row positions and heights
+    // 3. Render Body Rows
     let curY = headerRowHeight;
     (td.rows || []).forEach((row, rowIdx) => {
-      const rHeight = rowHeights[rowIdx] || 26;
       const bg = rowIdx % 2 === 1 ? alternateRowBg : rowBg;
 
       // Row Background
@@ -2190,23 +2138,28 @@ async function _elementToFabricObject(
       let cellX = 0;
       (row || []).forEach((cellText: any, colIdx: number) => {
         const colW = colWidths[colIdx];
-        const cellStr = cellText !== undefined && cellText !== null && String(cellText).trim() !== '' ? String(cellText) : '-';
-        const cellTb = new Textbox(cellStr, {
-          left: cellX + cellPadding,
-          top: curY + cellPadding + 1,
-          width: colW - cellPadding * 2,
-          originX: 'left',
-          originY: 'top',
-          fontSize: dynamicBodyFontSize,
-          fontFamily: 'Inter',
-          fontWeight: colIdx === 0 ? '700' : '500',
-          fill: '#0f172a',
-          textAlign: colIdx === 0 || colIdx === 1 ? 'left' : 'center',
-          splitByGrapheme: false,
-          lineHeight: 1.2,
-          objectCaching: false,
-        });
-        tableObjs.push(cellTb);
+        const cellStr = cellText !== undefined && cellText !== null ? String(cellText) : '';
+        if (cellStr.trim() !== '') {
+          const vOffsetBody = Math.max(2, (rHeight - (dynamicBodyFontSize * 1.3)) / 2);
+          const cellTb = new Textbox(cellStr, {
+            left: cellX + cellPadding,
+            top: curY + vOffsetBody,
+            width: Math.max(10, colW - cellPadding * 2),
+            originX: 'left',
+            originY: 'top',
+            fontSize: dynamicBodyFontSize,
+            fontFamily: td.fontFamily || 'Inter',
+            fontWeight: td.fontWeight || (colIdx === 0 ? '700' : '500'),
+            fontStyle: td.fontStyle || 'normal',
+            underline: td.textDecoration?.includes('underline'),
+            fill: td.textColor || '#0f172a',
+            textAlign: td.textAlign || 'center',
+            splitByGrapheme: false,
+            lineHeight: 1.2,
+            objectCaching: false,
+          });
+          tableObjs.push(cellTb);
+        }
 
         // Vertical cell divider
         if (colIdx < numCols - 1) {
@@ -2239,7 +2192,7 @@ async function _elementToFabricObject(
       left: 0,
       top: 0,
       width: el.width,
-      height: totalCalculatedTableHeight,
+      height: el.height,
       fill: 'transparent',
       stroke: borderColor,
       strokeWidth: 1.5,
@@ -2253,7 +2206,7 @@ async function _elementToFabricObject(
       top: el.y,
       angle: el.rotation || 0,
       width: el.width,
-      height: totalCalculatedTableHeight,
+      height: el.height,
       originX: 'left',
       originY: 'top',
       opacity: el.opacity ?? 1,

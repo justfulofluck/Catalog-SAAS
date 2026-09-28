@@ -364,8 +364,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         const el = pageRef.current.elements.find(item => item.id === actualId);
         if (!el) return;
 
-        // If element belongs to a section (has sectionTag or is a table/grid element), open Grid Studio
-        if (el.sectionTag || el.id.startsWith('grid-sec-') || el.type === 'table' || el.tableData) {
+        // If element belongs to a section, open Grid Studio
+        if (el.sectionTag || el.id.startsWith('grid-sec-')) {
           const store = useStore.getState();
           store.setEditorTab('grid-studio');
           store.setSidebarExpanded(true);
@@ -377,6 +377,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           useStore.getState().startCropMode(el.id);
         } else if (el.type === 'video') {
           window.dispatchEvent(new CustomEvent('catalog:playVideo', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
+        } else if (el.type === 'table') {
+          window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'product-block') {
@@ -1024,7 +1026,8 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const oldTableJSON = existingObj._tableDataJSON;
             const newTableJSON = JSON.stringify(el.tableData || {});
             const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
-            return oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
+            const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
+            return oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs(el.height - oldH) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
           }
           if (el.type === 'shape' || el.type === 'comment') {
             const oldFill = existingObj._lastFill || existingObj.fill || '';
