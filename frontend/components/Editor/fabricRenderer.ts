@@ -931,8 +931,10 @@ async function _elementToFabricObject(
           scaleY: 1,
           selectable: false,
           evented: false,
+          objectCaching: false,
         });
 
+        (baseImg as any)._element = htmlImg;
         (baseImg as any).cropX = el.cropX;
         (baseImg as any).cropY = el.cropY;
         (baseImg as any).cropWidth = el.cropWidth;
@@ -941,24 +943,17 @@ async function _elementToFabricObject(
         (baseImg as any).naturalHeight = naturalH;
 
         baseImg._render = function (ctx: CanvasRenderingContext2D) {
-          const imageElement = (this as any)._element;
+          const imageElement = (this as any)._element || (this as any).getElement?.() || htmlImg;
           if (!imageElement) return;
-          const nw = imageElement.naturalWidth || imageElement.width || 1;
-          const nh = imageElement.naturalHeight || imageElement.height || 1;
+          const nw = (this as any).naturalWidth || imageElement.naturalWidth || imageElement.width || 1;
+          const nh = (this as any).naturalHeight || imageElement.naturalHeight || imageElement.height || 1;
           const w = (this as any).width || 1;
           const h = (this as any).height || 1;
 
-          let cropX = (this as any).cropX;
-          let cropY = (this as any).cropY;
-          let cropW = (this as any).cropWidth;
-          let cropH = (this as any).cropHeight;
-
-          if (cropX === undefined || cropW === undefined || cropY === undefined || cropH === undefined) {
-            cropX = 0;
-            cropY = 0;
-            cropW = nw;
-            cropH = nh;
-          }
+          let cropX = (this as any).cropX !== undefined ? (this as any).cropX : 0;
+          let cropY = (this as any).cropY !== undefined ? (this as any).cropY : 0;
+          let cropW = (this as any).cropWidth !== undefined ? (this as any).cropWidth : nw;
+          let cropH = (this as any).cropHeight !== undefined ? (this as any).cropHeight : nh;
 
           const sx = Math.max(0, Math.min(nw - 1, cropX));
           const sy = Math.max(0, Math.min(nh - 1, cropY));
@@ -984,6 +979,7 @@ async function _elementToFabricObject(
           ry: el.borderRadius || 0,
           selectable: false,
           evented: false,
+          objectCaching: false,
         });
 
         const group = new Group([baseImg, overlayRect], {
@@ -997,6 +993,7 @@ async function _elementToFabricObject(
           opacity: el.opacity ?? 1,
           stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
           strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+          objectCaching: false,
         });
         (group as any).id = el.id;
         (group as any)._src = el.src;
@@ -1026,8 +1023,10 @@ async function _elementToFabricObject(
         scaleY: 1,
         stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
         strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+        objectCaching: false,
       });
 
+      (img as any)._element = htmlImg;
       (img as any).cropX = el.cropX;
       (img as any).cropY = el.cropY;
       (img as any).cropWidth = el.cropWidth;
@@ -1036,24 +1035,17 @@ async function _elementToFabricObject(
       (img as any).naturalHeight = naturalH;
 
       img._render = function (ctx: CanvasRenderingContext2D) {
-        const imageElement = (this as any)._element;
+        const imageElement = (this as any)._element || (this as any).getElement?.() || htmlImg;
         if (!imageElement) return;
-        const nw = imageElement.naturalWidth || imageElement.width || 1;
-        const nh = imageElement.naturalHeight || imageElement.height || 1;
+        const nw = (this as any).naturalWidth || imageElement.naturalWidth || imageElement.width || 1;
+        const nh = (this as any).naturalHeight || imageElement.naturalHeight || imageElement.height || 1;
         const w = (this as any).width || 1;
         const h = (this as any).height || 1;
 
-        let cropX = (this as any).cropX;
-        let cropY = (this as any).cropY;
-        let cropW = (this as any).cropWidth;
-        let cropH = (this as any).cropHeight;
-
-        if (cropX === undefined || cropW === undefined || cropY === undefined || cropH === undefined) {
-          cropX = 0;
-          cropY = 0;
-          cropW = nw;
-          cropH = nh;
-        }
+        let cropX = (this as any).cropX !== undefined ? (this as any).cropX : 0;
+        let cropY = (this as any).cropY !== undefined ? (this as any).cropY : 0;
+        let cropW = (this as any).cropWidth !== undefined ? (this as any).cropWidth : nw;
+        let cropH = (this as any).cropHeight !== undefined ? (this as any).cropHeight : nh;
 
         const sx = Math.max(0, Math.min(nw - 1, cropX));
         const sy = Math.max(0, Math.min(nh - 1, cropY));

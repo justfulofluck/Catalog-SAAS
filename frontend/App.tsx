@@ -25,6 +25,7 @@ import ColorPanel from './components/Sidebar/ColorPanel';
 import GridStudioPanel from './components/Sidebar/GridStudioPanel';
 import SingleItemsPanel from './components/Sidebar/SingleItemsPanel';
 import ElementsPanel from './components/Sidebar/ElementsPanel';
+import CropStudioPanel from './components/Sidebar/CropStudioPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
 import { CreateProductModal } from './components/Products/CreateProductModal';
@@ -420,7 +421,7 @@ const App: React.FC = () => {
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
-                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors' || editorTab === 'elements') ? 'w-[360px]' : 'w-[330px]'
+                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors' || editorTab === 'elements' || editorTab === 'crop') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'pages' && <PagesPanel />}
                 {editorTab === 'grid-studio' && <GridStudioPanel />}
@@ -431,6 +432,7 @@ const App: React.FC = () => {
                 {editorTab === 'buttons' && <ButtonsPanel />}
                 {editorTab === 'header-footer' && <HeaderFooterPanel />}
                 {editorTab === 'colors' && <ColorPanel />}
+                {editorTab === 'crop' && <CropStudioPanel />}
               </div>
             )}
           </div>
