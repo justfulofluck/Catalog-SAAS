@@ -127,16 +127,16 @@ export class HorizontalLineShape extends Rect {
 export class CurvedLineShape extends Rect {
   _render(ctx: CanvasRenderingContext2D) {
     const w = this.width;
+    const halfW = w / 2;
     const h = Math.max(this.height, 20);
-    const halfH = h / 2;
     const strokeWidth = this.strokeWidth || 2;
     const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
 
     ctx.save();
     ctx.beginPath();
-    // Smooth S-curve spline connector from (0, halfH) to (w, halfH)
-    ctx.moveTo(0, halfH);
-    ctx.bezierCurveTo(w * 0.35, halfH - h * 0.45, w * 0.65, halfH + h * 0.45, w, halfH);
+    // Smooth S-curve spline connector centered from (-halfW, 0) to (halfW, 0)
+    ctx.moveTo(-halfW, 0);
+    ctx.bezierCurveTo(-w * 0.15, -h * 0.45, w * 0.15, h * 0.45, halfW, 0);
 
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = strokeWidth;
@@ -148,26 +148,26 @@ export class CurvedLineShape extends Rect {
     const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
     ctx.fillStyle = strokeColor;
     ctx.beginPath();
-    ctx.arc(0, halfH, endCircleRadius, 0, Math.PI * 2);
+    ctx.arc(-halfW, 0, endCircleRadius, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.beginPath();
-    ctx.arc(w, halfH, endCircleRadius, 0, Math.PI * 2);
+    ctx.arc(halfW, 0, endCircleRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
   _toSVG(): string[] {
     const w = this.width;
+    const halfW = w / 2;
     const h = Math.max(this.height, 20);
-    const halfH = h / 2;
     const strokeWidth = this.strokeWidth || 2;
     const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
     const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
     return [
-      `<path d="M 0 ${halfH} C ${w * 0.35} ${halfH - h * 0.45}, ${w * 0.65} ${halfH + h * 0.45}, ${w} ${halfH}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" />\n`,
-      `<circle cx="0" cy="${halfH}" r="${endCircleRadius}" fill="${strokeColor}" />\n`,
-      `<circle cx="${w}" cy="${halfH}" r="${endCircleRadius}" fill="${strokeColor}" />\n`
+      `<path d="M ${-halfW} 0 C ${-w * 0.15} ${-h * 0.45}, ${w * 0.15} ${h * 0.45}, ${halfW} 0" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" />\n`,
+      `<circle cx="${-halfW}" cy="0" r="${endCircleRadius}" fill="${strokeColor}" />\n`,
+      `<circle cx="${halfW}" cy="0" r="${endCircleRadius}" fill="${strokeColor}" />\n`
     ];
   }
 }
@@ -175,23 +175,22 @@ export class CurvedLineShape extends Rect {
 export class ElbowLineShape extends Rect {
   _render(ctx: CanvasRenderingContext2D) {
     const w = this.width;
+    const halfW = w / 2;
     const h = Math.max(this.height, 20);
-    const halfH = h / 2;
     const strokeWidth = this.strokeWidth || 2;
     const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
     const cornerR = Math.min(8, Math.min(w * 0.15, h * 0.25));
 
     ctx.save();
     ctx.beginPath();
-    // Step/Elbow connector: horizontal start -> vertical step -> horizontal end with rounded corners
-    const midX = w / 2;
-    const startY = halfH - h * 0.35;
-    const endY = halfH + h * 0.35;
+    // Step/Elbow connector centered around (0,0):
+    const startY = -h * 0.35;
+    const endY = h * 0.35;
 
-    ctx.moveTo(0, startY);
-    ctx.arcTo(midX, startY, midX, halfH, cornerR);
-    ctx.arcTo(midX, endY, w, endY, cornerR);
-    ctx.lineTo(w, endY);
+    ctx.moveTo(-halfW, startY);
+    ctx.arcTo(0, startY, 0, 0, cornerR);
+    ctx.arcTo(0, endY, halfW, endY, cornerR);
+    ctx.lineTo(halfW, endY);
 
     ctx.strokeStyle = strokeColor;
     ctx.lineWidth = strokeWidth;
@@ -203,30 +202,29 @@ export class ElbowLineShape extends Rect {
     const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
     ctx.fillStyle = strokeColor;
     ctx.beginPath();
-    ctx.arc(0, startY, endCircleRadius, 0, Math.PI * 2);
+    ctx.arc(-halfW, startY, endCircleRadius, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.beginPath();
-    ctx.arc(w, endY, endCircleRadius, 0, Math.PI * 2);
+    ctx.arc(halfW, endY, endCircleRadius, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
   _toSVG(): string[] {
     const w = this.width;
+    const halfW = w / 2;
     const h = Math.max(this.height, 20);
-    const halfH = h / 2;
     const strokeWidth = this.strokeWidth || 2;
     const strokeColor = (this.stroke as string) || (this.fill as string) || '#000000';
     const cornerR = Math.min(8, Math.min(w * 0.15, h * 0.25));
-    const midX = w / 2;
-    const startY = halfH - h * 0.35;
-    const endY = halfH + h * 0.35;
+    const startY = -h * 0.35;
+    const endY = h * 0.35;
     const endCircleRadius = Math.max(strokeWidth * 0.8, 3.5);
     return [
-      `<path d="M 0 ${startY} L ${midX - cornerR} ${startY} Q ${midX} ${startY} ${midX} ${startY + (endY > startY ? cornerR : -cornerR)} L ${midX} ${endY - (endY > startY ? cornerR : -cornerR)} Q ${midX} ${endY} ${midX + cornerR} ${endY} L ${w} ${endY}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" />\n`,
-      `<circle cx="0" cy="${startY}" r="${endCircleRadius}" fill="${strokeColor}" />\n`,
-      `<circle cx="${w}" cy="${endY}" r="${endCircleRadius}" fill="${strokeColor}" />\n`
+      `<path d="M ${-halfW} ${startY} L ${-cornerR} ${startY} Q 0 ${startY} 0 ${startY + (endY > startY ? cornerR : -cornerR)} L 0 ${endY - (endY > startY ? cornerR : -cornerR)} Q 0 ${endY} ${cornerR} ${endY} L ${halfW} ${endY}" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" fill="none" />\n`,
+      `<circle cx="${-halfW}" cy="${startY}" r="${endCircleRadius}" fill="${strokeColor}" />\n`,
+      `<circle cx="${halfW}" cy="${endY}" r="${endCircleRadius}" fill="${strokeColor}" />\n`
     ];
   }
 }
