@@ -925,11 +925,30 @@ async function _elementToFabricObject(
         const baseImg = new FabricImage(htmlImg, {
           left: 0,
           top: 0,
-          scaleX: el.width / naturalW,
-          scaleY: el.height / naturalH,
+          width: el.width,
+          height: el.height,
+          scaleX: 1,
+          scaleY: 1,
           selectable: false,
           evented: false,
         });
+
+        baseImg._render = function (ctx: CanvasRenderingContext2D) {
+          const imageElement = (this as any)._element;
+          if (!imageElement) return;
+          const nw = imageElement.naturalWidth || imageElement.width || 1;
+          const nh = imageElement.naturalHeight || imageElement.height || 1;
+          const w = (this as any).width || 1;
+          const h = (this as any).height || 1;
+
+          const scale = Math.max(w / nw, h / nh);
+          const sw = Math.min(nw, w / scale);
+          const sh = Math.min(nh, h / scale);
+          const sx = Math.max(0, (nw - sw) / 2);
+          const sy = Math.max(0, (nh - sh) / 2);
+
+          ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+        };
 
         if (fabricFilters.length > 0) {
           (baseImg as any).filters = fabricFilters;
@@ -975,14 +994,32 @@ async function _elementToFabricObject(
         return group;
       }
 
-      const img = new FabricImage(htmlImg);
-      img.set({
+      const img = new FabricImage(htmlImg, {
         ...common,
-        scaleX: el.width / naturalW,
-        scaleY: el.height / naturalH,
+        width: el.width,
+        height: el.height,
+        scaleX: 1,
+        scaleY: 1,
         stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
         strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
       });
+
+      img._render = function (ctx: CanvasRenderingContext2D) {
+        const imageElement = (this as any)._element;
+        if (!imageElement) return;
+        const nw = imageElement.naturalWidth || imageElement.width || 1;
+        const nh = imageElement.naturalHeight || imageElement.height || 1;
+        const w = (this as any).width || 1;
+        const h = (this as any).height || 1;
+
+        const scale = Math.max(w / nw, h / nh);
+        const sw = Math.min(nw, w / scale);
+        const sh = Math.min(nh, h / scale);
+        const sx = Math.max(0, (nw - sw) / 2);
+        const sy = Math.max(0, (nh - sh) / 2);
+
+        ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+      };
 
       if (fabricFilters.length > 0) {
         (img as any).filters = fabricFilters;

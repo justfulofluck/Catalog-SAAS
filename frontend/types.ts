@@ -128,6 +128,13 @@ export interface CanvasElement {
   textStrokeWidth?: number;
   effectSpread?: number;
   effectRoundness?: number;
+  // Image Crop properties
+  cropX?: number;
+  cropY?: number;
+  cropWidth?: number;
+  cropHeight?: number;
+  naturalWidth?: number;
+  naturalHeight?: number;
   // SVG Content / Rich Vector Element
   svgContent?: string;
 

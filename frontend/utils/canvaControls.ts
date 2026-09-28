@@ -35,12 +35,18 @@ export function renderCanvaCornerControl(
   left: number,
   top: number,
   _styleOverride: any,
-  _fabricObject: any
+  fabricObject: any
 ) {
   ctx.save();
   ctx.translate(left, top);
 
   const radius = (this.sizeX || CANVA_THEME.cornerSize) / 2;
+  const controlKey = (this as any).controlKey;
+  const isDraggingThis = !!controlKey && (
+    fabricObject?.canvas?._currentTransform?.corner === controlKey ||
+    (fabricObject?.canvas?._currentTransform?.target === fabricObject &&
+      fabricObject?.canvas?._currentTransform?.corner === controlKey)
+  );
 
   // Soft elevation shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
@@ -50,20 +56,51 @@ export function renderCanvaCornerControl(
 
   ctx.beginPath();
   ctx.arc(0, 0, radius, 0, Math.PI * 2, false);
-  ctx.fillStyle = '#ffffff';
-  ctx.fill();
 
-  // Subtle clean border for contrast against white backgrounds
-  ctx.shadowColor = 'transparent';
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
-  ctx.stroke();
+  if (isDraggingThis) {
+    // Active dragging node turns solid purple with clean white border (matching Screenshot 2)
+    ctx.fillStyle = CANVA_THEME.borderColor;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+    ctx.stroke();
+  }
 
   ctx.restore();
 }
 
 /**
- * Render vertical white pill/capsule control for side width resizing (ml / mr) (matching Screenshot 2).
+ * Action handler for changing object height (mt, mb) for non-destructive frame cropping.
+ */
+export function changeObjectHeight(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+  if (typeof (controlsUtils as any).changeHeight === 'function') {
+    return (controlsUtils as any).changeHeight(eventData, transform, x, y);
+  }
+  const localPoint = controlsUtils.getLocalPoint
+    ? controlsUtils.getLocalPoint(transform, transform.originX, transform.originY, x, y)
+    : target.toLocalPoint(new Point(x, y), transform.originX, transform.originY);
+  const newHeight = Math.max(15, Math.abs(localPoint.y));
+  if (Math.round(target.height) !== Math.round(newHeight)) {
+    target.set('height', Math.round(newHeight));
+    target.setCoords();
+    if (target.canvas) target.canvas.requestRenderAll();
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Render vertical white pill/capsule control for side width resizing / cropping (ml / mr) (matching Screenshot 2).
  */
 export function renderCanvaSidePillControl(
   this: Control,
@@ -84,6 +121,13 @@ export function renderCanvaSidePillControl(
   const h = CANVA_THEME.sidePillHeight;
   const r = CANVA_THEME.sidePillRadius;
 
+  const controlKey = (this as any).controlKey;
+  const isDraggingThis = !!controlKey && (
+    fabricObject?.canvas?._currentTransform?.corner === controlKey ||
+    (fabricObject?.canvas?._currentTransform?.target === fabricObject &&
+      fabricObject?.canvas?._currentTransform?.corner === controlKey)
+  );
+
   // Soft elevation shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
   ctx.shadowBlur = 4;
@@ -106,20 +150,28 @@ export function renderCanvaSidePillControl(
     ctx.lineTo(-hw, -hh + r);
     ctx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
   }
-  ctx.fillStyle = CANVA_THEME.borderColor;
-  ctx.fill();
 
-  // Subtle clean border
-  ctx.shadowColor = 'transparent';
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.stroke();
+  if (isDraggingThis) {
+    ctx.fillStyle = CANVA_THEME.borderColor;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+    ctx.stroke();
+  }
 
   ctx.restore();
 }
 
 /**
- * Render horizontal pill/capsule control for top and bottom height resizing (mt / mb) (matching Canva screenshot).
+ * Render horizontal pill/capsule control for top and bottom height resizing / cropping (mt / mb) (matching Canva screenshot).
  */
 export function renderCanvaTopBottomPillControl(
   this: Control,
@@ -140,6 +192,13 @@ export function renderCanvaTopBottomPillControl(
   const h = CANVA_THEME.topPillHeight;
   const r = CANVA_THEME.topPillRadius;
 
+  const controlKey = (this as any).controlKey;
+  const isDraggingThis = !!controlKey && (
+    fabricObject?.canvas?._currentTransform?.corner === controlKey ||
+    (fabricObject?.canvas?._currentTransform?.target === fabricObject &&
+      fabricObject?.canvas?._currentTransform?.corner === controlKey)
+  );
+
   // Soft elevation shadow
   ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
   ctx.shadowBlur = 4;
@@ -162,14 +221,22 @@ export function renderCanvaTopBottomPillControl(
     ctx.lineTo(-hw, -hh + r);
     ctx.quadraticCurveTo(-hw, -hh, -hw + r, -hh);
   }
-  ctx.fillStyle = CANVA_THEME.borderColor;
-  ctx.fill();
 
-  // Subtle clean border
-  ctx.shadowColor = 'transparent';
-  ctx.lineWidth = 1;
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
-  ctx.stroke();
+  if (isDraggingThis) {
+    ctx.fillStyle = CANVA_THEME.borderColor;
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.shadowColor = 'transparent';
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = CANVA_THEME.cornerStrokeColor;
+    ctx.stroke();
+  }
 
   ctx.restore();
 }
@@ -341,8 +408,8 @@ export function renderCanvaMoveButton(
  * - 2 bottom floating action buttons (rotate, drag)
  * - No top mtr stick, no top/bottom middle handles
  */
-export function createCanvaControls(isTextbox: boolean = false): Record<string, Control> {
-  return {
+export function createCanvaControls(isTextbox: boolean = false, isImage: boolean = false): Record<string, Control> {
+  const controls: Record<string, Control> = {
     // 4 Corner Circles
     tl: new Control({
       x: -0.5,
@@ -389,14 +456,14 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       touchSizeY: 24,
     }),
 
-    // Side Pill Handles (Width Resizing for Text, Scaling for others)
+    // Side Pill Handles (Width Resizing for Text & Images, Scaling for others)
     ml: new Control({
       x: -0.5,
       y: 0,
-      actionHandler: isTextbox ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
+      actionHandler: (isTextbox || isImage) ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isTextbox ? 'resizing' : undefined,
-      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+      actionName: (isTextbox || isImage) ? 'resizing' : undefined,
+      getActionName: (isTextbox || isImage) ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -406,10 +473,10 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
     mr: new Control({
       x: 0.5,
       y: 0,
-      actionHandler: isTextbox ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
+      actionHandler: (isTextbox || isImage) ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isTextbox ? 'resizing' : undefined,
-      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+      actionName: (isTextbox || isImage) ? 'resizing' : undefined,
+      getActionName: (isTextbox || isImage) ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaSidePillControl,
       sizeX: CANVA_THEME.sidePillWidth + 4,
       sizeY: CANVA_THEME.sidePillHeight + 4,
@@ -417,13 +484,16 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       touchSizeY: 28,
     }),
 
-    // Top & Bottom Horizontal Pill Handles (Height Resizing & Expansion)
+    // Top & Bottom Horizontal Pill Handles (Height Resizing for Images, Scaling for others)
     mt: new Control({
       x: 0,
       y: -0.5,
-      actionHandler: controlsUtils.scalingYOrSkewingX,
+      actionHandler: isImage
+        ? changeObjectHeight
+        : controlsUtils.scalingYOrSkewingX,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      getActionName: controlsUtils.scaleOrSkewActionName,
+      actionName: isImage ? 'resizing' : undefined,
+      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaTopBottomPillControl,
       sizeX: CANVA_THEME.topPillWidth + 4,
       sizeY: CANVA_THEME.topPillHeight + 4,
@@ -433,9 +503,12 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
     mb: new Control({
       x: 0,
       y: 0.5,
-      actionHandler: controlsUtils.scalingYOrSkewingX,
+      actionHandler: isImage
+        ? changeObjectHeight
+        : controlsUtils.scalingYOrSkewingX,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      getActionName: controlsUtils.scaleOrSkewActionName,
+      actionName: isImage ? 'resizing' : undefined,
+      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaTopBottomPillControl,
       sizeX: CANVA_THEME.topPillWidth + 4,
       sizeY: CANVA_THEME.topPillHeight + 4,
@@ -477,6 +550,12 @@ export function createCanvaControls(isTextbox: boolean = false): Record<string, 
       touchSizeY: CANVA_THEME.actionButtonSize + 8,
     }),
   };
+
+  Object.entries(controls).forEach(([key, ctrl]) => {
+    (ctrl as any).controlKey = key;
+  });
+
+  return controls;
 }
 
 /**
@@ -811,7 +890,13 @@ export function applyCanvaSelectionStyle(obj: any) {
     transparentCorners: false,
     padding: 0,
   });
-  obj.controls = createCanvaControls(isText);
+
+  const isImage = obj.type === 'image' ||
+    obj.type === 'FabricImage' ||
+    (obj._element && obj._element.tagName === 'IMG') ||
+    (typeof obj.id === 'string' && (obj.id.startsWith('img-') || obj._src));
+
+  obj.controls = createCanvaControls(isText, isImage);
 }
 
 /**
