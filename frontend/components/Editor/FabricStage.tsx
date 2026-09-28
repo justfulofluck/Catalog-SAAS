@@ -758,6 +758,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           const newH = Math.round((obj.height || el.height || 0) * sy);
           updates.width = newW;
           updates.height = newH;
+          if (obj.cropX !== undefined) updates.cropX = Math.round(obj.cropX);
+          if (obj.cropY !== undefined) updates.cropY = Math.round(obj.cropY);
+          if (obj.cropWidth !== undefined) updates.cropWidth = Math.round(obj.cropWidth);
+          if (obj.cropHeight !== undefined) updates.cropHeight = Math.round(obj.cropHeight);
+          if (obj.naturalWidth !== undefined) updates.naturalWidth = obj.naturalWidth;
+          if (obj.naturalHeight !== undefined) updates.naturalHeight = obj.naturalHeight;
+          delete obj._cropTransformStart;
           obj.set({
             width: newW,
             height: newH,

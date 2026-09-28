@@ -199,7 +199,17 @@ const CatalogThumbnailPreview: React.FC<{
           if (isMounted) renderCanvas();
         });
         if (img.complete && img.naturalWidth > 0) {
-          ctx.drawImage(img, 0, 0, el.width, el.height);
+          const nw = img.naturalWidth;
+          const nh = img.naturalHeight;
+          const cropX = el.cropX !== undefined ? el.cropX : 0;
+          const cropY = el.cropY !== undefined ? el.cropY : 0;
+          const cropW = el.cropWidth !== undefined ? el.cropWidth : nw;
+          const cropH = el.cropHeight !== undefined ? el.cropHeight : nh;
+          const sx = Math.max(0, Math.min(nw - 1, cropX));
+          const sy = Math.max(0, Math.min(nh - 1, cropY));
+          const sw = Math.max(1, Math.min(nw - sx, cropW));
+          const sh = Math.max(1, Math.min(nh - sy, cropH));
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, el.width, el.height);
           if (el.overlayEnabled) {
             ctx.save();
             if (el.overlayType === 'gradient') {

@@ -78,25 +78,297 @@ export function renderCanvaCornerControl(
 }
 
 /**
+ * Safe calculation of local pointer coordinates in object space for Fabric v6 / v5.
+ */
+function getTransformLocalPoint(transform: any, originX: string, originY: string, x: number, y: number): Point {
+  if (controlsUtils && typeof (controlsUtils as any).getLocalPoint === 'function') {
+    return (controlsUtils as any).getLocalPoint(transform, originX, originY, x, y);
+  }
+  const target = transform.target;
+  if (target && typeof target.toLocalPoint === 'function') {
+    return target.toLocalPoint(new Point(x, y), originX, originY);
+  }
+  const point = new Point(x, y);
+  const matrix = target?.calcTransformMatrix ? target.calcTransformMatrix() : [1, 0, 0, 1, 0, 0];
+  const inv = util.invertTransform(matrix);
+  const untransformed = util.transformPoint(point, inv);
+  const halfW = (target?.width || 0) / 2;
+  const halfH = (target?.height || 0) / 2;
+  let offsetX = 0;
+  let offsetY = 0;
+  if (originX === 'left') offsetX = halfW;
+  else if (originX === 'right') offsetX = -halfW;
+  if (originY === 'top') offsetY = halfH;
+  else if (originY === 'bottom') offsetY = -halfH;
+  return new Point(untransformed.x + offsetX, untransformed.y + offsetY);
+}
+
+function getPointOnObject(target: any, originX: string, originY: string): Point {
+  if (typeof target.getPointByOrigin === 'function') {
+    return target.getPointByOrigin(originX, originY);
+  }
+  if (typeof target.translateToGivenOrigin === 'function') {
+    const center = target.getCenterPoint ? target.getCenterPoint() : new Point(target.left || 0, target.top || 0);
+    return target.translateToGivenOrigin(center, 'center', 'center', originX, originY);
+  }
+  return target.getCenterPoint ? target.getCenterPoint() : new Point(target.left || 0, target.top || 0);
+}
+
+function setPointOnObject(target: any, point: Point, originX: string, originY: string) {
+  if (typeof target.setPositionByOrigin === 'function') {
+    target.setPositionByOrigin(point, originX, originY);
+    return;
+  }
+  if (typeof target.translateToGivenOrigin === 'function') {
+    const newCenter = target.translateToGivenOrigin(point, originX, originY, 'center', 'center');
+    if (typeof target.setPositionByOrigin === 'function') {
+      target.setPositionByOrigin(newCenter, 'center', 'center');
+    } else {
+      target.set({
+        left: target.originX === 'center' ? newCenter.x : (newCenter.x - (target.width || 0) / 2),
+        top: target.originY === 'center' ? newCenter.y : (newCenter.y - (target.height || 0) / 2),
+      });
+    }
+    return;
+  }
+  target.set({ left: point.x, top: point.y });
+}
+
+/**
+ * Initializes and caches starting transform snapshot for non-destructive image cropping.
+ */
+function initImageCropTransform(target: any, transform: any) {
+  if (target._cropTransformStart && target._cropTransformStart.transform === transform) {
+    return target._cropTransformStart;
+  }
+
+  const el = target._element || (target.getObjects && target.getObjects()[0]?._element);
+  const nw = el?.naturalWidth || el?.width || target.naturalWidth || target.width || 1;
+  const nh = el?.naturalHeight || el?.height || target.naturalHeight || target.height || 1;
+
+  let curCropX = target.cropX;
+  let curCropY = target.cropY;
+  let curCropW = target.cropWidth;
+  let curCropH = target.cropHeight;
+
+  if (curCropX === undefined || curCropW === undefined || curCropW <= 0) {
+    curCropX = 0;
+    curCropW = nw;
+  }
+  if (curCropY === undefined || curCropH === undefined || curCropH <= 0) {
+    curCropY = 0;
+    curCropH = nh;
+  }
+
+  const origW = target.width || 1;
+  const origH = target.height || 1;
+  const scaleX = origW / curCropW;
+  const scaleY = origH / curCropH;
+
+  const leftAnchor = getPointOnObject(target, 'left', 'top');
+  const rightAnchor = getPointOnObject(target, 'right', 'top');
+  const topAnchor = getPointOnObject(target, 'left', 'top');
+  const bottomAnchor = getPointOnObject(target, 'left', 'bottom');
+  const centerAnchor = getPointOnObject(target, 'center', 'center');
+
+  const startState = {
+    transform,
+    cropX: curCropX,
+    cropY: curCropY,
+    cropWidth: curCropW,
+    cropHeight: curCropH,
+    naturalWidth: nw,
+    naturalHeight: nh,
+    scaleX,
+    scaleY,
+    origW,
+    origH,
+    leftAnchor,
+    rightAnchor,
+    topAnchor,
+    bottomAnchor,
+    centerAnchor,
+  };
+
+  target._cropTransformStart = startState;
+  return startState;
+}
+
+/**
+ * Action handler for image width cropping (ml, mr handles).
+ * - Default: Crops only the dragged side, keeping opposite edge completely pinned.
+ * - Alt key: Symmetrically crops both sides inwards towards center (matching Canva).
+ */
+export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+
+  const start = initImageCropTransform(target, transform);
+  const isAlt = !!eventData.altKey;
+  const corner = transform.corner; // 'mr' or 'ml'
+
+  if (corner === 'mr') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
+      const rawNewW = Math.max(15, local.x);
+      const maxCropW = start.naturalWidth - start.cropX;
+      const maxW = Math.max(15, maxCropW * start.scaleX);
+      const newW = Math.min(maxW, rawNewW);
+      const newCropW = newW / start.scaleX;
+
+      target.set({ width: Math.round(newW) });
+      target.cropX = start.cropX;
+      target.cropWidth = newCropW;
+      setPointOnObject(target, start.leftAnchor, 'left', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
+      const rawHalfW = Math.max(7.5, Math.abs(local.x));
+      const centerCropX = start.cropX + start.cropWidth / 2;
+      const maxHalfCropW = Math.min(centerCropX, start.naturalWidth - centerCropX);
+      const halfW = Math.min(Math.max(7.5, maxHalfCropW * start.scaleX), rawHalfW);
+      const newW = halfW * 2;
+      const newCropW = newW / start.scaleX;
+
+      target.set({ width: Math.round(newW) });
+      target.cropWidth = newCropW;
+      target.cropX = Math.max(0, centerCropX - newCropW / 2);
+      setPointOnObject(target, start.centerAnchor, 'center', 'center');
+    }
+  } else if (corner === 'ml') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
+      const rawNewW = Math.max(15, -local.x);
+      const startRightCrop = start.cropX + start.cropWidth;
+      const maxW = Math.max(15, startRightCrop * start.scaleX);
+      const newW = Math.min(maxW, rawNewW);
+      const newCropW = newW / start.scaleX;
+
+      target.set({ width: Math.round(newW) });
+      target.cropWidth = newCropW;
+      target.cropX = Math.max(0, startRightCrop - newCropW);
+      setPointOnObject(target, start.rightAnchor, 'right', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
+      const rawHalfW = Math.max(7.5, Math.abs(local.x));
+      const centerCropX = start.cropX + start.cropWidth / 2;
+      const maxHalfCropW = Math.min(centerCropX, start.naturalWidth - centerCropX);
+      const halfW = Math.min(Math.max(7.5, maxHalfCropW * start.scaleX), rawHalfW);
+      const newW = halfW * 2;
+      const newCropW = newW / start.scaleX;
+
+      target.set({ width: Math.round(newW) });
+      target.cropWidth = newCropW;
+      target.cropX = Math.max(0, centerCropX - newCropW / 2);
+      setPointOnObject(target, start.centerAnchor, 'center', 'center');
+    }
+  }
+
+  // If target is a Group (e.g. image with overlay), sync child objects
+  if (typeof target.getObjects === 'function') {
+    target.getObjects().forEach((child: any) => {
+      child.set({ width: target.width });
+      if (child.type === 'FabricImage' || child.type === 'image' || child._element) {
+        child.cropX = target.cropX;
+        child.cropWidth = target.cropWidth;
+      }
+    });
+  }
+
+  target.setCoords();
+  if (target.canvas) target.canvas.requestRenderAll();
+  return true;
+}
+
+/**
+ * Action handler for image height cropping (mt, mb handles).
+ * - Default: Crops only the dragged side, keeping opposite edge completely pinned.
+ * - Alt key: Symmetrically crops both sides inwards towards center (matching Canva).
+ */
+export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+
+  const start = initImageCropTransform(target, transform);
+  const isAlt = !!eventData.altKey;
+  const corner = transform.corner; // 'mb' or 'mt'
+
+  if (corner === 'mb') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
+      const rawNewH = Math.max(15, local.y);
+      const maxCropH = start.naturalHeight - start.cropY;
+      const maxH = Math.max(15, maxCropH * start.scaleY);
+      const newH = Math.min(maxH, rawNewH);
+      const newCropH = newH / start.scaleY;
+
+      target.set({ height: Math.round(newH) });
+      target.cropY = start.cropY;
+      target.cropHeight = newCropH;
+      setPointOnObject(target, start.topAnchor, 'left', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
+      const rawHalfH = Math.max(7.5, Math.abs(local.y));
+      const centerCropY = start.cropY + start.cropHeight / 2;
+      const maxHalfCropH = Math.min(centerCropY, start.naturalHeight - centerCropY);
+      const halfH = Math.min(Math.max(7.5, maxHalfCropH * start.scaleY), rawHalfH);
+      const newH = halfH * 2;
+      const newCropH = newH / start.scaleY;
+
+      target.set({ height: Math.round(newH) });
+      target.cropHeight = newCropH;
+      target.cropY = Math.max(0, centerCropY - newCropH / 2);
+      setPointOnObject(target, start.centerAnchor, 'center', 'center');
+    }
+  } else if (corner === 'mt') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'left', 'bottom', x, y);
+      const rawNewH = Math.max(15, -local.y);
+      const startBottomCrop = start.cropY + start.cropHeight;
+      const maxH = Math.max(15, startBottomCrop * start.scaleY);
+      const newH = Math.min(maxH, rawNewH);
+      const newCropH = newH / start.scaleY;
+
+      target.set({ height: Math.round(newH) });
+      target.cropHeight = newCropH;
+      target.cropY = Math.max(0, startBottomCrop - newCropH);
+      setPointOnObject(target, start.bottomAnchor, 'left', 'bottom');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
+      const rawHalfH = Math.max(7.5, Math.abs(local.y));
+      const centerCropY = start.cropY + start.cropHeight / 2;
+      const maxHalfCropH = Math.min(centerCropY, start.naturalHeight - centerCropY);
+      const halfH = Math.min(Math.max(7.5, maxHalfCropH * start.scaleY), rawHalfH);
+      const newH = halfH * 2;
+      const newCropH = newH / start.scaleY;
+
+      target.set({ height: Math.round(newH) });
+      target.cropHeight = newCropH;
+      target.cropY = Math.max(0, centerCropY - newCropH / 2);
+      setPointOnObject(target, start.centerAnchor, 'center', 'center');
+    }
+  }
+
+  // If target is a Group (e.g. image with overlay), sync child objects
+  if (typeof target.getObjects === 'function') {
+    target.getObjects().forEach((child: any) => {
+      child.set({ height: target.height });
+      if (child.type === 'FabricImage' || child.type === 'image' || child._element) {
+        child.cropY = target.cropY;
+        child.cropHeight = target.cropHeight;
+      }
+    });
+  }
+
+  target.setCoords();
+  if (target.canvas) target.canvas.requestRenderAll();
+  return true;
+}
+
+/**
  * Action handler for changing object height (mt, mb) for non-destructive frame cropping.
  */
 export function changeObjectHeight(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
-  const target = transform.target;
-  if (!target) return false;
-  if (typeof (controlsUtils as any).changeHeight === 'function') {
-    return (controlsUtils as any).changeHeight(eventData, transform, x, y);
-  }
-  const localPoint = controlsUtils.getLocalPoint
-    ? controlsUtils.getLocalPoint(transform, transform.originX, transform.originY, x, y)
-    : target.toLocalPoint(new Point(x, y), transform.originX, transform.originY);
-  const newHeight = Math.max(15, Math.abs(localPoint.y));
-  if (Math.round(target.height) !== Math.round(newHeight)) {
-    target.set('height', Math.round(newHeight));
-    target.setCoords();
-    if (target.canvas) target.canvas.requestRenderAll();
-    return true;
-  }
-  return false;
+  return imageCropHeightHandler(eventData, transform, x, y);
 }
 
 /**
@@ -460,7 +732,11 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
     ml: new Control({
       x: -0.5,
       y: 0,
-      actionHandler: (isTextbox || isImage) ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
+      actionHandler: isImage
+        ? imageCropWidthHandler
+        : isTextbox
+          ? controlsUtils.changeWidth
+          : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: (isTextbox || isImage) ? 'resizing' : undefined,
       getActionName: (isTextbox || isImage) ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
@@ -473,7 +749,11 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
     mr: new Control({
       x: 0.5,
       y: 0,
-      actionHandler: (isTextbox || isImage) ? controlsUtils.changeWidth : controlsUtils.scalingXOrSkewingY,
+      actionHandler: isImage
+        ? imageCropWidthHandler
+        : isTextbox
+          ? controlsUtils.changeWidth
+          : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: (isTextbox || isImage) ? 'resizing' : undefined,
       getActionName: (isTextbox || isImage) ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
@@ -489,7 +769,7 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0,
       y: -0.5,
       actionHandler: isImage
-        ? changeObjectHeight
+        ? imageCropHeightHandler
         : controlsUtils.scalingYOrSkewingX,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: isImage ? 'resizing' : undefined,
@@ -504,7 +784,7 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0,
       y: 0.5,
       actionHandler: isImage
-        ? changeObjectHeight
+        ? imageCropHeightHandler
         : controlsUtils.scalingYOrSkewingX,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: isImage ? 'resizing' : undefined,
@@ -894,9 +1174,11 @@ export function applyCanvaSelectionStyle(obj: any) {
   const isImage = obj.type === 'image' ||
     obj.type === 'FabricImage' ||
     (obj._element && obj._element.tagName === 'IMG') ||
-    (typeof obj.id === 'string' && (obj.id.startsWith('img-') || obj._src));
+    (typeof obj.id === 'string' && (obj.id.startsWith('img-') || obj._src)) ||
+    obj._overlayEnabled !== undefined ||
+    (obj.getObjects && obj.getObjects()[0]?._element);
 
-  obj.controls = createCanvaControls(isText, isImage);
+  obj.controls = createCanvaControls(isText, !!isImage);
 }
 
 /**
