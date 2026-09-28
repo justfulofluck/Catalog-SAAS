@@ -25,6 +25,7 @@ import ColorPanel from './components/Sidebar/ColorPanel';
 import GridStudioPanel from './components/Sidebar/GridStudioPanel';
 import SingleItemsPanel from './components/Sidebar/SingleItemsPanel';
 import ElementsPanel from './components/Sidebar/ElementsPanel';
+import VideosPanel from './components/Sidebar/VideosPanel';
 import CropStudioPanel from './components/Sidebar/CropStudioPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
@@ -61,7 +62,8 @@ import {
   Type,
   Sliders,
   Package,
-  PenTool
+  PenTool,
+  Video
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -380,6 +382,25 @@ const App: React.FC = () => {
 
                 <button
                   onClick={() => {
+                    if (editorTab === 'videos' && isSidebarExpanded) {
+                      setSidebarExpanded(false);
+                    } else {
+                      setEditorTab('videos' as any);
+                      setSidebarExpanded(true);
+                    }
+                  }}
+                  className={`p-2.5 rounded-[4px] transition-all ${
+                    editorTab === 'videos' && isSidebarExpanded 
+                      ? 'bg-[#0084ff] text-white shadow-md ring-1 ring-[#0084ff]' 
+                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                  }`}
+                  title="Videos & Video Embeds"
+                >
+                  <Video size={20} />
+                </button>
+
+                <button
+                  onClick={() => {
                     if (editorTab === 'buttons' && isSidebarExpanded) {
                       setSidebarExpanded(false);
                     } else {
@@ -429,6 +450,7 @@ const App: React.FC = () => {
                 {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
                 {editorTab === 'elements' && <ElementsPanel />}
+                {editorTab === 'videos' && <VideosPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
                 {editorTab === 'header-footer' && <HeaderFooterPanel />}
                 {editorTab === 'colors' && <ColorPanel />}

@@ -3,6 +3,8 @@ export * from './elementItems';
 export * from './ElementCardPreview';
 export * from './templates/textBlockTemplates';
 export * from './templates/checklistTemplates';
+export * from './templates/videoEmbedTemplates';
 export * from './views/TextBlockDetailView';
 export * from './views/ChecklistDetailView';
+export * from './views/VideoEmbedDetailView';
 export * from './views/ElementsOverview';

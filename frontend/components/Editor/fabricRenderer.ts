@@ -1072,6 +1072,58 @@ async function _elementToFabricObject(
     }
   }
 
+  if (elType === 'video') {
+    const posterUrl = el.videoPoster || el.src || 'https://images.unsplash.com/photo-1506784365847-bbad939e9335?auto=format&fit=crop&q=80&w=800';
+    try {
+      const finalSrc = normalizeImageUrl(posterUrl);
+      const htmlImg = await getCachedImageElement(finalSrc);
+      const naturalW = htmlImg.naturalWidth || htmlImg.width || 640;
+      const naturalH = htmlImg.naturalHeight || htmlImg.height || 360;
+
+      const img = new FabricImage(htmlImg, {
+        ...common,
+        width: el.width,
+        height: el.height,
+        scaleX: 1,
+        scaleY: 1,
+        stroke: el.stroke && el.stroke !== 'transparent' ? el.stroke : undefined,
+        strokeWidth: el.stroke && el.stroke !== 'transparent' ? (el.strokeWidth || 2) : 0,
+        objectCaching: false,
+      });
+
+      (img as any)._element = htmlImg;
+      (img as any)._videoUrl = el.videoUrl;
+      (img as any)._videoPoster = el.videoPoster;
+      (img as any)._videoTitle = el.videoTitle;
+      (img as any)._videoType = el.videoType;
+      (img as any).naturalWidth = naturalW;
+      (img as any).naturalHeight = naturalH;
+
+      img._render = function (ctx: CanvasRenderingContext2D) {
+        const imageElement = (this as any)._element || (this as any).getElement?.() || htmlImg;
+        if (!imageElement) return;
+        const nw = (this as any).naturalWidth || imageElement.naturalWidth || imageElement.width || 1;
+        const nh = (this as any).naturalHeight || imageElement.naturalHeight || imageElement.height || 1;
+        const w = (this as any).width || 1;
+        const h = (this as any).height || 1;
+
+        // Draw clean video thumbnail frame (no play overlay or scrubber)
+        ctx.drawImage(imageElement, 0, 0, nw, nh, -w / 2, -h / 2, w, h);
+      };
+
+      return img;
+    } catch (err) {
+      console.error('Failed to render video poster on canvas:', err, posterUrl);
+      const rect = new Rect({ 
+        ...common, 
+        fill: '#18181b', 
+        stroke: '#3b82f6', 
+        strokeWidth: 2 
+      });
+      return rect;
+    }
+  }
+
   if (elType === 'shape' || elType === 'comment') {
     const w = el.width, h = el.height;
     const shapeType = el.shapeType || 'rect';

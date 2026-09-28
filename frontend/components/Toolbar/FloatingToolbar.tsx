@@ -27,7 +27,8 @@ import {
   ArrowRight,
   ArrowLeft,
   ArrowDown,
-  ArrowUp
+  ArrowUp,
+  Play
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH } from '../../constants';
@@ -261,8 +262,8 @@ const FloatingToolbar: React.FC<Props> = ({
       onMouseDown={(e) => e.stopPropagation()}
     >
 
-      {/* Fill color (for shapes/non-image elements) */}
-      {element.type !== 'image' && (
+      {/* Fill color (for shapes/non-image/non-video elements) */}
+      {element.type !== 'image' && element.type !== 'video' && (
         <button
           className={btnClass}
           title="Fill Color"
@@ -298,6 +299,21 @@ const FloatingToolbar: React.FC<Props> = ({
         >
           <CropIcon size={14} strokeWidth={2.2} />
           <span>Crop</span>
+        </button>
+      )}
+
+      {/* Video Play Button */}
+      {element.type === 'video' && (
+        <button
+          className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-[11px] font-bold tracking-tight text-white bg-[#0084ff] hover:bg-[#0070d8] shadow-sm transition-all active:scale-95"
+          title="Play (or double-click on video)"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('catalog:playVideo', { detail: { id: element.id, pageIndex: currentPageIndex } }));
+          }}
+        >
+          <Play size={12} className="fill-current" />
+          <span>Play</span>
         </button>
       )}
 

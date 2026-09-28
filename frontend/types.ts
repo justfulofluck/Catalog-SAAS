@@ -1,4 +1,4 @@
-export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table' | 'checklist';
+export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table' | 'checklist' | 'video';
 export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
 export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line' | 'curved-line' | 'elbow-line' | 'chevron' | 'none';
 export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image' | 'minimal-pill';
@@ -137,6 +137,16 @@ export interface CanvasElement {
   naturalHeight?: number;
   // SVG Content / Rich Vector Element
   svgContent?: string;
+
+  // Video specific
+  videoUrl?: string;
+  videoPoster?: string;
+  videoType?: 'youtube' | 'vimeo' | 'mp4' | 'webm' | 'loom' | 'direct' | 'custom';
+  isAutoplay?: boolean;
+  isLoop?: boolean;
+  isMuted?: boolean;
+  showControls?: boolean;
+  videoTitle?: string;
 
   // Table specific
   tableData?: TableData;
