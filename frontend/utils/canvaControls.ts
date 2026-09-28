@@ -1171,6 +1171,14 @@ export function applyCanvaSelectionStyle(obj: any) {
     padding: 0,
   });
 
+  const isHollowShape = !obj.fill || obj.fill === 'transparent' || obj.fill === 'none';
+  if (isHollowShape && (obj.type === 'rect' || obj.type === 'circle' || obj.type === 'polygon' || obj.type === 'path' || (obj as any).shapeType)) {
+    obj.set({
+      perPixelTargetFind: true,
+      targetFindTolerance: Math.max(8, Math.min(16, Math.round(((obj.strokeWidth as number) || 2) * 1.5))),
+    });
+  }
+
   const isImage = obj.type === 'image' ||
     obj.type === 'FabricImage' ||
     (obj._element && obj._element.tagName === 'IMG') ||
