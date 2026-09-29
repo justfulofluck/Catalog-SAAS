@@ -1032,7 +1032,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const newTableJSON = JSON.stringify(el.tableData || {});
             const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
             const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
-            return existingObj._rendererVersion !== 2 || oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs(el.height - oldH) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
+            return existingObj._rendererVersion !== 3 || oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs(el.height - oldH) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
           }
           if (el.type === 'shape' || el.type === 'comment') {
             const oldFill = existingObj._lastFill || existingObj.fill || '';
@@ -1211,7 +1211,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                     text: is3GridTitle ? parsedText.toUpperCase() : parsedText,
                     fontSize: el.fontSize || 16,
                     fontFamily: resolvedFont,
-                    fontWeight: el.fontWeight || (is3GridTitle ? 'bold' : 'normal'),
+                    fontWeight: is3GridTitle ? 'normal' : (el.fontWeight || 'normal'),
                     fontStyle: el.fontStyle || 'normal',
                     fill: el.fill || '#000000',
                     textAlign: el.textAlign || 'left',

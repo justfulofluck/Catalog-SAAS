@@ -757,7 +757,7 @@ async function _elementToFabricObject(
       text: is3GridTitle ? cleanRawText.toUpperCase() : cleanRawText,
       fontSize: el.fontSize || 16,
       fontFamily: resolvedFontFamily,
-      fontWeight: el.fontWeight || (is3GridTitle ? 'bold' : 'normal'),
+      fontWeight: is3GridTitle ? 'normal' : (el.fontWeight || 'normal'),
       fontStyle: el.fontStyle || 'normal',
       textAlign: el.textAlign || 'left',
       lineHeight: el.lineHeight || 1.2,
@@ -2181,8 +2181,8 @@ async function _elementToFabricObject(
           originX: 'left',
           originY: 'top',
           fontSize: dynamicHeaderFontSize,
-          fontFamily: is3GridTable ? 'Bebas Neue, Oswald, Montserrat, sans-serif' : (td.fontFamily || 'Montserrat'),
-          fontWeight: is3GridTable ? 'bold' : (td.headerFontWeight || (td.fontWeight === 'normal' ? '600' : '900')),
+          fontFamily: is3GridTable ? 'Bebas Neue, Oswald, sans-serif' : (td.fontFamily || 'Montserrat'),
+          fontWeight: is3GridTable ? 'normal' : (td.headerFontWeight || (td.fontWeight === 'normal' ? '600' : '900')),
           fontStyle: td.fontStyle || 'normal',
           underline: td.textDecoration?.includes('underline'),
           fill: headerTextColor,
@@ -2307,7 +2307,7 @@ async function _elementToFabricObject(
     });
 
     (tableGroup as any).id = el.id;
-    (tableGroup as any)._rendererVersion = 2;
+    (tableGroup as any)._rendererVersion = 3;
     (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
     return tableGroup;
   }
