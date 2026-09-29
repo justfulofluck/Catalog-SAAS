@@ -742,18 +742,27 @@ async function _elementToFabricObject(
       }
     }
 
+    const is3GridTitle = Boolean(
+      (el.sectionTag && (el.id?.includes('title') || (el.fontSize && el.fontSize >= 18))) ||
+      (el.fill === '#00a651' && (el.fontSize && el.fontSize >= 18))
+    );
+
+    const resolvedFontFamily = is3GridTitle
+      ? (el.fontFamily === 'Montserrat' || el.fontFamily === 'Inter' || !el.fontFamily ? 'Bebas Neue, Oswald, sans-serif' : el.fontFamily)
+      : (el.fontFamily || 'Inter');
+
     const textProps: Record<string, any> = {
       ...common,
       width: textWidth,
-      text: cleanRawText,
+      text: is3GridTitle ? cleanRawText.toUpperCase() : cleanRawText,
       fontSize: el.fontSize || 16,
-      fontFamily: el.fontFamily || 'Inter',
-      fontWeight: el.fontWeight || 'normal',
+      fontFamily: resolvedFontFamily,
+      fontWeight: is3GridTitle ? 'normal' : (el.fontWeight || 'normal'),
       fontStyle: el.fontStyle || 'normal',
       textAlign: el.textAlign || 'left',
       lineHeight: el.lineHeight || 1.2,
       underline: el.textDecoration?.includes('underline') || false,
-      charSpacing: el.letterSpacing || 0,
+      charSpacing: 0,
       splitByGrapheme: false,
       editable: false, // Disable Fabric's native text editing — the app uses its own HTML overlay
     };
@@ -2053,34 +2062,80 @@ async function _elementToFabricObject(
 
   if (el.type === 'table') {
     const td = el.tableData || {
-      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING'],
+      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING PER BOX'],
       rows: [
-        ['VT-2612', '12W V-TAC COB WHITE BODY', '75MM', 'W, W.W, N.W', '580', '20 PCS'],
-        ['VT-2612', '12W VTAC 3IN1 ON SWITCH', '75MM', 'W, W.W, N.W', '1,000', '20 PCS'],
-        ['VT-2612', '12W V-TAC COB DIMMABLE', '75MM', 'W, W.W, N.W', '1,500', '20 PCS']
+        ['VT-17012', '12W HONEY COMB SERIES COB', '75MM', 'W, W.W, N.W', '800', '20 PCS'],
+        ['VT-17018', '18W HONEY COMB SERIES COB', '95MM', 'W, W.W, N.W', '1,000', '20 PCS'],
+        ['VT-17024', '24W HONEY COMB SERIES COB', '115MM', 'W, W.W, N.W', '1,200', '20 PCS']
       ]
     };
 
-    const headerBg = td.headerBg || '#002b36'; // Dark Teal / Navy Blue like V-TAC
+    const is3GridTable = Boolean(
+      el.sectionTag ||
+      el.id?.includes('sec-table') ||
+      el.id?.includes('product-table') ||
+      el.id?.includes('grid-sec') ||
+      (el as any).isGridTable ||
+      td.variant === 'grid-spec' ||
+      (!el.groupId && td.headers?.some(h => {
+        const up = String(h || '').toUpperCase();
+        return up.includes('MODEL') || up.includes('PRODUCT') || up.includes('CUT-OUT') || up.includes('CUT OUT') || up.includes('DEALER');
+      }))
+    );
+
+    const formatHeaderForDisplay = (h: any): string => {
+      const s = String(h ?? '').trim();
+      if (!is3GridTable) return s.toUpperCase();
+      const up = s.toUpperCase();
+      if (up === 'DEALER PRICE') return 'DEALER\nPRICE';
+      if (up === 'PACKING PER BOX' || up === 'PACKING PERBOX' || up === 'PACKING/BOX') return 'PACKING\nPER BOX';
+      if (up === 'PACKING BOX') return 'PACKING\nBOX';
+      if (up === 'CUT OUT' || up === 'CUTOUT') return 'CUT-OUT';
+      if (up === 'MODEL NUMBER') return 'MODEL\nNUMBER';
+      return up;
+    };
+
+    const headerBg = td.headerBg || (is3GridTable ? '#002838' : '#334155');
     const headerTextColor = td.headerTextColor || '#ffffff';
     const rowBg = td.rowBg || '#ffffff';
-    const alternateRowBg = td.alternateRowBg || '#f8fafc';
-    const borderColor = td.borderColor || '#334155';
-    const cellPadding = td.cellPadding || 6;
-    const headerFontSize = td.headerFontSize || 9.5;
-    const bodyFontSize = td.fontSize || 8.5;
+    const alternateRowBg = td.alternateRowBg || (is3GridTable ? '#eef2f5' : '#f8fafc');
+    const borderColor = td.borderColor || (is3GridTable ? '#002838' : '#cbd5e1');
+    const cellPadding = td.cellPadding || (is3GridTable ? 4 : 6);
 
     const numCols = Math.max(1, td.headers?.length || 1);
     const numRows = Math.max(1, td.rows?.length || 1);
     const totalRowCount = numRows + 1; // 1 header + N body rows
 
-    // Auto-adjust font size based on column count and element width with guaranteed legibility
-    const dynamicHeaderFontSize = numCols > 6 ? Math.max(8.5, Math.min(headerFontSize, el.width / (numCols * 7.5))) : headerFontSize;
-    const dynamicBodyFontSize = numCols > 6 ? Math.max(8.0, Math.min(bodyFontSize, el.width / (numCols * 8.0))) : bodyFontSize;
+    // Dynamic header font size (crisp, bold, condensed font Bebas Neue)
+    const dynamicHeaderFontSize = is3GridTable
+      ? (numCols >= 7 ? 10.5 : Math.max(10.5, Math.min(13, el.width / (numCols * 5.2))))
+      : (numCols > 6 ? Math.max(8.5, Math.min(td.headerFontSize || 9.5, el.width / (numCols * 7.5))) : (td.headerFontSize || 9.5));
 
-    // Calculate col widths (custom or evenly distributed)
+    const dynamicBodyFontSize = is3GridTable
+      ? (numCols >= 7 ? 8.5 : Math.max(8.5, Math.min(10, el.width / (numCols * 6.8))))
+      : (numCols > 6 ? Math.max(8.0, Math.min(td.fontSize || 8.5, el.width / (numCols * 8.0))) : (td.fontSize || 8.5));
+
+    // Check if saved colWidths are just placeholder uniform widths (e.g. all equal)
+    const isUniformColWidths = td.colWidths && td.colWidths.length === numCols &&
+      td.colWidths.every(w => Math.abs(w - td.colWidths![0]) < 1);
+
+    // Calculate column widths
     const colWidths: number[] = [];
-    if (td.colWidths && td.colWidths.length === numCols) {
+    if (is3GridTable) {
+      // Smart proportional column weights for 3-Grid Specification Tables (Screenshot 2)
+      const weights = (td.headers || []).map((h) => {
+        const lower = String(h || '').toLowerCase().trim();
+        if (lower.includes('product') || lower.includes('name') || lower.includes('desc') || lower.includes('title') || lower.includes('item')) return 3.6;
+        if (lower.includes('model') || lower.includes('code') || lower.includes('sku')) return 1.5;
+        if (lower.includes('cut') || lower.includes('dim') || lower.includes('size')) return 1.1;
+        if (lower.includes('color') || lower.includes('cct') || lower.includes('temp')) return 1.1;
+        if (lower.includes('dealer') || lower.includes('price') || lower.includes('mrp') || lower.includes('rate') || lower.includes('cost')) return 1.0;
+        if (lower.includes('pack') || lower.includes('box') || lower.includes('qty')) return 1.1;
+        return 1.0;
+      });
+      const totalWeight = weights.reduce((sum, w) => sum + w, 0);
+      weights.forEach(w => colWidths.push((w / totalWeight) * el.width));
+    } else if (td.colWidths && td.colWidths.length === numCols) {
       const totalRel = td.colWidths.reduce((a, b) => a + b, 0);
       td.colWidths.forEach(w => colWidths.push((w / totalRel) * el.width));
     } else {
@@ -2088,10 +2143,12 @@ async function _elementToFabricObject(
       for (let i = 0; i < numCols; i++) colWidths.push(evenW);
     }
 
-    // Row heights: divide table height evenly across all rows
-    const rowHeight = el.height / totalRowCount;
-    const headerRowHeight = rowHeight;
-    const rHeight = rowHeight;
+    // Row heights: compact, crisp rows matching reference catalog and preview
+    const headerRowHeight = is3GridTable ? 28 : Math.max(24, Math.min(el.height / totalRowCount, 32));
+    const rHeight = is3GridTable
+      ? Math.min(32, Math.max(26, (el.height - headerRowHeight) / numRows))
+      : ((el.height - headerRowHeight) / numRows);
+    const totalRenderedH = headerRowHeight + numRows * rHeight;
 
     const tableObjs: any[] = [];
 
@@ -2111,34 +2168,39 @@ async function _elementToFabricObject(
     let currentX = 0;
     td.headers.forEach((headerText, colIdx) => {
       const colW = colWidths[colIdx];
-      const hStr = String(headerText ?? '');
+      const hStr = formatHeaderForDisplay(headerText);
       if (hStr.trim() !== '') {
-        const vOffsetHeader = Math.max(2, (headerRowHeight - (dynamicHeaderFontSize * 1.3)) / 2);
-        const headerTb = new Textbox(hStr.toUpperCase(), {
+        const lineCount = hStr.split('\n').length;
+        const textHeight = dynamicHeaderFontSize * (lineCount > 1 ? 2.1 : 1.15);
+        const vOffsetHeader = Math.max(1, (headerRowHeight - textHeight) / 2);
+
+        const headerTb = new Textbox(hStr, {
           left: currentX + cellPadding,
           top: vOffsetHeader,
           width: Math.max(10, colW - cellPadding * 2),
           originX: 'left',
           originY: 'top',
           fontSize: dynamicHeaderFontSize,
-          fontFamily: td.fontFamily || 'Montserrat',
-          fontWeight: td.headerFontWeight || (td.fontWeight === 'normal' ? '600' : '900'),
+          fontFamily: is3GridTable ? 'Bebas Neue, Oswald, sans-serif' : (td.fontFamily || 'Montserrat'),
+          fontWeight: is3GridTable ? 'normal' : (td.headerFontWeight || (td.fontWeight === 'normal' ? '600' : '900')),
           fontStyle: td.fontStyle || 'normal',
           underline: td.textDecoration?.includes('underline'),
           fill: headerTextColor,
-          textAlign: td.textAlign || 'center',
+          textAlign: 'center',
           splitByGrapheme: false,
-          lineHeight: 1.15,
+          lineHeight: 1.05,
+          charSpacing: 0,
           objectCaching: false,
         });
         tableObjs.push(headerTb);
       }
 
-      // Header vertical border
+      // Header vertical border (pure white crisp divider in 3-grid headers!)
       if (colIdx < numCols - 1) {
+        const headerDividerColor = is3GridTable ? '#ffffff' : borderColor;
         tableObjs.push(new Line([currentX + colW, 0, currentX + colW, headerRowHeight], {
-          stroke: borderColor,
-          strokeWidth: 1,
+          stroke: headerDividerColor,
+          strokeWidth: is3GridTable ? 1.2 : 1,
           originX: 'left',
           originY: 'top',
           objectCaching: false,
@@ -2170,7 +2232,7 @@ async function _elementToFabricObject(
         const colW = colWidths[colIdx];
         const cellStr = cellText !== undefined && cellText !== null ? String(cellText) : '';
         if (cellStr.trim() !== '') {
-          const vOffsetBody = Math.max(2, (rHeight - (dynamicBodyFontSize * 1.3)) / 2);
+          const vOffsetBody = Math.max(1, (rHeight - (dynamicBodyFontSize * 1.25)) / 2);
           const cellTb = new Textbox(cellStr, {
             left: cellX + cellPadding,
             top: curY + vOffsetBody,
@@ -2178,14 +2240,14 @@ async function _elementToFabricObject(
             originX: 'left',
             originY: 'top',
             fontSize: dynamicBodyFontSize,
-            fontFamily: td.fontFamily || 'Inter',
-            fontWeight: td.fontWeight || (colIdx === 0 ? '700' : '500'),
+            fontFamily: td.fontFamily || 'Inter, Arial, sans-serif',
+            fontWeight: is3GridTable ? (colIdx === 0 ? '600' : '400') : (td.fontWeight || (colIdx === 0 ? '700' : '500')),
             fontStyle: td.fontStyle || 'normal',
             underline: td.textDecoration?.includes('underline'),
-            fill: td.textColor || '#0f172a',
-            textAlign: td.textAlign || 'center',
+            fill: td.textColor || (is3GridTable ? '#002838' : '#0f172a'),
+            textAlign: 'center',
             splitByGrapheme: false,
-            lineHeight: 1.2,
+            lineHeight: 1.15,
             objectCaching: false,
           });
           tableObjs.push(cellTb);
@@ -2195,7 +2257,7 @@ async function _elementToFabricObject(
         if (colIdx < numCols - 1) {
           tableObjs.push(new Line([cellX + colW, curY, cellX + colW, curY + rHeight], {
             stroke: borderColor,
-            strokeWidth: 0.8,
+            strokeWidth: is3GridTable ? 1.0 : 0.8,
             originX: 'left',
             originY: 'top',
             objectCaching: false,
@@ -2208,7 +2270,7 @@ async function _elementToFabricObject(
       // Horizontal Row Border at top of this row
       tableObjs.push(new Line([0, curY, el.width, curY], {
         stroke: borderColor,
-        strokeWidth: 1,
+        strokeWidth: 1.0,
         originX: 'left',
         originY: 'top',
         objectCaching: false,
@@ -2222,10 +2284,10 @@ async function _elementToFabricObject(
       left: 0,
       top: 0,
       width: el.width,
-      height: el.height,
+      height: totalRenderedH,
       fill: 'transparent',
       stroke: borderColor,
-      strokeWidth: 1.5,
+      strokeWidth: is3GridTable ? 1.5 : 1.2,
       originX: 'left',
       originY: 'top',
       objectCaching: false,
@@ -2245,6 +2307,7 @@ async function _elementToFabricObject(
     });
 
     (tableGroup as any).id = el.id;
+    (tableGroup as any)._rendererVersion = 3;
     (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
     return tableGroup;
   }

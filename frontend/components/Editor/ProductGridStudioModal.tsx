@@ -15,77 +15,75 @@ interface ProductGridStudioModalProps {
 const DEFAULT_SECTIONS: ProductGridSection[] = [
   {
     id: 'sec-1',
-    title: 'CRETA SERIES COB DOWNLIGHT',
+    title: 'HONEY COMB SERIES COB DOWN LIGHT',
     titleColor: '#00a651',
-    titleFontSize: 22,
+    titleFontSize: 26,
     imageSrc: 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600',
     hasBackground: false,
     backgroundColor: '#f1f5f9',
     tableData: {
-      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING PER BOX'],
       rows: [
-        ['VT-08', '20W CRETA SERIES COB', '75MM', '₹1450', 'W, W.W, N.W'],
-        ['VT-09', '12W CRETA SERIES COB', '75MM', '₹1200', 'W, W.W, N.W']
+        ['VT-17012', '12W HONEY COMB SERIES COB', '75MM', 'W, W.W, N.W', '800', '20 PCS'],
+        ['VT-17018', '18W HONEY COMB SERIES COB', '95MM', 'W, W.W, N.W', '1,000', '20 PCS'],
+        ['VT-17024', '24W HONEY COMB SERIES COB', '115MM', 'W, W.W, N.W', '1,200', '20 PCS']
       ],
-      headerBg: '#002b36',
+      headerBg: '#002838',
       headerTextColor: '#ffffff',
-      alternateRowBg: '#f8fafc',
+      alternateRowBg: '#eef2f5',
       rowBg: '#ffffff',
-      borderColor: '#002b36',
-      fontSize: 7.5,
-      headerFontSize: 8,
+      borderColor: '#002838',
+      fontSize: 9,
+      headerFontSize: 12,
       cellPadding: 4,
-      colWidths: [65, 140, 55, 55, 60]
     }
   },
   {
     id: 'sec-2',
-    title: 'ULTRA SERIES COB DOWNLIGHT',
+    title: 'BRAVO SERIES COB DOWNLIGHTER',
     titleColor: '#00a651',
-    titleFontSize: 22,
+    titleFontSize: 26,
     imageSrc: 'https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&q=80&w=600',
     hasBackground: true,
     backgroundColor: '#e2e8f0',
     tableData: {
-      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING PER BOX'],
       rows: [
-        ['VT-2613', '12W ULTRA SERIES TITANIUM', '75MM', '₹1450', 'W, W.W, N.W'],
-        ['VT-2613', '12W ULTRA SERIES COB', '75MM', '₹1200', 'W, W.W, N.W']
+        ['VT-2613', '12W BRAVO SERIES COB', '55MM', 'W, W.W, N.W', '1,300', '20 PCS'],
+        ['VT-2613', '12W BRAVO SERIES TITANIUM BLACK', '55MM', 'W, W.W, N.W', '1,550', '20 PCS']
       ],
-      headerBg: '#002b36',
+      headerBg: '#002838',
       headerTextColor: '#ffffff',
-      alternateRowBg: '#f8fafc',
+      alternateRowBg: '#eef2f5',
       rowBg: '#ffffff',
-      borderColor: '#002b36',
-      fontSize: 7.5,
-      headerFontSize: 8,
+      borderColor: '#002838',
+      fontSize: 9,
+      headerFontSize: 12,
       cellPadding: 4,
-      colWidths: [65, 140, 55, 55, 60]
     }
   },
   {
     id: 'sec-3',
-    title: 'MAX SERIES COB DOWNLIGHT',
+    title: 'CRETA SERIES COB DOWNLIGHT',
     titleColor: '#00a651',
-    titleFontSize: 22,
+    titleFontSize: 26,
     imageSrc: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=600',
     hasBackground: false,
     backgroundColor: '#f1f5f9',
     tableData: {
-      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'PRICE', 'COLOR'],
+      headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING PER BOX'],
       rows: [
-        ['VT-2614', '12W MAX SERIES COB', '75MM', '₹900', 'W, W.W, N.W'],
-        ['VT-2615', '18W MAX SERIES COB', '90MM', '₹1100', 'W, W.W, N.W']
+        ['VT-17007', '7W CRETA SERIES COB DOWNLIGHT', '65MM', 'W, W.W', '290', '50 PCS'],
+        ['VT-17011', '12W CRETA SERIES COB DOWNLIGHT', '80MM', 'W, W.W', '340', '50 PCS']
       ],
-      headerBg: '#002b36',
+      headerBg: '#002838',
       headerTextColor: '#ffffff',
-      alternateRowBg: '#f8fafc',
+      alternateRowBg: '#eef2f5',
       rowBg: '#ffffff',
-      borderColor: '#002b36',
-      fontSize: 7.5,
-      headerFontSize: 8,
+      borderColor: '#002838',
+      fontSize: 9,
+      headerFontSize: 12,
       cellPadding: 4,
-      colWidths: [65, 140, 55, 55, 60]
     }
   }
 ];

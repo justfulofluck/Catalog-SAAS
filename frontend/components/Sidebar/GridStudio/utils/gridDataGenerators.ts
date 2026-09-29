@@ -62,22 +62,21 @@ export const generateSectionsFromRealProducts = (
         id: 'sec-1',
         title: 'PRODUCT SERIES 1',
         titleColor: '#00a651',
-        titleFontSize: 22,
+        titleFontSize: 26,
         imageSrc: '',
         hasBackground: false,
         backgroundColor: '#f1f5f9',
         tableData: {
-          headers: ['MODEL NO', 'PRODUCTS', 'PRICE'],
-          rows: [['-', 'Product Series 1', '-']],
-          headerBg: '#002b36',
+          headers: ['MODEL NO', 'PRODUCTS', 'CUT-OUT', 'COLOR', 'DEALER PRICE', 'PACKING PER BOX'],
+          rows: [['-', 'Product Series 1', '-', '-', '-', '-']],
+          headerBg: '#002838',
           headerTextColor: '#ffffff',
-          alternateRowBg: '#f8fafc',
+          alternateRowBg: '#eef2f5',
           rowBg: '#ffffff',
-          borderColor: '#002b36',
-          fontSize: 7.5,
-          headerFontSize: 8,
+          borderColor: '#002838',
+          fontSize: 9,
+          headerFontSize: 12,
           cellPadding: 4,
-          colWidths: [80, 200, 80]
         }
       }
     ];
@@ -113,22 +112,21 @@ export const generateSectionsFromRealProducts = (
       id: `sec-${sIdx + 1}`,
       title: cat.name.toUpperCase(),
       titleColor: '#00a651',
-      titleFontSize: 22,
+      titleFontSize: 26,
       imageSrc: catImg,
       hasBackground: sIdx % 2 === 1,
       backgroundColor: '#e2e8f0',
       tableData: {
         headers,
         rows,
-        headerBg: '#002b36',
+        headerBg: '#002838',
         headerTextColor: '#ffffff',
-        alternateRowBg: '#f8fafc',
+        alternateRowBg: '#eef2f5',
         rowBg: '#ffffff',
-        borderColor: '#002b36',
-        fontSize: 7.5,
-        headerFontSize: 8,
+        borderColor: '#002838',
+        fontSize: 9,
+        headerFontSize: 12,
         cellPadding: 4,
-        colWidths: [80, 200, 80]
       }
     };
   });
@@ -163,22 +161,21 @@ export const generateSectionForCategory = (
     id: `sec-${Date.now()}-${sectionIndex}`,
     title: cat.name.toUpperCase(),
     titleColor: '#00a651',
-    titleFontSize: 22,
+    titleFontSize: 26,
     imageSrc: catImg,
     hasBackground: sectionIndex % 2 === 1,
     backgroundColor: '#e2e8f0',
     tableData: {
       headers,
       rows,
-      headerBg: '#002b36',
+      headerBg: '#002838',
       headerTextColor: '#ffffff',
-      alternateRowBg: '#f8fafc',
+      alternateRowBg: '#eef2f5',
       rowBg: '#ffffff',
-      borderColor: '#002b36',
-      fontSize: 7.5,
-      headerFontSize: 8,
+      borderColor: '#002838',
+      fontSize: 9,
+      headerFontSize: 12,
       cellPadding: 4,
-      colWidths: [80, 200, 80]
     }
   };
 };
