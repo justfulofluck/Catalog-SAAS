@@ -455,17 +455,17 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                   <X size={11} />
                 </button>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
+              <div className="flex flex-wrap items-start gap-x-4 gap-y-2.5 pt-0.5">
                 {/* Header BG */}
-                <div>
-                  <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Background</label>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Background</label>
                   <div className="flex items-center gap-1">
                     {['#002b36', '#0F3D3E', '#0f172a', '#4c0519', '#18181b'].map(c => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => onUpdateTableStyle(secIdx, { headerBg: c })}
-                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer ${
+                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer shrink-0 ${
                           sec.tableData.headerBg === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'
                         }`}
                         style={{ backgroundColor: c }}
@@ -475,21 +475,21 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                       type="color"
                       value={sec.tableData.headerBg || '#002b36'}
                       onChange={(e) => onUpdateTableStyle(secIdx, { headerBg: e.target.value })}
-                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"
+                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent shrink-0"
                     />
                   </div>
                 </div>
 
                 {/* Header Text Color */}
-                <div>
-                  <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Text</label>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Text</label>
                   <div className="flex items-center gap-1">
                     {['#ffffff', '#f8fafc', '#e2e8f0', '#fbbf24'].map(c => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => onUpdateTableStyle(secIdx, { headerTextColor: c })}
-                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer ${
+                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer shrink-0 ${
                           sec.tableData.headerTextColor === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'
                         }`}
                         style={{ backgroundColor: c }}
@@ -499,45 +499,21 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                       type="color"
                       value={sec.tableData.headerTextColor || '#ffffff'}
                       onChange={(e) => onUpdateTableStyle(secIdx, { headerTextColor: e.target.value })}
-                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"
-                    />
-                  </div>
-                </div>
-
-                {/* Alternating Row Color */}
-                <div>
-                  <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Zebra Row Tint</label>
-                  <div className="flex items-center gap-1">
-                    {['#f8fafc', '#f1f5f9', '#f0fdf4', '#ecfdf5', '#ffffff'].map(c => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => onUpdateTableStyle(secIdx, { alternateRowBg: c })}
-                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer ${
-                          sec.tableData.alternateRowBg === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'
-                        }`}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                    <input
-                      type="color"
-                      value={sec.tableData.alternateRowBg || '#f8fafc'}
-                      onChange={(e) => onUpdateTableStyle(secIdx, { alternateRowBg: e.target.value })}
-                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"
+                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent shrink-0"
                     />
                   </div>
                 </div>
 
                 {/* Border Color */}
-                <div>
-                  <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Border Color</label>
+                <div className="flex flex-col gap-1 shrink-0">
+                  <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Border Color</label>
                   <div className="flex items-center gap-1">
                     {['#002b36', '#0F3D3E', '#cbd5e1', '#94a3b8', '#1e293b'].map(c => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => onUpdateTableStyle(secIdx, { borderColor: c })}
-                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer ${
+                        className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer shrink-0 ${
                           sec.tableData.borderColor === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'
                         }`}
                         style={{ backgroundColor: c }}
@@ -547,8 +523,50 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                       type="color"
                       value={sec.tableData.borderColor || '#002b36'}
                       onChange={(e) => onUpdateTableStyle(secIdx, { borderColor: e.target.value })}
-                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent"
+                      className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent shrink-0"
                     />
+                  </div>
+                </div>
+
+                {/* Font Size */}
+                <div className="flex flex-col gap-1 shrink-0">
+                  <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Font Size</label>
+                  <div className="flex items-center gap-1">
+                    {[7, 8, 9, 10].map(sz => (
+                      <button
+                        key={sz}
+                        type="button"
+                        onClick={() => onUpdateTableStyle(secIdx, { fontSize: sz, headerFontSize: sz + 2 })}
+                        className={`px-1.5 py-0.5 min-w-[26px] text-center rounded font-bold text-[9px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                          Math.round(sec.tableData.fontSize || 8) === sz
+                            ? 'bg-[#0F3D3E] text-white ring-1 ring-emerald-400'
+                            : isDark ? 'bg-[#1f1f1f] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                        }`}
+                      >
+                        {sz}px
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Cell Padding */}
+                <div className="flex flex-col gap-1 shrink-0">
+                  <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cell Padding</label>
+                  <div className="flex items-center gap-1">
+                    {[3, 4, 6, 8].map(pad => (
+                      <button
+                        key={pad}
+                        type="button"
+                        onClick={() => onUpdateTableStyle(secIdx, { cellPadding: pad })}
+                        className={`px-1.5 py-0.5 min-w-[26px] text-center rounded font-bold text-[9px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                          (sec.tableData.cellPadding || 4) === pad
+                            ? 'bg-[#0F3D3E] text-white ring-1 ring-emerald-400'
+                            : isDark ? 'bg-[#1f1f1f] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+                        }`}
+                      >
+                        {pad}px
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -559,12 +577,12 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
           <div className={`border rounded-lg overflow-x-auto shadow-inner ${
             isDark ? 'border-[#262626] bg-[#0c0c0c]' : 'border-slate-300 bg-white'
           }`}>
-            <table className="w-full text-left border-collapse text-[9.5px]">
+            <table className="w-full text-left border-collapse text-xs">
               <thead>
                 <tr style={{ backgroundColor: sec.tableData.headerBg || '#002b36', color: sec.tableData.headerTextColor || '#ffffff' }}>
-                  <th className="p-1 text-center w-6 border-r border-white/20 text-[8px] font-mono">#</th>
+                  <th className="text-center w-6 border-r border-white/20 text-[8px] font-mono py-1.5 px-1">#</th>
                   {sec.tableData.headers.map((h, colIdx) => (
-                    <th key={colIdx} className="p-1 font-black border-r border-white/20 relative group">
+                    <th key={colIdx} className="font-black border-r border-white/20 relative group py-1.5 px-2">
                       <div className="flex items-center justify-between gap-1">
                         <input
                           type="text"
@@ -576,7 +594,7 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                               tableData: { ...sec.tableData, headers: newHeaders }
                             });
                           }}
-                          className="bg-transparent border-none text-[9.5px] font-black outline-none w-full p-0 uppercase"
+                          className="bg-transparent border-none font-black outline-none w-full p-0 uppercase text-[10px]"
                           style={{ color: sec.tableData.headerTextColor || '#ffffff' }}
                         />
                         {/* Autofill Magic Button */}
@@ -629,7 +647,7 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                       </div>
                     </th>
                   ))}
-                  <th className="p-1 text-center w-14 border-white/20 text-[8px] font-mono">Actions</th>
+                  <th className="text-center w-14 border-white/20 text-[8px] font-mono py-1.5 px-1">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -647,22 +665,22 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                         borderColor: sec.tableData.borderColor || (isDark ? '#262626' : '#e2e8f0')
                       }}
                     >
-                      <td className="p-1 text-center font-mono text-[8px] opacity-50 border-r border-slate-700/20">
+                      <td className="text-center font-mono text-[8px] opacity-50 border-r border-slate-700/20 py-1.5 px-1">
                         {rIdx + 1}
                       </td>
                       {row.map((cell, cIdx) => (
-                        <td key={cIdx} className="p-1 border-r border-slate-700/20">
+                        <td key={cIdx} className="border-r border-slate-700/20 py-1 px-1.5">
                           <input
                             type="text"
                             value={cell}
                             onChange={(e) => onUpdateTableRowCell(secIdx, rIdx, cIdx, e.target.value)}
-                            className={`w-full bg-transparent border-none text-[9.5px] outline-none p-0 font-medium ${
+                            className={`w-full bg-transparent border-none outline-none p-0 font-medium text-[11px] ${
                               isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
                             }`}
                           />
                         </td>
                       ))}
-                      <td className="p-1 text-center">
+                      <td className="text-center py-1.5 px-1">
                         <div className="flex items-center justify-center gap-1 opacity-60 group-hover/row:opacity-100 transition-opacity">
                           <button
                             type="button"
@@ -699,9 +717,11 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                     </tr>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
         </div>
       </div>
     </div>

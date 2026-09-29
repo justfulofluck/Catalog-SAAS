@@ -82,7 +82,7 @@ export const generateSectionsFromRealProducts = (
           rows: [['-', 'Product Series 1', '-', '-', '-', '-']],
           headerBg: '#002838',
           headerTextColor: '#ffffff',
-          alternateRowBg: '#eef2f5',
+          alternateRowBg: '#ffffff',
           rowBg: '#ffffff',
           borderColor: '#002838',
           fontSize: 9,
@@ -133,7 +133,7 @@ export const generateSectionsFromRealProducts = (
         rows,
         headerBg: '#002838',
         headerTextColor: '#ffffff',
-        alternateRowBg: '#eef2f5',
+        alternateRowBg: '#ffffff',
         rowBg: '#ffffff',
         borderColor: '#002838',
         fontSize: 9,
@@ -182,7 +182,7 @@ export const generateSectionForCategory = (
       rows,
       headerBg: '#002838',
       headerTextColor: '#ffffff',
-      alternateRowBg: '#eef2f5',
+      alternateRowBg: '#ffffff',
       rowBg: '#ffffff',
       borderColor: '#002838',
       fontSize: 9,
@@ -2788,17 +2788,17 @@ export const GridStudioPanel: React.FC = () => {
                             <X size={11} />
                           </button>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-0.5">
+                        <div className="flex flex-wrap items-start gap-x-4 gap-y-2.5 pt-0.5">
                           {/* Header BG */}
-                          <div>
-                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Background</label>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Background</label>
                             <div className="flex items-center gap-1">
                               {['#002b36', '#0F3D3E', '#0f172a', '#4c0519', '#18181b'].map(c => (
                                 <button
                                   key={c}
                                   type="button"
                                   onClick={() => handleUpdateTableStyle(secIdx, { headerBg: c })}
-                                  className={`w-4 h-4 rounded-full border transition-transform ${sec.tableData.headerBg === c ? 'ring-2 ring-emerald-400 border-white scale-110' : 'border-slate-600'}`}
+                                  className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer shrink-0 ${sec.tableData.headerBg === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'}`}
                                   style={{ backgroundColor: c }}
                                 />
                               ))}
@@ -2806,38 +2806,68 @@ export const GridStudioPanel: React.FC = () => {
                                 type="color"
                                 value={sec.tableData.headerBg || '#002b36'}
                                 onChange={(e) => handleUpdateTableStyle(secIdx, { headerBg: e.target.value })}
-                                className="w-4 h-4 rounded cursor-pointer bg-transparent border-0"
+                                className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent shrink-0"
                                 title="Custom Header Color"
                               />
                             </div>
                           </div>
 
                           {/* Header Text Color */}
-                          <div>
-                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Text</label>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Header Text</label>
                             <div className="flex items-center gap-1">
-                              {['#ffffff', '#E2DCC8', '#000000'].map(c => (
+                              {['#ffffff', '#f8fafc', '#e2e8f0', '#fbbf24'].map(c => (
                                 <button
                                   key={c}
                                   type="button"
                                   onClick={() => handleUpdateTableStyle(secIdx, { headerTextColor: c })}
-                                  className={`w-4 h-4 rounded-full border transition-transform ${sec.tableData.headerTextColor === c ? 'ring-2 ring-emerald-400 border-white scale-110' : 'border-slate-600'}`}
+                                  className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer shrink-0 ${sec.tableData.headerTextColor === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'}`}
                                   style={{ backgroundColor: c }}
                                 />
                               ))}
+                              <input
+                                type="color"
+                                value={sec.tableData.headerTextColor || '#ffffff'}
+                                onChange={(e) => handleUpdateTableStyle(secIdx, { headerTextColor: e.target.value })}
+                                className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent shrink-0"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Border Color */}
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Border Color</label>
+                            <div className="flex items-center gap-1">
+                              {['#002b36', '#0F3D3E', '#cbd5e1', '#94a3b8', '#1e293b'].map(c => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => handleUpdateTableStyle(secIdx, { borderColor: c })}
+                                  className={`w-3.5 h-3.5 rounded-full border transition-transform cursor-pointer shrink-0 ${
+                                    sec.tableData.borderColor === c ? 'scale-125 ring-2 ring-emerald-400 border-white' : isDark ? 'border-[#333]' : 'border-slate-300'
+                                  }`}
+                                  style={{ backgroundColor: c }}
+                                />
+                              ))}
+                              <input
+                                type="color"
+                                value={sec.tableData.borderColor || '#002b36'}
+                                onChange={(e) => handleUpdateTableStyle(secIdx, { borderColor: e.target.value })}
+                                className="w-3.5 h-3.5 rounded cursor-pointer border-0 bg-transparent shrink-0"
+                              />
                             </div>
                           </div>
 
                           {/* Font Size */}
-                          <div>
-                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Font Size</label>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Font Size</label>
                             <div className="flex items-center gap-1">
                               {[7, 8, 9, 10].map(sz => (
                                 <button
                                   key={sz}
                                   type="button"
-                                  onClick={() => handleUpdateTableStyle(secIdx, { fontSize: sz, headerFontSize: sz + 0.5 })}
-                                  className={`px-1.5 py-0.5 rounded font-bold transition-all ${
+                                  onClick={() => handleUpdateTableStyle(secIdx, { fontSize: sz, headerFontSize: sz + 2 })}
+                                  className={`px-1.5 py-0.5 min-w-[26px] text-center rounded font-bold text-[9px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                                     Math.round(sec.tableData.fontSize || 8) === sz
                                       ? 'bg-[#0F3D3E] text-white ring-1 ring-emerald-400'
                                       : isDark ? 'bg-[#1f1f1f] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
@@ -2850,15 +2880,15 @@ export const GridStudioPanel: React.FC = () => {
                           </div>
 
                           {/* Cell Padding */}
-                          <div>
-                            <label className={`block text-[8px] font-bold uppercase mb-1 ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cell Padding</label>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <label className={`block text-[8px] font-bold uppercase tracking-wider whitespace-nowrap ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Cell Padding</label>
                             <div className="flex items-center gap-1">
                               {[3, 4, 6, 8].map(pad => (
                                 <button
                                   key={pad}
                                   type="button"
                                   onClick={() => handleUpdateTableStyle(secIdx, { cellPadding: pad })}
-                                  className={`px-1.5 py-0.5 rounded font-bold transition-all ${
+                                  className={`px-1.5 py-0.5 min-w-[26px] text-center rounded font-bold text-[9px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                                     (sec.tableData.cellPadding || 4) === pad
                                       ? 'bg-[#0F3D3E] text-white ring-1 ring-emerald-400'
                                       : isDark ? 'bg-[#1f1f1f] text-slate-400 hover:text-white' : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
@@ -2877,7 +2907,7 @@ export const GridStudioPanel: React.FC = () => {
                     <div className={`overflow-x-auto border rounded-lg custom-scrollbar shadow-inner ${
                       isDark ? 'border-[#2d2d2d] bg-[#0e0e0e]' : 'border-slate-200 bg-white'
                     }`}>
-                      <table className="w-full text-left border-collapse text-[10px]">
+                      <table className="w-full text-left border-collapse text-xs">
                         <thead>
                           <tr
                             className="border-b border-[#144f51]"
@@ -2886,11 +2916,11 @@ export const GridStudioPanel: React.FC = () => {
                               color: sec.tableData.headerTextColor || '#ffffff'
                             }}
                           >
-                            <th className="p-2 w-9 text-center font-mono text-[9px] opacity-70 shrink-0 border-r border-white/10">#</th>
+                            <th className="w-9 text-center font-mono text-[9px] opacity-70 shrink-0 border-r border-white/10 py-1.5 px-1">#</th>
                             {sec.tableData.headers.map((hdr, cIdx) => (
                               <th
                                 key={cIdx}
-                                className={`p-2 font-black tracking-wider uppercase text-[9.5px] relative group/hdr border-r border-white/10 last:border-r-0 ${
+                                className={`font-black tracking-wider uppercase relative group/hdr border-r border-white/10 last:border-r-0 py-1.5 px-2 ${
                                   cIdx === 0 ? 'w-[130px]' : cIdx === 1 ? 'min-w-[200px]' : 'w-[120px]'
                                 }`}
                               >
@@ -2900,7 +2930,7 @@ export const GridStudioPanel: React.FC = () => {
                                       type="text"
                                       value={hdr}
                                       onChange={(e) => handleHeaderChange(secIdx, cIdx, e.target.value)}
-                                      className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/25 text-inherit placeholder:opacity-50 font-black text-[9.5px] px-1.5 py-0.5 rounded outline-none uppercase tracking-wider transition-all"
+                                      className="w-full bg-white/10 hover:bg-white/15 focus:bg-white/25 text-inherit placeholder:opacity-50 font-black px-1.5 py-0.5 rounded outline-none uppercase tracking-wider text-[10px] transition-all"
                                       title="Click to rename field"
                                     />
                                   </div>
@@ -3010,7 +3040,7 @@ export const GridStudioPanel: React.FC = () => {
                                 </div>
                               </th>
                             ))}
-                            <th className="p-2 w-28 text-center font-mono text-[9px] opacity-70 shrink-0">Actions</th>
+                            <th className="w-28 text-center font-mono text-[9px] opacity-70 shrink-0 py-1.5 px-1">Actions</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -3025,7 +3055,7 @@ export const GridStudioPanel: React.FC = () => {
                                     : `${rIdx % 2 === 1 ? 'bg-slate-50/70' : 'bg-white'} border-slate-200 hover:bg-teal-50/40`
                                 }`}
                               >
-                                <td className={`p-1.5 text-center font-mono text-[9px] w-9 border-r ${
+                                <td className={`text-center font-mono text-[9px] w-9 border-r py-1.5 px-1 ${
                                   isDark ? 'text-slate-500 border-[#1e1e1e]' : 'text-slate-400 border-slate-200'
                                 }`}>
                                   <div className="flex flex-col items-center justify-center">
@@ -3038,7 +3068,7 @@ export const GridStudioPanel: React.FC = () => {
                                 {row.map((cell, cIdx) => (
                                   <td
                                     key={cIdx}
-                                    className={`p-1 border-r last:border-r-0 ${
+                                    className={`border-r last:border-r-0 py-1 px-1.5 ${
                                       isDark ? 'border-[#1e1e1e]' : 'border-slate-200'
                                     } ${cIdx === 0 ? 'w-[130px]' : cIdx === 1 ? 'min-w-[200px]' : 'w-[120px]'}`}
                                   >
@@ -3046,7 +3076,7 @@ export const GridStudioPanel: React.FC = () => {
                                       type="text"
                                       value={cell}
                                       onChange={(e) => handleCellChange(secIdx, rIdx, cIdx, e.target.value)}
-                                      className={`w-full px-2.5 py-1.5 bg-transparent border border-transparent focus:border-[#0F3D3E] outline-none rounded-md text-[10.5px] font-mono transition-all ${
+                                      className={`w-full bg-transparent border border-transparent focus:border-[#0F3D3E] outline-none rounded-md font-mono text-[11px] px-1.5 py-1 transition-all ${
                                         isDark
                                           ? `focus:bg-[#172324] ${cIdx === 3 ? 'text-[#E2DCC8] font-black' : cIdx === 0 ? 'text-white font-bold' : 'text-slate-100'}`
                                           : `focus:bg-teal-50/50 ${cIdx === 3 ? 'text-slate-900 font-black' : cIdx === 0 ? 'text-slate-900 font-bold' : 'text-slate-800'}`
@@ -3054,84 +3084,84 @@ export const GridStudioPanel: React.FC = () => {
                                     />
                                   </td>
                                 ))}
-                                <td className="p-1 text-center w-28 shrink-0">
+                                <td className="text-center w-28 shrink-0 py-1.5 px-1">
                                   <div className="flex items-center justify-center gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
-                                    {/* Link / Fill row from Product */}
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setLinkRowModal({ secIdx, rIdx });
-                                        setLinkRowSearch('');
-                                        setLinkRowCategory('all');
-                                      }}
-                                      className={`p-1 rounded transition-colors ${
-                                        isDark ? 'text-slate-400 hover:text-[#E2DCC8] hover:bg-[#0F3D3E]/50' : 'text-slate-500 hover:text-[#0F3D3E] hover:bg-teal-50'
-                                      }`}
-                                      title="Fill row from catalog product"
-                                    >
-                                      <Package size={11} />
-                                    </button>
-                                    {/* Move Row Up */}
-                                    <button
-                                      type="button"
-                                      disabled={rIdx === 0}
-                                      onClick={() => handleMoveTableRow(secIdx, rIdx, 'up')}
-                                      className={`p-1 rounded disabled:opacity-20 transition-colors ${
-                                        isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                                      }`}
-                                      title="Move Row Up"
-                                    >
-                                      <ArrowUp size={11} />
-                                    </button>
-                                    {/* Move Row Down */}
-                                    <button
-                                      type="button"
-                                      disabled={rIdx === sec.tableData.rows.length - 1}
-                                      onClick={() => handleMoveTableRow(secIdx, rIdx, 'down')}
-                                      className={`p-1 rounded disabled:opacity-20 transition-colors ${
-                                        isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                                      }`}
-                                      title="Move Row Down"
-                                    >
-                                      <ArrowDown size={11} />
-                                    </button>
-                                    {/* Duplicate Row */}
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDuplicateTableRow(secIdx, rIdx)}
-                                      className={`p-1 rounded transition-colors ${
-                                        isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
-                                      }`}
-                                      title="Duplicate Row"
-                                    >
-                                      <Copy size={11} />
-                                    </button>
-                                    {/* Delete Row */}
-                                    {sec.tableData.rows.length > 1 && (
-                                      <button
-                                        type="button"
-                                        onClick={() => handleDeleteTableRow(secIdx, rIdx)}
-                                        className={`p-1 rounded transition-colors ${
-                                          isDark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
-                                        }`}
-                                        title="Delete Row"
-                                      >
-                                        <Trash2 size={11} />
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                      </table>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setLinkRowModal({ secIdx, rIdx });
+                                            setLinkRowSearch('');
+                                            setLinkRowCategory('all');
+                                          }}
+                                          className={`p-1 rounded transition-colors ${
+                                            isDark ? 'text-slate-400 hover:text-[#E2DCC8] hover:bg-[#0F3D3E]/50' : 'text-slate-500 hover:text-[#0F3D3E] hover:bg-teal-50'
+                                          }`}
+                                          title="Fill row from catalog product"
+                                        >
+                                          <Package size={11} />
+                                        </button>
+                                        {/* Move Row Up */}
+                                        <button
+                                          type="button"
+                                          disabled={rIdx === 0}
+                                          onClick={() => handleMoveTableRow(secIdx, rIdx, 'up')}
+                                          className={`p-1 rounded disabled:opacity-20 transition-colors ${
+                                            isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                          }`}
+                                          title="Move Row Up"
+                                        >
+                                          <ArrowUp size={11} />
+                                        </button>
+                                        {/* Move Row Down */}
+                                        <button
+                                          type="button"
+                                          disabled={rIdx === sec.tableData.rows.length - 1}
+                                          onClick={() => handleMoveTableRow(secIdx, rIdx, 'down')}
+                                          className={`p-1 rounded disabled:opacity-20 transition-colors ${
+                                            isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                          }`}
+                                          title="Move Row Down"
+                                        >
+                                          <ArrowDown size={11} />
+                                        </button>
+                                        {/* Duplicate Row */}
+                                        <button
+                                          type="button"
+                                          onClick={() => handleDuplicateTableRow(secIdx, rIdx)}
+                                          className={`p-1 rounded transition-colors ${
+                                            isDark ? 'text-slate-400 hover:text-white hover:bg-[#252525]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+                                          }`}
+                                          title="Duplicate Row"
+                                        >
+                                          <Copy size={11} />
+                                        </button>
+                                        {/* Delete Row */}
+                                        {sec.tableData.rows.length > 1 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleDeleteTableRow(secIdx, rIdx)}
+                                            className={`p-1 rounded transition-colors ${
+                                              isDark ? 'text-slate-400 hover:text-red-400 hover:bg-red-500/10' : 'text-slate-500 hover:text-red-600 hover:bg-red-50'
+                                            }`}
+                                            title="Delete Row"
+                                          >
+                                            <Trash2 size={11} />
+                                          </button>
+                                        )}
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+                        </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            );
-          }))}
+              );
+            })
+          )}
 
           {!isSpecialPage && sections.length > 0 && sections.length < 3 && (
             <button

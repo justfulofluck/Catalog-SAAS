@@ -4445,8 +4445,8 @@ export const useStore = create<State>((set, get) => ({
       const targetPage = catalog.pages[pageIndex];
       if (!targetPage) return state;
 
-      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
-      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+      const pageHasHeader = Boolean(catalog.hasHeader !== false && targetPage.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+      const pageHasFooter = Boolean(catalog.hasFooter !== false && targetPage.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
 
       const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
       const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
@@ -4667,8 +4667,8 @@ export const useStore = create<State>((set, get) => ({
       // Helper to lay out sections on a page
       const layoutSections = (sections: ProductGridSection[], page: CatalogPage, timestamp: number): CanvasElement[] => {
         if (sections.length === 0) return [];
-        const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
-        const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
+        const pageHasHeader = Boolean(catalog.hasHeader !== false && page.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
+        const pageHasFooter = Boolean(catalog.hasFooter !== false && page.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
 
         const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
         const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
@@ -4965,8 +4965,8 @@ export const useStore = create<State>((set, get) => ({
       sections[secIdxB] = temp;
 
       const timestamp = Date.now();
-      const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
-      const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+      const pageHasHeader = Boolean(catalog.hasHeader !== false && targetPage.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+      const pageHasFooter = Boolean(catalog.hasFooter !== false && targetPage.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
 
       const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
       const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
@@ -5153,8 +5153,8 @@ export const useStore = create<State>((set, get) => ({
         };
       } else {
         const timestamp = Date.now();
-        const pageHasHeader = targetPage.hasHeader !== undefined ? targetPage.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
-        const pageHasFooter = targetPage.hasFooter !== undefined ? targetPage.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+        const pageHasHeader = Boolean(catalog.hasHeader !== false && targetPage.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && targetPage.type !== 'cover');
+        const pageHasFooter = Boolean(catalog.hasFooter !== false && targetPage.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && targetPage.type !== 'cover');
 
         const headerH = pageHasHeader ? (catalog.headerHeight || 113.4) : 0;
         const footerH = pageHasFooter ? (catalog.footerHeight || 75.6) : 0;
