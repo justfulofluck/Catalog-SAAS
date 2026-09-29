@@ -1867,19 +1867,7 @@ const EditorCanvas: React.FC = () => {
         </div>
       </div>
 
-      {/* Editor Footer Bar */}
-      <div className="h-11 border-t flex items-center justify-between px-5 shrink-0 z-40 bg-[#141414] border-[#262626]">
-        <div className="flex items-center gap-6">
-        </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-[#1a1a1a] border border-[#2a2a2a] rounded-[4px] px-2 py-0.5 gap-2.5">
-            <button onClick={() => setZoom(Math.max(0.1, zoom - 0.1))} className="text-[#888] hover:text-white transition-colors" title="Zoom Out"><Plus size={13} className="rotate-45" /></button>
-            <span className="text-[10px] font-bold text-white w-9 text-center select-none">{Math.round(zoom * 100)}%</span>
-            <button onClick={() => setZoom(Math.min(3, zoom + 0.1))} className="text-[#888] hover:text-white transition-colors" title="Zoom In"><Plus size={13} /></button>
-          </div>
-        </div>
-      </div>
 
 
 

@@ -1032,7 +1032,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const newTableJSON = JSON.stringify(el.tableData || {});
             const oldW = (existingObj.width || 1) * Math.abs(existingObj.scaleX || 1);
             const oldH = (existingObj.height || 1) * Math.abs(existingObj.scaleY || 1);
-            return oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs(el.height - oldH) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
+            return existingObj._rendererVersion !== 2 || oldTableJSON !== newTableJSON || Math.abs(el.width - oldW) > 2 || Math.abs(el.height - oldH) > 2 || Math.abs((existingObj.scaleX || 1) - 1) > 0.05;
           }
           if (el.type === 'shape' || el.type === 'comment') {
             const oldFill = existingObj._lastFill || existingObj.fill || '';
@@ -1199,17 +1199,25 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
 
                 if (el.type === 'text') {
                   let parsedText = resolveDynamicText(String(el.text ?? '').replace(/<[^>]*>/g, ''), dynamicContext);
+                  const is3GridTitle = Boolean(
+                    (el.sectionTag && (el.id?.includes('title') || (el.fontSize && el.fontSize >= 18))) ||
+                    (el.fill === '#00a651' && (el.fontSize && el.fontSize >= 18))
+                  );
+                  const resolvedFont = is3GridTitle
+                    ? (el.fontFamily === 'Montserrat' || el.fontFamily === 'Inter' || !el.fontFamily ? 'Bebas Neue, Oswald, sans-serif' : el.fontFamily)
+                    : (el.fontFamily || catalog?.fontFamily || 'Inter');
+
                   existingObj.set({
-                    text: parsedText,
+                    text: is3GridTitle ? parsedText.toUpperCase() : parsedText,
                     fontSize: el.fontSize || 16,
-                    fontFamily: el.fontFamily || catalog?.fontFamily || 'Inter',
-                    fontWeight: el.fontWeight || 'normal',
+                    fontFamily: resolvedFont,
+                    fontWeight: el.fontWeight || (is3GridTitle ? 'bold' : 'normal'),
                     fontStyle: el.fontStyle || 'normal',
                     fill: el.fill || '#000000',
                     textAlign: el.textAlign || 'left',
                     lineHeight: el.lineHeight || 1.2,
                     underline: el.textDecoration?.includes('underline') || false,
-                    charSpacing: el.letterSpacing || 0,
+                    charSpacing: 0,
                     objectCaching: false,
                   });
                   existingObj._lastFill = el.fill || '';
