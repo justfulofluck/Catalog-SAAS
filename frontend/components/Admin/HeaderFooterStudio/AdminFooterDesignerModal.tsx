@@ -1560,18 +1560,18 @@ export const AdminFooterDesignerModal: React.FC = () => {
         isDark ? 'bg-[#121214] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
       }`}>
         <div className="flex items-center gap-3.5">
-          {/* Back to Project Button */}
+          {/* Back to Admin Dashboard Button */}
           <button
-            onClick={() => setIsAdminFooterDesignerOpen(false)}
+            onClick={() => setIsAdminFooterDesignerOpen(false, null)}
             className={`flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-all shadow-sm group ${
               isDark
                 ? 'bg-[#1a1a1c] hover:bg-[#252528] text-white border-[#38383c] hover:border-[#E2DCC8]/50'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 hover:border-[#0F3D3E]/50'
             }`}
-            title="Back to Catalog Project"
+            title="Back to Super Admin Dashboard"
           >
             <ArrowLeft size={16} className={`${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} group-hover:-translate-x-0.5 transition-transform`} />
-            <span className={`text-xs font-bold ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Back to Project</span>
+            <span className={`text-xs font-bold ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Back to Admin Dashboard</span>
           </button>
 
           <div className={`h-6 w-px ${isDark ? 'bg-[#28282c]' : 'bg-slate-200'}`} />
@@ -1591,14 +1591,14 @@ export const AdminFooterDesignerModal: React.FC = () => {
                     ? 'text-white hover:border-[#E2DCC8]/40 focus:border-[#E2DCC8] placeholder:text-gray-500'
                     : 'text-slate-900 hover:border-[#0F3D3E]/40 focus:border-[#0F3D3E] placeholder:text-slate-400'
                 }`}
-                placeholder="Footer Theme Name..."
+                placeholder="Footer Blueprint Name..."
               />
               <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
                 isDark
-                  ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
-                  : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
+                  ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                  : 'bg-cyan-500/10 text-cyan-800 border-cyan-500/30'
               }`}>
-                Footer Studio
+                Global Master Blueprint
               </span>
             </div>
             <div className={`flex items-center gap-3 text-xs mt-0.5 pl-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
@@ -1623,68 +1623,45 @@ export const AdminFooterDesignerModal: React.FC = () => {
               step={1}
               value={Math.max(15, Math.min(60, toMm(footerHeight) >= 15 ? toMm(footerHeight) : 20))}
               onChange={(e) => setFooterHeight(toPx(Number(e.target.value)))}
-              className={`w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-[#0F3D3E] ${
+              className={`w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-cyan-500 ${
                 isDark ? 'bg-[#333333]' : 'bg-slate-300'
               }`}
             />
-            <span className={`text-xs font-bold w-10 text-right font-mono ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
+            <span className={`text-xs font-bold w-10 text-right font-mono ${isDark ? 'text-cyan-300' : 'text-cyan-800'}`}>
               {Math.max(15, Math.min(60, toMm(footerHeight) >= 15 ? toMm(footerHeight) : 20))}mm
             </span>
           </div>
 
-          {/* Apply to Catalog Button */}
-          <button
-            onClick={handleApplyToCatalog}
-            className={`flex items-center gap-2 px-3.5 py-2 rounded-[6px] text-xs font-bold transition-all shadow-sm border ${
-              isDark
-                ? 'bg-[#1c1c1f] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/50 text-white'
-                : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/50 text-slate-800'
-            }`}
-            title="Apply this designed footer directly to the currently opened catalog"
-          >
-            {appliedSuccess ? (
-              <>
-                <CheckCircle2 size={15} className="text-emerald-500" />
-                <span className="text-emerald-500">Applied!</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={15} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
-                <span>Apply to Catalog</span>
-              </>
-            )}
-          </button>
-
-          {/* Save as Theme Button */}
+          {/* Save / Publish Master Template Button */}
           <button
             onClick={handleSaveTheme}
             disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-cyan-950/40"
+            className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-cyan-950/40 active:scale-95"
           >
             {savedSuccess ? (
               <>
                 <Check size={16} className="text-emerald-300" />
-                <span className="text-emerald-300">Saved to Themes!</span>
+                <span className="text-emerald-300">Published to Blueprints!</span>
               </>
             ) : isSaving ? (
-              <span>Saving...</span>
+              <span>Publishing...</span>
             ) : (
               <>
                 <Save size={15} />
-                <span>Save Footer Theme</span>
+                <span>Publish Master Template</span>
               </>
             )}
           </button>
 
           {/* Close Studio Button */}
           <button
-            onClick={() => setIsAdminFooterDesignerOpen(false)}
+            onClick={() => setIsAdminFooterDesignerOpen(false, null)}
             className={`p-2 rounded-[6px] border transition-colors ml-1 ${
               isDark
                 ? 'bg-[#18181b] hover:bg-[#26262a] border-[#2a2a2e] text-[#888888] hover:text-white'
                 : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900'
             }`}
-            title="Close Super Admin • Master Footer Studio"
+            title="Close Footer Studio"
           >
             <X size={18} />
           </button>

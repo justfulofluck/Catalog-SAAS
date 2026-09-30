@@ -316,12 +316,6 @@ export const AdminTemplateManager: React.FC = () => {
                 onSave={handleSaveTemplate}
                 initialData={editingTemplate}
             />
-
-            {/* Super Admin Dedicated Header Studio */}
-            {isAdminHeaderDesignerOpen && <AdminHeaderDesignerModal />}
-
-            {/* Super Admin Dedicated Footer Studio */}
-            {isAdminFooterDesignerOpen && <AdminFooterDesignerModal />}
         </div>
     );
 };
