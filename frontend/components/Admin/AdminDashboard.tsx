@@ -10,15 +10,17 @@ import {
     XCircle,
     LogOut,
     CreditCard,
-    Sliders
+    Sliders,
+    Sparkles
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import SubscriptionManagement from './SubscriptionManagement';
 import { AdminSettings } from './AdminSettings';
+import { AdminTemplateManager } from './AdminTemplateManager';
 
 const AdminDashboard: React.FC = () => {
     const { registeredUsers, logout, user, fetchUsers, error } = useStore();
-    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions' | 'settings'>('users');
+    const [activeTab, setActiveTab] = useState<'users' | 'subscriptions' | 'templates' | 'settings'>('users');
 
     React.useEffect(() => {
         fetchUsers();
@@ -77,6 +79,13 @@ const AdminDashboard: React.FC = () => {
                         className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'subscriptions' ? 'border-[#0F3D3E] text-[#E2DCC8]' : 'border-transparent text-[#888888] hover:text-white'}`}
                     >
                         <CreditCard size={16} /> Subscription Factory
+                    </button>
+
+                    <button
+                        onClick={() => setActiveTab('templates')}
+                        className={`pb-4 text-xs font-bold uppercase tracking-widest border-b-2 transition-all flex items-center gap-2 ${activeTab === 'templates' ? 'border-[#0F3D3E] text-[#E2DCC8]' : 'border-transparent text-[#888888] hover:text-white'}`}
+                    >
+                        <Sparkles size={16} /> Template & Studio Hub
                     </button>
 
                     <button
@@ -219,6 +228,8 @@ const AdminDashboard: React.FC = () => {
                         </>
                     ) : activeTab === 'subscriptions' ? (
                         <SubscriptionManagement />
+                    ) : activeTab === 'templates' ? (
+                        <AdminTemplateManager />
                     ) : (
                         <AdminSettings />
                     )}
