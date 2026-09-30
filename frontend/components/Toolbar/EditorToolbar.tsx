@@ -43,7 +43,7 @@ const EditorToolbar: React.FC = () => {
     zoom, setZoom, addElement, currentPageIndex, catalog, setView, user,
     undo, redo, undoStack, redoStack, uiTheme, toggleUiTheme,
     saveCatalog, activeTool, setActiveTool, isSceneTreeOpen, setIsSceneTreeOpen,
-    editingSystemTemplate,
+    editingSystemTemplate, isAdminAuthenticated,
     saveActiveTemplateFromEditor
   } = useStore();
   const [isCommiting, setIsCommiting] = useState(false);
@@ -56,6 +56,15 @@ const EditorToolbar: React.FC = () => {
   const lineMenuRef = useRef<HTMLDivElement>(null);
   const shapeMenuRef = useRef<HTMLDivElement>(null);
   const textMenuRef = useRef<HTMLDivElement>(null);
+
+  const handleBackFromEditor = () => {
+    if (editingSystemTemplate || isAdminAuthenticated) {
+      useStore.setState({ editingSystemTemplate: null });
+      setView('admin-dashboard');
+    } else {
+      setView('dashboard');
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -193,11 +202,11 @@ const EditorToolbar: React.FC = () => {
     }`}>
       <div className="flex items-center gap-3">
         <button
-          onClick={() => editingSystemTemplate ? useStore.setState({ editingSystemTemplate: null, currentView: 'admin-dashboard' }) : setView('dashboard')}
+          onClick={handleBackFromEditor}
           className={`flex items-center gap-2 p-2 rounded-[4px] transition-all group ${
             isDark ? 'hover:bg-[#0F3D3E]/30 text-[#E2DCC8]/70 hover:text-[#F1F1F1]' : 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'
           }`}
-          title="Back to Dashboard"
+          title={editingSystemTemplate || isAdminAuthenticated ? "Back to Super Admin Portal" : "Back to Dashboard"}
         >
           <LayoutDashboard size={18} />
         </button>

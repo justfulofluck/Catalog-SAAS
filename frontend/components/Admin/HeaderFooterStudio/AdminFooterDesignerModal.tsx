@@ -16,7 +16,10 @@ import {
   AlignRight,
   Check,
   Info,
-  Sliders
+  Sliders,
+  ZoomIn,
+  ZoomOut,
+  Maximize2
 } from 'lucide-react';
 import { useStore } from '../../../store/useStore';
 import { CanvasElement, SystemTemplate } from '../../../types';
@@ -78,6 +81,7 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
   const [activeTab, setActiveTab] = useState<'elements' | 'templates' | 'settings'>('elements');
   const [history, setHistory] = useState<CanvasElement[][]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [zoom, setZoom] = useState(1.4); // 140% default zoom for large, clear editing
 
   // Initialize on template open
   useEffect(() => {
@@ -339,29 +343,28 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in duration-200">
-      <div className="bg-[#141414] border border-[#2a2a2a] w-full max-w-7xl h-[90vh] rounded-lg shadow-2xl flex flex-col overflow-hidden text-white font-sans">
-        
-        {/* ================= MODAL HEADER ================= */}
-        <div className="px-6 py-4 bg-[#181818] border-b border-[#262626] flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded bg-[#0F3D3E] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-inner">
-              <Sparkles size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-white">
-                  Super Admin • Master Footer Studio
-                </h2>
-                <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                  Global System Template
-                </span>
-              </div>
-              <p className="text-[11px] text-[#888888]">
-                Design standardized footer pagination and disclaimer blueprints for all SaaS clients.
-              </p>
-            </div>
+    <div className="fixed inset-0 z-[9999] flex flex-col bg-[#121212] w-screen h-screen overflow-hidden text-white font-sans animate-in fade-in duration-150">
+      
+      {/* ================= MODAL HEADER ================= */}
+      <div className="px-6 py-3.5 bg-[#181818] border-b border-[#262626] flex items-center justify-between shrink-0 shadow-md">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded bg-[#0F3D3E] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-inner">
+            <Sparkles size={18} />
           </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+                Super Admin • Master Footer Studio
+              </h2>
+              <span className="px-2 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                Global System Template
+              </span>
+            </div>
+            <p className="text-[11px] text-[#888888]">
+              Design standardized footer pagination and disclaimer blueprints for all SaaS clients.
+            </p>
+          </div>
+        </div>
 
           <div className="flex items-center gap-3">
             <button
@@ -582,34 +585,82 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
           </div>
 
           {/* CENTER INTERACTIVE CANVAS WORKSPACE */}
-          <div className="flex-1 bg-[#101010] flex flex-col overflow-hidden">
-            {/* Top Canvas Bar (Dimensions & Sliders) */}
-            <div className="px-4 py-2.5 bg-[#161616] border-b border-[#262626] flex items-center justify-between gap-4 text-xs font-medium">
-              <div className="flex items-center gap-4">
+          <div className="flex-1 bg-[#0e0e0e] flex flex-col overflow-hidden">
+            {/* Top Canvas Bar (Dimensions, Zoom & Sliders) */}
+            <div className="px-6 py-2.5 bg-[#161616] border-b border-[#262626] flex items-center justify-between gap-4 text-xs font-medium shrink-0">
+              <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Footer Height:</span>
                   <input
                     type="range"
                     min="40"
-                    max="150"
+                    max="160"
                     value={footerHeight}
                     onChange={e => setFooterHeight(Number(e.target.value))}
-                    className="w-28 accent-[#0F3D3E]"
+                    className="w-28 accent-cyan-500"
                   />
-                  <span className="font-mono text-[11px] text-[#E2DCC8]">{Math.round(footerHeight)}px</span>
+                  <span className="font-mono text-[11px] text-cyan-300 font-bold">{Math.round(footerHeight)}px</span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Margins:</span>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Side Margins:</span>
                   <input
                     type="range"
                     min="10"
                     max="80"
                     value={sideMargin}
                     onChange={e => setSideMargin(Number(e.target.value))}
-                    className="w-24 accent-[#0F3D3E]"
+                    className="w-24 accent-cyan-500"
                   />
-                  <span className="font-mono text-[11px] text-[#E2DCC8]">{sideMargin}px</span>
+                  <span className="font-mono text-[11px] text-cyan-300 font-bold">{sideMargin}px</span>
+                </div>
+              </div>
+
+              {/* Center Zoom Controls */}
+              <div className="flex items-center gap-2 bg-[#121212] px-3 py-1 rounded border border-[#2a2a2a]">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Workspace Zoom:</span>
+                <button
+                  onClick={() => setZoom(prev => Math.max(0.8, Number((prev - 0.2).toFixed(2))))}
+                  className="p-1 text-slate-300 hover:text-white hover:bg-[#202020] rounded transition-all"
+                  title="Zoom Out"
+                >
+                  <ZoomOut size={14} />
+                </button>
+                <span className="font-mono text-xs font-bold text-cyan-300 w-12 text-center">
+                  {Math.round(zoom * 100)}%
+                </span>
+                <button
+                  onClick={() => setZoom(prev => Math.min(2.5, Number((prev + 0.2).toFixed(2))))}
+                  className="p-1 text-slate-300 hover:text-white hover:bg-[#202020] rounded transition-all"
+                  title="Zoom In"
+                >
+                  <ZoomIn size={14} />
+                </button>
+                <div className="flex items-center gap-1 ml-1 border-l border-[#2a2a2a] pl-2">
+                  <button
+                    onClick={() => setZoom(1.0)}
+                    className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border transition-all ${
+                      zoom === 1.0 ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/50' : 'bg-[#202020] text-slate-400 hover:text-white border-[#333]'
+                    }`}
+                  >
+                    100%
+                  </button>
+                  <button
+                    onClick={() => setZoom(1.4)}
+                    className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border transition-all ${
+                      zoom === 1.4 ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/50' : 'bg-[#202020] text-slate-400 hover:text-white border-[#333]'
+                    }`}
+                  >
+                    140%
+                  </button>
+                  <button
+                    onClick={() => setZoom(1.8)}
+                    className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded border transition-all ${
+                      zoom === 1.8 ? 'bg-cyan-950/60 text-cyan-300 border-cyan-500/50' : 'bg-[#202020] text-slate-400 hover:text-white border-[#333]'
+                    }`}
+                  >
+                    180%
+                  </button>
                 </div>
               </div>
 
@@ -620,16 +671,19 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
               </div>
             </div>
 
-            {/* Canvas Container */}
-            <div className="flex-1 overflow-auto flex items-center justify-center p-8 bg-[#0d0d0d]">
-              <div className="flex flex-col items-center gap-2 max-w-full">
-                {/* Simulated Catalog Body Preview Above Footer */}
-                <div
-                  style={{ width: `${PAGE_WIDTH}px`, height: '140px' }}
-                  className="bg-[#181818]/50 border border-dashed border-[#262626] rounded-t flex flex-col items-center justify-center text-slate-600 gap-1.5"
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Catalog Content & Product Grid Space</span>
-                  <span className="text-[9px] text-slate-500">Footer will sit directly below page interior elements</span>
+            {/* Canvas Container with Scaled Zoom Workspace */}
+            <div className="flex-1 overflow-auto flex items-center justify-center p-12 bg-[#0a0a0a]">
+              <div
+                style={{
+                  transform: `scale(${zoom})`,
+                  transformOrigin: 'center center',
+                  transition: 'transform 0.15s ease-out'
+                }}
+                className="flex flex-col items-center gap-3 shrink-0 my-auto"
+              >
+                <div className="flex items-center justify-between w-full px-1 text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">
+                  <span>Standard A4 Footer Space (Print Boundary)</span>
+                  <span>Width: {PAGE_WIDTH}px • Height: {Math.round(footerHeight)}px</span>
                 </div>
 
                 {/* THE FOOTER CANVAS CONTAINER */}
@@ -640,16 +694,16 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
                     backgroundColor: backgroundColor
                   }}
                   onClick={() => setSelectedId(null)}
-                  className="relative rounded-b shadow-2xl border border-[#333] transition-all overflow-hidden cursor-default select-none"
+                  className="relative rounded shadow-2xl border-2 border-[#333] transition-all overflow-hidden cursor-default select-none"
                 >
                   {/* Side Margin Guides */}
                   <div
                     style={{ left: `${sideMargin}px` }}
-                    className="absolute top-0 bottom-0 w-px border-l border-dashed border-cyan-500/30 pointer-events-none z-0"
+                    className="absolute top-0 bottom-0 w-px border-l border-dashed border-cyan-500/40 pointer-events-none z-0"
                   />
                   <div
                     style={{ right: `${sideMargin}px` }}
-                    className="absolute top-0 bottom-0 w-px border-r border-dashed border-cyan-500/30 pointer-events-none z-0"
+                    className="absolute top-0 bottom-0 w-px border-r border-dashed border-cyan-500/40 pointer-events-none z-0"
                   />
 
                   {/* Render Canvas Elements */}
@@ -707,10 +761,6 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
                     );
                   })}
                 </div>
-                
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 font-mono">
-                  Standard A4 Footer Boundary Preview
-                </span>
               </div>
             </div>
           </div>
@@ -911,7 +961,6 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
           </div>
 
         </div>
-
       </div>
     </div>
   );
