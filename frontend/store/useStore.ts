@@ -3552,24 +3552,6 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          // Product / Category Image
-          const imageWidth = 240;
-          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
-          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
-          elements.push({
-            id: `${sectionId}-img`,
-            type: 'image',
-            x: leftMargin,
-            y: curY,
-            width: imageWidth,
-            height: imageHeight,
-            src: finalImgSrc,
-            zIndex: idx * 10 + 2,
-            rotation: 0,
-            opacity: 1,
-            sectionTag: sectionId
-          });
-
           // Right Title
           const rightX = leftMargin + 255;
           const rightWidth = Math.max(200, contentWidth - 255);
@@ -3604,6 +3586,25 @@ export const useStore = create<State>((set, get) => ({
             height: Math.max(60, sectionHeight - 45),
             tableData: sec.tableData,
             zIndex: idx * 10 + 4,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Product / Category Image — positioned perpendicular (horizontally aligned) to the Table
+          const imageWidth = 240;
+          const availableImgHeight = Math.max(70, sectionHeight - 45);
+          const imageHeight = Math.min(240, availableImgHeight);
+          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+          elements.push({
+            id: `${sectionId}-img`,
+            type: 'image',
+            x: leftMargin,
+            y: tableY,
+            width: imageWidth,
+            height: imageHeight,
+            src: finalImgSrc,
+            zIndex: idx * 10 + 2,
             rotation: 0,
             opacity: 1,
             sectionTag: sectionId
@@ -4490,28 +4491,7 @@ export const useStore = create<State>((set, get) => ({
           });
         }
 
-        // 2. Product Image on Left (natural, bounded dimensions)
-        const imageWidth = 240;
-        const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
-        const imgX = leftMargin;
-        const imgY = curY;
-        const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
-
-        newElements.push({
-          id: `${sectionId}-img`,
-          type: 'image',
-          x: imgX,
-          y: imgY,
-          width: imageWidth,
-          height: imageHeight,
-          src: finalImgSrc,
-          zIndex: idx * 10 + 2,
-          rotation: 0,
-          opacity: 1,
-          sectionTag: sectionId
-        });
-
-        // 3. Right Column: Title + Table
+        // 2. Right Column: Title + Table
         const rightX = leftMargin + 255;
         const rightWidth = Math.max(200, contentWidth - 255);
 
@@ -4546,7 +4526,7 @@ export const useStore = create<State>((set, get) => ({
           ],
           headerBg: '#002838',
           headerTextColor: '#ffffff',
-          alternateRowBg: '#eef2f5',
+          alternateRowBg: '#ffffff',
           rowBg: '#ffffff',
           borderColor: '#002838',
           fontSize: 9,
@@ -4563,6 +4543,28 @@ export const useStore = create<State>((set, get) => ({
           height: Math.max(65, sectionHeight - 45),
           tableData,
           zIndex: idx * 10 + 4,
+          rotation: 0,
+          opacity: 1,
+          sectionTag: sectionId
+        });
+
+        // 3. Product Image on Left (aligned perpendicular to the table)
+        const imageWidth = 240;
+        const availableImgHeight = Math.max(70, sectionHeight - 45);
+        const imageHeight = Math.min(240, availableImgHeight);
+        const imgX = leftMargin;
+        const imgY = tableY;
+        const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+
+        newElements.push({
+          id: `${sectionId}-img`,
+          type: 'image',
+          x: imgX,
+          y: imgY,
+          width: imageWidth,
+          height: imageHeight,
+          src: finalImgSrc,
+          zIndex: idx * 10 + 2,
           rotation: 0,
           opacity: 1,
           sectionTag: sectionId
@@ -4727,25 +4729,6 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          // Left Image (bounded to avoid stretching)
-          const imageWidth = 240;
-          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
-          if (sec.imageSrc) {
-            newElements.push({
-              id: `${sectionId}-img`,
-              type: 'image',
-              x: leftMargin,
-              y: curY,
-              width: imageWidth,
-              height: imageHeight,
-              src: sec.imageSrc,
-              zIndex: idx * 10 + 2,
-              rotation: 0,
-              opacity: 1,
-              sectionTag: sectionId
-            });
-          }
-
           // Right Column: Title — calculate dynamic height based on text wrapping
           const titleFontSize = sec.titleFontSize || 22;
           const titleText = String(sec.title || `SERIES ${idx + 1}`);
@@ -4799,6 +4782,26 @@ export const useStore = create<State>((set, get) => ({
             opacity: 1,
             sectionTag: sectionId
           });
+
+          // Left Image — positioned perpendicular (horizontally aligned) to the Table
+          const imageWidth = 240;
+          const availableImageHeight = Math.max(70, sectionHeight - titleHeight - 12);
+          const imageHeight = Math.min(240, availableImageHeight);
+          if (sec.imageSrc) {
+            newElements.push({
+              id: `${sectionId}-img`,
+              type: 'image',
+              x: leftMargin,
+              y: tableY,
+              width: imageWidth,
+              height: imageHeight,
+              src: sec.imageSrc,
+              zIndex: idx * 10 + 2,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
 
           curY += sectionHeight + gap;
         });
@@ -5022,24 +5025,6 @@ export const useStore = create<State>((set, get) => ({
           });
         }
 
-        const imageWidth = 240;
-        const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
-        if (sec.imageSrc) {
-          newElements.push({
-            id: `${sectionId}-img`,
-            type: 'image',
-            x: leftMargin,
-            y: curY,
-            width: imageWidth,
-            height: imageHeight,
-            src: sec.imageSrc,
-            zIndex: idx * 10 + 2,
-            rotation: 0,
-            opacity: 1,
-            sectionTag: sectionId
-          });
-        }
-
         const rightX = leftMargin + 255;
         const rightWidth = Math.max(200, contentWidth - 255);
 
@@ -5076,6 +5061,25 @@ export const useStore = create<State>((set, get) => ({
           opacity: 1,
           sectionTag: sectionId
         });
+
+        const imageWidth = 240;
+        const availableImageHeight = Math.max(70, sectionHeight - 45);
+        const imageHeight = Math.min(240, availableImageHeight);
+        if (sec.imageSrc) {
+          newElements.push({
+            id: `${sectionId}-img`,
+            type: 'image',
+            x: leftMargin,
+            y: tableY,
+            width: imageWidth,
+            height: imageHeight,
+            src: sec.imageSrc,
+            zIndex: idx * 10 + 2,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+        }
 
         curY += sectionHeight + gap;
       });
@@ -5210,24 +5214,6 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          const imageWidth = 240;
-          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
-          if (sec.imageSrc) {
-            newElements.push({
-              id: `${sectionId}-img`,
-              type: 'image',
-              x: leftMargin,
-              y: curY,
-              width: imageWidth,
-              height: imageHeight,
-              src: sec.imageSrc,
-              zIndex: idx * 10 + 2,
-              rotation: 0,
-              opacity: 1,
-              sectionTag: sectionId
-            });
-          }
-
           const rightX = leftMargin + 255;
           const rightWidth = Math.max(200, contentWidth - 255);
 
@@ -5264,6 +5250,25 @@ export const useStore = create<State>((set, get) => ({
             opacity: 1,
             sectionTag: sectionId
           });
+
+          const imageWidth = 240;
+          const availableImageHeight = Math.max(70, sectionHeight - 45);
+          const imageHeight = Math.min(240, availableImageHeight);
+          if (sec.imageSrc) {
+            newElements.push({
+              id: `${sectionId}-img`,
+              type: 'image',
+              x: leftMargin,
+              y: tableY,
+              width: imageWidth,
+              height: imageHeight,
+              src: sec.imageSrc,
+              zIndex: idx * 10 + 2,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          }
 
           curY += sectionHeight + gap;
         });
@@ -5487,24 +5492,6 @@ export const useStore = create<State>((set, get) => ({
             });
           }
 
-          // Product Image (bounded to prevent stretching)
-          const imageWidth = 240;
-          const imageHeight = Math.max(70, Math.min(240, sectionHeight - 10));
-          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
-          elements.push({
-            id: `${sectionId}-img`,
-            type: 'image',
-            x: leftMargin,
-            y: curY,
-            width: imageWidth,
-            height: imageHeight,
-            src: finalImgSrc,
-            zIndex: idx * 10 + 2,
-            rotation: 0,
-            opacity: 1,
-            sectionTag: sectionId
-          });
-
           // Right Title
           const rightX = leftMargin + 255;
           const rightWidth = Math.max(200, contentWidth - 255);
@@ -5539,6 +5526,25 @@ export const useStore = create<State>((set, get) => ({
             height: Math.max(60, sectionHeight - 45),
             tableData: sec.tableData,
             zIndex: idx * 10 + 4,
+            rotation: 0,
+            opacity: 1,
+            sectionTag: sectionId
+          });
+
+          // Product Image (bounded to prevent stretching, aligned perpendicular to the table)
+          const imageWidth = 240;
+          const availableImageHeight = Math.max(70, sectionHeight - 45);
+          const imageHeight = Math.min(240, availableImageHeight);
+          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+          elements.push({
+            id: `${sectionId}-img`,
+            type: 'image',
+            x: leftMargin,
+            y: tableY,
+            width: imageWidth,
+            height: imageHeight,
+            src: finalImgSrc,
+            zIndex: idx * 10 + 2,
             rotation: 0,
             opacity: 1,
             sectionTag: sectionId

@@ -2128,6 +2128,10 @@ async function _elementToFabricObject(
     const isUniformColWidths = td.colWidths && td.colWidths.length === numCols &&
       td.colWidths.every(w => Math.abs(w - td.colWidths![0]) < 1);
 
+    // Helper 2D canvas context for exact text measurement matching browser and Fabric font rendering
+    const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    const measureCtx = measureCanvas ? measureCanvas.getContext('2d') : null;
+
     // Dynamic Text Line Estimation for accurate row height and padding
     const estimateTextLines = (text: any, colW: number, fSize: number, isHeader: boolean = false): number => {
       if (text === undefined || text === null) return 1;
@@ -2138,37 +2142,67 @@ async function _elementToFabricObject(
       let totalLines = 0;
       const usableWidth = Math.max(10, colW - cellPadding * 2);
 
+      const fFamily = isHeader && is3GridTable
+        ? 'Bebas Neue, Oswald, sans-serif'
+        : (td.fontFamily || 'Inter, Arial, sans-serif');
+      const fWeight = isHeader
+        ? (is3GridTable ? 'bold' : (td.headerFontWeight || '900'))
+        : (td.fontWeight || '500');
+
+      if (measureCtx) {
+        measureCtx.font = `${fWeight} ${fSize}px ${fFamily}`;
+      }
+
       explicitLines.forEach(expLine => {
         const lineStr = expLine.trim();
         if (!lineStr) {
           totalLines += 1;
           return;
         }
-        const hasUpper = lineStr === lineStr.toUpperCase();
-        // Bebas Neue condensed header font has narrow char width ratio (~0.38).
-        // Standard body fonts (Inter) have ~0.48-0.52 ratio.
-        const avgCharWidth = fSize * (isHeader && is3GridTable ? 0.38 : (hasUpper ? 0.52 : 0.46));
-        const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
-        const words = lineStr.split(/\s+/);
-        let curLineLen = 0;
-        let subLines = 1;
 
-        words.forEach(word => {
-          if (word.length > charsPerLine) {
-            if (curLineLen > 0) {
+        if (measureCtx) {
+          const words = lineStr.split(/\s+/);
+          let currentLine = '';
+          let subLines = 1;
+
+          for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const testWidth = measureCtx.measureText(testLine).width;
+
+            if (testWidth > usableWidth && currentLine !== '') {
               subLines++;
-              curLineLen = 0;
+              currentLine = word;
+            } else {
+              currentLine = testLine;
             }
-            subLines += Math.ceil(word.length / charsPerLine) - 1;
-            curLineLen = word.length % charsPerLine || charsPerLine;
-          } else if (curLineLen > 0 && (curLineLen + 1 + word.length) > charsPerLine) {
-            subLines++;
-            curLineLen = word.length;
-          } else {
-            curLineLen += (curLineLen === 0 ? 0 : 1) + word.length;
           }
-        });
-        totalLines += subLines;
+          totalLines += subLines;
+        } else {
+          const hasUpper = lineStr === lineStr.toUpperCase();
+          const avgCharWidth = fSize * (isHeader && is3GridTable ? 0.38 : (hasUpper ? 0.62 : 0.52));
+          const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
+          const words = lineStr.split(/\s+/);
+          let curLineLen = 0;
+          let subLines = 1;
+
+          words.forEach(word => {
+            if (word.length > charsPerLine) {
+              if (curLineLen > 0) {
+                subLines++;
+                curLineLen = 0;
+              }
+              subLines += Math.ceil(word.length / charsPerLine) - 1;
+              curLineLen = word.length % charsPerLine || charsPerLine;
+            } else if (curLineLen > 0 && (curLineLen + 1 + word.length) > charsPerLine) {
+              subLines++;
+              curLineLen = word.length;
+            } else {
+              curLineLen += (curLineLen === 0 ? 0 : 1) + word.length;
+            }
+          });
+          totalLines += subLines;
+        }
       });
 
       return Math.max(1, totalLines);
@@ -2207,8 +2241,8 @@ async function _elementToFabricObject(
       const l = estimateTextLines(hStr, colW, dynamicHeaderFontSize, true);
       if (l > maxHeaderLines) maxHeaderLines = l;
     });
-    const headerTextTotalH = maxHeaderLines * dynamicHeaderFontSize * (maxHeaderLines > 1 ? 1.05 : 1.0);
-    const headerRowHeight = Math.max(18, Math.round(headerTextTotalH + cellPadding * 2));
+    const headerTextTotalH = maxHeaderLines * dynamicHeaderFontSize * (maxHeaderLines > 1 ? 1.1 : 1.0);
+    const headerRowHeight = Math.max(18, Math.round(headerTextTotalH + cellPadding * 2 + (maxHeaderLines > 1 ? 2 : 0)));
 
     // Dynamic Row Heights based on cell text content & line wrapping (snug fit, no excess empty gap)
     const rowHeights: number[] = (td.rows || []).map((row) => {
@@ -2219,8 +2253,9 @@ async function _elementToFabricObject(
         const l = estimateTextLines(cellStr, colW, dynamicBodyFontSize, false);
         if (l > maxLinesInRow) maxLinesInRow = l;
       });
-      const textBlockH = maxLinesInRow * dynamicBodyFontSize * (maxLinesInRow > 1 ? 1.1 : 1.0);
-      return Math.max(18, Math.round(textBlockH + cellPadding * 2));
+      const textBlockH = maxLinesInRow * dynamicBodyFontSize * 1.15;
+      const minRowH = is3GridTable ? 20 : 22;
+      return Math.max(minRowH, Math.round(textBlockH + cellPadding * 2 + (maxLinesInRow > 1 ? 4 : 2)));
     });
 
     const totalRenderedH = headerRowHeight + rowHeights.reduce((sum, h) => sum + h, 0);
@@ -2377,7 +2412,7 @@ async function _elementToFabricObject(
       top: el.y,
       angle: el.rotation || 0,
       width: el.width,
-      height: el.height,
+      height: totalRenderedH,
       originX: 'left',
       originY: 'top',
       opacity: el.opacity ?? 1,
@@ -2386,7 +2421,7 @@ async function _elementToFabricObject(
     });
 
     (tableGroup as any).id = el.id;
-    (tableGroup as any)._rendererVersion = 3;
+    (tableGroup as any)._rendererVersion = 4;
     (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
     return tableGroup;
   }

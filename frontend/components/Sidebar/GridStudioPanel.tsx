@@ -993,13 +993,13 @@ export const GridStudioPanel: React.FC = () => {
       zIndex: 10
     });
 
-    // Hero Image (if available)
+    // Hero Image (if available, positioned perpendicular to table)
     if (imgUrl) {
       addElement(currentPageIndex, {
         id: `sec-img-${product.id}-${timestamp}`,
         type: 'image',
         x: 45,
-        y: startY,
+        y: startY + 40,
         width: 240,
         height: 160,
         src: imgUrl,
