@@ -134,6 +134,14 @@ export interface SystemAdminSlice {
   openTemplateInVisualEditor: (template?: SystemTemplate | null) => void;
   saveActiveTemplateFromEditor: (options?: { name?: string; category?: string; type?: any }) => Promise<boolean>;
 
+  isAdminHeaderDesignerOpen: boolean;
+  editingAdminHeaderTemplate: SystemTemplate | null;
+  setIsAdminHeaderDesignerOpen: (isOpen: boolean, template?: SystemTemplate | null) => void;
+
+  isAdminFooterDesignerOpen: boolean;
+  editingAdminFooterTemplate: SystemTemplate | null;
+  setIsAdminFooterDesignerOpen: (isOpen: boolean, template?: SystemTemplate | null) => void;
+
   fetchSystemSettings: () => Promise<void>;
   updateSystemSettings: (updates: Partial<SystemSetting>) => Promise<boolean>;
   changeAdminPassword: (data: { current_password?: string; new_password: string }) => Promise<{ success: boolean; message: string }>;

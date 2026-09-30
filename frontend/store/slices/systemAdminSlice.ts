@@ -7,6 +7,22 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
   editingSystemTemplate: null,
   systemSettings: null,
 
+  isAdminHeaderDesignerOpen: false,
+  editingAdminHeaderTemplate: null,
+  setIsAdminHeaderDesignerOpen: (isOpen, template = null) =>
+    set({
+      isAdminHeaderDesignerOpen: isOpen,
+      editingAdminHeaderTemplate: template,
+    }),
+
+  isAdminFooterDesignerOpen: false,
+  editingAdminFooterTemplate: null,
+  setIsAdminFooterDesignerOpen: (isOpen, template = null) =>
+    set({
+      isAdminFooterDesignerOpen: isOpen,
+      editingAdminFooterTemplate: template,
+    }),
+
   fetchSystemTemplates: async () => {
     try {
       const response = await systemTemplatesApi.getAll();

@@ -14,6 +14,7 @@ import {
     Sparkles
 } from 'lucide-react';
 import { AdminTemplateEditorModal } from './AdminTemplateEditorModal';
+import { AdminHeaderDesignerModal, AdminFooterDesignerModal } from './HeaderFooterStudio';
 
 export const AdminTemplateManager: React.FC = () => {
     const {
@@ -22,7 +23,13 @@ export const AdminTemplateManager: React.FC = () => {
         createSystemTemplate,
         updateSystemTemplate,
         deleteSystemTemplate,
-        openTemplateInVisualEditor
+        openTemplateInVisualEditor,
+        isAdminHeaderDesignerOpen,
+        editingAdminHeaderTemplate,
+        setIsAdminHeaderDesignerOpen,
+        isAdminFooterDesignerOpen,
+        editingAdminFooterTemplate,
+        setIsAdminFooterDesignerOpen
     } = useStore();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -88,19 +95,35 @@ export const AdminTemplateManager: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
+                    <button
+                        onClick={() => setIsAdminHeaderDesignerOpen(true, null)}
+                        className="px-4 py-2.5 bg-[#202020] hover:bg-[#282828] border border-amber-500/30 text-amber-300 font-bold text-xs uppercase tracking-wider rounded-[4px] flex items-center justify-center gap-2 transition-all shadow-sm"
+                        title="Open Dedicated Super Admin Header Studio"
+                    >
+                        <Sparkles size={14} />
+                        Header Studio
+                    </button>
+                    <button
+                        onClick={() => setIsAdminFooterDesignerOpen(true, null)}
+                        className="px-4 py-2.5 bg-[#202020] hover:bg-[#282828] border border-cyan-500/30 text-cyan-300 font-bold text-xs uppercase tracking-wider rounded-[4px] flex items-center justify-center gap-2 transition-all shadow-sm"
+                        title="Open Dedicated Super Admin Footer Studio"
+                    >
+                        <Sparkles size={14} />
+                        Footer Studio
+                    </button>
                     <button
                         onClick={() => openTemplateInVisualEditor(null)}
-                        className="px-6 py-3 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 active:scale-95 text-white font-bold text-xs uppercase tracking-wider rounded-[4px] shadow-lg shadow-[#0F3D3E]/20 flex items-center justify-center gap-2 transition-all"
+                        className="px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 active:scale-95 text-white font-bold text-xs uppercase tracking-wider rounded-[4px] shadow-lg shadow-[#0F3D3E]/20 flex items-center justify-center gap-2 transition-all"
                     >
-                        <Sparkles size={16} />
-                        Design in Full Canvas Editor
+                        <Sparkles size={15} />
+                        Catalog Studio
                     </button>
                     <button
                         onClick={handleOpenCreate}
-                        className="px-4 py-3 bg-[#1c1c1c] hover:bg-[#262626] active:scale-95 text-[#cccccc] font-bold text-xs uppercase tracking-wider rounded-[4px] border border-[#262626] flex items-center justify-center gap-2 transition-all"
+                        className="px-3 py-2.5 bg-[#1c1c1c] hover:bg-[#262626] active:scale-95 text-[#cccccc] font-bold text-xs uppercase tracking-wider rounded-[4px] border border-[#262626] flex items-center justify-center gap-1.5 transition-all"
                     >
-                        <Plus size={16} />
+                        <Plus size={14} />
                         Quick Form
                     </button>
                 </div>
@@ -250,7 +273,15 @@ export const AdminTemplateManager: React.FC = () => {
 
                                     <div className="flex items-center gap-2">
                                         <button
-                                            onClick={() => openTemplateInVisualEditor(template)}
+                                            onClick={() => {
+                                                if (template.type === 'header') {
+                                                    setIsAdminHeaderDesignerOpen(true, template);
+                                                } else if (template.type === 'footer') {
+                                                    setIsAdminFooterDesignerOpen(true, template);
+                                                } else {
+                                                    openTemplateInVisualEditor(template);
+                                                }
+                                            }}
                                             className="px-3 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
                                             title="Open full interactive visual canvas editor"
                                         >
@@ -285,6 +316,12 @@ export const AdminTemplateManager: React.FC = () => {
                 onSave={handleSaveTemplate}
                 initialData={editingTemplate}
             />
+
+            {/* Super Admin Dedicated Header Studio */}
+            <AdminHeaderDesignerModal />
+
+            {/* Super Admin Dedicated Footer Studio */}
+            <AdminFooterDesignerModal />
         </div>
     );
 };
