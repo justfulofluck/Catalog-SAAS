@@ -814,15 +814,6 @@ export const AdminHeaderDesignerModal: React.FC<AdminHeaderDesignerModalProps> =
                     );
                   })}
                 </div>
-
-                {/* Simulated Catalog Body Preview */}
-                <div
-                  style={{ width: `${PAGE_WIDTH}px`, height: '140px' }}
-                  className="bg-[#181818]/50 border border-dashed border-[#262626] rounded-b flex flex-col items-center justify-center text-slate-600 gap-1.5"
-                >
-                  <span className="text-[10px] font-bold uppercase tracking-wider">Catalog Content & Product Grid Space</span>
-                  <span className="text-[9px] text-slate-500">Header will sit directly above page interior elements</span>
-                </div>
               </div>
             </div>
           </div>
@@ -1024,8 +1015,7 @@ export const AdminHeaderDesignerModal: React.FC<AdminHeaderDesignerModalProps> =
 
         </div>
       </div>
-    </div>
-  );
+    );
 };
 
 export default AdminHeaderDesignerModal;
