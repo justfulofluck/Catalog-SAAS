@@ -962,8 +962,7 @@ export const AdminFooterDesignerModal: React.FC<AdminFooterDesignerModalProps> =
 
         </div>
       </div>
-    </div>
-  );
+    );
 };
 
 export default AdminFooterDesignerModal;
