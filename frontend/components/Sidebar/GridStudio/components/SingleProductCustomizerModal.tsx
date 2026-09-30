@@ -1,8 +1,8 @@
 import React from 'react';
 import { X, Sliders, LayoutTemplate, Type, DollarSign, Hash, Palette, Layers, Package, RotateCcw } from 'lucide-react';
-import { Product, Category, CardTheme } from '../../../types';
-import { resolveProductImage } from '../../../utils/imageUtils';
-import { resolveFieldLabel } from '../../../utils/fieldUtils';
+import { Product, Category, CardTheme } from '../../../../types';
+import { resolveProductImage } from '../../../../utils/imageUtils';
+import { resolveFieldLabel } from '../../../../utils/fieldUtils';
 
 interface SingleProductCustomizerModalProps {
   customizingProduct: Product | null;

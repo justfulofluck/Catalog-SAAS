@@ -1,7 +1,7 @@
-import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category, CanvasElement } from '../../../types';
-import { PAGE_WIDTH, PAGE_HEIGHT } from '../../../constants';
-import { resolveProductImage, resolveProductTitle } from '../../../utils/imageUtils';
-import { resolveFieldLabel } from '../../../utils/fieldUtils';
+import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category, CanvasElement } from '../../../../types';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../../../constants';
+import { resolveProductImage, resolveProductTitle } from '../../../../utils/imageUtils';
+import { resolveFieldLabel } from '../../../../utils/fieldUtils';
 
 export const getCategoryProductsForPage = (
   page: CatalogPage | undefined,

@@ -1,6 +1,6 @@
 import React from 'react';
 import { X, Package } from 'lucide-react';
-import { Product, Category } from '../../../types';
+import { Product, Category } from '../../../../types';
 
 interface ProductPickerModalProps {
   sectionIdx: number | null;

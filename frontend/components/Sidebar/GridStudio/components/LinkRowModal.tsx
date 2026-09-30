@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, Package, Search } from 'lucide-react';
-import { Product, ProductVariant, Category } from '../../../types';
-import { normalizeImageUrl, resolveProductImage } from '../../../utils/imageUtils';
+import { Product, ProductVariant, Category } from '../../../../types';
+import { normalizeImageUrl, resolveProductImage } from '../../../../utils/imageUtils';
 
 interface LinkRowModalProps {
   modalState: { secIdx: number; rIdx: number } | null;

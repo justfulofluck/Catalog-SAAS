@@ -1,7 +1,7 @@
 import React from 'react';
 import { X, FolderPlus, Search, CheckCircle2, Layers, Plus } from 'lucide-react';
-import { Category, Product } from '../../../types';
-import { normalizeImageUrl, resolveProductImage } from '../../../utils/imageUtils';
+import { Category, Product } from '../../../../types';
+import { normalizeImageUrl, resolveProductImage } from '../../../../utils/imageUtils';
 
 interface AddCategoryModalProps {
   isOpen: boolean;

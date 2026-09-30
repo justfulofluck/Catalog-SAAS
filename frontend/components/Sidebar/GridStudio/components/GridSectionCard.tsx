@@ -3,8 +3,8 @@ import {
   ImageIcon, Upload, Palette, Plus, Trash2, ArrowUp, ArrowDown,
   Copy, ArrowRightLeft, Check, Sparkles, SlidersHorizontal, Package, X
 } from 'lucide-react';
-import { ProductGridSection, TableData, Category, Product, ProductVariant } from '../../../types';
-import { normalizeImageUrl } from '../../../utils/imageUtils';
+import { ProductGridSection, TableData, Category, Product, ProductVariant } from '../../../../types';
+import { normalizeImageUrl } from '../../../../utils/imageUtils';
 import { generateRowFromProduct } from '../utils/gridDataGenerators';
 import { PRESET_TITLE_COLORS } from '../templates/defaultStyles';
 
@@ -720,10 +720,9 @@ export const GridSectionCard: React.FC<GridSectionCardProps> = ({
                   </tbody>
                 </table>
               </div>
-            );
-          })()}
         </div>
       </div>
     </div>
   );
 };
+
