@@ -38,7 +38,8 @@ import {
   AlignCenter,
   AlignRight,
   ChevronDown,
-  Search
+  Search,
+  Grid
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, CATEGORIZED_FONTS } from '../../constants';
@@ -299,11 +300,32 @@ const FloatingToolbar: React.FC<Props> = ({
     headers: ['', '', ''],
     rows: [['', '', ''], ['', '', ''], ['', '', ''], ['', '', '']],
   };
+
+  const is3GridTable = isTableElement && Boolean(
+    element.sectionTag ||
+    element.id?.includes('sec-table') ||
+    element.id?.includes('product-table') ||
+    element.id?.includes('grid-sec') ||
+    (element as any).isGridTable ||
+    td.variant === 'grid-spec' ||
+    (!element.groupId && td.headers?.some(h => {
+      const up = String(h || '').toUpperCase();
+      return up.includes('MODEL') || up.includes('PRODUCT') || up.includes('CUT-OUT') || up.includes('CUT OUT') || up.includes('DEALER');
+    }))
+  );
+  const isStandaloneTable = isTableElement && !is3GridTable;
+
+  // 3-Grid specification tables are configured exclusively in Grid Studio; hide floating toolbar on canvas
+  if (is3GridTable) {
+    return null;
+  }
+
   const tableFont = td.fontFamily || 'Inter';
   const tableFontSize = Math.round(td.fontSize || 10);
   const tableTextColor = td.textColor || '#0F172A';
   const tableHeaderBg = td.headerBg || element.fill || '#cbd5e1';
   const tableRowBg = td.rowBg || '#ffffff';
+  const tableAlternateRowBg = td.alternateRowBg || '#f8fafc';
   const tableBorderColor = td.borderColor || '#cbd5e1';
   const isTableBold = td.fontWeight === 'bold' || td.fontWeight === '700' || td.fontWeight === '900';
   const isTableItalic = td.fontStyle === 'italic';
@@ -333,9 +355,18 @@ const FloatingToolbar: React.FC<Props> = ({
       onMouseDown={(e) => e.stopPropagation()}
     >
 
-      {/* TABLE TEXT CONTROLS */}
-      {isTableElement && (
+      {/* STANDALONE CUSTOM TABLE CONTROLS */}
+      {isStandaloneTable && (
         <>
+          {/* Badge */}
+          <div className="flex items-center gap-1 px-1">
+            <span className="px-1.5 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider bg-slate-800 text-slate-200 border border-slate-700 flex items-center gap-1 shrink-0">
+              <TableIcon size={11} /> Table
+            </span>
+          </div>
+
+          <div className="w-[1px] h-4 bg-[#E2DCC8]/20 mx-0.5" />
+
           {/* 1. Font Family Dropdown */}
           <div className="relative" ref={fontMenuRef}>
             <button
@@ -605,7 +636,7 @@ const FloatingToolbar: React.FC<Props> = ({
 
           <div className="w-[1px] h-4 bg-[#E2DCC8]/20 mx-0.5" />
 
-          {/* 4. Table Colors Popover */}
+          {/* 4. Standalone Table Colors Popover */}
           <div className="relative" ref={tableColorsRef}>
             <button
               type="button"
@@ -1065,6 +1096,21 @@ const FloatingToolbar: React.FC<Props> = ({
           }}
         >
           <div className="w-5 h-5 rounded-[2px] border border-white/20 shadow-sm" style={{ backgroundColor: activeFill }} />
+        </button>
+      )}
+
+      {/* Product Block Edit Card Button */}
+      {element.type === 'product-block' && (
+        <button
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-[11px] font-bold tracking-tight text-[#E2DCC8]/90 hover:text-white bg-[#0F3D3E]/40 hover:bg-[#0F3D3E]/60 border border-[#E2DCC8]/20 transition-all active:scale-95 cursor-pointer"
+          title="Edit Product Card (Theme, Fields, Colors, Overrides)"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('catalog:editProductCard', { detail: { id: element.id, pageIndex: currentPageIndex } }));
+          }}
+        >
+          <Sliders size={13} strokeWidth={2.2} />
+          <span>Edit Card</span>
         </button>
       )}
 

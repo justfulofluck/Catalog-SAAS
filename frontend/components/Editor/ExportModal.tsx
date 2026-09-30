@@ -246,8 +246,8 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             year: new Date().getFullYear(),
           };
 
-          const pageHasHeader = page.hasHeader !== undefined ? page.hasHeader : (catalog.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
-          const pageHasFooter = page.hasFooter !== undefined ? page.hasFooter : (catalog.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
+          const pageHasHeader = Boolean(catalog.hasHeader !== false && page.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
+          const pageHasFooter = Boolean(catalog.hasFooter !== false && page.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
 
           const allElements = [
             ...page.elements.map(el => ({

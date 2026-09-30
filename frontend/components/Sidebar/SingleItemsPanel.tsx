@@ -54,6 +54,7 @@ export const SingleItemsPanel: React.FC = () => {
     categories,
     currentPageIndex,
     catalog,
+    selectedElementIds,
     addElement,
     updateElement,
     setEditorTab,
@@ -61,6 +62,7 @@ export const SingleItemsPanel: React.FC = () => {
   } = useStore();
 
   const isDark = uiTheme === 'dark';
+  const lastSelectedElementIdRef = React.useRef<string | null>(null);
 
   // Filters & Search
   const [search, setSearch] = useState('');
@@ -222,15 +224,15 @@ export const SingleItemsPanel: React.FC = () => {
         badge: 'TITLE',
         label: 'Product Title',
         defaultValue: product.name || '',
-        currentValue: existingElement?.customTitle || existingElement?.productData?.name || product.name || '',
+        currentValue: existingElement?.customTitle !== undefined ? existingElement.customTitle : (existingElement?.productData?.name || product.name || ''),
         isCore: true
       },
       {
         key: 'price',
         badge: 'PRICE',
         label: 'Price',
-        defaultValue: `${product.currency || '₹'}${product.price || ''}`,
-        currentValue: existingElement?.customPrice || existingElement?.productData?.price || `${product.currency || '₹'}${product.price || ''}`,
+        defaultValue: `${product.currency || '₹'}${product.price !== undefined ? product.price : ''}`,
+        currentValue: existingElement?.customPrice !== undefined ? existingElement.customPrice : (existingElement?.productData?.price !== undefined ? `${existingElement?.productData?.currency || '₹'}${existingElement?.productData?.price}` : `${product.currency || '₹'}${product.price !== undefined ? product.price : ''}`),
         isCore: true
       },
       {
@@ -238,13 +240,15 @@ export const SingleItemsPanel: React.FC = () => {
         badge: 'SKU',
         label: 'SKU / Model No',
         defaultValue: product.sku || '',
-        currentValue: existingElement?.customSku || existingElement?.productData?.sku || product.sku || '',
+        currentValue: existingElement?.customSku !== undefined ? existingElement.customSku : (existingElement?.productData?.sku || product.sku || ''),
         isCore: true
       }
     ];
 
     if (product.description) {
-      const descVal = existingElement?.fieldOverrides?.description?.value || existingElement?.productData?.description || product.description;
+      const descVal = existingElement?.fieldOverrides?.description?.value !== undefined
+        ? existingElement.fieldOverrides.description.value
+        : (existingElement?.productData?.description || product.description);
       vars.push({
         key: 'description',
         badge: 'DESC',
@@ -258,7 +262,13 @@ export const SingleItemsPanel: React.FC = () => {
       Object.entries(product.customFields).forEach(([k, v]) => {
         if (v !== undefined && v !== null && v !== '' && typeof v !== 'object') {
           const resolvedLabel = resolveFieldLabel(k, categories, product) || k;
-          const currentVal = existingElement?.fieldOverrides?.[k]?.value || existingElement?.productData?.[k] || String(v);
+          const currentVal = existingElement?.fieldOverrides?.[k]?.value !== undefined
+            ? existingElement.fieldOverrides[k].value
+            : (existingElement?.productData?.[k] !== undefined
+                ? existingElement.productData[k]
+                : (existingElement?.productData?.customFields?.[k] !== undefined
+                    ? existingElement.productData.customFields[k]
+                    : String(v)));
           vars.push({
             key: k,
             badge: 'SPEC',
@@ -270,12 +280,35 @@ export const SingleItemsPanel: React.FC = () => {
       });
     }
 
+    // Also include any fields from fieldOverrides that might not be in product.customFields
+    if (existingElement?.fieldOverrides && typeof existingElement.fieldOverrides === 'object') {
+      Object.entries(existingElement.fieldOverrides).forEach(([k, override]: [string, any]) => {
+        if (k === 'name' || k === 'price' || k === 'sku' || k === 'description') return;
+        if (!vars.some(v => v.key === k)) {
+          const resolvedLabel = override?.label || resolveFieldLabel(k, categories, product) || k;
+          const val = override?.value !== undefined ? String(override.value) : '';
+          vars.push({
+            key: k,
+            badge: 'SPEC',
+            label: resolvedLabel,
+            defaultValue: val,
+            currentValue: val
+          });
+        }
+      });
+    }
+
     setCustomVars(vars);
 
     if (existingElement?.visibleFieldKeys && Array.isArray(existingElement.visibleFieldKeys) && existingElement.visibleFieldKeys.length > 0) {
-      setCustomActiveKeys(existingElement.visibleFieldKeys);
+      const validKeys = existingElement.visibleFieldKeys.filter((k: string) => vars.some(v => v.key === k));
+      setCustomActiveKeys(validKeys.length > 0 ? validKeys : vars.map(v => v.key));
     } else {
-      setCustomActiveKeys(vars.map(v => v.key));
+      let defaultKeys = vars.map(v => v.key);
+      if (existingElement?.showName === false) defaultKeys = defaultKeys.filter((k: string) => k !== 'name');
+      if (existingElement?.showPrice === false) defaultKeys = defaultKeys.filter((k: string) => k !== 'price');
+      if (existingElement?.showSku === false) defaultKeys = defaultKeys.filter((k: string) => k !== 'sku');
+      setCustomActiveKeys(defaultKeys);
     }
 
     // Resolve Card Colors: Defaults to pure catalog Light Card (#ffffff) unless explicitly styled or dark
@@ -294,6 +327,59 @@ export const SingleItemsPanel: React.FC = () => {
     setCustomStroke(existingElement?.stroke || existingElement?.productData?.cardStroke || (isTargetDark ? '#2e2e32' : '#e2e8f0'));
   };
 
+  // Helper to open customizer for an element on canvas with complete product data
+  const openCardForElement = (el: any, targetPageIdx: number) => {
+    const store = useStore.getState();
+    // 1. Find product in catalog by productId (support both string and number ID comparison)
+    let product = store.products.find(p => String(p.id) === String(el.productId));
+
+    // 2. If not found by productId, match by name or sku from element
+    if (!product && (el.customTitle || el.productData?.name)) {
+      const searchTitle = (el.customTitle || el.productData?.name || '').toLowerCase().trim();
+      if (searchTitle) {
+        product = store.products.find(p => (p.name || '').toLowerCase().trim() === searchTitle);
+      }
+    }
+    if (!product && (el.customSku || el.productData?.sku)) {
+      const searchSku = (el.customSku || el.productData?.sku || '').toLowerCase().trim();
+      if (searchSku) {
+        product = store.products.find(p => (p.sku || '').toLowerCase().trim() === searchSku);
+      }
+    }
+
+    // 3. Merge or fallback to productData attached directly to the canvas element
+    if (!product && el.productData) {
+      product = el.productData as Product;
+    } else if (product && el.productData) {
+      product = {
+        ...product,
+        ...el.productData,
+        customFields: {
+          ...(product.customFields || {}),
+          ...(el.productData.customFields || {})
+        }
+      };
+    }
+
+    // 4. Fallback if product still not found
+    if (!product) {
+      product = {
+        id: el.productId || Number(el.id) || 1,
+        name: el.customTitle || (el as any).title || (el as any).name || 'Product',
+        price: el.customPrice || (el as any).price || '0',
+        sku: el.customSku || (el as any).sku || '',
+        currency: '₹',
+        description: (el as any).description || '',
+        image: el.src || (el as any).image || '',
+        customFields: (el as any).customFields || {}
+      } as unknown as Product;
+    } else if (!product.image && el.src) {
+      product = { ...product, image: el.src };
+    }
+
+    openCustomizer(product, el, targetPageIdx);
+  };
+
   // Listen for canvas edit product card events (double click or toolbar edit button)
   useEffect(() => {
     const handleEditProductCard = (e: any) => {
@@ -303,25 +389,30 @@ export const SingleItemsPanel: React.FC = () => {
       const targetPage = store.catalog.pages[targetPageIdx];
       const el = targetPage?.elements.find(item => item.id === elementId);
       if (el) {
-        let product = store.products.find(p => p.id === el.productId);
-        if (!product && el.productData) {
-          product = el.productData as Product;
-        }
-          product = {
-            id: el.productId || Number(elementId) || 1,
-            name: el.customTitle || 'Product',
-            price: el.customPrice || '0',
-            sku: el.customSku || '',
-            currency: '₹',
-            description: '',
-            image: ''
-          } as unknown as Product;
-        openCustomizer(product, el, targetPageIdx);
+        lastSelectedElementIdRef.current = elementId;
+        openCardForElement(el, targetPageIdx);
       }
     };
     window.addEventListener('catalog:editProductCard', handleEditProductCard);
     return () => window.removeEventListener('catalog:editProductCard', handleEditProductCard);
-  }, []);
+  }, [categories]);
+
+  // When a product-block is selected on canvas and user opens this panel, auto-open card customizer
+  useEffect(() => {
+    if (selectedElementIds.length === 1) {
+      const selectedId = selectedElementIds[0];
+      if (selectedId !== lastSelectedElementIdRef.current) {
+        lastSelectedElementIdRef.current = selectedId;
+        const page = catalog?.pages?.[currentPageIndex];
+        const el = page?.elements?.find(item => item.id === selectedId);
+        if (el && el.type === 'product-block') {
+          openCardForElement(el, currentPageIndex);
+        }
+      }
+    } else {
+      lastSelectedElementIdRef.current = null;
+    }
+  }, [selectedElementIds, currentPageIndex, catalog?.pages]);
 
   // Variable Handlers (Toggle, Reorder, Update, Reset)
   const handleToggleVar = (key: string) => {
@@ -724,7 +815,11 @@ export const SingleItemsPanel: React.FC = () => {
             <div className="flex items-center gap-3 min-w-0">
               <button
                 type="button"
-                onClick={() => setCustomizingProduct(null)}
+                onClick={() => {
+                  lastSelectedElementIdRef.current = editingElementId;
+                  setCustomizingProduct(null);
+                  setEditingElementId(null);
+                }}
                 className={`px-3 py-1.5 rounded-[5px] border flex items-center gap-1.5 text-xs font-bold transition-all cursor-pointer shadow-xs ${
                   isDark
                     ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333] hover:border-[#0F3D3E]'
@@ -740,19 +835,9 @@ export const SingleItemsPanel: React.FC = () => {
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h3 className={`text-xs font-black uppercase tracking-wider truncate max-w-[240px] ${isDark ? 'text-white' : 'text-slate-900'}`} title={customizingProduct.name}>
+                  <h3 className={`text-xs font-black uppercase tracking-wider truncate max-w-[280px] ${isDark ? 'text-white' : 'text-slate-900'}`} title={customizingProduct.name}>
                     {customizingProduct.name}
                   </h3>
-                  {editingElementId ? (
-                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold uppercase shrink-0 flex items-center gap-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                      EDITING CANVAS CARD
-                    </span>
-                  ) : (
-                    <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/25 font-bold uppercase shrink-0">
-                      NEW CARD
-                    </span>
-                  )}
                 </div>
                 <p className={`text-[10px] font-mono truncate ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
                   SKU: {customizingProduct.sku || '-'} • Target: Page {editingElementId ? editingElementPageIndex + 1 : currentPageIndex + 1}
@@ -793,13 +878,17 @@ export const SingleItemsPanel: React.FC = () => {
             {/* Left Column: Form Controls & Variables */}
             <div className="space-y-4 text-xs pr-1">
               {/* 1. Theme Layout Selection - Visual Cards */}
-              <div className={`p-3.5 rounded-[8px] border space-y-2.5 ${isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-xs'}`}>
+              <div className={`p-3.5 rounded-[6px] border space-y-2.5 ${isDark ? 'bg-[#141414] border-[#262626]' : 'bg-white border-slate-200 shadow-xs'}`}>
                 <div className="flex items-center justify-between">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1.5">
-                    <LayoutGrid size={13} />
+                  <label className="text-[10px] font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                    <LayoutGrid size={13} className="text-[#00a651]" />
                     <span>CARD THEME LAYOUT</span>
                   </label>
-                  <span className="text-[9px] font-mono text-slate-400 uppercase font-bold">4 Layouts</span>
+                  <span className={`text-[9px] font-mono uppercase font-bold px-1.5 py-0.5 rounded-[3px] border ${
+                    isDark ? 'text-slate-400 bg-[#181818] border-[#2a2a2a]' : 'text-slate-500 bg-slate-100 border-slate-200'
+                  }`}>
+                    4 Layouts
+                  </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
@@ -851,23 +940,23 @@ export const SingleItemsPanel: React.FC = () => {
                             setCustomSpecsColor('#334155');
                           }
                         }}
-                        className={`p-2.5 rounded-[6px] text-left transition-all border cursor-pointer flex flex-col justify-between relative ${
+                        className={`p-2.5 rounded-[4px] text-left transition-all border cursor-pointer flex flex-col justify-between relative ${
                           isSelected
                             ? isDark
-                              ? 'bg-indigo-950/40 border-indigo-500 shadow-md ring-1 ring-indigo-500/40'
-                              : 'bg-indigo-50/80 border-indigo-500 shadow-sm ring-1 ring-indigo-400/40'
+                              ? 'bg-[#0F3D3E]/30 border-[#0F3D3E] shadow-sm ring-1 ring-[#0F3D3E]/60 text-white'
+                              : 'bg-teal-50/80 border-[#0F3D3E] shadow-sm ring-1 ring-[#0F3D3E]/40 text-[#0F3D3E]'
                             : isDark
-                              ? 'bg-[#1b1b1e] border-[#27272a] hover:border-[#3f3f46] hover:bg-[#222226]'
-                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60'
+                              ? 'bg-[#181818] border-[#2a2a2a] hover:border-[#3a3a3a] hover:bg-[#202020] text-slate-300'
+                              : 'bg-slate-50 border-slate-200 hover:border-slate-300 hover:bg-slate-100/60 text-slate-700'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className={`text-[11px] font-black tracking-tight ${isSelected ? (isDark ? 'text-indigo-300' : 'text-indigo-900') : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>
+                          <span className={`text-[11px] font-bold tracking-tight ${isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>
                             {themeItem.name}
                           </span>
-                          {isSelected && <Check size={12} className="text-indigo-400 shrink-0 font-bold" />}
+                          {isSelected && <Check size={12} className="text-[#00a651] shrink-0 font-bold" />}
                         </div>
-                        <p className={`text-[9.5px] leading-tight line-clamp-1 ${isSelected ? (isDark ? 'text-indigo-200/70' : 'text-indigo-700') : 'text-slate-400'}`}>
+                        <p className={`text-[9.5px] leading-tight line-clamp-1 ${isSelected ? (isDark ? 'text-slate-300' : 'text-slate-600') : 'text-slate-500'}`}>
                           {themeItem.desc}
                         </p>
                       </button>
@@ -877,19 +966,19 @@ export const SingleItemsPanel: React.FC = () => {
               </div>
 
               {/* 2. Card Variables & Content */}
-              <section className={`p-3.5 rounded-[8px] border space-y-3 ${
-                isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-xs'
+              <section className={`p-3.5 rounded-[6px] border space-y-3 ${
+                isDark ? 'bg-[#141414] border-[#262626]' : 'bg-white border-slate-200 shadow-xs'
               }`}>
                 {/* Top Bar with Title & Reset */}
                 <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-[#262626]">
-                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-indigo-400">
-                    <SlidersHorizontal size={13} />
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]">
+                    <SlidersHorizontal size={13} className="text-[#00a651]" />
                     <span>CARD VARIABLES & CONTENT</span>
                   </div>
                   <button
                     type="button"
                     onClick={handleResetAllVars}
-                    className="text-[10px] text-amber-500 hover:text-amber-400 flex items-center gap-1 font-bold cursor-pointer transition-colors"
+                    className="text-[10px] text-amber-400 hover:text-amber-300 flex items-center gap-1 font-bold cursor-pointer transition-colors"
                     title="Reset all variable overrides back to catalog database defaults"
                   >
                     <RotateCcw size={11} /> Reset All
@@ -899,10 +988,12 @@ export const SingleItemsPanel: React.FC = () => {
                 {/* Variables Header & Counter */}
                 <div className="flex items-center justify-between px-0.5">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                       ACTIVE FIELDS
                     </span>
-                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-[3px] border ${
+                      isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border-[#E2DCC8]/20' : 'bg-teal-50 text-[#0F3D3E] border-teal-200'
+                    }`}>
                       {customActiveKeys.length}/{customVars.length}
                     </span>
                   </div>
@@ -910,10 +1001,10 @@ export const SingleItemsPanel: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setCustomActiveKeys(['name', 'price'])}
-                      className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                      className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] border cursor-pointer transition-colors ${
                         customActiveKeys.length === 2
-                          ? 'bg-indigo-600 text-white'
-                          : isDark ? 'bg-[#222] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                          ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/40 shadow-xs'
+                          : isDark ? 'bg-[#181818] text-slate-400 hover:text-white border-[#2a2a2a]' : 'bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
                       }`}
                     >
                       Minimal
@@ -921,10 +1012,10 @@ export const SingleItemsPanel: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => setCustomActiveKeys(customVars.map(v => v.key))}
-                      className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded cursor-pointer transition-colors ${
+                      className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] border cursor-pointer transition-colors ${
                         customActiveKeys.length === customVars.length
-                          ? 'bg-indigo-600 text-white'
-                          : isDark ? 'bg-[#222] text-slate-400 hover:text-white' : 'bg-slate-100 text-slate-600 hover:text-slate-900'
+                          ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/40 shadow-xs'
+                          : isDark ? 'bg-[#181818] text-slate-400 hover:text-white border-[#2a2a2a]' : 'bg-slate-100 text-slate-600 hover:text-slate-900 border-slate-200'
                       }`}
                     >
                       Show All
@@ -943,10 +1034,10 @@ export const SingleItemsPanel: React.FC = () => {
                     return (
                       <div
                         key={v.key}
-                        className={`p-2 rounded-[6px] border transition-all ${
+                        className={`p-2 rounded-[4px] border transition-all ${
                           isActive
-                            ? isDark ? 'bg-[#1b1b1e] border-[#2e2e32]' : 'bg-white border-slate-200 shadow-xs'
-                            : isDark ? 'bg-[#121214]/50 border-[#222225] opacity-50' : 'bg-slate-50 border-slate-100 opacity-50'
+                            ? isDark ? 'bg-[#181818] border-[#2a2a2a] hover:border-[#383838]' : 'bg-white border-slate-200 shadow-xs'
+                            : isDark ? 'bg-[#121212] border-[#202020] opacity-40' : 'bg-slate-50 border-slate-100 opacity-40'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
@@ -955,27 +1046,27 @@ export const SingleItemsPanel: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => handleToggleVar(v.key)}
-                              className={`p-1 rounded transition-colors cursor-pointer ${
+                              className={`p-1 rounded-[3px] transition-colors cursor-pointer ${
                                 isActive
-                                  ? 'text-indigo-400 hover:bg-indigo-500/10'
+                                  ? 'text-[#00a651] hover:bg-[#00a651]/10'
                                   : isDark ? 'text-slate-600 hover:text-slate-400' : 'text-slate-300 hover:text-slate-500'
                               }`}
                               title={isActive ? 'Hide variable from card' : 'Show variable on card'}
                             >
-                              {isActive ? <Eye size={14} /> : <EyeOff size={14} />}
+                              {isActive ? <Eye size={13} /> : <EyeOff size={13} />}
                             </button>
 
-                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded tracking-wider shrink-0 ${
-                              v.badge === 'TITLE' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' :
+                            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded-[3px] tracking-wider shrink-0 ${
+                              v.badge === 'TITLE' ? (isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border border-[#E2DCC8]/25' : 'bg-teal-50 text-[#0F3D3E] border border-teal-200') :
                               v.badge === 'PRICE' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                              v.badge === 'SKU' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' :
-                              'bg-slate-500/20 text-slate-300 border border-slate-500/30'
+                              v.badge === 'SKU' ? 'bg-amber-500/15 text-amber-300 border border-amber-500/25' :
+                              (isDark ? 'bg-[#222] text-slate-300 border border-white/10' : 'bg-slate-100 text-slate-600 border border-slate-200')
                             }`}>
                               {v.badge}
                             </span>
 
                             <div className="flex flex-col min-w-0 flex-1">
-                              <span className={`text-[11px] font-bold truncate ${isActive ? (isDark ? 'text-white' : 'text-slate-800') : 'text-slate-500'}`}>
+                              <span className={`text-[11px] font-bold truncate ${isActive ? (isDark ? 'text-[#F1F1F1]' : 'text-slate-800') : 'text-slate-500'}`}>
                                 {v.label}
                               </span>
                               {!isEditing && (
@@ -993,10 +1084,10 @@ export const SingleItemsPanel: React.FC = () => {
                                 <button
                                   type="button"
                                   onClick={() => setCustomEditingVarKey(isEditing ? null : v.key)}
-                                  className={`p-1 rounded transition-colors cursor-pointer ${
+                                  className={`p-1 rounded-[3px] transition-colors cursor-pointer ${
                                     isEditing 
-                                      ? 'text-indigo-400 bg-indigo-500/10' 
-                                      : isDark ? 'text-slate-500 hover:text-slate-200' : 'text-slate-400 hover:text-slate-700'
+                                      ? 'text-[#E2DCC8] bg-[#0F3D3E] border border-[#E2DCC8]/30' 
+                                      : isDark ? 'text-slate-400 hover:text-[#E2DCC8]' : 'text-slate-400 hover:text-slate-700'
                                   }`}
                                   title="Edit value override"
                                 >
@@ -1006,7 +1097,7 @@ export const SingleItemsPanel: React.FC = () => {
                                   type="button"
                                   disabled={isFirst}
                                   onClick={() => handleMoveVar(v.key, 'up')}
-                                  className="p-1 text-slate-400 hover:text-slate-200 disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer"
+                                  className="p-1 text-slate-400 hover:text-[#E2DCC8] disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer"
                                   title="Move up"
                                 >
                                   <ArrowUp size={12} />
@@ -1015,7 +1106,7 @@ export const SingleItemsPanel: React.FC = () => {
                                   type="button"
                                   disabled={isLast}
                                   onClick={() => handleMoveVar(v.key, 'down')}
-                                  className="p-1 text-slate-400 hover:text-slate-200 disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer"
+                                  className="p-1 text-slate-400 hover:text-[#E2DCC8] disabled:opacity-20 disabled:hover:text-slate-400 cursor-pointer"
                                   title="Move down"
                                 >
                                   <ArrowDown size={12} />
@@ -1036,12 +1127,16 @@ export const SingleItemsPanel: React.FC = () => {
                                 if (e.key === 'Enter') setCustomEditingVarKey(null);
                               }}
                               placeholder={`Enter ${v.label}...`}
-                              className="flex-1 bg-slate-50 dark:bg-[#121214] border border-slate-200 dark:border-[#2e2e32] rounded px-2.5 py-1 text-xs font-semibold text-slate-800 dark:text-slate-100 outline-none focus:border-indigo-500"
+                              className={`flex-1 border rounded-[3px] px-2.5 py-1 text-xs font-semibold outline-none transition-colors ${
+                                isDark
+                                  ? 'bg-[#121212] border-[#333] focus:border-[#0F3D3E] text-[#F1F1F1]'
+                                  : 'bg-slate-50 border-slate-200 focus:border-[#0F3D3E] text-slate-900'
+                              }`}
                             />
                             <button
                               type="button"
                               onClick={() => setCustomEditingVarKey(null)}
-                              className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded text-[10px] font-bold cursor-pointer flex items-center gap-1"
+                              className="px-2.5 py-1 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[3px] text-[10px] font-bold cursor-pointer flex items-center gap-1 border border-[#E2DCC8]/25"
                             >
                               <Check size={11} /> Done
                             </button>
@@ -1054,19 +1149,25 @@ export const SingleItemsPanel: React.FC = () => {
               </section>
 
               {/* 3. Typography & Card Styling Section */}
-              <section className={`p-3.5 rounded-[8px] border space-y-3 ${
-                isDark ? 'bg-[#161616] border-[#262626]' : 'bg-white border-slate-200 shadow-xs'
+              <section className={`p-3.5 rounded-[6px] border space-y-3 ${
+                isDark ? 'bg-[#141414] border-[#262626]' : 'bg-white border-slate-200 shadow-xs'
               }`}>
                 <div className="flex items-center justify-between">
-                  <div className="text-[10px] font-black uppercase tracking-widest text-indigo-400 flex items-center gap-1.5">
-                    <Type size={13} />
+                  <div className="text-[10px] font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                    <Type size={13} className="text-[#00a651]" />
                     <span>TYPOGRAPHY & STYLING</span>
                   </div>
-                  <span className="text-[9px] font-mono text-slate-400 font-bold uppercase">Fonts & Colors</span>
+                  <span className={`text-[9px] font-mono uppercase font-bold px-1.5 py-0.5 rounded-[3px] border ${
+                    isDark ? 'text-slate-400 bg-[#181818] border-[#2a2a2a]' : 'text-slate-500 bg-slate-100 border-slate-200'
+                  }`}>
+                    Fonts & Colors
+                  </span>
                 </div>
 
                 {/* Quick Card Color Mode Presets */}
-                <div className="p-1.5 bg-slate-100 dark:bg-[#121214] rounded-[6px] border border-slate-200 dark:border-[#27272a] flex items-center gap-1">
+                <div className={`p-1 rounded-[4px] border flex items-center gap-1 ${
+                  isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-100 border-slate-200'
+                }`}>
                   <button
                     type="button"
                     onClick={() => {
@@ -1076,10 +1177,10 @@ export const SingleItemsPanel: React.FC = () => {
                       setCustomPriceColor('#00a651');
                       setCustomSpecsColor('#334155');
                     }}
-                    className={`flex-1 py-1 px-1.5 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                    className={`flex-1 py-1 px-1.5 rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all border ${
                       customFill === '#ffffff'
-                        ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        ? 'bg-white text-slate-900 border-[#0F3D3E] shadow-xs ring-1 ring-[#0F3D3E]/30'
+                        : isDark ? 'text-slate-400 hover:text-white border-transparent' : 'text-slate-600 hover:text-slate-900 border-transparent'
                     }`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full bg-white border border-slate-300 shadow-xs" />
@@ -1094,10 +1195,10 @@ export const SingleItemsPanel: React.FC = () => {
                       setCustomPriceColor('#34d399');
                       setCustomSpecsColor('#cbd5e1');
                     }}
-                    className={`flex-1 py-1 px-1.5 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                    className={`flex-1 py-1 px-1.5 rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all border ${
                       customFill === '#18181b'
-                        ? 'bg-[#27272a] text-white shadow-xs border border-[#3f3f46]'
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        ? 'bg-[#222] text-white border-[#0F3D3E] shadow-xs ring-1 ring-[#0F3D3E]/30'
+                        : isDark ? 'text-slate-400 hover:text-white border-transparent' : 'text-slate-600 hover:text-slate-900 border-transparent'
                     }`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full bg-[#18181b] border border-slate-600 shadow-xs" />
@@ -1112,10 +1213,10 @@ export const SingleItemsPanel: React.FC = () => {
                       setCustomPriceColor('#38bdf8');
                       setCustomSpecsColor('#cbd5e1');
                     }}
-                    className={`flex-1 py-1 px-1.5 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                    className={`flex-1 py-1 px-1.5 rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all border ${
                       customFill === '#0f172a'
-                        ? 'bg-[#1e293b] text-white shadow-xs border border-[#334155]'
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        ? 'bg-[#1e293b] text-white border-[#0F3D3E] shadow-xs ring-1 ring-[#0F3D3E]/30'
+                        : isDark ? 'text-slate-400 hover:text-white border-transparent' : 'text-slate-600 hover:text-slate-900 border-transparent'
                     }`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full bg-[#0f172a] border border-blue-900 shadow-xs" />
@@ -1130,10 +1231,10 @@ export const SingleItemsPanel: React.FC = () => {
                       setCustomPriceColor('#ea580c');
                       setCustomSpecsColor('#292524');
                     }}
-                    className={`flex-1 py-1 px-1.5 rounded text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all ${
+                    className={`flex-1 py-1 px-1.5 rounded-[3px] text-[10px] font-bold flex items-center justify-center gap-1 cursor-pointer transition-all border ${
                       customFill === '#fdfbf7'
-                        ? 'bg-amber-50/80 text-amber-950 shadow-xs border border-amber-200'
-                        : isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
+                        ? 'bg-amber-50 text-amber-950 border-[#0F3D3E] shadow-xs ring-1 ring-[#0F3D3E]/30'
+                        : isDark ? 'text-slate-400 hover:text-white border-transparent' : 'text-slate-600 hover:text-slate-900 border-transparent'
                     }`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full bg-[#fdfbf7] border border-amber-300 shadow-xs" />
@@ -1143,28 +1244,32 @@ export const SingleItemsPanel: React.FC = () => {
 
                 <div className="space-y-2">
                   {/* Title Font Size & Color */}
-                  <div className={`p-2.5 rounded-[6px] border flex items-center justify-between ${
-                    isDark ? 'bg-[#1b1b1e] border-[#27272a]' : 'bg-slate-50 border-slate-200'
+                  <div className={`p-2.5 rounded-[4px] border flex items-center justify-between ${
+                    isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-300 dark:text-slate-300 block uppercase tracking-wider">Product Title</span>
+                      <span className="text-[10px] font-bold text-[#E2DCC8] block uppercase tracking-wider">Product Title</span>
                       <span className="text-[9px] text-slate-500">Size & Color</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setCustomTitleFontSize(Math.max(8, customTitleFontSize - 1))}
-                        className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-[#27272a] hover:bg-slate-300 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer font-bold"
+                        className={`w-6 h-6 flex items-center justify-center rounded-[3px] text-xs cursor-pointer font-bold border transition-colors ${
+                          isDark ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
                       >-</button>
-                      <span className="text-[11px] font-mono font-bold w-7 text-center text-indigo-400">
+                      <span className="text-[11px] font-mono font-bold w-7 text-center text-[#E2DCC8]">
                         {customTitleFontSize}px
                       </span>
                       <button
                         type="button"
                         onClick={() => setCustomTitleFontSize(customTitleFontSize + 1)}
-                        className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-[#27272a] hover:bg-slate-300 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer font-bold"
+                        className={`w-6 h-6 flex items-center justify-center rounded-[3px] text-xs cursor-pointer font-bold border transition-colors ${
+                          isDark ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
                       >+</button>
-                      <div className="relative w-6 h-6 ml-1 rounded border border-white/20 overflow-hidden cursor-pointer shadow-xs">
+                      <div className="relative w-6 h-6 ml-1 rounded-[3px] border border-white/20 overflow-hidden cursor-pointer shadow-xs">
                         <input
                           type="color"
                           value={customTitleColor}
@@ -1177,18 +1282,20 @@ export const SingleItemsPanel: React.FC = () => {
                   </div>
 
                   {/* Price Font Size & Color */}
-                  <div className={`p-2.5 rounded-[6px] border flex items-center justify-between ${
-                    isDark ? 'bg-[#1b1b1e] border-[#27272a]' : 'bg-slate-50 border-slate-200'
+                  <div className={`p-2.5 rounded-[4px] border flex items-center justify-between ${
+                    isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-300 dark:text-slate-300 block uppercase tracking-wider">Price Pill</span>
+                      <span className="text-[10px] font-bold text-[#E2DCC8] block uppercase tracking-wider">Price Pill</span>
                       <span className="text-[9px] text-slate-500">Size & Color</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setCustomPriceFontSize(Math.max(8, customPriceFontSize - 1))}
-                        className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-[#27272a] hover:bg-slate-300 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer font-bold"
+                        className={`w-6 h-6 flex items-center justify-center rounded-[3px] text-xs cursor-pointer font-bold border transition-colors ${
+                          isDark ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
                       >-</button>
                       <span className="text-[11px] font-mono font-bold w-7 text-center text-emerald-400">
                         {customPriceFontSize}px
@@ -1196,9 +1303,11 @@ export const SingleItemsPanel: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setCustomPriceFontSize(customPriceFontSize + 1)}
-                        className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-[#27272a] hover:bg-slate-300 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer font-bold"
+                        className={`w-6 h-6 flex items-center justify-center rounded-[3px] text-xs cursor-pointer font-bold border transition-colors ${
+                          isDark ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
                       >+</button>
-                      <div className="relative w-6 h-6 ml-1 rounded border border-white/20 overflow-hidden cursor-pointer shadow-xs">
+                      <div className="relative w-6 h-6 ml-1 rounded-[3px] border border-white/20 overflow-hidden cursor-pointer shadow-xs">
                         <input
                           type="color"
                           value={customPriceColor}
@@ -1211,18 +1320,20 @@ export const SingleItemsPanel: React.FC = () => {
                   </div>
 
                   {/* Specs & Details Font Size & Color */}
-                  <div className={`p-2.5 rounded-[6px] border flex items-center justify-between ${
-                    isDark ? 'bg-[#1b1b1e] border-[#27272a]' : 'bg-slate-50 border-slate-200'
+                  <div className={`p-2.5 rounded-[4px] border flex items-center justify-between ${
+                    isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200'
                   }`}>
                     <div>
-                      <span className="text-[10px] font-bold text-slate-300 dark:text-slate-300 block uppercase tracking-wider">Specs Text</span>
+                      <span className="text-[10px] font-bold text-[#E2DCC8] block uppercase tracking-wider">Specs Text</span>
                       <span className="text-[9px] text-slate-500">Size & Color</span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <button
                         type="button"
                         onClick={() => setCustomSpecsFontSize(Math.max(6, customSpecsFontSize - 1))}
-                        className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-[#27272a] hover:bg-slate-300 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer font-bold"
+                        className={`w-6 h-6 flex items-center justify-center rounded-[3px] text-xs cursor-pointer font-bold border transition-colors ${
+                          isDark ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
                       >-</button>
                       <span className="text-[11px] font-mono font-bold w-7 text-center text-slate-300">
                         {customSpecsFontSize}px
@@ -1230,9 +1341,11 @@ export const SingleItemsPanel: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setCustomSpecsFontSize(customSpecsFontSize + 1)}
-                        className="w-6 h-6 flex items-center justify-center bg-slate-200 dark:bg-[#27272a] hover:bg-slate-300 dark:hover:bg-[#3f3f46] text-slate-700 dark:text-slate-200 rounded text-xs cursor-pointer font-bold"
+                        className={`w-6 h-6 flex items-center justify-center rounded-[3px] text-xs cursor-pointer font-bold border transition-colors ${
+                          isDark ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333]' : 'bg-slate-200 hover:bg-slate-300 text-slate-700 border-slate-300'
+                        }`}
                       >+</button>
-                      <div className="relative w-6 h-6 ml-1 rounded border border-white/20 overflow-hidden cursor-pointer shadow-xs">
+                      <div className="relative w-6 h-6 ml-1 rounded-[3px] border border-white/20 overflow-hidden cursor-pointer shadow-xs">
                         <input
                           type="color"
                           value={customSpecsColor}
@@ -1245,12 +1358,14 @@ export const SingleItemsPanel: React.FC = () => {
                   </div>
 
                   {/* Corner Roundness */}
-                  <div className={`p-2.5 rounded-[6px] border space-y-1.5 ${
-                    isDark ? 'bg-[#1b1b1e] border-[#27272a]' : 'bg-slate-50 border-slate-200'
+                  <div className={`p-2.5 rounded-[4px] border space-y-1.5 ${
+                    isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200'
                   }`}>
-                    <div className="flex justify-between items-center text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    <div className="flex justify-between items-center text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                       <span>Corner Roundness</span>
-                      <span className="text-indigo-400 font-mono font-bold bg-indigo-500/10 px-1.5 py-0.2 rounded border border-indigo-500/20">{customBorderRadius}px</span>
+                      <span className={`font-mono font-bold px-1.5 py-0.5 rounded-[3px] border ${
+                        isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border-[#E2DCC8]/20' : 'bg-teal-50 text-[#0F3D3E] border-teal-200'
+                      }`}>{customBorderRadius}px</span>
                     </div>
                     <input
                       type="range"
@@ -1259,16 +1374,16 @@ export const SingleItemsPanel: React.FC = () => {
                       step="1"
                       value={customBorderRadius}
                       onChange={(e) => setCustomBorderRadius(parseInt(e.target.value, 10))}
-                      className="w-full h-1.5 bg-slate-200 dark:bg-[#27272a] rounded-full appearance-none cursor-pointer accent-indigo-500"
+                      className="w-full h-1.5 bg-slate-200 dark:bg-[#27272a] rounded-full appearance-none cursor-pointer accent-[#0F3D3E]"
                     />
                   </div>
 
                   {/* Card Fill & Stroke */}
                   <div className="grid grid-cols-2 gap-2 pt-1">
-                    <div className={`p-2.5 rounded-[6px] border ${isDark ? 'bg-[#1b1b1e] border-[#27272a]' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className={`p-2.5 rounded-[4px] border ${isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200'}`}>
                       <label className="block text-[9px] font-bold uppercase tracking-wider mb-1 text-slate-400">Card Background</label>
                       <div className="flex items-center gap-2">
-                        <div className="relative w-6 h-6 rounded border border-white/20 overflow-hidden cursor-pointer shrink-0">
+                        <div className="relative w-6 h-6 rounded-[3px] border border-white/20 overflow-hidden cursor-pointer shrink-0">
                           <input
                             type="color"
                             value={customFill}
@@ -1289,13 +1404,13 @@ export const SingleItemsPanel: React.FC = () => {
                             className="w-8 h-8 -top-1 -left-1 absolute cursor-pointer bg-transparent border-0"
                           />
                         </div>
-                        <span className="text-[10px] font-mono truncate text-slate-300 font-semibold">{customFill}</span>
+                        <span className="text-[10px] font-mono truncate text-[#E2DCC8] font-semibold">{customFill}</span>
                       </div>
                     </div>
-                    <div className={`p-2.5 rounded-[6px] border ${isDark ? 'bg-[#1b1b1e] border-[#27272a]' : 'bg-slate-50 border-slate-200'}`}>
+                    <div className={`p-2.5 rounded-[4px] border ${isDark ? 'bg-[#181818] border-[#2a2a2a]' : 'bg-slate-50 border-slate-200'}`}>
                       <label className="block text-[9px] font-bold uppercase tracking-wider mb-1 text-slate-400">Border Stroke</label>
                       <div className="flex items-center gap-2">
-                        <div className="relative w-6 h-6 rounded border border-white/20 overflow-hidden cursor-pointer shrink-0">
+                        <div className="relative w-6 h-6 rounded-[3px] border border-white/20 overflow-hidden cursor-pointer shrink-0">
                           <input
                             type="color"
                             value={customStroke}
@@ -1303,7 +1418,7 @@ export const SingleItemsPanel: React.FC = () => {
                             className="w-8 h-8 -top-1 -left-1 absolute cursor-pointer bg-transparent border-0"
                           />
                         </div>
-                        <span className="text-[10px] font-mono truncate text-slate-300 font-semibold">{customStroke}</span>
+                        <span className="text-[10px] font-mono truncate text-[#E2DCC8] font-semibold">{customStroke}</span>
                       </div>
                     </div>
                   </div>
@@ -1314,21 +1429,23 @@ export const SingleItemsPanel: React.FC = () => {
             {/* Right Column: Live Card Preview */}
             <div className="flex flex-col space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
-                  <Sparkles size={13} className="text-amber-400" />
+                <label className="text-[10px] font-black uppercase tracking-wider text-[#E2DCC8] flex items-center gap-1.5">
+                  <Sparkles size={13} className="text-[#00a651]" />
                   <span>LIVE CARD PREVIEW</span>
                 </label>
                 <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                  <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 font-bold">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#00a651] animate-pulse" />
+                  <span className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded-[3px] font-bold border ${
+                    isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border-[#E2DCC8]/25' : 'bg-teal-50 text-[#0F3D3E] border-teal-200'
+                  }`}>
                     {customCardTheme}
                   </span>
                 </div>
               </div>
 
-              <div className={`flex-1 min-h-[420px] rounded-[8px] border p-6 flex items-center justify-center relative overflow-hidden ${
+              <div className={`flex-1 min-h-[420px] rounded-[6px] border p-6 flex items-center justify-center relative overflow-hidden ${
                 isDark 
-                  ? 'bg-[#0a0a0a] border-[#222] bg-[radial-gradient(#222_1px,transparent_1px)] [background-size:16px_16px]' 
+                  ? 'bg-[#101010] border-[#262626] bg-[radial-gradient(#252525_1px,transparent_1px)] [background-size:16px_16px]' 
                   : 'bg-slate-100 border-slate-200 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:16px_16px]'
               }`}>
                 {(() => {
@@ -1337,6 +1454,7 @@ export const SingleItemsPanel: React.FC = () => {
                   const skuVar = customVars.find(v => v.key === 'sku');
                   const imgUrl = normalizeImageUrl(
                     customizingProduct.image ||
+                    (customizingProduct as any).src ||
                     (customizingProduct.customFields && Object.values(customizingProduct.customFields).find(v => typeof v === 'string' && (v.startsWith('/media') || v.startsWith('http')))) as string ||
                     ''
                   );
@@ -1466,7 +1584,9 @@ export const SingleItemsPanel: React.FC = () => {
                       {customCardTheme === 'clean-badge' && (
                         <div className="p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] border ${
+                              isDark ? 'bg-[#0F3D3E]/40 text-[#E2DCC8] border-[#E2DCC8]/25' : 'bg-teal-50 text-[#0F3D3E] border-teal-200'
+                            }`}>
                               {customizingProduct.categoryName || 'FEATURED'}
                             </span>
                             {customActiveKeys.includes('price') && (
@@ -1549,37 +1669,6 @@ export const SingleItemsPanel: React.FC = () => {
                 })()}
               </div>
             </div>
-          </div>
-
-          {/* Footer Action Bar */}
-          <div className={`px-4 py-3 border-t flex items-center justify-between shrink-0 ${
-            isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-200 bg-white'
-          }`}>
-            <button
-              type="button"
-              onClick={() => setCustomizingProduct(null)}
-              className={`px-3 py-1.5 rounded-[5px] text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors ${
-                isDark ? 'text-slate-400 hover:text-white hover:bg-white/5' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-              }`}
-            >
-              <ArrowLeft size={13} /> Back to Single Items
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSaveCardChanges}
-              className="px-5 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-white rounded-[5px] text-xs font-black flex items-center gap-2 shadow-lg shadow-[#0F3D3E]/30 border border-[#E2DCC8]/30 cursor-pointer transition-all hover:scale-102 active:scale-98"
-            >
-              {editingElementId ? (
-                <>
-                  <Check size={14} className="text-emerald-300" /> Update Card on Canvas
-                </>
-              ) : (
-                <>
-                  <Plus size={14} /> Insert onto Page {currentPageIndex + 1}
-                </>
-              )}
-            </button>
           </div>
         </div>
       )}

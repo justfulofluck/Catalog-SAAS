@@ -1,7 +1,7 @@
-import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category, CanvasElement } from '../../../types';
-import { PAGE_WIDTH, PAGE_HEIGHT } from '../../../constants';
-import { resolveProductImage, resolveProductTitle } from '../../../utils/imageUtils';
-import { resolveFieldLabel } from '../../../utils/fieldUtils';
+import { Product, ProductVariant, ProductGridSection, TableData, CatalogPage, Category, CanvasElement } from '../../../../types';
+import { PAGE_WIDTH, PAGE_HEIGHT } from '../../../../constants';
+import { resolveProductImage, resolveProductTitle } from '../../../../utils/imageUtils';
+import { resolveFieldLabel } from '../../../../utils/fieldUtils';
 
 export const getCategoryProductsForPage = (
   page: CatalogPage | undefined,
@@ -71,7 +71,7 @@ export const generateSectionsFromRealProducts = (
           rows: [['-', 'Product Series 1', '-', '-', '-', '-']],
           headerBg: '#002838',
           headerTextColor: '#ffffff',
-          alternateRowBg: '#eef2f5',
+          alternateRowBg: '#ffffff',
           rowBg: '#ffffff',
           borderColor: '#002838',
           fontSize: 9,
@@ -121,7 +121,7 @@ export const generateSectionsFromRealProducts = (
         rows,
         headerBg: '#002838',
         headerTextColor: '#ffffff',
-        alternateRowBg: '#eef2f5',
+        alternateRowBg: '#ffffff',
         rowBg: '#ffffff',
         borderColor: '#002838',
         fontSize: 9,
@@ -170,7 +170,7 @@ export const generateSectionForCategory = (
       rows,
       headerBg: '#002838',
       headerTextColor: '#ffffff',
-      alternateRowBg: '#eef2f5',
+      alternateRowBg: '#ffffff',
       rowBg: '#ffffff',
       borderColor: '#002838',
       fontSize: 9,

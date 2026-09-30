@@ -2098,39 +2098,129 @@ async function _elementToFabricObject(
     const headerBg = td.headerBg || (is3GridTable ? '#002838' : '#334155');
     const headerTextColor = td.headerTextColor || '#ffffff';
     const rowBg = td.rowBg || '#ffffff';
-    const alternateRowBg = td.alternateRowBg || (is3GridTable ? '#eef2f5' : '#f8fafc');
+    const alternateRowBg = is3GridTable ? (td.rowBg || '#ffffff') : (td.alternateRowBg || '#f8fafc');
     const borderColor = td.borderColor || (is3GridTable ? '#002838' : '#cbd5e1');
-    const cellPadding = td.cellPadding || (is3GridTable ? 4 : 6);
+    const cellPadding = td.cellPadding !== undefined ? td.cellPadding : (is3GridTable ? 4 : 6);
 
     const numCols = Math.max(1, td.headers?.length || 1);
     const numRows = Math.max(1, td.rows?.length || 1);
     const totalRowCount = numRows + 1; // 1 header + N body rows
 
-    // Dynamic header font size (crisp, bold, condensed font Bebas Neue)
-    const dynamicHeaderFontSize = is3GridTable
-      ? (numCols >= 7 ? 10.5 : Math.max(10.5, Math.min(13, el.width / (numCols * 5.2))))
-      : (numCols > 6 ? Math.max(8.5, Math.min(td.headerFontSize || 9.5, el.width / (numCols * 7.5))) : (td.headerFontSize || 9.5));
+    // Dynamic header font size (crisp, bold, condensed font Bebas Neue or Montserrat)
+    const dynamicHeaderFontSize = td.headerFontSize !== undefined && td.headerFontSize > 0
+      ? td.headerFontSize
+      : (td.fontSize !== undefined && td.fontSize > 0
+        ? (td.fontSize + (is3GridTable ? 1 : 1))
+        : (is3GridTable
+          ? (numCols >= 8 ? 9 : (numCols >= 6 ? 10 : Math.max(10.5, Math.min(12, el.width / (numCols * 5.5)))))
+          : (numCols > 6 ? Math.max(8.0, Math.min(9.0, el.width / (numCols * 7.5))) : 9.5)
+        )
+      );
 
-    const dynamicBodyFontSize = is3GridTable
-      ? (numCols >= 7 ? 8.5 : Math.max(8.5, Math.min(10, el.width / (numCols * 6.8))))
-      : (numCols > 6 ? Math.max(8.0, Math.min(td.fontSize || 8.5, el.width / (numCols * 8.0))) : (td.fontSize || 8.5));
+    const dynamicBodyFontSize = td.fontSize !== undefined && td.fontSize > 0
+      ? td.fontSize
+      : (is3GridTable
+        ? (numCols >= 8 ? 7.5 : (numCols >= 6 ? 8.2 : Math.max(8.5, Math.min(9.5, el.width / (numCols * 7.0)))))
+        : (numCols > 6 ? Math.max(7.5, Math.min(8.5, el.width / (numCols * 8.0))) : 8.5)
+      );
 
     // Check if saved colWidths are just placeholder uniform widths (e.g. all equal)
     const isUniformColWidths = td.colWidths && td.colWidths.length === numCols &&
       td.colWidths.every(w => Math.abs(w - td.colWidths![0]) < 1);
 
+    // Helper 2D canvas context for exact text measurement matching browser and Fabric font rendering
+    const measureCanvas = typeof document !== 'undefined' ? document.createElement('canvas') : null;
+    const measureCtx = measureCanvas ? measureCanvas.getContext('2d') : null;
+
+    // Dynamic Text Line Estimation for accurate row height and padding
+    const estimateTextLines = (text: any, colW: number, fSize: number, isHeader: boolean = false): number => {
+      if (text === undefined || text === null) return 1;
+      const clean = String(text).trim();
+      if (!clean) return 1;
+
+      const explicitLines = clean.split('\n');
+      let totalLines = 0;
+      const usableWidth = Math.max(10, colW - cellPadding * 2);
+
+      const fFamily = isHeader && is3GridTable
+        ? 'Bebas Neue, Oswald, sans-serif'
+        : (td.fontFamily || 'Inter, Arial, sans-serif');
+      const fWeight = isHeader
+        ? (is3GridTable ? 'bold' : (td.headerFontWeight || '900'))
+        : (td.fontWeight || '500');
+
+      if (measureCtx) {
+        measureCtx.font = `${fWeight} ${fSize}px ${fFamily}`;
+      }
+
+      explicitLines.forEach(expLine => {
+        const lineStr = expLine.trim();
+        if (!lineStr) {
+          totalLines += 1;
+          return;
+        }
+
+        if (measureCtx) {
+          const words = lineStr.split(/\s+/);
+          let currentLine = '';
+          let subLines = 1;
+
+          for (let i = 0; i < words.length; i++) {
+            const word = words[i];
+            const testLine = currentLine ? `${currentLine} ${word}` : word;
+            const testWidth = measureCtx.measureText(testLine).width;
+
+            if (testWidth > usableWidth && currentLine !== '') {
+              subLines++;
+              currentLine = word;
+            } else {
+              currentLine = testLine;
+            }
+          }
+          totalLines += subLines;
+        } else {
+          const hasUpper = lineStr === lineStr.toUpperCase();
+          const avgCharWidth = fSize * (isHeader && is3GridTable ? 0.38 : (hasUpper ? 0.62 : 0.52));
+          const charsPerLine = Math.max(3, Math.floor(usableWidth / avgCharWidth));
+          const words = lineStr.split(/\s+/);
+          let curLineLen = 0;
+          let subLines = 1;
+
+          words.forEach(word => {
+            if (word.length > charsPerLine) {
+              if (curLineLen > 0) {
+                subLines++;
+                curLineLen = 0;
+              }
+              subLines += Math.ceil(word.length / charsPerLine) - 1;
+              curLineLen = word.length % charsPerLine || charsPerLine;
+            } else if (curLineLen > 0 && (curLineLen + 1 + word.length) > charsPerLine) {
+              subLines++;
+              curLineLen = word.length;
+            } else {
+              curLineLen += (curLineLen === 0 ? 0 : 1) + word.length;
+            }
+          });
+          totalLines += subLines;
+        }
+      });
+
+      return Math.max(1, totalLines);
+    };
+
     // Calculate column widths
     const colWidths: number[] = [];
     if (is3GridTable) {
-      // Smart proportional column weights for 3-Grid Specification Tables (Screenshot 2)
+      // Smart proportional column weights for 3-Grid Specification Tables
+      const prodWeight = numCols >= 8 ? 2.2 : (numCols >= 6 ? 2.6 : 3.4);
       const weights = (td.headers || []).map((h) => {
         const lower = String(h || '').toLowerCase().trim();
-        if (lower.includes('product') || lower.includes('name') || lower.includes('desc') || lower.includes('title') || lower.includes('item')) return 3.6;
-        if (lower.includes('model') || lower.includes('code') || lower.includes('sku')) return 1.5;
-        if (lower.includes('cut') || lower.includes('dim') || lower.includes('size')) return 1.1;
-        if (lower.includes('color') || lower.includes('cct') || lower.includes('temp')) return 1.1;
-        if (lower.includes('dealer') || lower.includes('price') || lower.includes('mrp') || lower.includes('rate') || lower.includes('cost')) return 1.0;
-        if (lower.includes('pack') || lower.includes('box') || lower.includes('qty')) return 1.1;
+        if (lower.includes('product') || lower.includes('name') || lower.includes('desc') || lower.includes('title') || lower.includes('item')) return prodWeight;
+        if (lower.includes('model') || lower.includes('code') || lower.includes('sku')) return 1.35;
+        if (lower.includes('cut') || lower.includes('dim') || lower.includes('size')) return 1.15;
+        if (lower.includes('color') || lower.includes('cct') || lower.includes('temp')) return 1.25;
+        if (lower.includes('dealer') || lower.includes('price') || lower.includes('mrp') || lower.includes('rate') || lower.includes('cost')) return 1.1;
+        if (lower.includes('pack') || lower.includes('box') || lower.includes('qty')) return 1.25;
         return 1.0;
       });
       const totalWeight = weights.reduce((sum, w) => sum + w, 0);
@@ -2143,12 +2233,32 @@ async function _elementToFabricObject(
       for (let i = 0; i < numCols; i++) colWidths.push(evenW);
     }
 
-    // Row heights: compact, crisp rows matching reference catalog and preview
-    const headerRowHeight = is3GridTable ? 28 : Math.max(24, Math.min(el.height / totalRowCount, 32));
-    const rHeight = is3GridTable
-      ? Math.min(32, Math.max(26, (el.height - headerRowHeight) / numRows))
-      : ((el.height - headerRowHeight) / numRows);
-    const totalRenderedH = headerRowHeight + numRows * rHeight;
+    // Dynamic Header Row Height (snug fit around text + cellPadding)
+    let maxHeaderLines = 1;
+    (td.headers || []).forEach((headerText, colIdx) => {
+      const colW = colWidths[colIdx] || (el.width / numCols);
+      const hStr = formatHeaderForDisplay(headerText);
+      const l = estimateTextLines(hStr, colW, dynamicHeaderFontSize, true);
+      if (l > maxHeaderLines) maxHeaderLines = l;
+    });
+    const headerTextTotalH = maxHeaderLines * dynamicHeaderFontSize * (maxHeaderLines > 1 ? 1.1 : 1.0);
+    const headerRowHeight = Math.max(18, Math.round(headerTextTotalH + cellPadding * 2 + (maxHeaderLines > 1 ? 2 : 0)));
+
+    // Dynamic Row Heights based on cell text content & line wrapping (snug fit, no excess empty gap)
+    const rowHeights: number[] = (td.rows || []).map((row) => {
+      let maxLinesInRow = 1;
+      (row || []).forEach((cellText: any, colIdx: number) => {
+        const colW = colWidths[colIdx] || (el.width / numCols);
+        const cellStr = cellText !== undefined && cellText !== null ? String(cellText) : '';
+        const l = estimateTextLines(cellStr, colW, dynamicBodyFontSize, false);
+        if (l > maxLinesInRow) maxLinesInRow = l;
+      });
+      const textBlockH = maxLinesInRow * dynamicBodyFontSize * 1.15;
+      const minRowH = is3GridTable ? 20 : 22;
+      return Math.max(minRowH, Math.round(textBlockH + cellPadding * 2 + (maxLinesInRow > 1 ? 4 : 2)));
+    });
+
+    const totalRenderedH = headerRowHeight + rowHeights.reduce((sum, h) => sum + h, 0);
 
     const tableObjs: any[] = [];
 
@@ -2170,9 +2280,9 @@ async function _elementToFabricObject(
       const colW = colWidths[colIdx];
       const hStr = formatHeaderForDisplay(headerText);
       if (hStr.trim() !== '') {
-        const lineCount = hStr.split('\n').length;
-        const textHeight = dynamicHeaderFontSize * (lineCount > 1 ? 2.1 : 1.15);
-        const vOffsetHeader = Math.max(1, (headerRowHeight - textHeight) / 2);
+        const lineCount = estimateTextLines(hStr, colW, dynamicHeaderFontSize, true);
+        const textHeight = lineCount * dynamicHeaderFontSize * (lineCount > 1 ? 1.05 : 1.0);
+        const vOffsetHeader = Math.max(cellPadding, (headerRowHeight - textHeight) / 2);
 
         const headerTb = new Textbox(hStr, {
           left: currentX + cellPadding,
@@ -2213,6 +2323,7 @@ async function _elementToFabricObject(
     // 3. Render Body Rows
     let curY = headerRowHeight;
     (td.rows || []).forEach((row, rowIdx) => {
+      const rHeight = rowHeights[rowIdx] || 24;
       const bg = rowIdx % 2 === 1 ? alternateRowBg : rowBg;
 
       // Row Background
@@ -2232,7 +2343,10 @@ async function _elementToFabricObject(
         const colW = colWidths[colIdx];
         const cellStr = cellText !== undefined && cellText !== null ? String(cellText) : '';
         if (cellStr.trim() !== '') {
-          const vOffsetBody = Math.max(1, (rHeight - (dynamicBodyFontSize * 1.25)) / 2);
+          const cellLines = estimateTextLines(cellStr, colW, dynamicBodyFontSize, false);
+          const cellTextHeight = cellLines * dynamicBodyFontSize * (cellLines > 1 ? 1.1 : 1.0);
+          const vOffsetBody = Math.max(cellPadding, (rHeight - cellTextHeight) / 2);
+
           const cellTb = new Textbox(cellStr, {
             left: cellX + cellPadding,
             top: curY + vOffsetBody,
@@ -2298,7 +2412,7 @@ async function _elementToFabricObject(
       top: el.y,
       angle: el.rotation || 0,
       width: el.width,
-      height: el.height,
+      height: totalRenderedH,
       originX: 'left',
       originY: 'top',
       opacity: el.opacity ?? 1,
@@ -2307,7 +2421,7 @@ async function _elementToFabricObject(
     });
 
     (tableGroup as any).id = el.id;
-    (tableGroup as any)._rendererVersion = 3;
+    (tableGroup as any)._rendererVersion = 4;
     (tableGroup as any)._tableDataJSON = JSON.stringify(el.tableData || {});
     return tableGroup;
   }

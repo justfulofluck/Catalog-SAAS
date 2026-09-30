@@ -29,6 +29,7 @@ import VideosPanel from './components/Sidebar/VideosPanel';
 import CropStudioPanel from './components/Sidebar/CropStudioPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
+import { AdminHeaderDesignerModal, AdminFooterDesignerModal } from './components/Admin/HeaderFooterStudio';
 import { CreateProductModal } from './components/Products/CreateProductModal';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
@@ -88,6 +89,8 @@ const App: React.FC = () => {
     checkAuth,
     isHeaderDesignerOpen,
     isFooterDesignerOpen,
+    isAdminHeaderDesignerOpen,
+    isAdminFooterDesignerOpen,
     isCreateProductModalOpen
   } = useStore();
 
@@ -228,6 +231,12 @@ const App: React.FC = () => {
   }
 
   if (isAdminAuthenticated && currentView === 'admin-dashboard') {
+    if (isAdminHeaderDesignerOpen) {
+      return <AdminHeaderDesignerModal />;
+    }
+    if (isAdminFooterDesignerOpen) {
+      return <AdminFooterDesignerModal />;
+    }
     return <AdminDashboard />;
   }
 

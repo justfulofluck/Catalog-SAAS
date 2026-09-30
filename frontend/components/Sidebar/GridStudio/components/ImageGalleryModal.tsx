@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { X, Image as ImageIcon, Upload, Layers, Package, Sparkles, CheckCircle2 } from 'lucide-react';
-import { Product, Category, ProductGridSection } from '../../../types';
-import { normalizeImageUrl, resolveProductImage } from '../../../utils/imageUtils';
+import { Product, Category, ProductGridSection } from '../../../../types';
+import { normalizeImageUrl, resolveProductImage } from '../../../../utils/imageUtils';
 import { ImageGalleryTab } from '../types';
 
 interface ImageGalleryModalProps {
