@@ -471,6 +471,8 @@ export const AdminHeaderDesignerModal: React.FC = () => {
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [appliedSuccess, setAppliedSuccess] = useState<boolean>(false);
+  const [isPublishModalOpen, setIsPublishModalOpen] = useState<boolean>(false);
+  const [isActiveStatus, setIsActiveStatus] = useState<boolean>(true);
 
   const [activeColorMenu, setActiveColorMenu] = useState<'text' | 'shape' | null>(null);
   const colorMenuRef = useRef<HTMLDivElement>(null);
@@ -519,6 +521,7 @@ export const AdminHeaderDesignerModal: React.FC = () => {
       setTemplateName(editingAdminHeaderTemplate.name || 'Custom Header');
       setCategory(editingAdminHeaderTemplate.category || 'General');
       setDescription(editingAdminHeaderTemplate.description || '');
+      setIsActiveStatus(editingAdminHeaderTemplate.is_active !== false);
       const pageData = editingAdminHeaderTemplate.pages_data?.[0] || {};
       const rawH = pageData.height;
       const hHeight = (rawH && rawH >= toPx(15)) ? rawH : toPx(30);
@@ -527,6 +530,9 @@ export const AdminHeaderDesignerModal: React.FC = () => {
       setElements(pageData.elements ? JSON.parse(JSON.stringify(pageData.elements)) : []);
     } else if (catalog.headerElements && catalog.headerElements.length > 0) {
       setTemplateName(`${catalog.name || 'Catalog'} Master Header`);
+      setCategory('General');
+      setDescription('');
+      setIsActiveStatus(true);
       const validH = (catalog.headerHeight && catalog.headerHeight >= toPx(15)) ? catalog.headerHeight : toPx(30);
       setHeaderHeight(validH);
       if (!catalog.headerHeight || catalog.headerHeight < toPx(15)) {
@@ -537,6 +543,8 @@ export const AdminHeaderDesignerModal: React.FC = () => {
     } else {
       setTemplateName('Master Header');
       setCategory('General');
+      setDescription('');
+      setIsActiveStatus(true);
       setHeaderHeight(toPx(30));
       setHeaderBg('#ffffff');
       setElements([]);
@@ -1416,7 +1424,11 @@ export const AdminHeaderDesignerModal: React.FC = () => {
   // ─────────────────────────────────────────────────────────────
   // Save & Apply Actions
   // ─────────────────────────────────────────────────────────────
-  const handleSaveTheme = async () => {
+  const handleOpenPublishModal = () => {
+    setIsPublishModalOpen(true);
+  };
+
+  const handleConfirmPublish = async () => {
     setIsSaving(true);
     try {
       const canvas = fabricCanvasRef.current;
@@ -1438,9 +1450,9 @@ export const AdminHeaderDesignerModal: React.FC = () => {
 
       const templateData = {
         name: templateName.trim() || 'Custom Header',
-        category: category.trim() || 'Custom',
+        category: category.trim() || 'General',
         type: 'header' as const,
-        description: description || `Custom header theme with ${syncedElements.length} elements`,
+        description: description.trim() || `Master header theme with ${syncedElements.length} elements`,
         pages_data: [
           {
             height: headerHeight,
@@ -1448,7 +1460,7 @@ export const AdminHeaderDesignerModal: React.FC = () => {
             elements: syncedElements
           }
         ],
-        is_active: true
+        is_active: isActiveStatus
       };
 
       let res;
@@ -1461,6 +1473,7 @@ export const AdminHeaderDesignerModal: React.FC = () => {
       if (res) {
         await fetchSystemTemplates();
         setSavedSuccess(true);
+        setIsPublishModalOpen(false);
         setTimeout(() => setSavedSuccess(false), 3000);
       }
     } catch (err) {
@@ -1576,12 +1589,6 @@ export const AdminHeaderDesignerModal: React.FC = () => {
                   }`}
                 placeholder="Header Blueprint Name..."
               />
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${isDark
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
-                : 'bg-amber-500/10 text-amber-800 border-amber-500/30'
-                }`}>
-                Global Master Blueprint
-              </span>
             </div>
             <div className={`flex items-center gap-3 text-xs mt-0.5 pl-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
               <span>Width: <strong className={isDark ? 'text-slate-300' : 'text-slate-700'}>794px</strong> (Catalog Width)</span>
@@ -1614,7 +1621,7 @@ export const AdminHeaderDesignerModal: React.FC = () => {
 
           {/* Save / Publish Master Template Button */}
           <button
-            onClick={handleSaveTheme}
+            onClick={handleOpenPublishModal}
             disabled={isSaving}
             className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-cyan-950/40 active:scale-95"
           >
@@ -2891,6 +2898,191 @@ export const AdminHeaderDesignerModal: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* ── Publish & Blueprint Metadata Modal ───────────────────── */}
+      {isPublishModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className={`w-full max-w-lg rounded-[8px] border shadow-2xl overflow-hidden flex flex-col ${
+            isDark ? 'bg-[#18181b] border-[#333338] text-white' : 'bg-white border-slate-300 text-slate-900'
+          }`}>
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+              isDark ? 'bg-[#141416] border-[#2c2c30]' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-[6px] bg-[#0F3D3E] text-[#E2DCC8] flex items-center justify-center font-bold shadow-md">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h3 className="font-space text-base font-bold text-white">Publish Header Blueprint</h3>
+                  <p className="text-[11px] text-[#888888]">Configure identity, target industry & publication status</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPublishModalOpen(false)}
+                className="p-1.5 rounded-[4px] text-[#888888] hover:text-white hover:bg-[#28282c] transition-colors"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className="p-6 space-y-5">
+              {/* Template Name */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Template Name <span className="text-amber-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={templateName}
+                  onChange={(e) => setTemplateName(e.target.value)}
+                  placeholder="e.g. Modern Minimalist Header 2026"
+                  className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none transition-all ${
+                    isDark
+                      ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                  }`}
+                />
+              </div>
+
+              {/* Industry / Category */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Target Industry / Category
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none cursor-pointer transition-all ${
+                    isDark
+                      ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                  }`}
+                >
+                  <option value="General">General / Multi-Purpose</option>
+                  <option value="Industrial / Lighting">Industrial / Lighting</option>
+                  <option value="Electronics & Tech">Electronics & Tech</option>
+                  <option value="Fashion & Apparel">Fashion & Apparel</option>
+                  <option value="Furniture & Interior">Furniture & Interior</option>
+                  <option value="Automotive & Tools">Automotive & Tools</option>
+                  <option value="Cosmetics & Beauty">Cosmetics & Beauty</option>
+                  <option value="Jewelry & Luxury">Jewelry & Luxury</option>
+                  <option value="Food & Beverage">Food & Beverage</option>
+                  <option value="Medical & Healthcare">Medical & Healthcare</option>
+                  <option value="Real Estate">Real Estate</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Description / Layout Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Brief description of this header blueprint layout..."
+                  className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none resize-none transition-all ${
+                    isDark
+                      ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                  }`}
+                />
+              </div>
+
+              {/* Publication Status (Live vs Draft) */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Publication Status
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsActiveStatus(true)}
+                    className={`p-3 rounded-[6px] border text-left transition-all flex items-start gap-3 ${
+                      isActiveStatus
+                        ? 'bg-emerald-950/40 border-emerald-500/60 text-white'
+                        : isDark
+                        ? 'bg-[#111113] border-[#333338] text-[#888888] hover:border-[#44444a]'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      isActiveStatus ? 'border-emerald-400 bg-emerald-400' : 'border-[#666666]'
+                    }`}>
+                      {isActiveStatus && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Live / Published
+                      </p>
+                      <p className="text-[10px] text-[#888888] mt-0.5">
+                        Available immediately for all tenants
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsActiveStatus(false)}
+                    className={`p-3 rounded-[6px] border text-left transition-all flex items-start gap-3 ${
+                      !isActiveStatus
+                        ? 'bg-zinc-800/60 border-amber-500/60 text-white'
+                        : isDark
+                        ? 'bg-[#111113] border-[#333338] text-[#888888] hover:border-[#44444a]'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      !isActiveStatus ? 'border-amber-400 bg-amber-400' : 'border-[#666666]'
+                    }`}>
+                      {!isActiveStatus && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Draft (Inactive)
+                      </p>
+                      <p className="text-[10px] text-[#888888] mt-0.5">
+                        Hidden from tenant template selectors
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`px-6 py-4 border-t flex items-center justify-end gap-3 ${
+              isDark ? 'bg-[#141416] border-[#2c2c30]' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setIsPublishModalOpen(false)}
+                className="px-4 py-2 bg-transparent hover:bg-[#28282c] text-[#aaaaaa] hover:text-white rounded-[4px] text-xs font-bold transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmPublish}
+                disabled={isSaving || !templateName.trim()}
+                className="px-5 py-2.5 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg transition-all active:scale-95 disabled:opacity-50"
+              >
+                {isSaving ? (
+                  <span>Publishing...</span>
+                ) : (
+                  <>
+                    <Save size={14} />
+                    <span>Confirm & Publish Blueprint</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
