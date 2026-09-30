@@ -1683,11 +1683,6 @@ export const GridStudioPanel: React.FC = () => {
     setProductPickerSectionIdx(null);
   };
 
-  const handleApplyAndReflow = () => {
-    applyProductGridToPage(currentPageIndex, sections);
-    reflowCatalogPages();
-  };
-
   const activePage = catalog.pages[currentPageIndex];
   const isSpecialPage = activePage?.type === 'cover' || activePage?.type === 'index' || activePage?.type === 'closing';
   const firstProductPageIdx = catalog.pages.findIndex(p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing');
@@ -3183,26 +3178,6 @@ export const GridStudioPanel: React.FC = () => {
         </div>
       )}
 
-      {/* ================= PANEL FOOTER ================= */}
-      {!isSpecialPage && viewMode === 'editor' && (
-        <div className={`p-3 border-t space-y-2 shrink-0 transition-colors ${
-          isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-200 bg-white shadow-sm'
-        }`}>
-          <button
-            type="button"
-            onClick={handleApplyAndReflow}
-            className={`w-full py-2 px-3 border rounded-lg text-[10px] font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all hover:scale-[1.01] active:scale-[0.99] ${
-              isDark
-                ? 'bg-[#1b2529] hover:bg-[#223136] text-[#E2DCC8] border-[#0F3D3E]/60'
-                : 'bg-teal-50 hover:bg-teal-100 text-teal-900 border-teal-300'
-            }`}
-            title="Reflow all pages across catalog"
-          >
-            <Zap size={12} className={isDark ? "text-[#00a651]" : "text-teal-600"} />
-            <span>Auto-Reflow Pages</span>
-          </button>
-        </div>
-      )}
 
       {/* ================= COMPLETE MEDIA GALLERY & UPLOADS MODAL ================= */}
       {imageGalleryPickerSectionIdx !== null && (
@@ -3985,7 +3960,7 @@ export const GridStudioPanel: React.FC = () => {
               isDark ? 'border-[#242424] bg-[#181818]' : 'border-slate-200 bg-slate-50'
             }`}>
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#00a651] text-black flex items-center justify-center shadow-md shadow-[#00a651]/20 font-bold">
+                <div className="w-8 h-8 rounded-lg bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/20 flex items-center justify-center shadow-sm font-bold">
                   <FolderPlus size={18} className="stroke-[2.5]" />
                 </div>
                 <div>
@@ -3994,11 +3969,11 @@ export const GridStudioPanel: React.FC = () => {
                       Add Category to Catalog
                     </h4>
                     {addCategoryTargetPageIdx !== null ? (
-                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8]">
+                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/20">
                         Target: Page {addCategoryTargetPageIdx + 1}
                       </span>
                     ) : (
-                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8]">
+                      <span className="px-1.5 py-0.5 rounded text-[8.5px] font-mono font-bold bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/20">
                         Auto-Place
                       </span>
                     )}
@@ -4036,8 +4011,10 @@ export const GridStudioPanel: React.FC = () => {
                     value={addCategorySearch}
                     onChange={(e) => setAddCategorySearch(e.target.value)}
                     placeholder="Search available categories..."
-                    className={`w-full pl-9 pr-3 py-1.5 border rounded-lg text-xs placeholder-slate-400 outline-none focus:border-[#00a651] ${
-                      isDark ? 'bg-[#0f0f0f] border-[#333] text-white' : 'bg-slate-50 border-slate-300 text-slate-900'
+                    className={`w-full pl-9 pr-3 py-1.5 border rounded-lg text-xs placeholder-slate-400 outline-none transition-colors ${
+                      isDark
+                        ? 'bg-[#0f0f0f] border-[#2e2e2e] text-white focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E]/50'
+                        : 'bg-slate-50 border-slate-300 text-slate-900 focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E]/50'
                     }`}
                     autoFocus
                   />
@@ -4053,7 +4030,7 @@ export const GridStudioPanel: React.FC = () => {
                 if (unincludedCategories.length === 0) {
                   return (
                     <div className="py-12 px-4 text-center space-y-3">
-                      <div className="w-12 h-12 rounded-full bg-emerald-500/10 text-[#00a651] flex items-center justify-center mx-auto border border-emerald-500/20">
+                      <div className="w-12 h-12 rounded-full bg-[#0F3D3E]/20 text-[#E2DCC8] flex items-center justify-center mx-auto border border-[#E2DCC8]/20">
                         <CheckCircle2 size={24} />
                       </div>
                       <div className="space-y-1">
@@ -4091,8 +4068,8 @@ export const GridStudioPanel: React.FC = () => {
                       onClick={() => handleAddCategoryToCatalog(cat, addCategoryTargetPageIdx)}
                       className={`p-3 border rounded-xl transition-all flex items-center justify-between gap-3 cursor-pointer group ${
                         isDark
-                          ? 'bg-[#181818] hover:bg-[#202020] border-[#2a2a2a] hover:border-[#00a651]'
-                          : 'bg-white hover:bg-emerald-50/40 border-slate-200 hover:border-[#00a651] shadow-sm'
+                          ? 'bg-[#181818] hover:bg-[#1e1e1e] border-[#282828] hover:border-[#0F3D3E]/80'
+                          : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-[#0F3D3E]/60 shadow-sm'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -4114,12 +4091,12 @@ export const GridStudioPanel: React.FC = () => {
 
                         <div className="min-w-0">
                           <h5 className={`text-xs font-bold truncate transition-colors ${
-                            isDark ? 'text-white group-hover:text-[#00a651]' : 'text-slate-900 group-hover:text-[#00a651]'
+                            isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'
                           }`}>
                             {cat.name}
                           </h5>
                           <div className={`flex items-center gap-2 text-[10px] mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                            <span className="font-semibold text-[#00a651] font-mono">{catProds.length} Products</span>
+                            <span className="font-semibold text-[#E2DCC8] font-mono">{catProds.length} Products</span>
                             {catProds.length > 0 && (
                               <span>• {catProds.reduce((acc, p) => acc + (p.variants?.length || 1), 0)} model rows</span>
                             )}
@@ -4129,9 +4106,9 @@ export const GridStudioPanel: React.FC = () => {
 
                       <button
                         type="button"
-                        className="px-3 py-1.5 bg-[#00a651] hover:bg-[#009247] text-black font-black uppercase text-[10px] rounded-lg tracking-wider transition-all shrink-0 shadow-sm flex items-center gap-1"
+                        className="px-3 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] text-[#E2DCC8] border border-[#E2DCC8]/25 font-bold uppercase text-[10px] rounded-lg tracking-wider transition-all shrink-0 shadow-sm flex items-center gap-1.5 active:scale-95"
                       >
-                        <Plus size={12} className="stroke-[3]" /> Add
+                        <Plus size={12} className="stroke-[2.5]" /> Add
                       </button>
                     </div>
                   );

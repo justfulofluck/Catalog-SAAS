@@ -1099,6 +1099,21 @@ const FloatingToolbar: React.FC<Props> = ({
         </button>
       )}
 
+      {/* Product Block Edit Card Button */}
+      {element.type === 'product-block' && (
+        <button
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] text-[11px] font-bold tracking-tight text-[#E2DCC8]/90 hover:text-white bg-[#0F3D3E]/40 hover:bg-[#0F3D3E]/60 border border-[#E2DCC8]/20 transition-all active:scale-95 cursor-pointer"
+          title="Edit Product Card (Theme, Fields, Colors, Overrides)"
+          onClick={(e) => {
+            e.stopPropagation();
+            window.dispatchEvent(new CustomEvent('catalog:editProductCard', { detail: { id: element.id, pageIndex: currentPageIndex } }));
+          }}
+        >
+          <Sliders size={13} strokeWidth={2.2} />
+          <span>Edit Card</span>
+        </button>
+      )}
+
       {/* Image Crop Button */}
       {element.type === 'image' && (
         <button
