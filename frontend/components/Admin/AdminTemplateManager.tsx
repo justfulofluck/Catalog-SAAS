@@ -318,10 +318,10 @@ export const AdminTemplateManager: React.FC = () => {
             />
 
             {/* Super Admin Dedicated Header Studio */}
-            <AdminHeaderDesignerModal />
+            {isAdminHeaderDesignerOpen && <AdminHeaderDesignerModal />}
 
             {/* Super Admin Dedicated Footer Studio */}
-            <AdminFooterDesignerModal />
+            {isAdminFooterDesignerOpen && <AdminFooterDesignerModal />}
         </div>
     );
 };
