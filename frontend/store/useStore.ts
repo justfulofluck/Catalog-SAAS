@@ -286,10 +286,23 @@ interface State {
     categoryIds: string[],
     options?: {
       includeCover: boolean;
+      coverTemplateId?: string;
       includeIndex: boolean;
       includeCategoryCovers: boolean;
       selectedTemplateId?: string;
       tableHeaders?: string[];
+      categoryLayouts?: Record<string, string>;
+      defaultLayoutId?: string;
+      headerMode?: 'none' | 'default' | 'template';
+      headerTemplateId?: string;
+      footerMode?: 'none' | 'default' | 'template';
+      footerTemplateId?: string;
+      cardFields?: {
+        showPrice?: boolean;
+        showSku?: boolean;
+        showTitle?: boolean;
+        cardTheme?: string;
+      };
     }
   ) => void;
   applyCoverTemplate: (pageIndex: number | null, template: PageTemplate) => void;
@@ -3188,40 +3201,145 @@ export const useStore = create<State>((set, get) => ({
     const allPages: CatalogPage[] = [];
     let currentPageNumber = 1;
 
+    // Resolve Header Settings
+    const headerMode = options?.headerMode || 'none'; // 'none' | 'default' | 'template'
+    let resolvedHeaderElements: CanvasElement[] = [];
+    let resolvedHeaderHeight = 45;
+    let hasHeader = false;
+
+    if (headerMode === 'default') {
+      hasHeader = true;
+      resolvedHeaderHeight = 45;
+      resolvedHeaderElements = [
+        {
+          id: `header-title-${Date.now()}`,
+          type: 'text',
+          text: name.toUpperCase(),
+          x: 40,
+          y: 12,
+          width: PAGE_WIDTH - 80,
+          height: 25,
+          fontSize: 11,
+          fontFamily: theme.fontFamily || 'Inter',
+          fontWeight: 'bold',
+          textAlign: 'center',
+          fill: '#475569',
+          zIndex: 10,
+          rotation: 0,
+          opacity: 1,
+          verticalAlign: 'middle',
+        }
+      ];
+    } else if (headerMode === 'template' && options?.headerTemplateId) {
+      const tmpl = state.systemTemplates.find(t => String(t.id) === String(options.headerTemplateId) || t.uuid === String(options.headerTemplateId));
+      if (tmpl) {
+        hasHeader = true;
+        resolvedHeaderElements = (tmpl.pages_data?.[0]?.elements || tmpl.elements || []) as CanvasElement[];
+        
+        let calculatedH = Number(tmpl.pages_data?.[0]?.height) || Number((tmpl as any).headerHeight) || Number((tmpl as any).height) || 0;
+        if (!calculatedH && resolvedHeaderElements.length > 0) {
+          resolvedHeaderElements.forEach(el => {
+            const b = (Number(el.y) || 0) + (Number(el.height) || 0);
+            if (b > calculatedH) calculatedH = b;
+          });
+        }
+        resolvedHeaderHeight = calculatedH || 113.4;
+      }
+    }
+
+    // Resolve Footer Settings
+    const footerMode = options?.footerMode || 'none'; // 'none' | 'default' | 'template'
+    let resolvedFooterElements: CanvasElement[] = [];
+    let resolvedFooterHeight = 35;
+    let hasFooter = false;
+
+    if (footerMode === 'default') {
+      hasFooter = true;
+      resolvedFooterHeight = 35;
+      resolvedFooterElements = [
+        {
+          id: `footer-page-${Date.now()}`,
+          type: 'text',
+          text: 'Page {{page}}',
+          x: PAGE_WIDTH - 180,
+          y: 8,
+          width: 140,
+          height: 20,
+          fontSize: 9,
+          fontFamily: theme.fontFamily || 'Inter',
+          fontWeight: 'bold',
+          textAlign: 'right',
+          fill: '#94a3b8',
+          zIndex: 10,
+          rotation: 0,
+          opacity: 1,
+          verticalAlign: 'middle',
+        }
+      ];
+    } else if (footerMode === 'template' && options?.footerTemplateId) {
+      const tmpl = state.systemTemplates.find(t => String(t.id) === String(options.footerTemplateId) || t.uuid === String(options.footerTemplateId));
+      if (tmpl) {
+        hasFooter = true;
+        resolvedFooterElements = (tmpl.pages_data?.[0]?.elements || tmpl.elements || []) as CanvasElement[];
+
+        let calculatedH = Number(tmpl.pages_data?.[0]?.height) || Number((tmpl as any).footerHeight) || Number((tmpl as any).height) || 0;
+        if (!calculatedH && resolvedFooterElements.length > 0) {
+          resolvedFooterElements.forEach(el => {
+            const b = (Number(el.y) || 0) + (Number(el.height) || 0);
+            if (b > calculatedH) calculatedH = b;
+          });
+        }
+        resolvedFooterHeight = calculatedH || 57;
+      }
+    }
+
     // 1. Global Cover Page
     if (options.includeCover) {
-      const coverTemplate = COVER_TEMPLATES[0];
+      let coverElements: CanvasElement[] = [];
+      let coverBg = theme.backgroundColor || '#ffffff';
 
-      // Filter out redundant background shapes (x=0, y=0, w=794, h=1123)
-      const globalCoverElements = (coverTemplate?.elements || [])
-        .filter(el => !(el.type === 'shape' && el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT))
-        .map((el, idx) => {
-          const id = `cover-el-${Date.now()}-${idx}`;
-          const base = { rotation: 0, opacity: 1, ...el, id };
-          if (el.type === 'text') {
-            const isHeading = el.fontSize && el.fontSize >= 30;
-            return {
-              ...base,
-              fontFamily: theme.fontFamily,
-              fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
-              fontWeight: el.fontWeight || (isHeading ? '900' : '400')
-            };
-          }
-          return base;
-        });
+      if (options.coverTemplateId) {
+        const tmpl = state.systemTemplates.find(t => String(t.id) === String(options.coverTemplateId) || t.uuid === String(options.coverTemplateId));
+        if (tmpl) {
+          coverElements = (tmpl.pages_data?.[0]?.elements || tmpl.elements || []) as CanvasElement[];
+          coverBg = tmpl.pages_data?.[0]?.backgroundColor || tmpl.backgroundColor || coverBg;
+        }
+      }
+
+      if (coverElements.length === 0) {
+        const coverTemplate = COVER_TEMPLATES[0];
+        coverElements = (coverTemplate?.elements || [])
+          .filter(el => !(el.type === 'shape' && el.x === 0 && el.y === 0 && el.width === PAGE_WIDTH && el.height === PAGE_HEIGHT))
+          .map((el, idx) => {
+            const id = `cover-el-${Date.now()}-${idx}`;
+            const base = { rotation: 0, opacity: 1, ...el, id };
+            if (el.type === 'text') {
+              const isHeading = el.fontSize && el.fontSize >= 30;
+              return {
+                ...base,
+                text: isHeading ? name.toUpperCase() : el.text,
+                fontFamily: theme.fontFamily,
+                fill: el.fill || (isHeading ? theme.headingColor : theme.bodyColor),
+                fontWeight: el.fontWeight || (isHeading ? '900' : '400')
+              };
+            }
+            return base;
+          }) as CanvasElement[];
+      }
 
       allPages.push({
         id: `p-cover-global`,
         pageNumber: currentPageNumber++,
-        elements: globalCoverElements as CanvasElement[],
-        type: 'cover'
+        elements: coverElements,
+        type: 'cover',
+        backgroundColor: coverBg
       });
     }
 
     // Dynamic safety zones
     const curCatalog = state.catalog;
-    const headerH = curCatalog.hasHeader ? (curCatalog.headerHeight || 40) : 0;
-    const footerH = curCatalog.hasFooter ? (curCatalog.footerHeight || 40) : 0;
+    const headerH = hasHeader ? (resolvedHeaderHeight || 45) : 0;
+    const footerH = hasFooter ? (resolvedFooterHeight || 35) : 0;
     const marginTop = curCatalog.marginTop || 0;
     const marginBottom = curCatalog.marginBottom || 0;
 
@@ -3439,259 +3557,291 @@ export const useStore = create<State>((set, get) => ({
       });
     };
 
-    const isVTAC = options?.selectedTemplateId === 'tpl-v-tac' || !options?.selectedTemplateId;
+    const categoryLayouts = options?.categoryLayouts || {};
+    const defaultLayoutId = options?.defaultLayoutId || (options?.selectedTemplateId === 'tpl-v-tac' || !options?.selectedTemplateId ? 'table-3grid' : 'cards-2x2');
 
-    if (isVTAC) {
-      // 1. Convert selected categories into 3-section V-TAC layout
-      const categorySections: ProductGridSection[] = [];
+    const getLayoutForCategory = (catId: string): string => {
+      return categoryLayouts[catId] || defaultLayoutId;
+    };
 
-      categoryIds.forEach((categoryId, catIdx) => {
-        const catProducts = state.products.filter(p => String(p.categoryId) === String(categoryId));
-        const category = state.categories.find(c => String(c.id) === String(categoryId));
-        if (!category && catProducts.length === 0) return;
+    // Helper for rendering 2x2 or 3x3 Card Grid pages
+    const generateCardElementsForPage = (
+      productsForPage: Product[],
+      cols: number,
+      rows: number,
+      cardTheme: string = 'classic-stack'
+    ): CanvasElement[] => {
+      const gridElements: CanvasElement[] = [];
+      const padding = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : 35;
+      const spacing = 16;
 
-        const catName = category?.name || `Category ${catIdx + 1}`;
-        const catImg = resolveProductImage(catProducts[0], category, catProducts);
-        const headers = [...targetHeaders];
+      const leftMargin = curCatalog.marginLeft !== undefined ? curCatalog.marginLeft : padding;
+      const rightMargin = curCatalog.marginRight !== undefined ? curCatalog.marginRight : padding;
+      const topMargin = curCatalog.marginTop !== undefined ? curCatalog.marginTop : padding;
+      const bottomMargin = curCatalog.marginBottom !== undefined ? curCatalog.marginBottom : padding;
 
-        const rows: string[][] = [];
-        catProducts.forEach(prod => {
-          if (prod.variants && prod.variants.length > 0) {
-            prod.variants.forEach(v => rows.push(generateCatalogRow(headers, prod, v)));
-          } else {
-            rows.push(generateCatalogRow(headers, prod));
-          }
-        });
+      const availableWidth = PAGE_WIDTH - leftMargin - rightMargin;
+      const availableHeight = PAGE_HEIGHT - topMargin - bottomMargin - headerH - footerH;
+      const slotWidth = (availableWidth - (cols - 1) * spacing) / cols;
+      const slotHeight = (availableHeight - (rows - 1) * spacing) / rows;
 
-        if (rows.length === 0) {
-          rows.push(headers.map((h, i) => i === 1 ? `${catName} Series` : '-'));
-        }
+      productsForPage.forEach((product, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+        const x = leftMargin + col * (slotWidth + spacing);
+        const y = headerH + topMargin + row * (slotHeight + spacing);
 
-        categorySections.push({
-          id: `sec-${Date.now()}-${catIdx}`,
-          title: catName.toUpperCase(),
-          titleColor: '#00a651',
-          titleFontSize: 22,
-          imageSrc: catImg,
-          hasBackground: false,
-          backgroundColor: '#e2e8f0',
-          tableData: {
-            headers,
-            rows,
-            headerBg: '#002b36',
-            headerTextColor: '#ffffff',
-            alternateRowBg: '#f8fafc',
-            rowBg: '#ffffff',
-            borderColor: '#002b36',
-            fontSize: 7.5,
-            headerFontSize: 8,
-            cellPadding: 4
-          }
-        });
-
-        tocEntries.push({
-          name: catName,
-          pageNumber: contentPageCounter
-        });
+        gridElements.push({
+          id: `product-block-${row}-${col}-${Date.now()}-${Math.random()}`,
+          type: 'product-block',
+          x,
+          y,
+          width: slotWidth,
+          height: slotHeight,
+          rotation: 0,
+          opacity: 1,
+          productId: product.id,
+          zIndex: 1,
+          cardTheme: options?.cardFields?.cardTheme || cardTheme,
+          showPrice: options?.cardFields?.showPrice !== false,
+          showSku: options?.cardFields?.showSku !== false,
+          showName: options?.cardFields?.showTitle !== false
+        } as CanvasElement);
       });
 
-      // Bucket sections into pages (3 distinct categories / sections per page)
-      const pageBuckets: { sections: ProductGridSection[] }[] = [];
-      for (let i = 0; i < categorySections.length; i += 3) {
-        const chunk = categorySections.slice(i, i + 3).map((sec, sIdx) => ({
-          ...sec,
-          hasBackground: sIdx % 2 === 1
-        }));
-        pageBuckets.push({ sections: chunk });
+      return gridElements;
+    };
+
+    // Group selected categories sequentially by layout style
+    const categoryGroups: { layout: string; catIds: string[] }[] = [];
+    categoryIds.forEach(catId => {
+      const layout = getLayoutForCategory(catId);
+      const lastGroup = categoryGroups[categoryGroups.length - 1];
+      if (lastGroup && lastGroup.layout === layout && layout === 'table-3grid') {
+        // Multiple consecutive table categories can share 3-grid pages
+        lastGroup.catIds.push(catId);
+      } else {
+        categoryGroups.push({ layout, catIds: [catId] });
       }
+    });
 
-      const leftMargin = curCatalog.marginLeft || 35;
-      const rightMargin = curCatalog.marginRight || 35;
-      const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
+    const leftMargin = curCatalog.marginLeft || 35;
+    const rightMargin = curCatalog.marginRight || 35;
+    const contentWidth = PAGE_WIDTH - leftMargin - rightMargin;
 
-      pageBuckets.forEach((bucket, pIdx) => {
-        const pageNumber = contentPageCounter++;
-        const pageHasHeader = curCatalog.hasHeader !== false;
-        const pageHasFooter = curCatalog.hasFooter !== false;
-        const headerH = pageHasHeader ? (curCatalog.headerHeight || 113.4) : 0;
-        const footerH = pageHasFooter ? (curCatalog.footerHeight || 75.6) : 0;
+    // Process each category group
+    categoryGroups.forEach((group, gIdx) => {
+      if (group.layout === 'table-3grid') {
+        // 1. Build 3-Grid specification table sections
+        const categorySections: ProductGridSection[] = [];
 
-        const topBound = Math.max(headerH + 15, curCatalog.marginTop || 20);
-        const bottomBound = PAGE_HEIGHT - Math.max(footerH + 15, curCatalog.marginBottom || 20);
-        const availableHeight = bottomBound - topBound;
+        group.catIds.forEach((categoryId, catIdx) => {
+          const catProducts = state.products.filter(p => String(p.categoryId) === String(categoryId));
+          const category = state.categories.find(c => String(c.id) === String(categoryId));
+          if (!category && catProducts.length === 0) return;
 
-        const sectionCount = Math.max(1, bucket.sections.length);
-        const baseSlotCount = Math.max(3, sectionCount);
-        const gap = 15;
-        const totalGaps = (baseSlotCount - 1) * gap;
-        const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
-        const sectionHeight = standardSlotHeight;
+          const catName = category?.name || `Category ${catIdx + 1}`;
+          const catImg = resolveProductImage(catProducts[0], category, catProducts);
+          const headers = [...targetHeaders];
 
-        const elements: CanvasElement[] = [];
-        const timestamp = Date.now();
+          const rows: string[][] = [];
+          catProducts.forEach(prod => {
+            if (prod.variants && prod.variants.length > 0) {
+              prod.variants.forEach(v => rows.push(generateCatalogRow(headers, prod, v)));
+            } else {
+              rows.push(generateCatalogRow(headers, prod));
+            }
+          });
 
-        bucket.sections.forEach((sec, idx) => {
-          const curY = Math.round(topBound + idx * (sectionHeight + gap));
-          const sectionId = `grid-sec-${timestamp}-${pIdx}-${idx}`;
+          if (rows.length === 0) {
+            rows.push(headers.map((h, i) => i === 1 ? `${catName} Series` : '-'));
+          }
 
-          // Background Stripe
-          if (sec.hasBackground) {
+          categorySections.push({
+            id: `sec-${Date.now()}-${catIdx}`,
+            title: catName.toUpperCase(),
+            titleColor: '#00a651',
+            titleFontSize: 22,
+            imageSrc: catImg,
+            hasBackground: false,
+            backgroundColor: '#e2e8f0',
+            tableData: {
+              headers,
+              rows,
+              headerBg: '#002b36',
+              headerTextColor: '#ffffff',
+              alternateRowBg: '#f8fafc',
+              rowBg: '#ffffff',
+              borderColor: '#002b36',
+              fontSize: 7.5,
+              headerFontSize: 8,
+              cellPadding: 4
+            }
+          });
+
+          tocEntries.push({
+            name: catName,
+            pageNumber: contentPageCounter
+          });
+        });
+
+        // Bucket sections into pages (up to 3 sections per page)
+        const pageBuckets: { sections: ProductGridSection[] }[] = [];
+        for (let i = 0; i < categorySections.length; i += 3) {
+          const chunk = categorySections.slice(i, i + 3).map((sec, sIdx) => ({
+            ...sec,
+            hasBackground: sIdx % 2 === 1
+          }));
+          pageBuckets.push({ sections: chunk });
+        }
+
+        pageBuckets.forEach((bucket, pIdx) => {
+          const pageNumber = contentPageCounter++;
+          const pageHasHeader = curCatalog.hasHeader !== false;
+          const pageHasFooter = curCatalog.hasFooter !== false;
+          const curHeaderH = pageHasHeader ? (curCatalog.headerHeight || 113.4) : 0;
+          const curFooterH = pageHasFooter ? (curCatalog.footerHeight || 75.6) : 0;
+
+          const topBound = Math.max(curHeaderH + 15, curCatalog.marginTop || 20);
+          const bottomBound = PAGE_HEIGHT - Math.max(curFooterH + 15, curCatalog.marginBottom || 20);
+          const availableHeight = bottomBound - topBound;
+
+          const sectionCount = Math.max(1, bucket.sections.length);
+          const baseSlotCount = Math.max(3, sectionCount);
+          const gap = 15;
+          const totalGaps = (baseSlotCount - 1) * gap;
+          const standardSlotHeight = Math.max(100, Math.floor((availableHeight - totalGaps) / baseSlotCount));
+          const sectionHeight = standardSlotHeight;
+
+          const elements: CanvasElement[] = [];
+          const timestamp = Date.now();
+
+          bucket.sections.forEach((sec, idx) => {
+            const curY = Math.round(topBound + idx * (sectionHeight + gap));
+            const sectionId = `grid-sec-${timestamp}-${gIdx}-${pIdx}-${idx}`;
+
+            // Background Stripe
+            if (sec.hasBackground) {
+              elements.push({
+                id: `${sectionId}-bg`,
+                type: 'shape',
+                shapeType: 'rect',
+                x: 0,
+                y: curY - 5,
+                width: PAGE_WIDTH,
+                height: sectionHeight + 10,
+                fill: sec.backgroundColor || '#e2e8f0',
+                zIndex: idx * 10 + 1,
+                rotation: 0,
+                opacity: 1,
+                sectionTag: sectionId
+              });
+            }
+
+            // Right Title
+            const rightX = leftMargin + 255;
+            const rightWidth = Math.max(200, contentWidth - 255);
+
             elements.push({
-              id: `${sectionId}-bg`,
-              type: 'shape',
-              shapeType: 'rect',
-              x: 0,
-              y: curY - 5,
-              width: PAGE_WIDTH,
-              height: sectionHeight + 10,
-              fill: sec.backgroundColor || '#e2e8f0',
-              zIndex: idx * 10 + 1,
+              id: `${sectionId}-title`,
+              type: 'text',
+              x: rightX,
+              y: curY + 4,
+              width: rightWidth,
+              height: 32,
+              text: sec.title || `PRODUCT SERIES ${idx + 1}`,
+              fontSize: sec.titleFontSize || 26,
+              fontFamily: 'Bebas Neue',
+              fontWeight: 'bold',
+              fill: sec.titleColor || '#00a651',
+              letterSpacing: 0.5,
+              zIndex: idx * 10 + 3,
               rotation: 0,
               opacity: 1,
               sectionTag: sectionId
             });
+
+            // Table
+            const tableY = curY + 40;
+            elements.push({
+              id: `${sectionId}-table`,
+              type: 'table',
+              x: rightX,
+              y: tableY,
+              width: rightWidth,
+              height: Math.max(60, sectionHeight - 45),
+              tableData: sec.tableData,
+              zIndex: idx * 10 + 4,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+
+            // Product / Category Image — positioned perpendicular (horizontally aligned) to the Table
+            const imageWidth = 240;
+            const availableImgHeight = Math.max(70, sectionHeight - 45);
+            const imageHeight = Math.min(240, availableImgHeight);
+            const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
+            elements.push({
+              id: `${sectionId}-img`,
+              type: 'image',
+              x: leftMargin,
+              y: tableY,
+              width: imageWidth,
+              height: imageHeight,
+              src: finalImgSrc,
+              zIndex: idx * 10 + 2,
+              rotation: 0,
+              opacity: 1,
+              sectionTag: sectionId
+            });
+          });
+
+          allPages.push({
+            id: `page-gen-table-${timestamp}-${gIdx}-${pIdx}`,
+            pageNumber,
+            type: 'interior',
+            title: `Product Spec Page ${pageNumber}`,
+            orientation: 'portrait',
+            backgroundColor: '#ffffff',
+            elements
+          });
+        });
+      } else {
+        // 2. Card Grid Layouts (cards-2x2, cards-3x3, etc.)
+        const is3x3 = group.layout === 'cards-3x3';
+        const cols = is3x3 ? 3 : 2;
+        const rows = is3x3 ? 3 : 2;
+        const perPage = cols * rows;
+
+        group.catIds.forEach(categoryId => {
+          const catProducts = state.products.filter(p => String(p.categoryId) === String(categoryId));
+          const category = state.categories.find(c => String(c.id) === String(categoryId));
+          if (catProducts.length === 0) return;
+
+          tocEntries.push({
+            name: category?.name || 'Category',
+            pageNumber: contentPageCounter
+          });
+
+          for (let i = 0; i < catProducts.length; i += perPage) {
+            const pageNumber = contentPageCounter++;
+            const chunk = catProducts.slice(i, i + perPage);
+            const cardElements = generateCardElementsForPage(chunk, cols, rows);
+
+            allPages.push({
+              id: `page-gen-cards-${Date.now()}-${categoryId}-${i}`,
+              pageNumber,
+              type: 'interior',
+              title: `${category?.name || 'Category'} - Page ${pageNumber}`,
+              orientation: 'portrait',
+              backgroundColor: '#ffffff',
+              elements: cardElements
+            });
           }
-
-          // Right Title
-          const rightX = leftMargin + 255;
-          const rightWidth = Math.max(200, contentWidth - 255);
-
-          elements.push({
-            id: `${sectionId}-title`,
-            type: 'text',
-            x: rightX,
-            y: curY + 4,
-            width: rightWidth,
-            height: 32,
-            text: sec.title || `PRODUCT SERIES ${idx + 1}`,
-            fontSize: sec.titleFontSize || 26,
-            fontFamily: 'Bebas Neue',
-            fontWeight: 'bold',
-            fill: sec.titleColor || '#00a651',
-            letterSpacing: 0.5,
-            zIndex: idx * 10 + 3,
-            rotation: 0,
-            opacity: 1,
-            sectionTag: sectionId
-          });
-
-          // Table
-          const tableY = curY + 40;
-          elements.push({
-            id: `${sectionId}-table`,
-            type: 'table',
-            x: rightX,
-            y: tableY,
-            width: rightWidth,
-            height: Math.max(60, sectionHeight - 45),
-            tableData: sec.tableData,
-            zIndex: idx * 10 + 4,
-            rotation: 0,
-            opacity: 1,
-            sectionTag: sectionId
-          });
-
-          // Product / Category Image — positioned perpendicular (horizontally aligned) to the Table
-          const imageWidth = 240;
-          const availableImgHeight = Math.max(70, sectionHeight - 45);
-          const imageHeight = Math.min(240, availableImgHeight);
-          const finalImgSrc = normalizeImageUrl(sec.imageSrc) || 'https://images.unsplash.com/photo-1513506003901-1e6a229e2d15?auto=format&fit=crop&q=80&w=600';
-          elements.push({
-            id: `${sectionId}-img`,
-            type: 'image',
-            x: leftMargin,
-            y: tableY,
-            width: imageWidth,
-            height: imageHeight,
-            src: finalImgSrc,
-            zIndex: idx * 10 + 2,
-            rotation: 0,
-            opacity: 1,
-            sectionTag: sectionId
-          });
         });
-
-        allPages.push({
-          id: `page-gen-${timestamp}-${pIdx}`,
-          pageNumber,
-          type: 'interior',
-          title: `Product Page ${pIdx + 1}`,
-          orientation: 'portrait',
-          backgroundColor: '#ffffff',
-          elements
-        });
-      });
-    } else {
-      // Iterate through selected categories to generate content pages for generic templates
-      categoryIds.forEach(categoryId => {
-        const catProducts = state.products.filter(p => p.categoryId === categoryId);
-        const category = state.categories.find(c => c.id === categoryId);
-
-        if (catProducts.length === 0) return;
-
-        // Record TOC Entry for this category
-        tocEntries.push({
-          name: category?.name || 'Category',
-          pageNumber: contentPageCounter
-        });
-
-        // Category Section Page (Divider/Cover) - CONDITIONAL
-        if (options.includeCategoryCovers) {
-          const sectionCoverElements: CanvasElement[] = [
-            {
-              id: `sec-title-${categoryId}-${Date.now()}`,
-              type: 'text',
-              x: 0, y: (PAGE_HEIGHT + headerH - footerH) / 2 - 40, width: PAGE_WIDTH, height: 80,
-              text: category?.name || 'Category',
-              fontSize: 48,
-              fontFamily: theme.headingFont,
-              fontWeight: '900',
-              fill: theme.headingColor,
-              textAlign: 'center',
-              zIndex: 1,
-              rotation: 0,
-              opacity: 1
-            },
-            {
-              id: `sec-desc-${categoryId}-${Date.now()}`,
-              type: 'text',
-              x: 40, y: (PAGE_HEIGHT + headerH - footerH) / 2 + 50, width: PAGE_WIDTH - 80, height: 40,
-              text: `${catProducts.length} Items`,
-              fontSize: 16,
-              fontFamily: theme.fontFamily,
-              fill: theme.bodyColor,
-              textAlign: 'center',
-              zIndex: 1,
-              rotation: 0,
-              opacity: 1
-            }
-          ];
-
-          allPages.push({
-            id: `p-section-${categoryId}`,
-            pageNumber: contentPageCounter,
-            elements: sectionCoverElements,
-            type: 'intro',
-            categoryId: categoryId,
-            backgroundColor: category?.color || theme.backgroundColor
-          });
-          contentPageCounter++;
-        }
-
-        // Product Grids for this Category
-        const productsPerPage = template.cols * template.rows;
-        for (let i = 0; i < catProducts.length; i += productsPerPage) {
-          allPages.push({
-            id: `p-grid-${categoryId}-${i}-${Date.now()}`,
-            pageNumber: contentPageCounter,
-            elements: generatePageElements(catProducts.slice(i, i + productsPerPage)),
-            type: 'product',
-            categoryId: categoryId
-          });
-          contentPageCounter++;
-        }
-      });
-    }
+      }
+    });
 
     // Generate and Insert Index Page if enabled
     if (options.includeIndex) {
@@ -3779,6 +3929,12 @@ export const useStore = create<State>((set, get) => ({
         id: `cat-${Date.now()}`,
         name,
         status: 'draft',
+        hasHeader,
+        headerElements: resolvedHeaderElements,
+        headerHeight: resolvedHeaderHeight,
+        hasFooter,
+        footerElements: resolvedFooterElements,
+        footerHeight: resolvedFooterHeight,
         pages: allPages,
         updatedAt: new Date().toISOString()
       },

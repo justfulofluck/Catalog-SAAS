@@ -121,3 +121,8 @@ coverage/
 .ruff_cache/
 .jest/
 .eslintcache
+
+# ──────────────────────── Local Work & Marketing ─────────────────
+appwork/
+Markating-site/
+marketing-site/
