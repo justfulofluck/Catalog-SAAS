@@ -22,6 +22,9 @@ const TextPanel: React.FC = () => {
     const timestamp = Date.now();
     const currentBrandFont = catalog.fontFamily || 'Inter';
 
+    const fontSize = opts.fontSize ?? 16;
+    const defaultLineHeight = opts.lineHeight ?? (24 / fontSize);
+
     const newEl: CanvasElement = {
       id: `text-${timestamp}-${Math.random().toString(36).substring(2, 6)}`,
       type: 'text',
@@ -32,14 +35,14 @@ const TextPanel: React.FC = () => {
       rotation: opts.rotation ?? 0,
       opacity: opts.opacity ?? 1,
       text: opts.text ?? 'Your paragraph text',
-      fontSize: opts.fontSize ?? 18,
+      fontSize,
       fontFamily: opts.fontFamily ?? currentBrandFont,
       fontWeight: opts.fontWeight ?? 'normal',
       fontStyle: opts.fontStyle ?? 'normal',
       fill: opts.fill ?? '#1e293b',
       textAlign: opts.textAlign ?? 'left',
       letterSpacing: opts.letterSpacing ?? 0,
-      lineHeight: opts.lineHeight ?? 1.2,
+      lineHeight: defaultLineHeight,
       effectStyle: opts.effectStyle,
       effectColor: opts.effectColor,
       shadowOffsetX: opts.shadowOffsetX,
@@ -53,13 +56,14 @@ const TextPanel: React.FC = () => {
     addElement(currentPageIndex, newEl);
   };
 
-  // 1. Add Default Text Box
+  // 1. Add Default Text Box (Default 24px line space)
   const handleAddDefaultTextBox = () => {
     handleAddTextElement({
       text: 'Add your text here',
-      fontSize: 18,
+      fontSize: 16,
+      lineHeight: 1.5, // 16px * 1.5 = 24px line space
       width: 320,
-      height: 45,
+      height: 48,
       fontWeight: '500',
     });
   };
@@ -70,6 +74,7 @@ const TextPanel: React.FC = () => {
       text: 'Add a heading',
       fontSize: 42,
       fontWeight: '900',
+      lineHeight: 1.2,
       width: 440,
       height: 55,
       fontFamily: catalog.fontFamily || 'Montserrat',
@@ -82,6 +87,7 @@ const TextPanel: React.FC = () => {
       text: 'Add a subheading',
       fontSize: 24,
       fontWeight: '700',
+      lineHeight: 1.3,
       width: 380,
       height: 38,
       fontFamily: catalog.fontFamily || 'Inter',
@@ -92,13 +98,13 @@ const TextPanel: React.FC = () => {
   const handleAddBodyText = () => {
     handleAddTextElement({
       text: 'Add a little bit of body text',
-      fontSize: 14,
+      fontSize: 16,
       fontWeight: '400',
       width: 320,
       height: 60,
       fontFamily: catalog.fontFamily || 'Inter',
       fill: '#475569',
-      lineHeight: 1.4,
+      lineHeight: 1.5, // 16px * 1.5 = 24px line space
     });
   };
 

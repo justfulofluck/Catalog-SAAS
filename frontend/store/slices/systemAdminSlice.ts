@@ -103,6 +103,12 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
               },
             ];
 
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('cs_editing_template', JSON.stringify(template));
+        }
+      } catch (e) {}
+
       set({
         editingSystemTemplate: template,
         catalog: {
@@ -130,6 +136,12 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
         pages_data: [{ pageNumber: 1, type: 'cover', elements: [] }],
         is_active: true,
       };
+
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('cs_editing_template', JSON.stringify(newTemplateSkeleton));
+        }
+      } catch (e) {}
 
       set({
         editingSystemTemplate: newTemplateSkeleton,
@@ -175,6 +187,11 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
         pages_data: pagesData,
       });
       if (res) {
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
+          }
+        } catch (e) {}
         showToast('Cover Blueprint updated successfully!', 'success', 'Blueprint Saved');
       }
       return !!res;
@@ -191,6 +208,11 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
       });
       if (res) {
         set({ editingSystemTemplate: res });
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
+          }
+        } catch (e) {}
         showToast('Master Cover Blueprint published successfully!', 'success', 'Blueprint Created');
       }
       return !!res;

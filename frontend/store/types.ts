@@ -182,6 +182,7 @@ export interface UiSlice {
     | 'stock'
     | 'header-footer'
     | 'text'
+    | 'text-effects'
     | 'colors'
     | 'elements'
     | 'properties'

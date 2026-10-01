@@ -817,10 +817,14 @@ export const AdminFooterDesignerModal: React.FC = () => {
         updates.height = elObj?.height || 2;
         obj.set({ width: newW, scaleX: 1, scaleY: 1 });
         obj.setCoords();
-      } else if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text') {
-        updates.width = Math.round((obj.width || 0) * sx);
+      } else if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
+        const newFontSize = Math.max(6, Math.round((obj.fontSize || elObj?.fontSize || 16) * sx));
+        const newWidth = Math.max(20, Math.round((obj.width || elObj?.width || 100) * sx));
+        updates.fontSize = newFontSize;
+        updates.width = newWidth;
         updates.text = obj.text || '';
-        obj.set({ scaleX: 1, scaleY: 1 });
+        obj.set({ fontSize: newFontSize, width: newWidth, scaleX: 1, scaleY: 1 });
+        if (typeof obj.initDimensions === 'function') obj.initDimensions();
         obj.setCoords();
       } else if (obj instanceof Circle || obj.type === 'circle') {
         const newRadius = (obj.radius || (obj.width ? obj.width / 2 : 14)) * sx;
@@ -1197,7 +1201,7 @@ export const AdminFooterDesignerModal: React.FC = () => {
               fontWeight: el.fontWeight || 'normal',
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
-              charSpacing: (el.letterSpacing || 0) * 10
+              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 12)) * 1000) : 0
             });
             applyElementFill(fabricObj, el.fill || '#475569', el.width, el.height);
           } else if (el.type === 'shape') {
@@ -1220,7 +1224,7 @@ export const AdminFooterDesignerModal: React.FC = () => {
               fontWeight: el.fontWeight || 'normal',
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
-              charSpacing: (el.letterSpacing || 0) * 10,
+              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 12)) * 1000) : 0,
               angle: el.rotation || 0,
               opacity: el.opacity ?? 1,
               originX: 'left',

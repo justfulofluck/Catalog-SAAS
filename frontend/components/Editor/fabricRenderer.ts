@@ -664,7 +664,7 @@ function generateRichTextSvg(el: CanvasElement): string {
     <foreignObject width="100%" height="100%">
       <div xmlns="http://www.w3.org/1999/xhtml" style="width:100%;height:100%;display:flex;align-items:${el.verticalAlign === 'middle' ? 'center' : (el.verticalAlign === 'bottom' ? 'flex-end' : 'flex-start')};justify-content:${el.textAlign || 'left'};box-sizing:border-box;">
         <style>${fontImport}</style>
-        <div style="font-size:${el.fontSize || 16}px;font-family:${el.fontFamily || 'Inter'};font-weight:${el.fontWeight || 'normal'};font-style:${el.fontStyle || 'normal'};text-decoration:${el.textDecoration || 'none'};text-align:${el.textAlign || 'left'};line-height:${el.lineHeight || 1.2};letter-spacing:${(el.letterSpacing || 0) / 1000}em;${gradientStyle}width:100%;padding:5px;box-sizing:border-box;${effectStyles}white-space:pre-wrap;word-break:break-word;">${safeText}</div>
+        <div style="font-size:${el.fontSize || 16}px;font-family:${el.fontFamily || 'Inter'};font-weight:${el.fontWeight || 'normal'};font-style:${el.fontStyle || 'normal'};text-decoration:${el.textDecoration || 'none'};text-align:${el.textAlign || 'left'};line-height:${el.lineHeight || 1.2};letter-spacing:${el.letterSpacing || 0}px;${gradientStyle}width:100%;padding:5px;box-sizing:border-box;${effectStyles}white-space:pre-wrap;word-break:break-word;">${safeText}</div>
       </div>
     </foreignObject>
   </svg>`;
@@ -679,6 +679,269 @@ async function loadSvgAsImage(svgString: string): Promise<HTMLImageElement> {
     img.onload = () => resolve(img);
     img.onerror = reject;
   });
+}
+
+export function applyTextEffectsToFabricObject(obj: any, el: Partial<CanvasElement>) {
+  if (!obj) return;
+  const effectStyle = el.effectStyle !== undefined ? el.effectStyle : (obj._effectStyle || 'none');
+  const color = el.effectColor !== undefined ? el.effectColor : (obj._effectColor || '#000000');
+  const color2 = el.effectColor2 !== undefined ? el.effectColor2 : (obj._effectColor2 || '#00fff9');
+  const blurVal = (el.shadowBlur !== undefined && el.shadowBlur !== null) ? Number(el.shadowBlur) : (obj._effectBlur ?? 5);
+  const ox = (el.shadowOffsetX !== undefined && el.shadowOffsetX !== null) ? Number(el.shadowOffsetX) : (obj._effectOffsetX ?? 3);
+  const oy = (el.shadowOffsetY !== undefined && el.shadowOffsetY !== null) ? Number(el.shadowOffsetY) : (obj._effectOffsetY ?? 3);
+  const opacity = (el.shadowOpacity !== undefined && el.shadowOpacity !== null) ? Number(el.shadowOpacity) : (obj._effectOpacity ?? 0.6);
+  const thickness = (el.textStrokeWidth !== undefined && el.textStrokeWidth !== null) ? Number(el.textStrokeWidth) : (obj._effectThickness ?? 1.5);
+  const baseFill = el.fill !== undefined ? el.fill : (obj._baseFill || (typeof obj.fill === 'string' && obj.fill !== 'transparent' ? obj.fill : '#000000'));
+
+  // Store effect parameters on object for custom multi-pass rendering
+  obj._effectStyle = effectStyle;
+  obj._effectColor = color;
+  obj._effectColor2 = color2;
+  obj._effectBlur = blurVal;
+  obj._effectOffsetX = ox;
+  obj._effectOffsetY = oy;
+  obj._effectOpacity = opacity;
+  obj._effectThickness = thickness;
+  obj._baseFill = baseFill;
+
+  // Preserve original _renderText method once
+  if (!obj._origRenderText && typeof obj._renderText === 'function') {
+    obj._origRenderText = obj._renderText;
+  }
+
+  // 1. Reset standard defaults first
+  obj.set({
+    shadow: null,
+    stroke: null,
+    strokeWidth: 0,
+    backgroundColor: '',
+    paintFirst: 'fill',
+    fill: baseFill,
+  });
+
+  if (!effectStyle || effectStyle === 'none') {
+    if (obj._origRenderText) {
+      obj._renderText = obj._origRenderText;
+    }
+    return;
+  }
+
+  // 2. Apply chosen effect
+  switch (effectStyle) {
+    case 'shadow': {
+      if (obj._origRenderText) obj._renderText = obj._origRenderText;
+      obj.set({
+        fill: baseFill,
+        shadow: new Shadow({
+          color: rgba(color, opacity),
+          blur: blurVal,
+          offsetX: ox,
+          offsetY: oy,
+        }),
+      });
+      break;
+    }
+    case 'lift': {
+      if (obj._origRenderText) obj._renderText = obj._origRenderText;
+      obj.set({
+        fill: baseFill,
+        shadow: new Shadow({
+          color: `rgba(0,0,0,${opacity})`,
+          blur: Math.max(blurVal, 8) * 1.5,
+          offsetX: 0,
+          offsetY: Math.max(oy, 4),
+        }),
+      });
+      break;
+    }
+    case 'hollow': {
+      if (obj._origRenderText) obj._renderText = obj._origRenderText;
+      obj.set({
+        fill: 'transparent',
+        stroke: color || baseFill || '#000000',
+        strokeWidth: thickness,
+        paintFirst: 'stroke',
+      });
+      break;
+    }
+    case 'outline': {
+      if (obj._origRenderText) obj._renderText = obj._origRenderText;
+      obj.set({
+        fill: baseFill,
+        stroke: color || '#000000',
+        strokeWidth: thickness,
+        paintFirst: 'stroke',
+      });
+      break;
+    }
+    case 'neon': {
+      if (obj._origRenderText) {
+        obj._renderText = function (ctx: CanvasRenderingContext2D) {
+          const neonColor = obj._effectColor || (obj._baseFill && obj._baseFill !== '#ffffff' && obj._baseFill !== '#000000' ? obj._baseFill : '#ff007f');
+          const b = obj._effectBlur || 15;
+          const origShadow = this.shadow;
+          const origFill = this.fill;
+
+          // Pass 1: Broad atmospheric glow
+          ctx.save();
+          this.fill = neonColor;
+          this.shadow = new Shadow({ color: neonColor, blur: b * 1.8, offsetX: 0, offsetY: 0 });
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          // Pass 2: Intense inner glow
+          ctx.save();
+          this.fill = neonColor;
+          this.shadow = new Shadow({ color: neonColor, blur: b * 0.8, offsetX: 0, offsetY: 0 });
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          // Pass 3: Bright core text
+          ctx.save();
+          this.fill = '#ffffff';
+          this.shadow = new Shadow({ color: neonColor, blur: b * 0.3, offsetX: 0, offsetY: 0 });
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          this.shadow = origShadow;
+          this.fill = origFill;
+        };
+      }
+      obj.set({
+        fill: color || baseFill || '#ff007f',
+      });
+      break;
+    }
+    case 'glitch': {
+      // Canva 3-Color 3D Glitch: Cyan (-ox, -oy) + Magenta/Primary (+ox, +oy) + Base Text (0, 0)
+      if (obj._origRenderText) {
+        obj._renderText = function (ctx: CanvasRenderingContext2D) {
+          const c1 = obj._effectColor || '#ff0055';
+          const c2 = obj._effectColor2 || '#00fff9';
+          const offX = obj._effectOffsetX ?? 3;
+          const offY = obj._effectOffsetY ?? 3;
+          const origFill = this.fill;
+          const origShadow = this.shadow;
+          this.shadow = null;
+
+          // Layer 1: Cyan chromatic offset (-ox, -oy)
+          ctx.save();
+          ctx.translate(-offX, -offY);
+          this.fill = c2;
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          // Layer 2: Magenta/Primary chromatic offset (+ox, +oy)
+          ctx.save();
+          ctx.translate(offX, offY);
+          this.fill = c1;
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          // Layer 3: Main Base Text in center (0, 0)
+          ctx.save();
+          this.fill = obj._baseFill || '#000000';
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          this.fill = origFill;
+          this.shadow = origShadow;
+        };
+      }
+      obj.set({
+        fill: baseFill || '#000000',
+      });
+      break;
+    }
+    case 'echo': {
+      // 3-step cascading echo trail with fading opacity
+      if (obj._origRenderText) {
+        obj._renderText = function (ctx: CanvasRenderingContext2D) {
+          const c = obj._effectColor || '#000000';
+          const offX = obj._effectOffsetX ?? 4;
+          const offY = obj._effectOffsetY ?? 4;
+          const op = obj._effectOpacity ?? 0.5;
+          const origFill = this.fill;
+          const origShadow = this.shadow;
+          this.shadow = null;
+
+          // 3 offset echo shadows
+          for (let i = 3; i >= 1; i--) {
+            ctx.save();
+            ctx.translate(offX * i, offY * i);
+            this.fill = rgba(c, op * (0.33 * (4 - i)));
+            obj._origRenderText.call(this, ctx);
+            ctx.restore();
+          }
+
+          // Top base text
+          ctx.save();
+          this.fill = obj._baseFill || '#000000';
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          this.fill = origFill;
+          this.shadow = origShadow;
+        };
+      }
+      obj.set({
+        fill: baseFill || '#000000',
+      });
+      break;
+    }
+    case 'splice': {
+      // Offset solid shadow + hollow border outline
+      if (obj._origRenderText) {
+        obj._renderText = function (ctx: CanvasRenderingContext2D) {
+          const c1 = obj._effectColor || '#000000';
+          const c2 = obj._effectColor2 || '#8B3DFF';
+          const offX = obj._effectOffsetX ?? 3;
+          const offY = obj._effectOffsetY ?? 3;
+          const thick = obj._effectThickness ?? 2;
+          const origFill = this.fill;
+          const origStroke = this.stroke;
+          const origStrokeWidth = this.strokeWidth;
+          const origShadow = this.shadow;
+          this.shadow = null;
+
+          // Layer 1: Solid offset shadow
+          ctx.save();
+          ctx.translate(offX, offY);
+          this.fill = c2;
+          this.stroke = null;
+          this.strokeWidth = 0;
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          // Layer 2: Hollow stroke outline
+          ctx.save();
+          this.fill = 'transparent';
+          this.stroke = c1;
+          this.strokeWidth = thick;
+          this.paintFirst = 'stroke';
+          obj._origRenderText.call(this, ctx);
+          ctx.restore();
+
+          this.fill = origFill;
+          this.stroke = origStroke;
+          this.strokeWidth = origStrokeWidth;
+          this.shadow = origShadow;
+        };
+      }
+      obj.set({
+        fill: 'transparent',
+      });
+      break;
+    }
+    case 'background': {
+      if (obj._origRenderText) obj._renderText = obj._origRenderText;
+      obj.set({
+        fill: baseFill,
+        backgroundColor: rgba(color || '#8B3DFF', opacity || 1),
+      });
+      break;
+    }
+  }
 }
 
 async function _elementToFabricObject(
@@ -717,7 +980,6 @@ async function _elementToFabricObject(
   if (elType === 'text') {
     const hasMixedStyles = /<[a-z]+[^>]*style\s*=|color:\s*|font-size:\s*|font-family:\s*/.test(el.text || '');
     const isRichText = hasMixedStyles || (el.fill?.includes('gradient') ?? false);
-    const hasEffect = el.effectStyle && el.effectStyle !== 'none';
     const useSvgFallback = isRichText;
 
     if (useSvgFallback) {
@@ -762,100 +1024,15 @@ async function _elementToFabricObject(
       textAlign: el.textAlign || 'left',
       lineHeight: el.lineHeight || 1.2,
       underline: el.textDecoration?.includes('underline') || false,
-      charSpacing: 0,
+      charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 16)) * 1000) : 0,
       splitByGrapheme: false,
       editable: false, // Disable Fabric's native text editing — the app uses its own HTML overlay
     };
     applyFill(textProps, el.fill, textWidth, el.height);
 
-    if (hasEffect) {
-      const color = el.effectColor || '#000000';
-      const b = el.shadowBlur || 0;
-      const ox = el.shadowOffsetX || 0;
-      const oy = el.shadowOffsetY || 0;
-      const op = (el.shadowOpacity !== undefined && el.shadowOpacity !== null) ? el.shadowOpacity : 0.5;
-
-      if (el.effectStyle === 'shadow') {
-        textProps.shadow = new Shadow({ color: rgba(color, op), blur: b, offsetX: ox, offsetY: oy });
-      } else if (el.effectStyle === 'lift') {
-        textProps.shadow = new Shadow({ color: `rgba(0,0,0,${op})`, blur: b, offsetX: 0, offsetY: 4 });
-      } else if (el.effectStyle === 'hollow') {
-        textProps.fill = 'transparent'; textProps.stroke = color; textProps.strokeWidth = el.textStrokeWidth || 1;
-      } else if (el.effectStyle === 'outline') {
-        textProps.stroke = color; textProps.strokeWidth = el.textStrokeWidth || 1;
-      }
-
-      if (['neon', 'glitch', 'echo', 'splice', 'background'].includes(el.effectStyle!)) {
-        const children: any[] = [];
-        const baseProps: Record<string, any> = { ...textProps };
-        delete baseProps.id; delete baseProps.selectable; delete baseProps.visible;
-
-        if (el.effectStyle === 'neon') {
-          [b * 3, b * 1.5, b * 0.5].forEach((blurVal) => {
-            children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-              ...baseProps, fill: color,
-              shadow: new Shadow({ color, blur: blurVal }),
-              evented: false, selectable: false,
-            }));
-          });
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, fill: el.fill || '#000000', evented: false, selectable: false,
-          }));
-        } else if (el.effectStyle === 'glitch') {
-          const color2 = el.effectColor2 || '#00fff9';
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: -ox, fill: color, evented: false, selectable: false,
-          }));
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: ox, fill: color2, evented: false, selectable: false,
-          }));
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: 0, fill: el.fill || '#000000', evented: false, selectable: false,
-          }));
-        } else if (el.effectStyle === 'echo') {
-          for (let i = 3; i >= 1; i--) {
-            children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-              ...baseProps, left: ox * i, top: oy * i,
-              fill: color, opacity: 0.2 * i, evented: false, selectable: false,
-            }));
-          }
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: 0, fill: el.fill || '#000000', evented: false, selectable: false,
-          }));
-        } else if (el.effectStyle === 'splice') {
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: ox, top: oy, fill: color, opacity: 0.8, evented: false, selectable: false,
-          }));
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: 0, stroke: color, strokeWidth: el.textStrokeWidth || 1,
-            fill: el.fill || '#000000', evented: false, selectable: false,
-          }));
-        } else if (el.effectStyle === 'background') {
-          const spread = el.effectSpread || 0;
-          const roundness = el.effectRoundness || 4;
-          children.push(new Rect({
-            left: -spread / 2, top: 0, width: el.width + spread, height: el.height,
-            fill: rgba(color, op), rx: roundness, ry: roundness, evented: false, selectable: false,
-          }));
-          children.push(new Textbox(el.text?.replace(/<[^>]*>/g, '') || '', {
-            ...baseProps, left: 0, selectable: false, evented: false,
-          }));
-        }
-
-        const group = new Group(children, {
-          left: el.x,
-          top: el.y,
-          angle: el.rotation || 0,
-          originX: 'left',
-          originY: 'top',
-          opacity: el.opacity ?? 1,
-        });
-        (group as any).id = el.id;
-        return group;
-      }
-    }
-
     const tb = new Textbox(textProps.text, textProps);
+    applyTextEffectsToFabricObject(tb, el);
+
     // If text has no explicit newlines, ensure tb width accommodates its rendered single-line text
     if (!textProps.text.includes('\n')) {
       const naturalW = (tb as any).calcTextWidth ? (tb as any).calcTextWidth() : 0;

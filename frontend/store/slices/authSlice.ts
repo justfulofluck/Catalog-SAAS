@@ -164,6 +164,7 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
     }
 
     sessionStorage.removeItem('cs_session');
+    sessionStorage.removeItem('cs_editing_template');
     localStorage.removeItem('cs_access_token');
     localStorage.removeItem('cs_refresh_token');
 
@@ -264,6 +265,20 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         get().fetchMedia();
         get().fetchAdminAssets();
         get().fetchSystemTemplates();
+
+        if (typeof window !== 'undefined' && window.location.pathname === '/editor') {
+          try {
+            const savedTplStr = sessionStorage.getItem('cs_editing_template');
+            if (savedTplStr) {
+              const savedTpl = JSON.parse(savedTplStr);
+              if (savedTpl) {
+                get().openTemplateInVisualEditor(savedTpl);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not restore template from session:', e);
+          }
+        }
       } else {
         set({
           isAuthenticated: true,

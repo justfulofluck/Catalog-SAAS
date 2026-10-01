@@ -711,6 +711,210 @@ export function renderCanvaMoveButton(
 }
 
 /**
+ * Action handler for scaling Textbox elements from corner handles (tl, tr, bl, br).
+ * In Canva: Corner dragging dynamically scales the Textbox's font size (fontSize) and width
+ * proportionally without stretching, distorting, or skewing the text object.
+ */
+function initTextboxScaleTransform(target: any, transform: any) {
+  if (target._textScaleTransformStart && target._textScaleTransformStart.transform === transform) {
+    return target._textScaleTransformStart;
+  }
+  const startFontSize = target.fontSize || 16;
+  const startWidth = target.width || 100;
+  const startHeight = target.height || 40;
+
+  const leftTopAnchor = getPointOnObject(target, 'left', 'top');
+  const rightTopAnchor = getPointOnObject(target, 'right', 'top');
+  const leftBottomAnchor = getPointOnObject(target, 'left', 'bottom');
+  const rightBottomAnchor = getPointOnObject(target, 'right', 'bottom');
+  const centerAnchor = getPointOnObject(target, 'center', 'center');
+
+  const startState = {
+    transform,
+    startFontSize,
+    startWidth,
+    startHeight,
+    leftTopAnchor,
+    rightTopAnchor,
+    leftBottomAnchor,
+    rightBottomAnchor,
+    centerAnchor,
+  };
+
+  target._textScaleTransformStart = startState;
+  return startState;
+}
+
+export function textboxScaleFontSizeHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+
+  const start = initTextboxScaleTransform(target, transform);
+  const isAlt = !!eventData.altKey;
+  const corner = transform.corner; // 'tl' | 'tr' | 'bl' | 'br'
+  const diag = Math.hypot(start.startWidth, start.startHeight) || 1;
+
+  let scale = 1;
+
+  if (isAlt) {
+    const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
+    const halfW = start.startWidth / 2 || 1;
+    const halfH = start.startHeight / 2 || 1;
+    const halfDiag = Math.hypot(halfW, halfH) || 1;
+    const dist = (Math.abs(local.x) * halfW + Math.abs(local.y) * halfH) / halfDiag;
+    scale = Math.max(0.08, dist / halfDiag);
+  } else if (corner === 'br') {
+    const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
+    const dist = (local.x * start.startWidth + local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  } else if (corner === 'bl') {
+    const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
+    const dist = (-local.x * start.startWidth + local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  } else if (corner === 'tr') {
+    const local = getTransformLocalPoint(transform, 'left', 'bottom', x, y);
+    const dist = (local.x * start.startWidth + -local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  } else if (corner === 'tl') {
+    const local = getTransformLocalPoint(transform, 'right', 'bottom', x, y);
+    const dist = (-local.x * start.startWidth + -local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  }
+
+  const newFontSize = Math.max(6, Math.round(start.startFontSize * scale));
+  const newWidth = Math.max(20, Math.round(start.startWidth * scale));
+
+  target.set({
+    fontSize: newFontSize,
+    width: newWidth,
+    scaleX: 1,
+    scaleY: 1,
+  });
+
+  if (typeof target.initDimensions === 'function') {
+    target.initDimensions();
+  }
+
+  // Re-anchor to pinned corner/center
+  if (isAlt) {
+    setPointOnObject(target, start.centerAnchor, 'center', 'center');
+  } else if (corner === 'br') {
+    setPointOnObject(target, start.leftTopAnchor, 'left', 'top');
+  } else if (corner === 'bl') {
+    setPointOnObject(target, start.rightTopAnchor, 'right', 'top');
+  } else if (corner === 'tr') {
+    setPointOnObject(target, start.leftBottomAnchor, 'left', 'bottom');
+  } else if (corner === 'tl') {
+    setPointOnObject(target, start.rightBottomAnchor, 'right', 'bottom');
+  }
+
+  target.setCoords();
+  if (target.canvas) {
+    target.canvas.fire('object:scaling', { target, transform });
+    target.canvas.fire('object:resizing', { target, transform });
+    target.canvas.requestRenderAll();
+  }
+  return true;
+}
+
+/**
+ * Action handler for changing Textbox wrapping width via side pill handles (ml, mr).
+ * In Canva:
+ * - Font size stays strictly unchanged.
+ * - Changing width reflows text dynamically across lines (word-wrap).
+ * - Textbox height auto-adjusts immediately according to the wrapped lines.
+ * - Dragging 'mr' pins the left-top anchor; dragging 'ml' pins the right-top anchor.
+ * - Alt key resizes width symmetrically from the center.
+ */
+function initTextboxWidthTransform(target: any, transform: any) {
+  if (target._textWidthTransformStart && target._textWidthTransformStart.transform === transform) {
+    return target._textWidthTransformStart;
+  }
+  const startWidth = target.width || 100;
+  const startFontSize = target.fontSize || 16;
+  const leftAnchor = getPointOnObject(target, 'left', 'top');
+  const rightAnchor = getPointOnObject(target, 'right', 'top');
+  const centerAnchor = getPointOnObject(target, 'center', 'top');
+
+  const startState = {
+    transform,
+    startWidth,
+    startFontSize,
+    leftAnchor,
+    rightAnchor,
+    centerAnchor,
+  };
+
+  target._textWidthTransformStart = startState;
+  return startState;
+}
+
+export function textboxWrapWidthHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+
+  const start = initTextboxWidthTransform(target, transform);
+  const isAlt = !!eventData.altKey;
+  const corner = transform.corner; // 'mr' or 'ml'
+  const minWidth = Math.max(20, (start.startFontSize || 16) * 1.2); // at least 1 character wide
+
+  let newWidth: number;
+
+  if (corner === 'mr') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(local.x));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.leftAnchor, 'left', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(Math.abs(local.x) * 2));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.centerAnchor, 'center', 'top');
+    }
+  } else if (corner === 'ml') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(-local.x));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.rightAnchor, 'right', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(Math.abs(local.x) * 2));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.centerAnchor, 'center', 'top');
+    }
+  }
+
+  target.setCoords();
+  if (target.canvas) {
+    target.canvas.fire('object:resizing', { target, transform });
+    target.canvas.requestRenderAll();
+  }
+  return true;
+}
+
+/**
  * Creates the complete Canva-style control set:
  * - 4 circular white corner controls
  * - 2 vertical white pill side handles (ml, mr)
@@ -719,12 +923,14 @@ export function renderCanvaMoveButton(
  */
 export function createCanvaControls(isTextbox: boolean = false, isImage: boolean = false): Record<string, Control> {
   const controls: Record<string, Control> = {
-    // 4 Corner Circles
+    // 4 Corner Circles (Font-size scaling for text, proportional scale for others)
     tl: new Control({
       x: -0.5,
       y: -0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -735,7 +941,9 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0.5,
       y: -0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -746,7 +954,9 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: -0.5,
       y: 0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -757,7 +967,9 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0.5,
       y: 0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -772,7 +984,7 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       actionHandler: isImage
         ? imageCropWidthHandler
         : isTextbox
-          ? controlsUtils.changeWidth
+          ? textboxWrapWidthHandler
           : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: (isTextbox || isImage) ? 'resizing' : undefined,
@@ -789,7 +1001,7 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       actionHandler: isImage
         ? imageCropWidthHandler
         : isTextbox
-          ? controlsUtils.changeWidth
+          ? textboxWrapWidthHandler
           : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: (isTextbox || isImage) ? 'resizing' : undefined,
@@ -801,37 +1013,39 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       touchSizeY: 28,
     }),
 
-    // Top & Bottom Horizontal Pill Handles (Height Resizing for Images, Scaling for others)
-    mt: new Control({
-      x: 0,
-      y: -0.5,
-      actionHandler: isImage
-        ? imageCropHeightHandler
-        : controlsUtils.scalingYOrSkewingX,
-      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'resizing' : undefined,
-      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
-      render: renderCanvaTopBottomPillControl,
-      sizeX: CANVA_THEME.topPillWidth + 4,
-      sizeY: CANVA_THEME.topPillHeight + 4,
-      touchSizeX: 28,
-      touchSizeY: 24,
-    }),
-    mb: new Control({
-      x: 0,
-      y: 0.5,
-      actionHandler: isImage
-        ? imageCropHeightHandler
-        : controlsUtils.scalingYOrSkewingX,
-      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'resizing' : undefined,
-      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
-      render: renderCanvaTopBottomPillControl,
-      sizeX: CANVA_THEME.topPillWidth + 4,
-      sizeY: CANVA_THEME.topPillHeight + 4,
-      touchSizeX: 28,
-      touchSizeY: 24,
-    }),
+    // Top & Bottom Horizontal Pill Handles (Height Resizing for Images, Scaling for shapes; OMITTED FOR TEXTBOXES matching Canva)
+    ...(!isTextbox ? {
+      mt: new Control({
+        x: 0,
+        y: -0.5,
+        actionHandler: isImage
+          ? imageCropHeightHandler
+          : controlsUtils.scalingYOrSkewingX,
+        cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+        actionName: isImage ? 'resizing' : undefined,
+        getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+        render: renderCanvaTopBottomPillControl,
+        sizeX: CANVA_THEME.topPillWidth + 4,
+        sizeY: CANVA_THEME.topPillHeight + 4,
+        touchSizeX: 28,
+        touchSizeY: 24,
+      }),
+      mb: new Control({
+        x: 0,
+        y: 0.5,
+        actionHandler: isImage
+          ? imageCropHeightHandler
+          : controlsUtils.scalingYOrSkewingX,
+        cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+        actionName: isImage ? 'resizing' : undefined,
+        getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+        render: renderCanvaTopBottomPillControl,
+        sizeX: CANVA_THEME.topPillWidth + 4,
+        sizeY: CANVA_THEME.topPillHeight + 4,
+        touchSizeX: 28,
+        touchSizeY: 24,
+      }),
+    } : {}),
 
     // Bottom Action Button: Rotate
     rotate: new Control({
@@ -1129,7 +1343,11 @@ export function applyCanvaSelectionStyle(obj: any) {
     });
     return;
   }
-  const isText = obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text';
+  const isText = obj.type === 'textbox' ||
+    obj.type === 'text' ||
+    obj.type === 'i-text' ||
+    obj.text !== undefined ||
+    (obj as any).shapeType === 'text';
   const isLine = obj.type === 'line' ||
     obj.shapeType === 'line' ||
     obj.shapeType === 'curved-line' ||
@@ -1273,6 +1491,7 @@ export function initCanvaGlobals() {
       (Textbox as any).createControls = () => ({
         controls: createCanvaControls(true),
       });
+      (Textbox.prototype as any).controls = createCanvaControls(true);
     }
 
     if (ActiveSelection) {

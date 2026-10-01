@@ -38,7 +38,8 @@ import {
   X,
   Code,
   FileJson,
-  Upload
+  Upload,
+  Settings
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ShapeType } from '../../types';
@@ -522,19 +523,65 @@ const EditorToolbar: React.FC = () => {
               <span>JSON Code</span>
             </button>
 
-            <button
-              onClick={() => {
-                setCoverName(editingSystemTemplate.name || catalog.name || 'New Cover Blueprint');
-                setCoverCategory(editingSystemTemplate.category || 'General');
-                setCoverDescription(editingSystemTemplate.description || '');
-                setCoverIsActive(editingSystemTemplate.is_active ?? true);
-                setIsPublishCoverModalOpen(true);
-              }}
-              className="px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#186062] text-white border border-[#E2DCC8]/40 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
-            >
-              <Sparkles size={13} className="text-emerald-300" />
-              Publish Blueprint
-            </button>
+            {editingSystemTemplate.id ? (
+              <>
+                <button
+                  onClick={async () => {
+                    setIsSavingTemplate(true);
+                    try {
+                      await saveActiveTemplateFromEditor();
+                    } catch (err) {
+                      console.error('Update template error:', err);
+                    } finally {
+                      setIsSavingTemplate(false);
+                    }
+                  }}
+                  disabled={isSavingTemplate}
+                  className="px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#186062] text-white border border-[#E2DCC8]/40 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 disabled:opacity-50 cursor-pointer"
+                  title="Save/Update blueprint with current canvas changes"
+                >
+                  {isSavingTemplate ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={13} className="text-emerald-300" />
+                      <span>Update Blueprint</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={() => {
+                    setCoverName(editingSystemTemplate.name || catalog.name || 'Cover Blueprint');
+                    setCoverCategory(editingSystemTemplate.category || 'General');
+                    setCoverDescription(editingSystemTemplate.description || '');
+                    setCoverIsActive(editingSystemTemplate.is_active ?? true);
+                    setIsPublishCoverModalOpen(true);
+                  }}
+                  className="p-2 bg-[#1b1b1b] hover:bg-[#252525] border border-[#383838] hover:border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[4px] transition-all shadow-sm active:scale-95 cursor-pointer"
+                  title="Blueprint Settings & Metadata"
+                >
+                  <Settings size={14} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => {
+                  setCoverName(editingSystemTemplate.name || catalog.name || 'New Cover Blueprint');
+                  setCoverCategory(editingSystemTemplate.category || 'General');
+                  setCoverDescription(editingSystemTemplate.description || '');
+                  setCoverIsActive(editingSystemTemplate.is_active ?? true);
+                  setIsPublishCoverModalOpen(true);
+                }}
+                className="px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#186062] text-white border border-[#E2DCC8]/40 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+              >
+                <Sparkles size={13} className="text-emerald-300" />
+                <span>Publish Blueprint</span>
+              </button>
+            )}
           </div>
         ) : (
           <button onClick={handleSave} disabled={isCommiting} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer">
@@ -748,12 +795,12 @@ const EditorToolbar: React.FC = () => {
                 {isSavingTemplate ? (
                   <>
                     <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Publishing...</span>
+                    <span>{editingSystemTemplate?.id ? 'Updating...' : 'Publishing...'}</span>
                   </>
                 ) : (
                   <>
                     <Check size={14} />
-                    <span>Save Master Blueprint</span>
+                    <span>{editingSystemTemplate?.id ? 'Update Blueprint' : 'Save Master Blueprint'}</span>
                   </>
                 )}
               </button>

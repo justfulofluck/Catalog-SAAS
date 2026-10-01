@@ -1322,7 +1322,7 @@ const EditorCanvas: React.FC = () => {
                       ? (isDragOver ? 'ring-4 ring-[#0F3D3E] shadow-[0_25px_70px_rgba(0,0,0,0.6)]' : 'ring-2 ring-[#0F3D3E] shadow-[0_25px_60px_rgba(0,0,0,0.55)]')
                       : 'opacity-90 hover:opacity-100 cursor-pointer shadow-[0_15px_40px_rgba(0,0,0,0.4)] border border-[#2a2a2a]'
                   }`}
-                  style={{ width: curW * zoom, height: curH * zoom, backgroundColor: page.backgroundColor || '#ffffff', zIndex: isActive ? 50 : 1 }}
+                  style={{ width: curW * zoom, height: curH * zoom, backgroundColor: page.backgroundColor || '#ffffff', zIndex: isActive ? 200 : 1 }}
                 >
                   {/* Floating Labels and Boundaries */}
                   {(() => {
@@ -1475,7 +1475,7 @@ const EditorCanvas: React.FC = () => {
                     >
                       <div
                         contentEditable suppressContentEditableWarning
-                        className="w-full h-full p-0 outline-none overflow-visible selection:bg-indigo-200/50"
+                        className="w-full h-full outline-none overflow-visible selection:bg-[#8B3DFF]/30 border border-[#8B3DFF] rounded-[2px]"
                         style={{
                           fontSize: editConfig.fontSize * zoom,
                           fontFamily: editConfig.fontFamily || 'Inter',
@@ -1523,7 +1523,7 @@ const EditorCanvas: React.FC = () => {
                           caretColor: '#8b3dff',
                           whiteSpace: 'pre-wrap',
                           wordBreak: 'break-word',
-                          padding: `${5 * zoom}px`, // Match Konva Text padding
+                          padding: '0px',
                           minWidth: 20 * zoom,
                           minHeight: 20 * zoom,
                           boxSizing: 'border-box',

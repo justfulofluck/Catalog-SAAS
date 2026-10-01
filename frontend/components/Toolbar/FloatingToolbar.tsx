@@ -210,7 +210,7 @@ const FloatingToolbar: React.FC<Props> = ({
   const toolbarHeight = 44; // Approx height of horizontal bar
   let toolbarTop = minY * zoom - toolbarHeight - 16;
   const isOffTop = toolbarTop < -80;
-  const isPopoverOffTop = toolbarTop < 240;
+  const isPopoverOffTop = toolbarTop < 300;
 
   if (isOffTop) {
     toolbarTop = maxY * zoom + 12;
@@ -221,7 +221,7 @@ const FloatingToolbar: React.FC<Props> = ({
     left: `${centerX * zoom}px`,
     top: `${toolbarTop}px`,
     transform: 'translateX(-50%)',
-    zIndex: 900,
+    zIndex: 3500,
     pointerEvents: 'auto',
   };
 

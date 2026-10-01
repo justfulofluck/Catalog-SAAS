@@ -21,6 +21,7 @@ import ProjectSettingsPanel from './components/Sidebar/ProjectSettingsPanel';
 import ButtonsPanel from './components/Sidebar/ButtonsPanel';
 import HeaderFooterPanel from './components/Sidebar/HeaderFooterPanel';
 import TextPanel from './components/Sidebar/TextPanel';
+import { TextEffectsPanel } from './components/Sidebar/TextEffectsPanel';
 import ColorPanel from './components/Sidebar/ColorPanel';
 import GridStudioPanel from './components/Sidebar/GridStudioPanel';
 import SingleItemsPanel from './components/Sidebar/SingleItemsPanel';
@@ -126,10 +127,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const getViewFromPath = (pathname: string): View => {
+      const state = useStore.getState();
       if (pathname === '/admin/dashboard') {
-        return isAdminAuthenticated ? 'admin-dashboard' : (isAuthenticated ? 'dashboard' : 'admin-login');
+        return state.isAdminAuthenticated ? 'admin-dashboard' : (state.isAuthenticated ? 'dashboard' : 'admin-login');
       }
-      if (pathname === '/admin') return 'admin-login';
+      if (pathname === '/admin') {
+        return state.isAdminAuthenticated ? 'admin-dashboard' : 'admin-login';
+      }
       if (pathname === '/editor') return 'editor';
       if (pathname === '/catalog-setup') return 'catalog-setup';
       if (pathname === '/catalog-products') return 'catalog-products';
@@ -146,8 +150,10 @@ const App: React.FC = () => {
       if (pathname === '/inventory/media') return 'media-library';
       if (pathname === '/onboarding') return 'business-selection';
       if (pathname === '/onboarding/business') return 'business-onboarding';
-      if (pathname === '/' || pathname === '') return 'dashboard';
-      return currentView;
+      if (pathname === '/' || pathname === '') {
+        return state.isAdminAuthenticated ? 'admin-dashboard' : 'dashboard';
+      }
+      return state.currentView;
     };
 
     const init = async () => {
@@ -547,13 +553,14 @@ const App: React.FC = () => {
             {/* Docked Sidebar Content */}
             {isSidebarExpanded && (
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
-                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors' || editorTab === 'elements' || editorTab === 'crop') ? 'w-[360px]' : 'w-[330px]'
+                (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'text-effects' || editorTab === 'colors' || editorTab === 'elements' || editorTab === 'crop') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
                 {editorTab === 'templates' && !isCoverStudioMode && <TemplatesPanel />}
                 {editorTab === 'pages' && !isCoverStudioMode && <PagesPanel />}
                 {editorTab === 'grid-studio' && !isCoverStudioMode && <GridStudioPanel />}
                 {editorTab === 'single-items' && !isCoverStudioMode && <SingleItemsPanel />}
                 {editorTab === 'text' && <TextPanel />}
+                {editorTab === 'text-effects' && <TextEffectsPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
                 {editorTab === 'elements' && <ElementsPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
