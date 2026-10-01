@@ -267,6 +267,89 @@ const ButtonsPanel: React.FC = () => {
         addElement(currentPageIndex, newElement);
     };
 
+    const getButtonPayload = (icon: IconDefinition) => {
+        let shapeType: ShapeType = 'circle';
+        let fill = buttonColor;
+        let stroke: string | undefined = undefined;
+        let strokeWidth = 0;
+        let iconColor = '#FFFFFF';
+
+        if (selectedStyle === 'transparent') {
+            shapeType = 'circle';
+            fill = 'transparent';
+            stroke = undefined;
+            strokeWidth = 0;
+            iconColor = buttonColor;
+        } else if (selectedStyle === 'solid-square') {
+            shapeType = 'rect';
+            fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        } else if (selectedStyle === 'outline-circle') {
+            shapeType = 'circle';
+            fill = 'transparent';
+            stroke = buttonColor;
+            strokeWidth = 2.5;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        } else if (selectedStyle === 'outline-square') {
+            shapeType = 'rect';
+            fill = 'transparent';
+            stroke = buttonColor;
+            strokeWidth = 2.5;
+            iconColor = buttonColor;
+        } else if (selectedStyle === 'rounded-square') {
+            shapeType = 'roundedRect';
+            fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        } else if (selectedStyle === 'pill') {
+            shapeType = 'pill';
+            fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        } else {
+            shapeType = 'circle';
+            fill = buttonColor;
+            iconColor = buttonColor === '#FFFFFF' ? '#0F3D3E' : '#FFFFFF';
+        }
+
+        let finalLinkUrl = targetLink.trim();
+        if (finalLinkUrl) {
+            if (linkType === 'whatsapp' && !finalLinkUrl.startsWith('http')) {
+                const cleanPhone = finalLinkUrl.replace(/[^0-9]/g, '');
+                finalLinkUrl = `https://wa.me/${cleanPhone}`;
+            } else if (linkType === 'phone' && !finalLinkUrl.startsWith('tel:')) {
+                finalLinkUrl = `tel:${finalLinkUrl}`;
+            } else if (linkType === 'email' && !finalLinkUrl.startsWith('mailto:')) {
+                finalLinkUrl = `mailto:${finalLinkUrl}`;
+            } else if (linkType === 'url' && !finalLinkUrl.startsWith('http://') && !finalLinkUrl.startsWith('https://')) {
+                finalLinkUrl = `https://${finalLinkUrl}`;
+            }
+        }
+
+        const iconSize = selectedStyle === 'transparent' ? size * 0.75 : size * 0.48;
+
+        return {
+            type: 'shape',
+            shapeType,
+            width: size,
+            height: size,
+            opacity: buttonOpacity / 100,
+            fill,
+            stroke,
+            strokeWidth,
+            linkUrl: finalLinkUrl || undefined,
+            linkType: finalLinkUrl ? linkType : undefined,
+            iconConfig: {
+                iconName: icon.unicode,
+                iconLibrary: 'fontawesome',
+                color: iconColor,
+                size: iconSize,
+                fontWeight: icon.library === 'brands' ? '400' : '900',
+                fontFamily: icon.library === 'brands' ? 'Font Awesome 6 Brands' : 'Font Awesome 6 Free',
+                linkUrl: finalLinkUrl || undefined,
+                linkType: finalLinkUrl ? linkType : undefined,
+            }
+        };
+    };
+
     return (
         <div className={`w-full h-full flex flex-col font-sans animate-in slide-in-from-left duration-300 transition-colors ${
             isDark ? 'bg-[#161616] text-white' : 'bg-white text-slate-800'
@@ -589,13 +672,20 @@ const ButtonsPanel: React.FC = () => {
                             {filteredIcons.map((icon) => (
                                 <button
                                     key={icon.id}
+                                    draggable={true}
+                                    onDragStart={(e) => {
+                                        const payload = getButtonPayload(icon);
+                                        e.dataTransfer.setData('application/json', JSON.stringify(payload));
+                                        e.dataTransfer.setData('text/plain', icon.name);
+                                        e.dataTransfer.effectAllowed = 'copy';
+                                    }}
                                     onClick={() => handleAddButton(icon)}
-                                    className={`group relative flex flex-col items-center justify-center h-12 rounded-[4px] transition-all border active:scale-95 ${
+                                    className={`group relative flex flex-col items-center justify-center h-12 rounded-[4px] transition-all border active:scale-95 cursor-grab active:cursor-grabbing ${
                                         isDark 
                                             ? 'bg-[#1a1a1a] border-[#262626] hover:border-[#0F3D3E] hover:bg-[#222]' 
                                             : 'bg-slate-50 border-slate-200 hover:border-[#0F3D3E] hover:bg-slate-100'
                                     }`}
-                                    title={icon.name}
+                                    title={`${icon.name} (Drag or Click to add)`}
                                 >
                                     <i className={`${icon.icon} text-base transition-transform group-hover:scale-110 ${
                                         isDark ? 'text-slate-300 group-hover:text-[#E2DCC8]' : 'text-slate-600 group-hover:text-[#0F3D3E]'

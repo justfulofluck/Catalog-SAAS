@@ -1,437 +1,22 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Canvas, IText, Rect, Line, Circle, Image as FabricImage, ActiveSelection, Gradient, Group, util, Point } from 'fabric';
-import {
-  Layout, X, Save, Check, Sparkles, Plus, Minus, Type, Square,
-  Image as ImageIcon, Palette, Trash2, Copy, ArrowUp, ArrowDown,
-  ArrowUpToLine, ArrowDownToLine, ChevronsUp, ChevronsDown, GripVertical,
-  ZoomIn, ZoomOut, RotateCcw, Sliders, ChevronDown, CheckCircle2,
-  FolderOpen, Layers, AlignLeft, AlignCenter, AlignRight, Bold, Italic,
-  SlidersHorizontal, Upload, Tag, Search, ArrowLeft
-} from 'lucide-react';
+import { Canvas, IText, Rect, Circle, Image as FabricImage, Group, util, Point } from 'fabric';
 import { useStore } from '../../store/useStore';
-import { CanvasElement, Product, ShapeType } from '../../types';
-import { PAGE_WIDTH, PX_PER_MM, CATEGORIZED_FONTS } from '../../constants';
-import AdvancedColorPicker from '../Properties/AdvancedColorPicker';
+import { CanvasElement, ShapeType } from '../../types';
+import { PAGE_WIDTH, PX_PER_MM } from '../../constants';
 import { applyCanvaSelectionStyle } from '../../utils/canvaControls';
-import { parseGradient, buildShape, getPolyPoints } from './fabricRenderer';
+import { getPolyPoints } from './fabricRenderer';
 
-const HEADER_SHAPES: { type: ShapeType; label: string; icon: React.ReactNode }[] = [
-  {
-    type: 'rect',
-    label: 'Square',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <rect x="3" y="3" width="18" height="18" rx="1" />
-      </svg>
-    )
-  },
-  {
-    type: 'roundedRect',
-    label: 'Rounded',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <rect x="3" y="3" width="18" height="18" rx="5" />
-      </svg>
-    )
-  },
-  {
-    type: 'circle',
-    label: 'Circle',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <circle cx="12" cy="12" r="9" />
-      </svg>
-    )
-  },
-  {
-    type: 'triangle',
-    label: 'Triangle',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="12,3 21,20 3,20" />
-      </svg>
-    )
-  },
-  {
-    type: 'triangleDown',
-    label: 'Down Tri',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="3,4 21,4 12,21" />
-      </svg>
-    )
-  },
-  {
-    type: 'diamond',
-    label: 'Diamond',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="12,2 22,12 12,22 2,12" />
-      </svg>
-    )
-  },
-  {
-    type: 'pentagon',
-    label: 'Pentagon',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="12,2 22,9 18,22 6,22 2,9" />
-      </svg>
-    )
-  },
-  {
-    type: 'hexagon',
-    label: 'Hexagon',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="12,2 21,7 21,17 12,22 3,17 3,7" />
-      </svg>
-    )
-  },
-  {
-    type: 'octagon',
-    label: 'Octagon',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="8,2 16,2 22,8 22,16 16,22 8,22 2,16 2,8" />
-      </svg>
-    )
-  },
-  {
-    type: 'star',
-    label: 'Star',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="12,2 15,9 22,9 16,14 18,21 12,17 6,21 8,14 2,9 9,9" />
-      </svg>
-    )
-  },
-  {
-    type: 'arrow',
-    label: 'Arrow',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="3,9 14,9 14,4 22,12 14,20 14,15 3,15" />
-      </svg>
-    )
-  },
-  {
-    type: 'arrow4',
-    label: 'Double Arrow',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="2,12 8,6 8,10 16,10 16,6 22,12 16,18 16,14 8,14 8,18" />
-      </svg>
-    )
-  },
-  {
-    type: 'cross',
-    label: 'Cross',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="9,2 15,2 15,9 22,9 22,15 15,15 15,22 9,22 9,15 2,15 2,9 9,9" />
-      </svg>
-    )
-  },
-  {
-    type: 'pill',
-    label: 'Pill',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <rect x="2" y="5" width="20" height="14" rx="7" />
-      </svg>
-    )
-  },
-  {
-    type: 'parallelogram',
-    label: 'Parallelogram',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current">
-        <polygon points="7,4 22,4 17,20 2,20" />
-      </svg>
-    )
-  },
-  {
-    type: 'line',
-    label: 'Divider Line',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5">
-        <line x1="2" y1="12" x2="22" y2="12" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
-      </svg>
-    )
-  },
-  {
-    type: 'curved-line',
-    label: 'Curved Line',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path d="M 3 17 C 8 7, 16 21, 21 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-        <circle cx="3" cy="17" r="2.5" fill="currentColor" />
-        <circle cx="21" cy="7" r="2.5" fill="currentColor" />
-      </svg>
-    )
-  },
-  {
-    type: 'elbow-line',
-    label: 'Elbow Line',
-    icon: (
-      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none">
-        <path d="M 3 18 H 12 V 6 H 21" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx="3" cy="18" r="2.5" fill="currentColor" />
-        <circle cx="21" cy="6" r="2.5" fill="currentColor" />
-      </svg>
-    )
-  }
-];
-
-function applyElementFill(obj: any, fill: string | undefined, w: number, h: number) {
-  const isLineType = obj.shapeType === 'line' ||
-    obj.shapeType === 'curved-line' ||
-    obj.shapeType === 'elbow-line' ||
-    obj.type === 'line' ||
-    obj.constructor?.name === 'HorizontalLineShape' ||
-    obj.constructor?.name === 'CurvedLineShape' ||
-    obj.constructor?.name === 'ElbowLineShape' ||
-    obj.isDivider === true;
-
-  if (!fill) {
-    obj.set('fill', '#ffffff');
-    if (isLineType) obj.set('stroke', '#cbd5e1');
-    return;
-  }
-  const parsed = parseGradient(fill, w, h);
-  if (parsed) {
-    const gradient = new Gradient({
-      type: 'linear',
-      gradientUnits: 'pixels',
-      coords: parsed.coords,
-      colorStops: parsed.stops,
-    });
-    obj.set('fill', gradient);
-  } else {
-    obj.set('fill', fill);
-  }
-
-  if (isLineType) {
-    const strokeVal = fill && !fill.includes('gradient') ? fill : '#cbd5e1';
-    obj.set('stroke', strokeVal);
-  }
-}
-
-const PRESET_HEADER_THEMES = [
-  {
-    id: 'preset-corp-split',
-    name: 'Corporate Minimal Split',
-    category: 'Corporate',
-    height: 113.4, // ~30mm
-    backgroundColor: '#ffffff',
-    elements: [
-      {
-        id: 'corp-line',
-        type: 'shape' as const,
-        shapeType: 'rect' as const,
-        x: 38,
-        y: 105,
-        width: 718,
-        height: 1.5,
-        fill: '#cbd5e1',
-        zIndex: 1,
-        rotation: 0,
-        opacity: 1
-      },
-      {
-        id: 'corp-left',
-        type: 'text' as const,
-        x: 38,
-        y: 40,
-        width: 380,
-        height: 30,
-        text: '{{catalog_name}}',
-        fontSize: 16,
-        fontWeight: 'bold',
-        fontFamily: 'Inter',
-        fill: '#0f172a',
-        letterSpacing: 1,
-        textAlign: 'left' as const,
-        zIndex: 2,
-        rotation: 0,
-        opacity: 1
-      },
-      {
-        id: 'corp-right',
-        type: 'text' as const,
-        x: 420,
-        y: 45,
-        width: 336,
-        height: 24,
-        text: '{{category_name}} // 2026',
-        fontSize: 11,
-        fontWeight: '600',
-        fontFamily: 'Inter',
-        fill: '#64748b',
-        letterSpacing: 1.5,
-        textAlign: 'right' as const,
-        zIndex: 2,
-        rotation: 0,
-        opacity: 1
-      }
-    ]
-  },
-  {
-    id: 'preset-dark-ribbon',
-    name: 'Industrial Dark Ribbon',
-    category: 'Industrial',
-    height: 120, // ~32mm
-    backgroundColor: '#0f172a',
-    elements: [
-      {
-        id: 'ribbon-accent',
-        type: 'shape' as const,
-        shapeType: 'rect' as const,
-        x: 0,
-        y: 116,
-        width: 794,
-        height: 4,
-        fill: '#0ea5e9',
-        zIndex: 1,
-        rotation: 0,
-        opacity: 1
-      },
-      {
-        id: 'ribbon-title',
-        type: 'text' as const,
-        x: 38,
-        y: 42,
-        width: 460,
-        height: 32,
-        text: '{{catalog_name}} // COLLECTION',
-        fontSize: 15,
-        fontWeight: '900',
-        fontFamily: 'Montserrat',
-        fill: '#ffffff',
-        letterSpacing: 2,
-        textAlign: 'left' as const,
-        zIndex: 2,
-        rotation: 0,
-        opacity: 1
-      },
-      {
-        id: 'ribbon-url',
-        type: 'text' as const,
-        x: 500,
-        y: 48,
-        width: 256,
-        height: 24,
-        text: 'PAGE {{page}}',
-        fontSize: 12,
-        fontWeight: 'bold',
-        fontFamily: 'Inter',
-        fill: '#38bdf8',
-        letterSpacing: 1.5,
-        textAlign: 'right' as const,
-        zIndex: 2,
-        rotation: 0,
-        opacity: 1
-      }
-    ]
-  },
-  {
-    id: 'preset-luxury-gold',
-    name: 'Luxury Emerald & Gold',
-    category: 'Luxury',
-    height: 125, // ~33mm
-    backgroundColor: '#081c1c',
-    elements: [
-      {
-        id: 'gold-line-top',
-        type: 'shape' as const,
-        shapeType: 'rect' as const,
-        x: 38,
-        y: 20,
-        width: 718,
-        height: 1,
-        fill: 'linear-gradient(90deg, #d4af37, #fef08a, #d4af37)',
-        zIndex: 1,
-        rotation: 0,
-        opacity: 0.8
-      },
-      {
-        id: 'gold-line-bottom',
-        type: 'shape' as const,
-        shapeType: 'rect' as const,
-        x: 38,
-        y: 110,
-        width: 718,
-        height: 1.5,
-        fill: 'linear-gradient(90deg, #d4af37, #fef08a, #d4af37)',
-        zIndex: 1,
-        rotation: 0,
-        opacity: 0.9
-      },
-      {
-        id: 'gold-title',
-        type: 'text' as const,
-        x: 38,
-        y: 48,
-        width: 718,
-        height: 36,
-        text: '— {{catalog_name}} —',
-        fontSize: 16,
-        fontWeight: 'bold',
-        fontFamily: 'Playfair Display',
-        fill: '#fef08a',
-        letterSpacing: 4,
-        textAlign: 'center' as const,
-        zIndex: 2,
-        rotation: 0,
-        opacity: 1
-      }
-    ]
-  },
-  {
-    id: 'preset-editorial-minimal',
-    name: 'Editorial Minimalist',
-    category: 'Minimal',
-    height: 100, // ~26mm
-    backgroundColor: '#fafafa',
-    elements: [
-      {
-        id: 'edit-line',
-        type: 'shape' as const,
-        shapeType: 'rect' as const,
-        x: 50,
-        y: 92,
-        width: 694,
-        height: 1,
-        fill: '#e2e8f0',
-        zIndex: 1,
-        rotation: 0,
-        opacity: 1
-      },
-      {
-        id: 'edit-title',
-        type: 'text' as const,
-        x: 50,
-        y: 35,
-        width: 694,
-        height: 28,
-        text: '{{category_name}}',
-        fontSize: 13,
-        fontWeight: 'bold',
-        fontFamily: 'Inter',
-        fill: '#475569',
-        letterSpacing: 3,
-        textAlign: 'center' as const,
-        zIndex: 2,
-        rotation: 0,
-        opacity: 1
-      }
-    ]
-  }
-];
-
-const CANVAS_PAD_X = 80;
-const CANVAS_PAD_Y = 80;
+import {
+  CANVAS_PAD_X,
+  CANVAS_PAD_Y,
+  toMm,
+  toPx,
+  applyElementFill
+} from './HeaderDesigner/constants';
+import { HeaderTopBar } from './HeaderDesigner/HeaderTopBar';
+import { HeaderLeftSidebar } from './HeaderDesigner/HeaderLeftSidebar';
+import { HeaderCanvasStage } from './HeaderDesigner/HeaderCanvasStage';
+import { HeaderRightSidebar } from './HeaderDesigner/HeaderRightSidebar';
 
 export const HeaderDesignerModal: React.FC = () => {
   const {
@@ -469,32 +54,6 @@ export const HeaderDesignerModal: React.FC = () => {
   const [savedSuccess, setSavedSuccess] = useState<boolean>(false);
   const [appliedSuccess, setAppliedSuccess] = useState<boolean>(false);
 
-  const [activeColorMenu, setActiveColorMenu] = useState<'text' | 'shape' | null>(null);
-  const colorMenuRef = useRef<HTMLDivElement>(null);
-
-  const [isFontMenuOpen, setIsFontMenuOpen] = useState<boolean>(false);
-  const [fontSearch, setFontSearch] = useState<string>('');
-  const fontMenuRef = useRef<HTMLDivElement>(null);
-
-  // Close floating popovers on outside click
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (colorMenuRef.current && !colorMenuRef.current.contains(e.target as Node)) {
-        setActiveColorMenu(null);
-      }
-      if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) {
-        setIsFontMenuOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const filteredFonts = CATEGORIZED_FONTS.map(group => ({
-    ...group,
-    fonts: group.fonts.filter(f => f.toLowerCase().includes(fontSearch.toLowerCase()))
-  })).filter(group => group.fonts.length > 0);
-
   // File upload input ref for custom logos
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -502,14 +61,10 @@ export const HeaderDesignerModal: React.FC = () => {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const fabricCanvasRef = useRef<Canvas | null>(null);
 
-  const toMm = (px: number) => Math.round(px / PX_PER_MM);
-  const toPx = (mm: number) => Math.round(mm * PX_PER_MM);
-
   // Initialize from editing template or current catalog header or default preset
   useEffect(() => {
     if (!isHeaderDesignerOpen) return;
 
-    // Refresh saved header templates on opening modal
     fetchSystemTemplates();
 
     if (editingHeaderTemplate) {
@@ -612,10 +167,7 @@ export const HeaderDesignerModal: React.FC = () => {
     setSelectedId(newId);
   };
 
-  // ─────────────────────────────────────────────────────────────
   // Layer Ordering & Arranging Helpers
-  // ─────────────────────────────────────────────────────────────
-  // In elements array: index 0 is Bottom (back), index (N-1) is Top (front)
   const bringToFront = (id: string) => {
     pushHistory();
     setElements(prev => {
@@ -666,8 +218,6 @@ export const HeaderDesignerModal: React.FC = () => {
     });
   };
 
-  const [draggedLayerId, setDraggedLayerId] = useState<string | null>(null);
-
   const reorderLayer = (draggedId: string, targetId: string) => {
     if (draggedId === targetId) return;
     pushHistory();
@@ -682,9 +232,7 @@ export const HeaderDesignerModal: React.FC = () => {
     });
   };
 
-  // ─────────────────────────────────────────────────────────────
   // Fabric Canvas Lifecycle & Synchronization
-  // ─────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!canvasElRef.current || !isHeaderDesignerOpen) return;
 
@@ -702,7 +250,6 @@ export const HeaderDesignerModal: React.FC = () => {
     canvas.setZoom(zoom);
     fabricCanvasRef.current = canvas;
 
-    // Selection listeners
     canvas.on('selection:created', (e: any) => {
       const active = canvas.getActiveObject();
       if (active) {
@@ -727,7 +274,6 @@ export const HeaderDesignerModal: React.FC = () => {
       setSelectedId(null);
     });
 
-    // Inline text changes listener
     canvas.on('text:changed', (e: any) => {
       const obj = e.target as any;
       if (obj && obj.id) {
@@ -741,7 +287,6 @@ export const HeaderDesignerModal: React.FC = () => {
       }
     });
 
-    // Object modified (dragged, scaled, rotated)
     canvas.on('object:modified', (e: any) => {
       const obj = e.target as any;
       if (!obj || !obj.id) return;
@@ -756,7 +301,6 @@ export const HeaderDesignerModal: React.FC = () => {
         obj.id.startsWith('hdr-shape') && elObj?.shapeType === 'line'
       )) || elObj?.shapeType === 'line' || obj.isDivider === true;
 
-      // For lines/dividers with center origin, calculate top-left element coordinate for standard rendering
       let posX = Math.round((obj.left || 0) - CANVAS_PAD_X);
       let posY = Math.round((obj.top || 0) - CANVAS_PAD_Y);
 
@@ -872,7 +416,6 @@ export const HeaderDesignerModal: React.FC = () => {
       const activeObj = canvas?.getActiveObject() as any;
       const isEditingText = isInput || (activeObj && activeObj.isEditing);
 
-      // 1. While editing text, only allow inline formatting shortcuts
       if (isEditingText) {
         if (isMod) {
           if (['b', 'B'].includes(e.key)) { e.preventDefault(); document.execCommand('bold'); return; }
@@ -882,7 +425,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 2. Undo / Redo
       if (isMod && (e.key === 'z' || e.key === 'Z')) {
         e.preventDefault();
         if (e.shiftKey) handleRedo(); else handleUndo();
@@ -894,7 +436,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 3. Deselect element (Escape & NumpadEnter)
       if (e.code === 'NumpadEnter' || e.key === 'Escape') {
         e.preventDefault();
         setSelectedId(null);
@@ -906,7 +447,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 4. Zoom shortcuts
       if (isMod && (e.key === '=' || e.key === '+')) {
         e.preventDefault();
         setZoom(prev => Math.min(3, Math.round((prev + 0.1) * 10) / 10));
@@ -923,7 +463,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 5. Duplicate (Ctrl+D)
       if (isMod && (e.key === 'd' || e.key === 'D')) {
         e.preventDefault();
         const currId = selectedIdRef.current || activeObj?.id;
@@ -933,7 +472,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 6. Copy (Ctrl+C) & Paste (Ctrl+V)
       if (isMod && (e.key === 'c' || e.key === 'C')) {
         const currId = selectedIdRef.current || activeObj?.id;
         const target = elementsRef.current.find(el => el.id === currId);
@@ -961,7 +499,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 7. Select All (Ctrl+A)
       if (isMod && (e.key === 'a' || e.key === 'A')) {
         if (elementsRef.current.length > 0) {
           e.preventDefault();
@@ -970,7 +507,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 8. Text Formatting on Selected Element (Ctrl+B, Ctrl+I, Ctrl+U)
       if (isMod && (e.key === 'b' || e.key === 'B')) {
         const currId = selectedIdRef.current || activeObj?.id;
         const el = elementsRef.current.find(item => item.id === currId);
@@ -1003,7 +539,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 9. Layer Reordering (Ctrl+] and Ctrl+[)
       if (isMod && (e.key === ']' || e.key === '}')) {
         const currId = selectedIdRef.current || activeObj?.id;
         if (currId) {
@@ -1023,7 +558,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 10. Delete (Backspace / Delete)
       if (e.key === 'Backspace' || e.key === 'Delete') {
         const currId = selectedIdRef.current || activeObj?.id;
         if (currId) {
@@ -1033,7 +567,6 @@ export const HeaderDesignerModal: React.FC = () => {
         return;
       }
 
-      // 11. Arrow Keys Nudge
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
         const currId = selectedIdRef.current || activeObj?.id;
         if (!currId) return;
@@ -1090,7 +623,6 @@ export const HeaderDesignerModal: React.FC = () => {
       const existing = canvas.getObjects() as any[];
       const elIds = new Set(elements.map(el => el.id));
 
-      // Remove deleted objects
       existing.forEach(obj => {
         if (obj.id && !elIds.has(obj.id)) {
           canvas.remove(obj);
@@ -1098,157 +630,128 @@ export const HeaderDesignerModal: React.FC = () => {
       });
 
       const existingMap = new Map<string, any>();
-      canvas.getObjects().forEach((o: any) => {
-        if (o.id) existingMap.set(o.id, o);
+      existing.forEach(obj => {
+        if (obj.id) existingMap.set(obj.id, obj);
       });
 
       for (const el of elements) {
         if (!isSubscribed) return;
-        let fabricObj = existingMap.get(el.id);
+        const obj = existingMap.get(el.id);
 
-        if (fabricObj) {
-          const isActiveObj = canvas.getActiveObjects().includes(fabricObj);
-
-          if (!isActiveObj) {
-            if (el.type === 'image' || fabricObj instanceof FabricImage || fabricObj.type === 'image') {
-              const natW = (fabricObj as any)._element?.naturalWidth || (fabricObj as any)._originalElement?.naturalWidth || (fabricObj as any).naturalWidth || fabricObj.width || el.width;
-              const natH = (fabricObj as any)._element?.naturalHeight || (fabricObj as any)._originalElement?.naturalHeight || (fabricObj as any).naturalHeight || fabricObj.height || el.height;
-              fabricObj.set({
-                left: el.x + CANVAS_PAD_X,
-                top: el.y + CANVAS_PAD_Y,
-                scaleX: el.width / (natW || 1),
-                scaleY: el.height / (natH || 1),
-                angle: el.rotation || 0,
-                opacity: el.opacity ?? 1,
-                originX: 'left',
-                originY: 'top',
-              });
-            } else {
-              fabricObj.set({
-                left: el.x + CANVAS_PAD_X,
-                top: el.y + CANVAS_PAD_Y,
-                width: el.width,
-                height: el.height,
-                angle: el.rotation || 0,
-                scaleX: 1,
-                scaleY: 1,
-              });
-
-              if (el.type === 'shape') {
-                if (el.shapeType === 'circle' && fabricObj instanceof Circle) {
-                  fabricObj.set({ radius: Math.min(el.width, el.height) / 2 });
-                } else if (el.shapeType && fabricObj.points) {
-                  const pts = getPolyPoints(el.shapeType, el.width, el.height);
-                  if (pts && pts.length >= 3) {
-                    fabricObj.set({ points: pts });
-                  }
-                }
-              } else if (fabricObj instanceof Group) {
-                const unscaledW = (fabricObj as any).width || 1;
-                const unscaledH = (fabricObj as any).height || 1;
-                fabricObj.set({
-                  scaleX: el.width / unscaledW,
-                  scaleY: el.height / unscaledH,
-                });
-              }
-            }
-          }
-
-          fabricObj.set({
+        if (obj) {
+          obj.set({
+            left: (el.x || 0) + CANVAS_PAD_X,
+            top: (el.y || 0) + CANVAS_PAD_Y,
+            angle: el.rotation || 0,
             opacity: el.opacity ?? 1,
-            zIndex: el.zIndex || 0,
+            visible: el.visible !== false,
           });
 
-          if (el.type === 'text' && fabricObj instanceof IText) {
-            fabricObj.set({
+          if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
+            obj.set({
               text: el.text || '',
-              fontSize: el.fontSize || 14,
+              fontSize: el.fontSize || 16,
               fontFamily: el.fontFamily || 'Inter',
               fontWeight: el.fontWeight || 'normal',
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
-              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 14)) * 1000) : 0
+              underline: el.textDecoration?.includes('underline') || false,
             });
-            applyElementFill(fabricObj, el.fill || '#000000', el.width, el.height);
-          } else if (el.type === 'shape') {
-            applyElementFill(fabricObj, el.fill || '#0F3D3E', el.width, el.height);
-            fabricObj.set({
-              stroke: el.stroke,
-              strokeWidth: el.strokeWidth || 0
-            });
+            applyElementFill(obj, el.fill, el.width, el.height);
+            if (typeof (obj as any).initDimensions === 'function') (obj as any).initDimensions();
+          } else if (obj.type === 'image' || obj instanceof FabricImage) {
+            applyCanvaSelectionStyle(obj);
+          } else {
+            applyElementFill(obj, el.fill, el.width, el.height);
           }
-          fabricObj.setCoords();
+          obj.setCoords();
         } else {
-          // Create new Fabric object
+          let newObj: any = null;
+
           if (el.type === 'text') {
-            fabricObj = new IText(el.text || 'Header Text', {
-              left: el.x + CANVAS_PAD_X,
-              top: el.y + CANVAS_PAD_Y,
-              width: el.width,
-              fontSize: el.fontSize || 14,
+            newObj = new IText(el.text || 'Header Text', {
+              left: (el.x || 0) + CANVAS_PAD_X,
+              top: (el.y || 0) + CANVAS_PAD_Y,
+              fontSize: el.fontSize || 16,
               fontFamily: el.fontFamily || 'Inter',
               fontWeight: el.fontWeight || 'normal',
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
-              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 14)) * 1000) : 0,
+              underline: el.textDecoration?.includes('underline') || false,
+              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 16)) * 1000) : 0,
               angle: el.rotation || 0,
               opacity: el.opacity ?? 1,
               originX: 'left',
               originY: 'top',
-              editable: true
+              objectCaching: false,
             });
-            applyElementFill(fabricObj, el.fill || '#000000', el.width, el.height);
+            applyElementFill(newObj, el.fill, el.width, el.height);
           } else if (el.type === 'shape') {
-            fabricObj = buildShape(
-              el.shapeType || 'rect',
-              el.width,
-              el.height,
-              el.stroke,
-              el.strokeWidth || 0,
-              el.fill || '#0F3D3E',
-              '#0F3D3E'
-            );
-            if (fabricObj) {
-              fabricObj.set({
-                left: el.x + CANVAS_PAD_X,
-                top: el.y + CANVAS_PAD_Y,
+            const isStraightLine = el.shapeType === 'line';
+            const isCurvedLine = el.shapeType === 'curved-line';
+            const isElbowLine = el.shapeType === 'elbow-line';
+            const isLineAny = isStraightLine || isCurvedLine || isElbowLine;
+
+            const shapeProps = {
+              left: (el.x || 0) + CANVAS_PAD_X,
+              top: (el.y || 0) + CANVAS_PAD_Y,
+              width: el.width,
+              height: el.height,
+              angle: el.rotation || 0,
+              opacity: el.opacity ?? 1,
+              originX: 'left' as const,
+              originY: 'top' as const,
+              objectCaching: false,
+            };
+
+            const shapeFill = el.fill || '#0F3D3E';
+            const shapeStroke = el.stroke || (isLineAny ? shapeFill : undefined);
+            const shapeStrokeWidth = el.strokeWidth !== undefined ? el.strokeWidth : (isLineAny ? 2.5 : 0);
+
+            newObj = new Rect({
+              ...shapeProps,
+              rx: el.shapeType === 'roundedRect' ? 6 : el.shapeType === 'pill' ? 12 : (el.rx || 0),
+              ry: el.shapeType === 'roundedRect' ? 6 : el.shapeType === 'pill' ? 12 : (el.ry || 0),
+              stroke: shapeStroke,
+              strokeWidth: shapeStrokeWidth,
+            });
+            applyElementFill(newObj, shapeFill, el.width, el.height);
+          } else if (el.type === 'image' && el.src) {
+            try {
+              const htmlImg = new Image();
+              htmlImg.crossOrigin = 'anonymous';
+              await new Promise<void>((resolve, reject) => {
+                htmlImg.onload = () => resolve();
+                htmlImg.onerror = () => reject();
+                htmlImg.src = el.src!;
+              });
+
+              newObj = new FabricImage(htmlImg, {
+                left: (el.x || 0) + CANVAS_PAD_X,
+                top: (el.y || 0) + CANVAS_PAD_Y,
+                width: htmlImg.naturalWidth || el.width,
+                height: htmlImg.naturalHeight || el.height,
+                scaleX: el.width / (htmlImg.naturalWidth || 1),
+                scaleY: el.height / (htmlImg.naturalHeight || 1),
                 angle: el.rotation || 0,
                 opacity: el.opacity ?? 1,
                 originX: 'left',
                 originY: 'top',
+                objectCaching: false,
               });
-              applyElementFill(fabricObj, el.fill || '#0F3D3E', el.width, el.height);
-              applyCanvaSelectionStyle(fabricObj);
-            }
-          } else if (el.type === 'image' && el.src) {
-            try {
-              fabricObj = await FabricImage.fromURL(el.src, { crossOrigin: 'anonymous' });
-              const natW = (fabricObj as any)._element?.naturalWidth || (fabricObj as any)._originalElement?.naturalWidth || (fabricObj as any).naturalWidth || fabricObj.width || el.width;
-              const natH = (fabricObj as any)._element?.naturalHeight || (fabricObj as any)._originalElement?.naturalHeight || (fabricObj as any).naturalHeight || fabricObj.height || el.height;
-              fabricObj.set({
-                left: el.x + CANVAS_PAD_X,
-                top: el.y + CANVAS_PAD_Y,
-                scaleX: el.width / (natW || 1),
-                scaleY: el.height / (natH || 1),
-                angle: el.rotation || 0,
-                opacity: el.opacity ?? 1,
-                originX: 'left',
-                originY: 'top'
-              });
-            } catch (err) {
-              console.warn('Failed to load image in header designer', err);
+            } catch (imgErr) {
+              console.warn('Failed to load logo on header canvas:', imgErr);
             }
           }
 
-          if (fabricObj) {
-            fabricObj.id = el.id;
-            applyCanvaSelectionStyle(fabricObj);
-            canvas.add(fabricObj);
+          if (newObj) {
+            newObj.id = el.id;
+            applyCanvaSelectionStyle(newObj);
+            canvas.add(newObj);
           }
         }
       }
 
-      // Sort canvas objects strictly in the order of elements array
       const orderMap = new Map(elements.map((el, i) => [el.id, i]));
       (canvas as any)._objects.sort((a: any, b: any) => {
         const orderA = orderMap.has(a.id) ? orderMap.get(a.id)! : 0;
@@ -1288,10 +791,8 @@ export const HeaderDesignerModal: React.FC = () => {
     }
   }, [selectedId]);
 
-  // ─────────────────────────────────────────────────────────────
   // Element Insertion Handlers
-  // ─────────────────────────────────────────────────────────────
-  const addTextElement = (text: string, fontSize = 14, fontWeight = 'normal', isTag = false) => {
+  const addTextElement = (text = 'Header Text', fontSize = 14, fontWeight = 'normal', isTag = false) => {
     const newId = `hdr-txt-${Date.now()}`;
     const newEl: CanvasElement = {
       id: newId,
@@ -1408,65 +909,7 @@ export const HeaderDesignerModal: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  // ─────────────────────────────────────────────────────────────
-  // Save & Apply Actions
-  // ─────────────────────────────────────────────────────────────
-  const handleSaveTheme = async () => {
-    setIsSaving(true);
-    try {
-      const canvas = fabricCanvasRef.current;
-      const canvasObjects = canvas ? canvas.getObjects() : [];
-      const syncedElements = elements.map(el => {
-        const liveObj = canvasObjects.find((o: any) => o.id === el.id);
-        let effectiveW = el.width;
-        let effectiveH = el.height;
-        if (liveObj) {
-          effectiveW = Math.round(liveObj.getScaledWidth ? liveObj.getScaledWidth() : (liveObj.width || el.width));
-          effectiveH = Math.round(liveObj.getScaledHeight ? liveObj.getScaledHeight() : (liveObj.height || el.height));
-        }
-        return {
-          ...el,
-          width: effectiveW,
-          height: effectiveH
-        };
-      });
-
-      const templateData = {
-        name: templateName.trim() || 'Custom Header',
-        category: category.trim() || 'Custom',
-        type: 'header' as const,
-        description: description || `Custom header theme with ${syncedElements.length} elements`,
-        pages_data: [
-          {
-            height: headerHeight,
-            backgroundColor: headerBg,
-            elements: syncedElements
-          }
-        ],
-        is_active: true
-      };
-
-      let res;
-      if (editingHeaderTemplate && (editingHeaderTemplate.id || editingHeaderTemplate.uuid)) {
-        res = await updateSystemTemplate(editingHeaderTemplate.id || editingHeaderTemplate.uuid, templateData);
-      } else {
-        res = await createSystemTemplate(templateData);
-      }
-
-      if (res) {
-        await fetchSystemTemplates();
-        setSavedSuccess(true);
-        setTimeout(() => setSavedSuccess(false), 3000);
-      }
-    } catch (err) {
-      console.error('Failed to save header theme:', err);
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleApplyToCatalog = () => {
-    // Apply directly to open catalog
     updateProjectSettings({
       hasHeader: true,
       headerHeight: headerHeight
@@ -1523,1369 +966,102 @@ export const HeaderDesignerModal: React.FC = () => {
     setAppliedSuccess(true);
     setTimeout(() => setAppliedSuccess(false), 2500);
 
-    // Auto-save the catalog to backend so browser refresh preserves the applied header!
     setTimeout(() => {
       saveCatalog().catch(err => console.warn('Auto-saving catalog after applying header:', err));
     }, 150);
   };
 
-
   if (!isHeaderDesignerOpen) return null;
 
   return (
-    <div className={`fixed inset-0 z-[9999] flex flex-col font-sans select-none animate-in fade-in duration-200 transition-colors ${isDark ? 'bg-[#0b0b0c] text-white' : 'bg-slate-100 text-slate-800'
-      }`}>
-
+    <div className={`fixed inset-0 z-[9999] flex flex-col font-sans select-none animate-in fade-in duration-200 transition-colors ${
+      isDark ? 'bg-[#0b0b0c] text-white' : 'bg-slate-100 text-slate-800'
+    }`}>
       {/* ── Top Header Navigation Bar ────────────────────────────── */}
-      <div className={`h-16 px-5 border-b flex items-center justify-between shrink-0 shadow-lg transition-colors ${isDark ? 'bg-[#121214] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
-        }`}>
-        <div className="flex items-center gap-3.5">
-          {/* Back to Project Button */}
-          <button
-            onClick={() => setIsHeaderDesignerOpen(false)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-[6px] border transition-all shadow-sm group ${isDark
-              ? 'bg-[#1a1a1c] hover:bg-[#252528] text-white border-[#38383c] hover:border-[#E2DCC8]/50'
-              : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 hover:border-[#0F3D3E]/50'
-              }`}
-            title="Back to Catalog Project"
-          >
-            <ArrowLeft size={16} className={`${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} group-hover:-translate-x-0.5 transition-transform`} />
-            <span className={`text-xs font-bold ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Back to Project</span>
-          </button>
-
-          <div className={`h-6 w-px ${isDark ? 'bg-[#28282c]' : 'bg-slate-200'}`} />
-
-          <div className="w-10 h-10 rounded-[6px] bg-gradient-to-br from-[#0F3D3E] to-[#100F0F] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-md shrink-0">
-            <Layout size={20} />
-          </div>
-
-          <div>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={templateName}
-                onChange={(e) => setTemplateName(e.target.value)}
-                className={`bg-transparent border-b border-transparent text-base font-black px-1 py-0.5 outline-none transition-all w-64 md:w-80 ${isDark
-                  ? 'text-white hover:border-[#E2DCC8]/40 focus:border-[#E2DCC8] placeholder:text-gray-500'
-                  : 'text-slate-900 hover:border-[#0F3D3E]/40 focus:border-[#0F3D3E] placeholder:text-slate-400'
-                  }`}
-                placeholder="Header Theme Name..."
-              />
-              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${isDark
-                ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
-                : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
-                }`}>
-                Header Studio
-              </span>
-            </div>
-            <div className={`flex items-center gap-3 text-xs mt-0.5 pl-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-              <span>Width: <strong className={isDark ? 'text-slate-300' : 'text-slate-700'}>794px</strong> (Catalog Width)</span>
-              <span>•</span>
-              <span>Height: <strong className={isDark ? 'text-slate-300' : 'text-slate-700'}>{Math.round(headerHeight)}px</strong> ({toMm(headerHeight)}mm)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Action Controls in Top Bar */}
-        <div className="flex items-center gap-2.5">
-          {/* Height Adjuster Pill */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-[6px] border ${isDark ? 'bg-[#18181b] border-[#2a2a2e]' : 'bg-slate-50 border-slate-300'
-            }`}>
-            <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Height</span>
-            <input
-              type="range"
-              min={15}
-              max={60}
-              step={1}
-              value={Math.max(15, Math.min(60, toMm(headerHeight) >= 15 ? toMm(headerHeight) : 30))}
-              onChange={(e) => setHeaderHeight(toPx(Number(e.target.value)))}
-              className={`w-20 h-1.5 rounded-full appearance-none cursor-pointer accent-[#0F3D3E] ${isDark ? 'bg-[#333333]' : 'bg-slate-300'
-                }`}
-            />
-            <span className={`text-xs font-bold w-10 text-right font-mono ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-              {Math.max(15, Math.min(60, toMm(headerHeight) >= 15 ? toMm(headerHeight) : 30))}mm
-            </span>
-          </div>
-
-          {/* Apply to Catalog Button */}
-          <button
-            onClick={handleApplyToCatalog}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-cyan-950/40"
-            title="Apply this designed header directly to the currently opened catalog"
-          >
-            {appliedSuccess ? (
-              <>
-                <CheckCircle2 size={15} className="text-emerald-300" />
-                <span className="text-emerald-300">Applied to Catalog!</span>
-              </>
-            ) : (
-              <>
-                <Sparkles size={15} className="text-[#E2DCC8]" />
-                <span>Apply to Catalog</span>
-              </>
-            )}
-          </button>
-
-          {/* Close Studio Button */}
-          <button
-            onClick={() => setIsHeaderDesignerOpen(false)}
-            className={`p-2 rounded-[6px] border transition-colors ml-1 ${isDark
-              ? 'bg-[#18181b] hover:bg-[#26262a] border-[#2a2a2e] text-[#888888] hover:text-white'
-              : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-600 hover:text-slate-900'
-              }`}
-            title="Close Header Designer"
-          >
-            <X size={18} />
-          </button>
-        </div>
-      </div>
+      <HeaderTopBar
+        isDark={isDark}
+        templateName={templateName}
+        setTemplateName={setTemplateName}
+        headerHeight={headerHeight}
+        setHeaderHeight={setHeaderHeight}
+        handleApplyToCatalog={handleApplyToCatalog}
+        appliedSuccess={appliedSuccess}
+        onClose={() => setIsHeaderDesignerOpen(false)}
+      />
 
       {/* ── Main Workspace Body ───────────────────────────────────── */}
       <div className="flex-1 flex overflow-hidden">
-
         {/* Left Sidebar Tools */}
-        <div className={`w-80 border-r flex flex-col shrink-0 transition-colors ${isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
-          }`}>
-
-          {/* Sidebar Tab Selector */}
-          <div className={`grid grid-cols-5 p-2 gap-1 border-b transition-colors ${isDark ? 'border-[#262626] bg-[#101012]' : 'border-slate-200 bg-slate-50'
-            }`}>
-            {[
-              { id: 'text', label: 'Text', icon: Type },
-              { id: 'shapes', label: 'Shapes', icon: Square },
-              { id: 'media', label: 'Logos', icon: ImageIcon },
-              { id: 'background', label: 'Theme', icon: Palette },
-              { id: 'presets', label: 'Presets', icon: Sparkles }
-            ].map(tab => {
-              const Icon = tab.icon;
-              const isActive = activeTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as any)}
-                  className={`flex flex-col items-center justify-center py-2 rounded-[4px] text-[10px] font-bold transition-all ${isActive
-                    ? 'bg-[#0F3D3E] text-white shadow'
-                    : isDark
-                      ? 'text-[#888888] hover:text-white hover:bg-[#1a1a1c]'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                    }`}
-                >
-                  <Icon size={14} className="mb-1" />
-                  <span>{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Tab Content Area */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-
-            {/* TAB 1: TEXT & SMART DYNAMIC TAGS */}
-            {activeTab === 'text' && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Standard Text Elements
-                  </h4>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Add standard typography to your header.
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => addTextElement('CATALOG HEADER', 18, 'bold')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
-                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                        }`}
-                    >
-                      <span className={`block text-sm font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Headline</span>
-                      <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Bold title (18px)</span>
-                    </button>
-
-                    <button
-                      onClick={() => addTextElement('Subheading Text', 12, '600')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
-                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                        }`}
-                    >
-                      <span className={`block text-sm font-semibold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>Subtitle</span>
-                      <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Medium (12px)</span>
-                    </button>
-
-                    <button
-                      onClick={() => addTextElement('www.company.com', 10, 'normal')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
-                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                        }`}
-                    >
-                      <span className={`block text-sm ${isDark ? 'text-slate-300 group-hover:text-[#E2DCC8]' : 'text-slate-700 group-hover:text-[#0F3D3E]'}`}>Caption / URL</span>
-                      <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Light spec (10px)</span>
-                    </button>
-
-                    <button
-                      onClick={() => addTextElement('— EDITION 2026 —', 11, 'bold')}
-                      className={`p-3 border rounded-[6px] text-left transition-all group ${isDark
-                        ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                        : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                        }`}
-                    >
-                      <span className={`block text-sm font-bold tracking-widest ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Decorated</span>
-                      <span className={`text-[10px] ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>Centered dash</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Smart Dynamic Tags Group */}
-                <div className={`pt-2 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
-                  <div className="flex items-center gap-1.5 mb-1">
-                    <Tag size={13} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
-                    <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                      Smart Dynamic Tags
-                    </h4>
-                  </div>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    These tags auto-replace with each catalog's name, current page, and category!
-                  </p>
-
-                  <div className="space-y-1.5">
-                    {[
-                      { tag: '{{catalog_name}}', label: 'Catalog Title', desc: 'Auto replaces with catalog name' },
-                      { tag: '{{category_name}}', label: 'Category Name', desc: 'Current page category name' },
-                      { tag: '{{page_number}}', label: 'Current Page #', desc: 'Dynamic running page number' },
-                      { tag: '{{total_pages}}', label: 'Total Pages Count', desc: 'Total catalog page count' },
-                      { tag: '{{company_name}}', label: 'Company / Brand', desc: 'Store owner / company name' },
-                      { tag: '{{current_year}}', label: 'Current Year', desc: 'e.g. 2026' }
-                    ].map(item => (
-                      <button
-                        key={item.tag}
-                        onClick={() => addTextElement(item.tag, 11, '600', true)}
-                        className={`w-full p-2.5 border rounded-[6px] flex items-center justify-between transition-all group text-left ${isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#222226] border-[#2a2a2e] hover:border-[#E2DCC8]/40'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40'
-                          }`}
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold ${isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'}`}>{item.label}</span>
-                            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${isDark
-                              ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#E2DCC8]/20'
-                              : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
-                              }`}>
-                              {item.tag}
-                            </span>
-                          </div>
-                          <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#777]' : 'text-slate-500'}`}>{item.desc}</p>
-                        </div>
-                        <Plus size={14} className={isDark ? 'text-[#888] group-hover:text-white' : 'text-slate-400 group-hover:text-slate-900'} />
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 2: SHAPES & GEOMETRIC ELEMENTS */}
-            {activeTab === 'shapes' && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Geometric Shapes
-                  </h4>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Click to add shapes, badges, icons, and dividers to your header.
-                  </p>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    {HEADER_SHAPES.map((shape) => (
-                      <button
-                        key={shape.type}
-                        onClick={() => addShapeElement(shape.type)}
-                        className={`p-3 border rounded-[6px] flex flex-col items-center justify-center gap-2 transition-all group shadow-sm ${isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#2a2a2e] hover:border-[#E2DCC8]/40 hover:shadow-cyan-950/20'
-                          : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]/40 hover:shadow-slate-200'
-                          }`}
-                        title={`Add ${shape.label} shape`}
-                      >
-                        <div className={`w-9 h-9 rounded border flex items-center justify-center transition-colors ${isDark
-                          ? 'bg-[#121214] border-[#2e2e32] group-hover:border-[#E2DCC8]/50 text-[#E2DCC8]'
-                          : 'bg-white border-slate-300 group-hover:border-[#0F3D3E]/50 text-[#0F3D3E]'
-                          }`}>
-                          {shape.icon}
-                        </div>
-                        <span className={`text-[10px] font-bold transition-colors ${isDark ? 'text-slate-300 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
-                          }`}>
-                          {shape.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* TAB 3: LOGOS & MEDIA */}
-            {activeTab === 'media' && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Upload Brand Logo
-                  </h4>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Insert your company or brand logo directly into the header.
-                  </p>
-
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileUpload}
-                    accept="image/*"
-                    className="hidden"
-                  />
-
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`w-full flex items-center justify-center gap-2 py-3 rounded-[6px] text-xs font-bold transition-all shadow-sm ${isDark
-                      ? 'bg-gradient-to-r from-[#0F3D3E]/30 to-[#100F0F] hover:bg-[#0F3D3E]/50 border border-[#E2DCC8]/40 text-[#E2DCC8]'
-                      : 'bg-gradient-to-r from-[#0F3D3E]/10 to-slate-100 hover:bg-[#0F3D3E]/20 border border-[#0F3D3E]/30 text-[#0F3D3E]'
-                      }`}
-                  >
-                    <Upload size={15} />
-                    <span>Upload Logo Image</span>
-                  </button>
-                </div>
-
-                {/* Uploaded Media from store */}
-                <div className={`pt-2 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    From Media Library
-                  </h4>
-                  <p className={`text-[10px] mb-2 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Click any uploaded image to place it on the header.
-                  </p>
-
-                  {mediaItems && mediaItems.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto p-1 custom-scrollbar">
-                      {mediaItems.map(item => (
-                        <div
-                          key={item.id}
-                          onClick={() => addImageLogo(item.url)}
-                          className={`aspect-video border rounded cursor-pointer overflow-hidden p-1 flex items-center justify-center transition-all group ${isDark
-                            ? 'bg-[#18181a] border-[#2a2a2e] hover:border-[#E2DCC8]'
-                            : 'bg-slate-50 border-slate-200 hover:border-[#0F3D3E]'
-                            }`}
-                        >
-                          <img
-                            src={item.url}
-                            alt={item.name}
-                            className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className={`p-4 rounded-[6px] border border-dashed text-center ${isDark ? 'border-[#333] text-[#888]' : 'border-slate-300 text-slate-500'
-                      }`}>
-                      <ImageIcon size={20} className={`mx-auto mb-1 ${isDark ? 'text-[#666]' : 'text-slate-400'}`} />
-                      <p className="text-[11px]">No media assets yet.</p>
-                      <p className={`text-[9px] ${isDark ? 'text-[#666]' : 'text-slate-400'}`}>Upload your logo above.</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB 4: HEADER BACKGROUND & THEME */}
-            {activeTab === 'background' && (
-              <div className="space-y-4">
-                <div>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Header Strip Background
-                  </h4>
-                  <p className={`text-[11px] mb-3 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                    Solid color or linear gradient across the header strip.
-                  </p>
-
-                  {/* Current Background Preview */}
-                  <div
-                    onClick={() => {
-                      setColorPickerTarget('bg');
-                      setShowColorPicker(true);
-                    }}
-                    className={`p-3 rounded-[6px] border cursor-pointer transition-all flex items-center justify-between mb-3 ${isDark ? 'border-[#38383c] hover:border-[#E2DCC8]' : 'border-slate-300 hover:border-[#0F3D3E]'
-                      }`}
-                    style={{ background: headerBg }}
-                  >
-                    <span className="text-xs font-black px-2 py-1 bg-black/60 rounded text-white shadow">
-                      Current Background
-                    </span>
-                    <Palette size={16} className="text-white drop-shadow" />
-                  </div>
-
-                  {/* Palette Swatches */}
-                  <div className="grid grid-cols-5 gap-2 mb-3">
-                    {[
-                      '#ffffff', '#0f172a', '#081c1c', '#18181b', '#f8fafc',
-                      'linear-gradient(90deg, #0f172a, #1e293b)',
-                      'linear-gradient(90deg, #081c1c, #0f3d3e)',
-                      'linear-gradient(90deg, #4f46e5, #06b6d4)',
-                      'linear-gradient(90deg, #111827, #374151)',
-                      'linear-gradient(90deg, #312e81, #1e1b4b)'
-                    ].map((bg, idx) => (
-                      <button
-                        key={idx}
-                        onClick={() => setHeaderBg(bg)}
-                        className="h-7 rounded-[4px] border border-white/20 hover:scale-105 transition-all shadow-sm"
-                        style={{ background: bg }}
-                        title={bg}
-                      />
-                    ))}
-                  </div>
-
-                  {/* Advanced Color Picker Trigger */}
-                  <button
-                    onClick={() => {
-                      setColorPickerTarget('bg');
-                      setShowColorPicker(!showColorPicker);
-                    }}
-                    className={`w-full py-2 border rounded-[6px] text-xs font-bold flex items-center justify-center gap-2 transition-all ${isDark
-                      ? 'bg-[#1a1a1c] hover:bg-[#242428] border-[#333] text-[#E2DCC8]'
-                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
-                      }`}
-                  >
-                    <Palette size={14} />
-                    <span>{showColorPicker ? 'Hide Color Studio' : 'Open Color & Gradient Studio'}</span>
-                  </button>
-
-                  {showColorPicker && colorPickerTarget === 'bg' && (
-                    <div className={`p-3 border rounded-[6px] mt-2 animate-in fade-in ${isDark ? 'bg-[#18181a] border-[#333]' : 'bg-slate-50 border-slate-300'
-                      }`}>
-                      <AdvancedColorPicker
-                        color={headerBg}
-                        onChange={(newColor) => setHeaderBg(newColor)}
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className={`pt-2 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
-                  <h4 className={`text-xs font-black uppercase tracking-wider mb-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                    Category Tag
-                  </h4>
-                  <input
-                    type="text"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className={`w-full border text-xs p-2 rounded-[4px] outline-none transition-colors ${isDark
-                      ? 'bg-[#18181a] border-[#2a2a2e] focus:border-[#E2DCC8] text-white placeholder:text-gray-500'
-                      : 'bg-white border-slate-300 focus:border-[#0F3D3E] text-slate-900 placeholder:text-slate-400'
-                      }`}
-                    placeholder="e.g. Corporate, Luxury, Industrial"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* TAB 5: PRESETS / STARTERS & SAVED THEMES */}
-            {activeTab === 'presets' && (
-              <div className="space-y-4">
-                {/* Saved User Themes */}
-                {(() => {
-                  const savedHeaders = systemTemplates.filter(st => st.is_active && st.type === 'header');
-                  if (savedHeaders.length === 0) return null;
-
-                  return (
-                    <div className={`space-y-2.5 pb-3 border-b ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                      <div className="flex items-center justify-between">
-                        <h4 className={`text-xs font-black uppercase tracking-wider flex items-center gap-1.5 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                          <Sparkles size={12} className={isDark ? 'text-cyan-400' : 'text-[#0F3D3E]'} />
-                          <span>My Saved Header Themes</span>
-                        </h4>
-                        <span className="text-[10px] font-bold text-cyan-600 dark:text-cyan-400 bg-cyan-100 dark:bg-cyan-950/60 px-2 py-0.5 rounded-full border border-cyan-300 dark:border-cyan-800/40">
-                          {savedHeaders.length} Saved
-                        </span>
-                      </div>
-                      <p className={`text-[11px] ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>
-                        Themes you saved to database. Click to load into studio.
-                      </p>
-
-                      <div className="space-y-2 max-h-64 overflow-y-auto custom-scrollbar p-0.5">
-                        {savedHeaders.map(tmpl => {
-                          const pData = tmpl.pages_data?.[0];
-                          const bg = pData?.backgroundColor || '#ffffff';
-                          const h = pData?.height || 113.4;
-
-                          return (
-                            <div
-                              key={`saved-${tmpl.id || tmpl.uuid}`}
-                              onClick={() => {
-                                setTemplateName(tmpl.name);
-                                setCategory(tmpl.category || 'General');
-                                setDescription(tmpl.description || '');
-                                if (pData) {
-                                  setHeaderHeight(h);
-                                  setHeaderBg(bg);
-                                  setElements(JSON.parse(JSON.stringify(pData.elements || [])));
-                                }
-                                setSelectedId(null);
-                              }}
-                              className={`p-2.5 rounded-[6px] cursor-pointer transition-all group relative border ${isDark
-                                ? 'bg-[#17171a] hover:bg-[#202025] border-cyan-900/40 hover:border-cyan-500'
-                                : 'bg-white hover:bg-slate-50 border-slate-200 hover:border-cyan-600 shadow-sm'
-                                }`}
-                            >
-                              <div className="flex items-center justify-between mb-1">
-                                <span className={`text-xs font-bold truncate max-w-[150px] ${isDark ? 'text-white group-hover:text-cyan-300' : 'text-slate-900 group-hover:text-cyan-700'
-                                  }`}>
-                                  {tmpl.name}
-                                </span>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-mono font-bold ${isDark ? 'bg-cyan-950/80 text-cyan-400' : 'bg-cyan-50 text-cyan-700'
-                                    }`}>
-                                    {toMm(h)}mm
-                                  </span>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      if (confirm(`Delete saved header theme "${tmpl.name}"?`)) {
-                                        deleteSystemTemplate(tmpl.id || tmpl.uuid);
-                                      }
-                                    }}
-                                    className="p-1 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded transition-all"
-                                    title="Delete this saved theme"
-                                  >
-                                    <Trash2 size={11} />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Preview Mini Strip */}
-                              <div
-                                className="w-full h-7 rounded border border-black/10 my-1 flex items-center justify-between px-2.5 text-[9px] font-mono truncate"
-                                style={{ background: bg }}
-                              >
-                                <span className={bg === '#ffffff' || bg === '#fafafa' ? 'text-slate-800 font-bold' : 'text-white font-bold'}>
-                                  {tmpl.name.toUpperCase()}
-                                </span>
-                                <span className="text-[8px] text-slate-500">
-                                  {pData?.elements?.length || 0} items
-                                </span>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ── Center Editor Canvas Area ─────────────────────────────── */}
-        <div className={`flex-1 flex flex-col overflow-hidden relative transition-colors ${isDark ? 'bg-[#0e0e10]' : 'bg-slate-100'
-          }`}>
-
-          {/* Top Canvas Bar: Selection Controls & Precision Zoom */}
-          <div className={`h-12 px-5 border-b flex items-center justify-between shrink-0 transition-colors ${isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200 shadow-sm'
-            }`}>
-
-            {/* Selected Element Quick Properties */}
-            {selectedElement ? (
-              <div className="flex items-center gap-2 text-xs">
-                <span className={`font-bold flex items-center gap-1 ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                  <span className="w-2 h-2 rounded-full bg-cyan-500" />
-                  {selectedElement.type === 'text' ? 'Text' : selectedElement.type === 'shape' ? 'Shape' : 'Image'}
-                </span>
-
-                <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-200'}`} />
-
-                {selectedElement.type === 'text' && (
-                  <>
-                    {/* Font Family Dropdown */}
-                    <div className="relative" ref={fontMenuRef}>
-                      <button
-                        onClick={() => setIsFontMenuOpen(!isFontMenuOpen)}
-                        className={`h-7 px-2.5 rounded-[4px] border flex items-center justify-between gap-1.5 min-w-[110px] max-w-[150px] transition-all ${isFontMenuOpen
-                          ? 'bg-[#0F3D3E] border-[#E2DCC8]/60 text-white shadow'
-                          : isDark
-                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
-                          }`}
-                        title="Change Font Family"
-                      >
-                        <span
-                          className="truncate text-xs font-semibold flex-1 text-left"
-                          style={{ fontFamily: selectedElement.fontFamily || 'Inter' }}
-                        >
-                          {selectedElement.fontFamily || 'Inter'}
-                        </span>
-                        <ChevronDown size={11} className={`text-slate-400 shrink-0 transition-transform ${isFontMenuOpen ? 'rotate-180' : ''}`} />
-                      </button>
-
-                      {isFontMenuOpen && (
-                        <div className={`absolute top-full left-0 mt-1.5 w-64 border rounded-[8px] shadow-2xl overflow-hidden z-[110] animate-in fade-in zoom-in-95 flex flex-col ${isDark ? 'bg-[#18181b] border-[#38383c] text-[#EDEDED]' : 'bg-white border-slate-300 text-slate-800'
-                          }`}>
-                          {/* Search Header */}
-                          <div className={`p-2 border-b flex items-center gap-2 sticky top-0 z-10 ${isDark ? 'border-[#28282c] bg-[#121214]' : 'border-slate-200 bg-slate-50'
-                            }`}>
-                            <Search size={13} className="text-slate-400" />
-                            <input
-                              autoFocus
-                              type="text"
-                              placeholder="Search fonts..."
-                              value={fontSearch}
-                              onChange={e => setFontSearch(e.target.value)}
-                              className={`w-full bg-transparent border-none outline-none text-xs font-bold ${isDark ? 'text-[#F1F1F1] placeholder:text-[#666]' : 'text-slate-900 placeholder:text-slate-400'
-                                }`}
-                            />
-                            {fontSearch && (
-                              <button onClick={() => setFontSearch('')} className="text-slate-400 hover:text-slate-700 text-[10px]">
-                                <X size={11} />
-                              </button>
-                            )}
-                          </div>
-
-                          {/* Font List */}
-                          <div className="max-h-60 overflow-y-auto custom-scrollbar p-1.5 flex flex-col gap-1 overscroll-contain">
-                            {filteredFonts.map(group => (
-                              <div key={group.label} className="flex flex-col mb-1 last:mb-0">
-                                <div className={`px-2 py-1 text-[9px] font-black uppercase tracking-widest rounded mb-0.5 ${isDark ? 'text-[#E2DCC8]/60 bg-white/[0.03]' : 'text-[#0F3D3E] bg-slate-100'
-                                  }`}>
-                                  {group.label}
-                                </div>
-                                <div className="flex flex-col">
-                                  {group.fonts.map(f => {
-                                    const isCurrent = (selectedElement.fontFamily || 'Inter') === f;
-                                    return (
-                                      <button
-                                        key={f}
-                                        onClick={() => {
-                                          updateElementLocal(selectedElement.id, { fontFamily: f });
-                                          if (typeof document !== 'undefined' && document.fonts) {
-                                            document.fonts.load(`16px "${f}"`).then(() => {
-                                              fabricCanvasRef.current?.requestRenderAll();
-                                            }).catch(() => { });
-                                          }
-                                          setIsFontMenuOpen(false);
-                                        }}
-                                        className={`w-full text-left px-2.5 py-1.5 text-xs rounded transition-all flex items-center justify-between ${isCurrent
-                                          ? 'bg-[#0F3D3E] text-white font-bold border border-[#E2DCC8]/30 shadow-sm'
-                                          : isDark
-                                            ? 'text-gray-300 hover:bg-[#222226] hover:text-white'
-                                            : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
-                                          }`}
-                                      >
-                                        <span style={{ fontFamily: f }} className="truncate">
-                                          {f}
-                                        </span>
-                                        {isCurrent && <Check size={12} className={isDark ? 'text-[#E2DCC8]' : 'text-emerald-400'} />}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            ))}
-
-                            {filteredFonts.length === 0 && (
-                              <div className="py-6 text-center text-slate-400 text-xs font-medium">
-                                No fonts found
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Font Size with Minus / Plus */}
-                    <div className={`flex items-center border rounded overflow-hidden h-7 ${isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
-                      }`}>
-                      <button
-                        onClick={() => updateElementLocal(selectedElement.id, { fontSize: Math.max(8, (selectedElement.fontSize || 14) - 1) })}
-                        className={`px-1.5 h-full transition-all ${isDark ? 'text-[#888] hover:text-white hover:bg-[#252528]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                          }`}
-                        title="Decrease Font Size"
-                      >
-                        <Minus size={11} />
-                      </button>
-                      <input
-                        type="number"
-                        min="8"
-                        max="72"
-                        value={selectedElement.fontSize || 14}
-                        onChange={(e) => updateElementLocal(selectedElement.id, { fontSize: Number(e.target.value) })}
-                        className={`w-9 bg-transparent font-bold text-center outline-none text-xs [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none ${isDark ? 'text-white' : 'text-slate-900'
-                          }`}
-                      />
-                      <button
-                        onClick={() => updateElementLocal(selectedElement.id, { fontSize: Math.min(72, (selectedElement.fontSize || 14) + 1) })}
-                        className={`px-1.5 h-full transition-all ${isDark ? 'text-[#888] hover:text-white hover:bg-[#252528]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                          }`}
-                        title="Increase Font Size"
-                      >
-                        <Plus size={11} />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => updateElementLocal(selectedElement.id, {
-                        fontWeight: selectedElement.fontWeight === 'bold' ? 'normal' : 'bold'
-                      })}
-                      className={`p-1.5 rounded transition-colors ${selectedElement.fontWeight === 'bold'
-                        ? 'bg-[#0F3D3E] text-white'
-                        : isDark
-                          ? 'hover:bg-[#222] text-[#888]'
-                          : 'hover:bg-slate-200 text-slate-600'
-                        }`}
-                      title="Bold"
-                    >
-                      <Bold size={13} />
-                    </button>
-
-                    <button
-                      onClick={() => updateElementLocal(selectedElement.id, {
-                        fontStyle: selectedElement.fontStyle === 'italic' ? 'normal' : 'italic'
-                      })}
-                      className={`p-1.5 rounded transition-colors ${selectedElement.fontStyle === 'italic'
-                        ? 'bg-[#0F3D3E] text-white'
-                        : isDark
-                          ? 'hover:bg-[#222] text-[#888]'
-                          : 'hover:bg-slate-200 text-slate-600'
-                        }`}
-                      title="Italic"
-                    >
-                      <Italic size={13} />
-                    </button>
-
-                    {/* Alignment */}
-                    <div className={`flex items-center border rounded overflow-hidden ${isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
-                      }`}>
-                      <button
-                        onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'left' })}
-                        className={`p-1 transition-colors ${selectedElement.textAlign === 'left' ? 'bg-[#0F3D3E] text-white' : isDark ? 'text-[#888]' : 'text-slate-600 hover:bg-slate-200'}`}
-                      >
-                        <AlignLeft size={12} />
-                      </button>
-                      <button
-                        onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'center' })}
-                        className={`p-1 transition-colors ${selectedElement.textAlign === 'center' ? 'bg-[#0F3D3E] text-white' : isDark ? 'text-[#888]' : 'text-slate-600 hover:bg-slate-200'}`}
-                      >
-                        <AlignCenter size={12} />
-                      </button>
-                      <button
-                        onClick={() => updateElementLocal(selectedElement.id, { textAlign: 'right' })}
-                        className={`p-1 transition-colors ${selectedElement.textAlign === 'right' ? 'bg-[#0F3D3E] text-white' : isDark ? 'text-[#888]' : 'text-slate-600 hover:bg-slate-200'}`}
-                      >
-                        <AlignRight size={12} />
-                      </button>
-                    </div>
-
-                    {/* Canva-style Text Color Button & Popover */}
-                    <div className="relative" ref={activeColorMenu === 'text' ? colorMenuRef : undefined}>
-                      <button
-                        onClick={() => setActiveColorMenu(activeColorMenu === 'text' ? null : 'text')}
-                        className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-xs font-bold transition-all ${activeColorMenu === 'text'
-                          ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow'
-                          : isDark
-                            ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
-                            : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
-                          }`}
-                        title="Text Color"
-                      >
-                        <div className="flex flex-col items-center">
-                          <span
-                            className="font-serif font-black text-[13px] leading-tight"
-                            style={{
-                              color: selectedElement.fill?.includes('gradient') ? (isDark ? '#ffffff' : '#0F3D3E') : (selectedElement.fill || (isDark ? '#ffffff' : '#0F3D3E'))
-                            }}
-                          >
-                            A
-                          </span>
-                          <div
-                            className="w-4 h-[3px] rounded-[1px] shadow-sm"
-                            style={{
-                              background: selectedElement.fill || (isDark ? '#ffffff' : '#0F3D3E')
-                            }}
-                          />
-                        </div>
-                        <span className={`text-[11px] font-medium ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>Color</span>
-                        <ChevronDown size={11} className="text-slate-400" />
-                      </button>
-
-                      {/* Floating Text Color Popover */}
-                      {activeColorMenu === 'text' && (
-                        <div className={`absolute top-full left-0 mt-2 w-72 p-3 border rounded-[8px] shadow-2xl z-[100] animate-in fade-in zoom-in-95 ${isDark ? 'bg-[#18181b] border-[#38383c]' : 'bg-white border-slate-300 shadow-2xl'
-                          }`}>
-                          <div className={`flex items-center justify-between pb-2 mb-2 border-b ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                            <div className="flex items-center gap-1.5">
-                              <Palette size={13} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
-                              <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>Text Color</span>
-                            </div>
-                            <button
-                              onClick={() => setActiveColorMenu(null)}
-                              className="p-1 hover:bg-slate-200 dark:hover:bg-[#26262a] rounded text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                            >
-                              <X size={12} />
-                            </button>
-                          </div>
-
-                          {/* Quick Color Input */}
-                          <div className={`flex items-center gap-2 mb-3 border p-1.5 rounded-[4px] ${isDark ? 'bg-[#121214] border-[#2e2e32]' : 'bg-slate-50 border-slate-200'
-                            }`}>
-                            <input
-                              type="color"
-                              value={selectedElement.fill?.startsWith('#') && selectedElement.fill.length === 7 ? selectedElement.fill : '#ffffff'}
-                              onChange={(e) => updateElementLocal(selectedElement.id, { fill: e.target.value })}
-                              className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent"
-                            />
-                            <input
-                              type="text"
-                              value={selectedElement.fill || '#ffffff'}
-                              onChange={(e) => updateElementLocal(selectedElement.id, { fill: e.target.value })}
-                              className={`flex-1 bg-transparent text-xs font-mono font-bold outline-none ${isDark ? 'text-white' : 'text-slate-900'
-                                }`}
-                              placeholder="#ffffff or gradient"
-                            />
-                          </div>
-
-                          {/* Preset Swatches */}
-                          <div className="space-y-1.5 mb-3">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Palette Presets</span>
-                            <div className="grid grid-cols-6 gap-1.5">
-                              {[
-                                '#ffffff', '#000000', '#0f172a', '#334155', '#64748b', '#94a3b8',
-                                '#0F3D3E', '#134d4f', '#E2DCC8', '#d4af37', '#fef08a', '#e0e7ff',
-                                '#0ea5e9', '#38bdf8', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981'
-                              ].map(hex => (
-                                <button
-                                  key={hex}
-                                  onClick={() => updateElementLocal(selectedElement.id, { fill: hex })}
-                                  className={`w-full aspect-square rounded-[3px] border transition-transform hover:scale-110 shadow-sm ${selectedElement.fill === hex ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-black/15'
-                                    }`}
-                                  style={{ backgroundColor: hex }}
-                                  title={hex}
-                                />
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Advanced Studio Picker Embed */}
-                          <div className={`pt-2 border-t ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                            <button
-                              onClick={() => setShowColorPicker(!showColorPicker)}
-                              className={`w-full flex items-center justify-between py-1.5 px-2 border rounded-[4px] text-[11px] font-bold ${isDark ? 'bg-[#202024] hover:bg-[#28282c] border-[#333] text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
-                                }`}
-                            >
-                              <span>Advanced Color Studio & Gradients</span>
-                              <ChevronDown size={12} className={`transition-transform ${showColorPicker ? 'rotate-180' : ''}`} />
-                            </button>
-
-                            {showColorPicker && (
-                              <div className={`mt-2 pt-1 border-t ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                                <AdvancedColorPicker
-                                  color={selectedElement.fill || '#ffffff'}
-                                  onChange={(newColor) => updateElementLocal(selectedElement.id, { fill: newColor })}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                )}
-
-                {selectedElement.type === 'shape' && (
-                  <div className="relative" ref={activeColorMenu === 'shape' ? colorMenuRef : undefined}>
-                    <button
-                      onClick={() => setActiveColorMenu(activeColorMenu === 'shape' ? null : 'shape')}
-                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] border text-xs font-bold transition-all ${activeColorMenu === 'shape'
-                        ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow'
-                        : isDark
-                          ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-white'
-                          : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-800'
-                        }`}
-                      title="Shape Fill Color"
-                    >
-                      <span
-                        className="w-3.5 h-3.5 rounded-full border border-black/20 shadow-sm"
-                        style={{ background: selectedElement.fill || '#cbd5e1' }}
-                      />
-                      <span>Fill Color</span>
-                      <ChevronDown size={11} className="text-slate-400" />
-                    </button>
-
-                    {/* Floating Shape Color Popover */}
-                    {activeColorMenu === 'shape' && (
-                      <div className={`absolute top-full left-0 mt-2 w-72 p-3 border rounded-[8px] shadow-2xl z-[100] animate-in fade-in zoom-in-95 ${isDark ? 'bg-[#18181b] border-[#38383c]' : 'bg-white border-slate-300'
-                        }`}>
-                        <div className={`flex items-center justify-between pb-2 mb-2 border-b ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                          <div className="flex items-center gap-1.5">
-                            <Palette size={13} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
-                            <span className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>Fill Color</span>
-                          </div>
-                          <button
-                            onClick={() => setActiveColorMenu(null)}
-                            className="p-1 hover:bg-slate-200 dark:hover:bg-[#26262a] rounded text-slate-400 hover:text-slate-700 dark:hover:text-white"
-                          >
-                            <X size={12} />
-                          </button>
-                        </div>
-
-                        {/* Quick Color Input */}
-                        <div className={`flex items-center gap-2 mb-3 border p-1.5 rounded-[4px] ${isDark ? 'bg-[#121214] border-[#2e2e32]' : 'bg-slate-50 border-slate-200'
-                          }`}>
-                          <input
-                            type="color"
-                            value={selectedElement.fill?.startsWith('#') && selectedElement.fill.length === 7 ? selectedElement.fill : '#cbd5e1'}
-                            onChange={(e) => updateElementLocal(selectedElement.id, { fill: e.target.value })}
-                            className="w-7 h-7 rounded border-0 cursor-pointer bg-transparent"
-                          />
-                          <input
-                            type="text"
-                            value={selectedElement.fill || '#cbd5e1'}
-                            onChange={(e) => updateElementLocal(selectedElement.id, { fill: e.target.value })}
-                            className={`flex-1 bg-transparent text-xs font-mono font-bold outline-none ${isDark ? 'text-white' : 'text-slate-900'
-                              }`}
-                            placeholder="#ffffff or gradient"
-                          />
-                        </div>
-
-                        {/* Preset Swatches */}
-                        <div className="space-y-1.5 mb-3">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Palette Presets</span>
-                          <div className="grid grid-cols-6 gap-1.5">
-                            {[
-                              '#cbd5e1', '#94a3b8', '#64748b', '#0f172a', '#000000', '#ffffff',
-                              '#0F3D3E', '#134d4f', '#E2DCC8', '#d4af37', '#fef08a', '#0ea5e9',
-                              '#38bdf8', '#3b82f6', '#8b5cf6', '#ef4444', '#10b981', '#f59e0b'
-                            ].map(hex => (
-                              <button
-                                key={hex}
-                                onClick={() => updateElementLocal(selectedElement.id, { fill: hex })}
-                                className={`w-full aspect-square rounded-[3px] border transition-transform hover:scale-110 shadow-sm ${selectedElement.fill === hex ? 'border-cyan-400 ring-1 ring-cyan-400' : 'border-black/15'
-                                  }`}
-                                style={{ backgroundColor: hex }}
-                                title={hex}
-                              />
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Advanced Studio Picker Embed */}
-                        <div className={`pt-2 border-t ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                          <button
-                            onClick={() => setShowColorPicker(!showColorPicker)}
-                            className={`w-full flex items-center justify-between py-1.5 px-2 border rounded-[4px] text-[11px] font-bold ${isDark ? 'bg-[#202024] hover:bg-[#28282c] border-[#333] text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-[#0F3D3E]'
-                              }`}
-                          >
-                            <span>Advanced Color Studio & Gradients</span>
-                            <ChevronDown size={12} className={`transition-transform ${showColorPicker ? 'rotate-180' : ''}`} />
-                          </button>
-
-                          {showColorPicker && (
-                            <div className={`mt-2 pt-1 border-t ${isDark ? 'border-[#28282c]' : 'border-slate-200'}`}>
-                              <AdvancedColorPicker
-                                color={selectedElement.fill || '#cbd5e1'}
-                                onChange={(newColor) => updateElementLocal(selectedElement.id, { fill: newColor })}
-                              />
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Straighten / Reset Rotation Button */}
-                {(selectedElement.shapeType === 'line' || (selectedElement.rotation && selectedElement.rotation !== 0)) && (
-                  <button
-                    onClick={() => {
-                      updateElementLocal(selectedElement.id, { rotation: 0 });
-                      const activeObj = fabricCanvasRef.current?.getActiveObject();
-                      if (activeObj) {
-                        activeObj.set({ angle: 0 });
-                        activeObj.setCoords();
-                        fabricCanvasRef.current?.requestRenderAll();
-                      }
-                    }}
-                    className={`flex items-center gap-1 px-2 py-1 rounded border text-[11px] font-bold transition-all shadow-sm ${isDark
-                      ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-cyan-400 text-cyan-400'
-                      : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-cyan-600 text-cyan-700'
-                      }`}
-                    title="Straighten line (Reset rotation to 0°)"
-                  >
-                    <RotateCcw size={12} />
-                    <span>Straighten (0°)</span>
-                  </button>
-                )}
-
-                <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-200'}`} />
-
-                {/* Layer Arrangement Controls */}
-                <div className={`flex items-center border rounded overflow-hidden ${isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
-                  }`} title="Layer Stacking Order">
-                  <button
-                    onClick={() => bringToFront(selectedElement.id)}
-                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'}`}
-                    title="Bring to Front (Top Layer)"
-                  >
-                    <ChevronsUp size={13} />
-                  </button>
-                  <button
-                    onClick={() => moveForward(selectedElement.id)}
-                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'}`}
-                    title="Bring Forward (Move Up 1 Step)"
-                  >
-                    <ArrowUp size={13} />
-                  </button>
-                  <button
-                    onClick={() => moveBackward(selectedElement.id)}
-                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'}`}
-                    title="Send Backward (Move Down 1 Step)"
-                  >
-                    <ArrowDown size={13} />
-                  </button>
-                  <button
-                    onClick={() => sendToBack(selectedElement.id)}
-                    className={`p-1.5 transition-all ${isDark ? 'hover:bg-[#28282c] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'}`}
-                    title="Send to Back (Bottom Layer)"
-                  >
-                    <ChevronsDown size={13} />
-                  </button>
-                </div>
-
-                <div className={`h-4 w-px mx-1 ${isDark ? 'bg-[#333]' : 'bg-slate-200'}`} />
-
-                {/* Duplicate */}
-                <button
-                  onClick={() => duplicateElementLocal(selectedElement.id)}
-                  className={`p-1.5 rounded transition-colors ${isDark ? 'hover:bg-[#222] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-600 hover:text-slate-900'}`}
-                  title="Duplicate Element"
-                >
-                  <Copy size={14} />
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => deleteElementLocal(selectedElement.id)}
-                  className={`p-1.5 rounded transition-colors ${isDark ? 'hover:bg-rose-950/60 text-rose-400 hover:text-rose-300' : 'hover:bg-rose-100 text-rose-600 hover:text-rose-700'}`}
-                  title="Delete Element"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ) : (
-              <div className={`flex items-center gap-2 text-xs ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
-                <Sparkles size={14} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
-                <span>Click any element on the header strip to move, resize, or edit</span>
-              </div>
-            )}
-
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-2">
-              <span className={`text-[11px] font-bold ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Zoom</span>
-              <button
-                onClick={() => setZoom(prev => Math.max(0.75, Math.round((prev - 0.15) * 100) / 100))}
-                className={`p-1 rounded transition-colors ${isDark ? 'bg-[#1c1c1f] hover:bg-[#242428] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
-                title="Zoom Out"
-              >
-                <ZoomOut size={13} />
-              </button>
-              <span className={`text-xs font-mono font-bold w-12 text-center ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                {Math.round(zoom * 100)}%
-              </span>
-              <button
-                onClick={() => setZoom(prev => Math.min(2.0, Math.round((prev + 0.15) * 100) / 100))}
-                className={`p-1 rounded transition-colors ${isDark ? 'bg-[#1c1c1f] hover:bg-[#242428] text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'}`}
-                title="Zoom In"
-              >
-                <ZoomIn size={13} />
-              </button>
-              <button
-                onClick={() => setZoom(1)}
-                className={`text-[10px] font-bold px-1.5 py-0.5 rounded transition-colors ${isDark ? 'text-[#888] hover:text-white hover:bg-[#222]' : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                  }`}
-              >
-                100%
-              </button>
-            </div>
-          </div>
-
-          {/* Canvas Viewport (Scrollable container centering the header strip) */}
-          <div className="flex-1 overflow-auto flex flex-col items-center justify-center p-8 relative">
-
-            {/* Dimension Indicator Pill */}
-            <div className={`mb-3 flex items-center gap-2 text-[11px] font-bold px-3 py-1 rounded-full shadow border ${isDark ? 'text-[#888] bg-[#161618] border-[#262626]' : 'text-slate-600 bg-white border-slate-200 shadow-sm'
-              }`}>
-              <span>Catalog Width: <strong>794px</strong></span>
-              <span>•</span>
-              <span>Header Height: <strong>{Math.round(headerHeight)}px</strong> ({toMm(headerHeight)}mm)</span>
-            </div>
-
-            {/* Isolated Header Canvas Frame & Artboard */}
-            <div
-              className="relative flex items-center justify-center select-none"
-              style={{
-                width: (PAGE_WIDTH + CANVAS_PAD_X * 2) * zoom,
-                height: (headerHeight + CANVAS_PAD_Y * 2) * zoom,
-              }}
-            >
-              {/* The Visual Header Strip (Artboard) */}
-              <div
-                className="absolute rounded-sm transition-all"
-                style={{
-                  width: PAGE_WIDTH * zoom,
-                  height: headerHeight * zoom,
-                  background: headerBg,
-                  boxShadow: isDark
-                    ? '0 25px 60px rgba(0,0,0,0.65), 0 0 0 1px rgba(226,220,200,0.25)'
-                    : '0 20px 45px rgba(0,0,0,0.15), 0 0 0 1px rgba(15,61,62,0.25)',
-                  pointerEvents: 'none'
-                }}
-              >
-                {/* Left & Right Page Margin Guide Marks (38px) */}
-                <div
-                  className="absolute top-0 bottom-0 border-r border-dashed border-cyan-500/40 pointer-events-none"
-                  style={{ left: 38 * zoom }}
-                  title="Left Margin Guide (38px)"
-                />
-                <div
-                  className="absolute top-0 bottom-0 border-l border-dashed border-cyan-500/40 pointer-events-none"
-                  style={{ right: 38 * zoom }}
-                  title="Right Margin Guide (38px)"
-                />
-              </div>
-
-              {/* The Interactive Fabric Canvas (Transparent, extending CANVAS_PAD outside the artboard) */}
-              <div className="relative z-10">
-                <canvas ref={canvasElRef} />
-              </div>
-            </div>
-
-            {/* Bottom Help note */}
-            <div className={`mt-4 text-center text-xs ${isDark ? 'text-[#666]' : 'text-slate-500'}`}>
-              <p>💡 Tip: Double-click text to edit inline. Drag corners to resize. Use Backspace to delete.</p>
-              <p className={`text-[10px] mt-0.5 ${isDark ? 'text-[#555]' : 'text-slate-400'}`}>The full page is hidden — only this master header section will be saved and reused.</p>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Right Sidebar: Layer Elements List ───────────────────── */}
-        <div className={`w-72 border-l flex flex-col shrink-0 transition-colors ${isDark ? 'bg-[#141416] border-[#262626]' : 'bg-white border-slate-200'
-          }`}>
-          <div className={`h-12 px-4 border-b flex items-center justify-between shrink-0 transition-colors ${isDark ? 'border-[#262626] bg-[#121214]' : 'border-slate-200 bg-slate-50'
-            }`}>
-            <div className="flex items-center gap-2">
-              <Layers size={14} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
-              <h4 className={`text-xs font-black uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>Header Layers</h4>
-            </div>
-            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${isDark ? 'text-[#888] bg-[#1c1c1f] border-[#2a2a2e]' : 'text-slate-600 bg-slate-100 border-slate-300'
-              }`}>
-              {elements.length}
-            </span>
-          </div>
-
-          {/* Quick Arrange Controls for Selected Layer */}
-          {selectedElement && (
-            <div className={`px-3 py-2 border-b flex items-center justify-between gap-1 animate-in fade-in ${isDark ? 'bg-[#18181c] border-[#26262a]' : 'bg-slate-50 border-slate-200'
-              }`}>
-              <span className={`text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 min-w-0 ${isDark ? 'text-[#888]' : 'text-slate-500'
-                }`}>
-                <span>Arrange:</span>
-                <span className={`truncate max-w-[85px] ${isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'}`}>
-                  {selectedElement.type === 'text' ? (selectedElement.text || 'Text') : (selectedElement.shapeType || 'Shape')}
-                </span>
-              </span>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => bringToFront(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                    }`}
-                  title="Bring to Top / Front"
-                >
-                  <ChevronsUp size={13} />
-                </button>
-                <button
-                  onClick={() => moveForward(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                    }`}
-                  title="Move Up / Forward (1 step)"
-                >
-                  <ArrowUp size={13} />
-                </button>
-                <button
-                  onClick={() => moveBackward(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                    }`}
-                  title="Move Down / Backward (1 step)"
-                >
-                  <ArrowDown size={13} />
-                </button>
-                <button
-                  onClick={() => sendToBack(selectedElement.id)}
-                  className={`p-1 rounded border transition-all ${isDark ? 'bg-[#222226] hover:bg-[#2e2e36] text-[#bbb] hover:text-white border-[#333]' : 'bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 border-slate-200'
-                    }`}
-                  title="Send to Bottom / Back"
-                >
-                  <ChevronsDown size={13} />
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex-1 overflow-y-auto p-3 space-y-1.5 custom-scrollbar">
-            {elements.length === 0 ? (
-              <div className={`text-center py-10 text-xs ${isDark ? 'text-[#666]' : 'text-slate-400'}`}>
-                <Layers size={24} className={`mx-auto mb-2 ${isDark ? 'text-[#444]' : 'text-slate-300'}`} />
-                <p>No elements on header yet.</p>
-                <p className={`text-[10px] mt-1 ${isDark ? 'text-[#555]' : 'text-slate-400'}`}>Add text, logos, or presets from the left panel.</p>
-              </div>
-            ) : (
-              elements
-                .slice()
-                .reverse()
-                .map((el, revIdx) => {
-                  const isSelected = el.id === selectedId;
-                  const isTop = revIdx === 0;
-                  const isBottom = revIdx === elements.length - 1;
-                  return (
-                    <div
-                      key={el.id}
-                      draggable
-                      onDragStart={(e) => {
-                        setDraggedLayerId(el.id);
-                        e.dataTransfer.setData('text/plain', el.id);
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        if (draggedLayerId && draggedLayerId !== el.id) {
-                          reorderLayer(draggedLayerId, el.id);
-                        }
-                        setDraggedLayerId(null);
-                      }}
-                      onClick={() => setSelectedId(el.id)}
-                      className={`group flex items-center justify-between p-2 rounded-[4px] border cursor-pointer transition-all ${draggedLayerId === el.id ? 'opacity-40 border-dashed border-cyan-400' : ''
-                        } ${isSelected
-                          ? isDark
-                            ? 'bg-[#0F3D3E]/40 border-[#E2DCC8]/60 text-white shadow-sm ring-1 ring-[#E2DCC8]/20'
-                            : 'bg-[#0F3D3E]/10 border-[#0F3D3E] text-slate-900 shadow-sm ring-1 ring-[#0F3D3E]/20'
-                          : isDark
-                            ? 'bg-[#18181a] border-[#26262a] text-[#aaa] hover:text-white hover:bg-[#202024]'
-                            : 'bg-slate-50 border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-white'
-                        }`}
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0 flex-1">
-                        <GripVertical size={13} className={`cursor-grab shrink-0 transition-colors ${isDark ? 'text-[#555] group-hover:text-[#999]' : 'text-slate-400 group-hover:text-slate-600'
-                          }`} />
-                        {el.type === 'text' ? (
-                          <Type size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
-                        ) : el.type === 'shape' ? (
-                          <Square size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
-                        ) : (
-                          <ImageIcon size={13} className={isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-[#777]' : 'text-slate-400')} />
-                        )}
-                        <span className="text-xs font-bold truncate">
-                          {el.type === 'text' ? (el.text || 'Text') : (el.shapeType || 'Shape')}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-0.5 shrink-0 ml-1">
-                        {/* Move Up in Stack */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveForward(el.id);
-                          }}
-                          disabled={isTop}
-                          className={`p-1 rounded transition-all ${isTop
-                            ? 'text-slate-300 dark:text-[#383838] cursor-not-allowed'
-                            : isDark
-                              ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
-                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                            }`}
-                          title={isTop ? 'Already at Top' : 'Move Up (Bring Forward)'}
-                        >
-                          <ArrowUp size={12} />
-                        </button>
-
-                        {/* Move Down in Stack */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            moveBackward(el.id);
-                          }}
-                          disabled={isBottom}
-                          className={`p-1 rounded transition-all ${isBottom
-                            ? 'text-slate-300 dark:text-[#383838] cursor-not-allowed'
-                            : isDark
-                              ? 'text-[#888] hover:text-white hover:bg-[#2c2c32]'
-                              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
-                            }`}
-                          title={isBottom ? 'Already at Bottom' : 'Move Down (Send Backward)'}
-                        >
-                          <ArrowDown size={12} />
-                        </button>
-
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            duplicateElementLocal(el.id);
-                          }}
-                          className={`p-1 rounded transition-all ${isDark ? 'hover:bg-[#333] text-[#888] hover:text-white' : 'hover:bg-slate-200 text-slate-500 hover:text-slate-900'
-                            }`}
-                          title="Duplicate"
-                        >
-                          <Copy size={12} />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            deleteElementLocal(el.id);
-                          }}
-                          className={`p-1 rounded transition-all ${isDark ? 'hover:bg-rose-950/50 text-rose-400 hover:text-rose-300' : 'hover:bg-rose-100 text-rose-600 hover:text-rose-700'
-                            }`}
-                          title="Delete"
-                        >
-                          <Trash2 size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })
-            )}
-          </div>
-
-          {/* Quick Clear Button */}
-          {elements.length > 0 && (
-            <div className={`p-3 border-t ${isDark ? 'border-[#262626]' : 'border-slate-200'}`}>
-              <button
-                onClick={() => {
-                  if (window.confirm('Clear all elements from this header?')) {
-                    setElements([]);
-                    setSelectedId(null);
-                  }
-                }}
-                className={`w-full py-2 border text-[11px] font-bold rounded transition-all ${isDark
-                  ? 'bg-[#1a1a1c] hover:bg-rose-950/40 border-[#333] hover:border-rose-800 text-[#888] hover:text-rose-300'
-                  : 'bg-slate-100 hover:bg-rose-50 border-slate-200 hover:border-rose-300 text-slate-600 hover:text-rose-600'
-                  }`}
-              >
-                Clear All Elements
-              </button>
-            </div>
-          )}
-        </div>
+        <HeaderLeftSidebar
+          isDark={isDark}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          addTextElement={addTextElement}
+          addShapeElement={addShapeElement}
+          addImageLogo={addImageLogo}
+          fileInputRef={fileInputRef}
+          handleFileUpload={handleFileUpload}
+          mediaItems={mediaItems}
+          headerBg={headerBg}
+          setHeaderBg={setHeaderBg}
+          colorPickerTarget={colorPickerTarget}
+          setColorPickerTarget={setColorPickerTarget}
+          showColorPicker={showColorPicker}
+          setShowColorPicker={setShowColorPicker}
+          category={category}
+          setCategory={setCategory}
+          systemTemplates={systemTemplates}
+          setTemplateName={setTemplateName}
+          setDescription={setDescription}
+          setHeaderHeight={setHeaderHeight}
+          setElements={setElements}
+          setSelectedId={setSelectedId}
+          deleteSystemTemplate={deleteSystemTemplate}
+          elements={elements}
+          selectedId={selectedId}
+          moveForward={moveForward}
+          moveBackward={moveBackward}
+          duplicateElementLocal={duplicateElementLocal}
+          deleteElementLocal={deleteElementLocal}
+          reorderLayer={reorderLayer}
+          pushHistory={pushHistory}
+        />
+
+        {/* Center Editor Canvas Area */}
+        <HeaderCanvasStage
+          isDark={isDark}
+          selectedElement={selectedElement}
+          updateElementLocal={updateElementLocal}
+          duplicateElementLocal={duplicateElementLocal}
+          deleteElementLocal={deleteElementLocal}
+          bringToFront={bringToFront}
+          sendToBack={sendToBack}
+          moveForward={moveForward}
+          moveBackward={moveBackward}
+          zoom={zoom}
+          setZoom={setZoom}
+          headerHeight={headerHeight}
+          canvasElRef={canvasElRef}
+          fabricCanvasRef={fabricCanvasRef}
+        />
+
+        {/* Right Sidebar: Layer Hierarchy & Order */}
+        <HeaderRightSidebar
+          isDark={isDark}
+          elements={elements}
+          selectedElement={selectedElement}
+          selectedId={selectedId}
+          setSelectedId={setSelectedId}
+          bringToFront={bringToFront}
+          sendToBack={sendToBack}
+          moveForward={moveForward}
+          moveBackward={moveBackward}
+          duplicateElementLocal={duplicateElementLocal}
+          deleteElementLocal={deleteElementLocal}
+          reorderLayer={reorderLayer}
+        />
       </div>
     </div>
   );
 };
-
 export default HeaderDesignerModal;

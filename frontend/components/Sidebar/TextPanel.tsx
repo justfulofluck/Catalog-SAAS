@@ -253,15 +253,29 @@ const TextPanel: React.FC = () => {
 
           {/* Heading Card */}
           <div
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                type: 'text',
+                text: 'Add a heading',
+                fontSize: 36,
+                fontWeight: '800',
+                width: 400,
+                height: 50,
+                fontFamily: catalog.fontFamily || 'Montserrat',
+                fill: isDark ? '#ffffff' : '#0f172a'
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
             onClick={handleAddHeading}
-            className={`group border p-3.5 rounded-[4px] cursor-pointer transition-all active:scale-[0.99] flex items-center shadow-sm ${
+            className={`group border p-3.5 rounded-[4px] cursor-grab active:cursor-grabbing transition-all active:scale-[0.99] flex items-center shadow-sm ${
               isDark 
                 ? 'bg-[#161616] hover:bg-[#1b1b1e] border-[#262626] hover:border-[#0F3D3E]' 
                 : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]'
             }`}
           >
             <span
-              className={`text-2xl font-black tracking-tight transition-colors ${
+              className={`text-2xl font-black tracking-tight transition-colors select-none ${
                 isDark ? 'text-white group-hover:text-[#E2DCC8]' : 'text-slate-900 group-hover:text-[#0F3D3E]'
               }`}
               style={{ fontFamily: catalog.fontFamily || 'Montserrat' }}
@@ -272,15 +286,29 @@ const TextPanel: React.FC = () => {
 
           {/* Subheading Card */}
           <div
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                type: 'text',
+                text: 'Add a subheading',
+                fontSize: 24,
+                fontWeight: '700',
+                width: 380,
+                height: 38,
+                fontFamily: catalog.fontFamily || 'Inter',
+                fill: isDark ? '#e2e8f0' : '#1e293b'
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
             onClick={handleAddSubheading}
-            className={`group border p-3 rounded-[4px] cursor-pointer transition-all active:scale-[0.99] flex items-center shadow-sm ${
+            className={`group border p-3 rounded-[4px] cursor-grab active:cursor-grabbing transition-all active:scale-[0.99] flex items-center shadow-sm ${
               isDark 
                 ? 'bg-[#161616] hover:bg-[#1b1b1e] border-[#262626] hover:border-[#0F3D3E]' 
                 : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]'
             }`}
           >
             <span
-              className={`text-base font-bold transition-colors ${
+              className={`text-base font-bold transition-colors select-none ${
                 isDark ? 'text-gray-200 group-hover:text-white' : 'text-slate-700 group-hover:text-slate-900'
               }`}
               style={{ fontFamily: catalog.fontFamily || 'Inter' }}
@@ -291,15 +319,29 @@ const TextPanel: React.FC = () => {
 
           {/* Body text Card */}
           <div
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('application/json', JSON.stringify({
+                type: 'text',
+                text: 'Add a little bit of body text',
+                fontSize: 16,
+                fontWeight: '400',
+                width: 320,
+                height: 60,
+                fontFamily: catalog.fontFamily || 'Inter',
+                fill: isDark ? '#94a3b8' : '#475569'
+              }));
+              e.dataTransfer.effectAllowed = 'copy';
+            }}
             onClick={handleAddBodyText}
-            className={`group border p-2.5 rounded-[4px] cursor-pointer transition-all active:scale-[0.99] flex items-center shadow-sm ${
+            className={`group border p-2.5 rounded-[4px] cursor-grab active:cursor-grabbing transition-all active:scale-[0.99] flex items-center shadow-sm ${
               isDark 
                 ? 'bg-[#161616] hover:bg-[#1b1b1e] border-[#262626] hover:border-[#0F3D3E]' 
                 : 'bg-slate-50 hover:bg-slate-100 border-slate-200 hover:border-[#0F3D3E]'
             }`}
           >
             <span
-              className={`text-xs font-normal transition-colors ${
+              className={`text-xs font-normal transition-colors select-none ${
                 isDark ? 'text-gray-400 group-hover:text-gray-200' : 'text-slate-500 group-hover:text-slate-700'
               }`}
               style={{ fontFamily: catalog.fontFamily || 'Inter' }}

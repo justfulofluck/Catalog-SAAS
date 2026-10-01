@@ -173,9 +173,13 @@ export const SingleItemsView: React.FC<SingleItemsViewProps> = ({
                     type: 'product',
                     url: imgUrl,
                     name: product.name,
-                    productId: product.id
+                    price: product.price,
+                    productId: product.id,
+                    product: product
                   };
                   e.dataTransfer.setData('application/json', JSON.stringify(dragData));
+                  e.dataTransfer.setData('text/plain', product.name);
+                  e.dataTransfer.effectAllowed = 'copy';
                 }}
                 className={`group relative rounded-[4px] p-3 transition-all flex flex-col justify-between cursor-grab active:cursor-grabbing border ${
                   isDark 

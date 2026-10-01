@@ -277,6 +277,7 @@ export interface ElementsSlice {
   updateElement: (pageIndex: number, elementId: string, updates: Partial<CanvasElement>) => void;
   updateElements: (pageIndex: number, updatesList: { id: string; updates: Partial<CanvasElement> }[]) => void;
   moveElements: (pageIndex: number, elementIds: string[], dx: number, dy: number) => void;
+  moveElementsBetweenPages: (fromPageIndex: number, toPageIndex: number, items: { id: string; x: number; y: number; updates?: Partial<CanvasElement> }[]) => void;
   removeElement: (pageIndex: number, elementId: string) => void;
   duplicateElement: (pageIndex: number, elementId: string) => void;
   nudgeElement: (pageIndex: number, elementId: string, dx: number, dy: number) => void;
@@ -352,7 +353,9 @@ export interface CatalogSlice {
   zoom: number;
   catalogSetupName: string;
   viewingCatalogId: string | null;
-  publicCatalog: Catalog | null;
+  saveStatus: 'saved' | 'saving' | 'unsaved' | 'error';
+  lastSavedAt: string | null;
+  setSaveStatus: (status: 'saved' | 'saving' | 'unsaved' | 'error') => void;
 
   setCurrentPageIndex: (index: number) => void;
   setSelectedPageIndex: (index: number | null) => void;
@@ -391,6 +394,11 @@ export interface CatalogSlice {
   removePage: (indexOrId: number | string) => void;
   duplicatePage: (indexOrId: number | string) => void;
   reorderPages: (newPageIds: string[]) => void;
+  movePage: (fromIndex: number, toIndex: number) => void;
+  updatePage: (pageIndex: number, updates: Partial<CatalogPage>) => void;
+  togglePageLock: (pageIndex: number) => void;
+  togglePageVisibility: (pageIndex: number) => void;
+  setPageTitle: (pageIndex: number, title: string) => void;
   setPageOrientation: (pageIndex: number, orientation: 'portrait' | 'landscape') => void;
   setCatalogOrientation: (orientation: 'portrait' | 'landscape') => void;
   setPageBackground: (pageIndex: number, color: string) => void;

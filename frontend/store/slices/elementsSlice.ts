@@ -205,6 +205,42 @@ export const createElementsSlice: AppSlice<ElementsSlice> = (set, get) => ({
       };
     }),
 
+  moveElementsBetweenPages: (fromPageIndex, toPageIndex, items) => {
+    if (fromPageIndex === toPageIndex || !items || items.length === 0) return;
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      const sourcePage = newPages[fromPageIndex];
+      const targetPage = newPages[toPageIndex];
+      if (!sourcePage || !targetPage) return state;
+
+      const itemIds = items.map((i) => i.id);
+      const movedElements: CanvasElement[] = [];
+
+      sourcePage.elements = sourcePage.elements.filter((el) => {
+        const itemInfo = items.find((i) => i.id === el.id);
+        if (itemInfo) {
+          movedElements.push({
+            ...el,
+            x: itemInfo.x,
+            y: itemInfo.y,
+            ...(itemInfo.updates || {}),
+          });
+          return false;
+        }
+        return true;
+      });
+
+      targetPage.elements = [...targetPage.elements, ...movedElements];
+
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: toPageIndex,
+        selectedElementIds: itemIds,
+      };
+    });
+  },
+
   removeElement: (pageIndex, elementId) => {
     get().pushHistory();
     set((state) => {

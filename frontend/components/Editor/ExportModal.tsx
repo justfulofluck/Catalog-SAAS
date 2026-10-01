@@ -1,30 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  FileDown,
-  Share2,
-  Code2,
-  Globe,
-  Copy,
-  Check,
-  ExternalLink,
-  QrCode,
-  BookOpen,
-  FileText,
-  Sparkles,
-  Loader2,
-  Lock,
-  Download,
-  Image as ImageIcon,
-  ShoppingCart,
-  Printer
-} from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { exportCatalogToPDF } from './pdfExporter';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from './fabricRenderer';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
 import { Canvas } from 'fabric';
+import {
+  ExportHeader,
+  ExportShareTab,
+  ExportDownloadTab,
+  ExportEmbedTab,
+  ExportPublishTab,
+  ExportFooter,
+} from './Export';
 
 interface ExportModalProps {
   isOpen: boolean;
@@ -318,646 +306,88 @@ export const ExportModal: React.FC<ExportModalProps> = ({
             : 'bg-white border-slate-200 text-slate-800'
         }`}
       >
-        {/* Header Tabs Navigation (Branded) */}
-        <div className={`flex items-center justify-between border-b px-6 pt-3.5 shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F]' : 'border-slate-100 bg-slate-50/80'}`}>
-          <div className="flex gap-6">
-            <button
-              type="button"
-              onClick={() => setActiveTab('share')}
-              className={`pb-3 font-semibold text-xs uppercase tracking-wider relative transition-colors cursor-pointer ${
-                activeTab === 'share'
-                  ? (isDark ? 'text-[#E2DCC8] font-bold' : 'text-[#0F3D3E] font-bold')
-                  : isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Share
-              {activeTab === 'share' && (
-                <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${isDark ? 'bg-[#E2DCC8]' : 'bg-[#0F3D3E]'}`} />
-              )}
-            </button>
+        {/* Header Tabs Navigation */}
+        <ExportHeader
+          isDark={isDark}
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          onClose={onClose}
+        />
 
-            <button
-              type="button"
-              onClick={() => setActiveTab('download')}
-              className={`pb-3 font-semibold text-xs uppercase tracking-wider relative transition-colors flex items-center gap-1.5 cursor-pointer ${
-                activeTab === 'download'
-                  ? (isDark ? 'text-[#E2DCC8] font-bold' : 'text-[#0F3D3E] font-bold')
-                  : isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Download
-              {activeTab === 'download' && (
-                <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${isDark ? 'bg-[#E2DCC8]' : 'bg-[#0F3D3E]'}`} />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('embed')}
-              className={`pb-3 font-semibold text-xs uppercase tracking-wider relative transition-colors cursor-pointer ${
-                activeTab === 'embed'
-                  ? (isDark ? 'text-[#E2DCC8] font-bold' : 'text-[#0F3D3E] font-bold')
-                  : isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Embed
-              {activeTab === 'embed' && (
-                <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${isDark ? 'bg-[#E2DCC8]' : 'bg-[#0F3D3E]'}`} />
-              )}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('publish')}
-              className={`pb-3 font-semibold text-xs uppercase tracking-wider relative transition-colors cursor-pointer ${
-                activeTab === 'publish'
-                  ? (isDark ? 'text-[#E2DCC8] font-bold' : 'text-[#0F3D3E] font-bold')
-                  : isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'text-slate-500 hover:text-slate-900'
-              }`}
-            >
-              Publish
-              {activeTab === 'publish' && (
-                <span className={`absolute bottom-0 left-0 right-0 h-0.5 ${isDark ? 'bg-[#E2DCC8]' : 'bg-[#0F3D3E]'}`} />
-              )}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className={`p-1.5 rounded-[4px] transition-colors mb-2.5 cursor-pointer ${
-              isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-white/10' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
-            }`}
-            title="Close"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        {/* Tab Content Body (Scrollable container taking all remaining space) */}
+        {/* Tab Content Body */}
         <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5 custom-scrollbar">
-          {/* ===================== SHARE TAB ===================== */}
           {activeTab === 'share' && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              {/* Top Row: 3 Share Options */}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  Share Options
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setActiveShareFeature(activeShareFeature === 'private' ? null : 'private')}
-                    className={`p-2.5 rounded-md border flex flex-col items-center justify-center gap-1 transition-all text-center cursor-pointer ${
-                      activeShareFeature === 'private'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/80 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <Share2 size={16} />
-                    <span className="text-[11px] font-bold">Private Link</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveShareFeature(activeShareFeature === 'form' ? null : 'form')}
-                    className={`p-2.5 rounded-md border flex flex-col items-center justify-center gap-1 transition-all text-center cursor-pointer ${
-                      activeShareFeature === 'form'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/80 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <FileText size={16} className="text-[#E2DCC8]/70" />
-                    <span className="text-[11px] font-semibold">Fillable Form</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setActiveShareFeature(activeShareFeature === 'qr' ? null : 'qr')}
-                    className={`p-2.5 rounded-md border flex flex-col items-center justify-center gap-1 transition-all text-center cursor-pointer ${
-                      activeShareFeature === 'qr'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/80 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <QrCode size={16} className="text-[#E2DCC8]/70" />
-                    <span className="text-[11px] font-semibold">QR Code</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Default Public Link Panel (When no sub-option is selected) */}
-              {!activeShareFeature && (
-                <div className={`p-3.5 rounded-md border space-y-2.5 animate-in fade-in duration-150 ${
-                  isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20' : 'bg-slate-50 border-slate-200'
-                }`}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold flex items-center gap-1.5 text-[#E2DCC8]">
-                      <Globe size={13} className="text-emerald-400" /> Public Shareable URL
-                    </span>
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Live & Ready</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={publicShareUrl}
-                      className={`flex-1 px-3 py-1.5 text-xs rounded-[4px] border font-mono select-all ${
-                        isDark ? 'bg-[#161616] border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-white border-slate-200 text-slate-700'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={handleCopyShareLink}
-                      className="px-3.5 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                    >
-                      {copiedLink ? <Check size={14} /> : <Copy size={14} />} Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.open(publicShareUrl, '_blank')}
-                      className={`p-1.5 rounded-[4px] border transition-all cursor-pointer ${
-                        isDark ? 'border-[#E2DCC8]/20 hover:bg-white/5 text-[#E2DCC8]' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
-                      }`}
-                      title="Open in new tab"
-                    >
-                      <ExternalLink size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Private Link Expand Panel */}
-              {activeShareFeature === 'private' && (
-                <div className={`p-3.5 rounded-md border space-y-2.5 animate-in fade-in duration-150 ${
-                  isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20' : 'bg-slate-50 border-slate-200'
-                }`}>
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold flex items-center gap-1.5 text-[#E2DCC8]">
-                      <Lock size={13} className="text-amber-400" /> Private Restricted Access URL
-                    </span>
-                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">Token Protected</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={privateShareUrl}
-                      className={`flex-1 px-3 py-1.5 text-xs rounded-[4px] border font-mono select-all ${
-                        isDark ? 'bg-[#161616] border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-white border-slate-200 text-slate-700'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCustomLink(privateShareUrl)}
-                      className="px-3.5 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                    >
-                      {copiedFeatureLink ? <Check size={14} /> : <Copy size={14} />} Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.open(privateShareUrl, '_blank')}
-                      className={`p-1.5 rounded-[4px] border transition-all cursor-pointer ${
-                        isDark ? 'border-[#E2DCC8]/20 hover:bg-white/5 text-[#E2DCC8]' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
-                      }`}
-                      title="Open in new tab"
-                    >
-                      <ExternalLink size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Fillable Form Feature Panel */}
-              {activeShareFeature === 'form' && (
-                <div className={`p-3.5 rounded-md border space-y-3 animate-in fade-in duration-150 ${
-                  isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20' : 'bg-slate-50 border-slate-200'
-                }`}>
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart size={16} className="text-[#E2DCC8]" />
-                    <div>
-                      <p className="text-xs font-bold text-[#F1F1F1]">Interactive Order & Quote Catalog</p>
-                      <p className="text-[10px] text-[#E2DCC8]/60">Allows customers to select quantities and request orders directly.</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      readOnly
-                      value={formOrderUrl}
-                      className={`flex-1 px-3 py-1.5 text-xs rounded-[4px] border font-mono select-all ${
-                        isDark ? 'bg-[#161616] border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-white border-slate-200 text-slate-700'
-                      }`}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleCopyCustomLink(formOrderUrl)}
-                      className="px-3.5 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold flex items-center gap-1 cursor-pointer transition-all active:scale-95"
-                    >
-                      {copiedFeatureLink ? <Check size={14} /> : <Copy size={14} />} Copy
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => window.open(formOrderUrl, '_blank')}
-                      className={`p-1.5 rounded-[4px] border transition-all cursor-pointer ${
-                        isDark ? 'border-[#E2DCC8]/20 hover:bg-white/5 text-[#E2DCC8]' : 'border-slate-200 hover:bg-slate-100 text-slate-700'
-                      }`}
-                      title="Launch Order Catalog"
-                    >
-                      <ExternalLink size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* QR Code Feature Panel */}
-              {activeShareFeature === 'qr' && (
-                <div className={`p-3.5 rounded-md border flex flex-col items-center gap-3 animate-in fade-in duration-150 ${
-                  isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20' : 'bg-slate-50 border-slate-200'
-                }`}>
-                  <img src={qrCodeImageUrl} alt="Catalog QR Code" className="w-28 h-28 rounded-[4px] bg-white p-1.5 shadow-sm" />
-                  <div className="text-center">
-                    <p className="text-xs font-bold text-[#E2DCC8]">Instant Mobile Scan</p>
-                    <p className="text-[10px] text-[#E2DCC8]/60">Point mobile camera to open catalog on phone immediately</p>
-                  </div>
-                  <div className="w-full">
-                    <button
-                      type="button"
-                      onClick={handleDownloadQrImage}
-                      className="w-full py-2 px-3 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition-all active:scale-95"
-                    >
-                      <Download size={14} /> Download QR Image
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <ExportShareTab
+              isDark={isDark}
+              activeShareFeature={activeShareFeature}
+              setActiveShareFeature={setActiveShareFeature}
+              publicShareUrl={publicShareUrl}
+              privateShareUrl={privateShareUrl}
+              formOrderUrl={formOrderUrl}
+              qrCodeImageUrl={qrCodeImageUrl}
+              copiedLink={copiedLink}
+              copiedFeatureLink={copiedFeatureLink}
+              handleCopyShareLink={handleCopyShareLink}
+              handleCopyCustomLink={handleCopyCustomLink}
+              handleDownloadQrImage={handleDownloadQrImage}
+            />
           )}
 
-          {/* ===================== DOWNLOAD TAB ===================== */}
           {activeTab === 'download' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              {/* File Format Selection */}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  File Format
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setFileType('pdf')}
-                    className={`p-3 rounded-md border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
-                      fileType === 'pdf'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <FileText size={18} />
-                    <span className="text-xs font-bold">PDF (Digital)</span>
-                    <span className="text-[10px] opacity-70">Web & Screen • RGB</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFileType('pdf_cmyk')}
-                    className={`p-3 rounded-md border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
-                      fileType === 'pdf_cmyk'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <Printer size={18} />
-                    <span className="text-xs font-bold">PDF (CMYK)</span>
-                    <span className="text-[10px] opacity-70">Print Ready • 300 DPI</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setFileType('png')}
-                    className={`p-3 rounded-md border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
-                      fileType === 'png'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <ImageIcon size={18} />
-                    <span className="text-xs font-bold">PNG Image</span>
-                    <span className="text-[10px] opacity-70">Lossless • Crisp</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Page Selection */}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  Select Pages
-                </label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPageSelection('all')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-[4px] border transition-all cursor-pointer ${
-                      pageSelection === 'all'
-                        ? 'bg-[#0F3D3E] text-[#F1F1F1] border-[#E2DCC8]/40 shadow-sm'
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    All Pages ({totalPages})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPageSelection('current')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-[4px] border transition-all cursor-pointer ${
-                      pageSelection === 'current'
-                        ? 'bg-[#0F3D3E] text-[#F1F1F1] border-[#E2DCC8]/40 shadow-sm'
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    Current Page ({currentPageIndex + 1})
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPageSelection('custom')}
-                    className={`flex-1 py-1.5 px-3 text-xs font-semibold rounded-[4px] border transition-all cursor-pointer ${
-                      pageSelection === 'custom'
-                        ? 'bg-[#0F3D3E] text-[#F1F1F1] border-[#E2DCC8]/40 shadow-sm'
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    Custom Range
-                  </button>
-                </div>
-                {pageSelection === 'custom' && (
-                  <input
-                    type="text"
-                    value={customRange}
-                    onChange={(e) => setCustomRange(e.target.value)}
-                    placeholder="e.g. 1, 2 or 1-2"
-                    className={`mt-2 w-full px-3 py-1.5 text-xs rounded-[4px] border ${
-                      isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20 text-[#F1F1F1]' : 'bg-white border-slate-200 text-slate-800'
-                    }`}
-                  />
-                )}
-              </div>
-
-              {/* Quality Preset */}
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  Resolution & Quality
-                </label>
-                <div className="grid grid-cols-3 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setDpiQuality('standard')}
-                    className={`py-1.5 px-2 text-xs rounded-[4px] border text-center font-medium transition-all cursor-pointer ${
-                      dpiQuality === 'standard'
-                        ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] font-bold'
-                        : isDark ? 'border-[#E2DCC8]/15 text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    Standard (150 DPI)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDpiQuality('high')}
-                    className={`py-1.5 px-2 text-xs rounded-[4px] border text-center font-medium transition-all cursor-pointer ${
-                      dpiQuality === 'high'
-                        ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] font-bold'
-                        : isDark ? 'border-[#E2DCC8]/15 text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    High (300 DPI)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDpiQuality('ultra')}
-                    className={`py-1.5 px-2 text-xs rounded-[4px] border text-center font-medium transition-all cursor-pointer ${
-                      dpiQuality === 'ultra'
-                        ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] font-bold'
-                        : isDark ? 'border-[#E2DCC8]/15 text-[#E2DCC8]/60 hover:text-[#F1F1F1]' : 'border-slate-200 text-slate-600'
-                    }`}
-                  >
-                    Ultra (600 DPI)
-                  </button>
-                </div>
-              </div>
-
-              {/* Progress Bar */}
-              {isExporting && exportProgress && (
-                <div className={`p-3 rounded-md border space-y-2 ${
-                  isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20' : 'bg-[#0F3D3E]/5 border-[#0F3D3E]/20'
-                }`}>
-                  <div className="flex justify-between items-center text-xs font-semibold">
-                    <span className="text-[#E2DCC8] flex items-center gap-1.5">
-                      <Loader2 size={13} className="animate-spin" /> {exportProgress.status}
-                    </span>
-                    <span className="text-[#E2DCC8]/80 font-mono">
-                      {Math.round((exportProgress.current / exportProgress.total) * 100)}%
-                    </span>
-                  </div>
-                  <div className="w-full bg-[#1e1e1e] rounded-[2px] h-1.5 overflow-hidden">
-                    <div
-                      className="bg-[#0F3D3E] h-full transition-all duration-200 border-r border-[#E2DCC8]"
-                      style={{ width: `${(exportProgress.current / exportProgress.total) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ===================== EMBED TAB ===================== */}
-          {activeTab === 'embed' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  Embed Style
-                </label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setEmbedMode('flipbook')}
-                    className={`p-3 rounded-md border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
-                      embedMode === 'flipbook'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <BookOpen size={18} />
-                    <span className="text-xs font-bold">Interactive Flipbook</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setEmbedMode('scroll')}
-                    className={`p-3 rounded-md border flex flex-col items-center gap-1.5 transition-all text-center cursor-pointer ${
-                      embedMode === 'scroll'
-                        ? (isDark ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 text-[#E2DCC8] ring-1 ring-[#0F3D3E]' : 'border-[#0F3D3E] bg-[#0F3D3E]/10 text-[#0F3D3E] ring-1 ring-[#0F3D3E]/20')
-                        : isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F] text-[#E2DCC8]/70 hover:border-[#E2DCC8]/30' : 'border-slate-200 bg-slate-50/60 text-slate-700 hover:border-slate-300'
-                    }`}
-                  >
-                    <Globe size={18} />
-                    <span className="text-xs font-bold">Web Page Catalog</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  HTML Embed Code
-                </label>
-                <div className={`p-3 rounded-md border font-mono text-xs overflow-x-auto select-all ${
-                  isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-slate-50 border-slate-200 text-[#0F3D3E]'
-                }`}>
-                  {`<iframe src="${embedMode === 'flipbook' ? flipbookUrl : publicShareUrl}" width="${embedWidth}" height="${embedHeight}" frameborder="0" allowfullscreen></iframe>`}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] font-black text-[#E2DCC8]/60 uppercase tracking-wider mb-1">
-                    Width
-                  </label>
-                  <input
-                    type="text"
-                    value={embedWidth}
-                    onChange={(e) => setEmbedWidth(e.target.value)}
-                    className={`w-full px-3 py-1.5 text-xs rounded-[4px] border ${
-                      isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20 text-[#F1F1F1]' : 'bg-white border-slate-200 text-slate-800'
-                    }`}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-[#E2DCC8]/60 uppercase tracking-wider mb-1">
-                    Height
-                  </label>
-                  <input
-                    type="text"
-                    value={embedHeight}
-                    onChange={(e) => setEmbedHeight(e.target.value)}
-                    className={`w-full px-3 py-1.5 text-xs rounded-[4px] border ${
-                      isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20 text-[#F1F1F1]' : 'bg-white border-slate-200 text-slate-800'
-                    }`}
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ===================== PUBLISH TAB ===================== */}
-          {activeTab === 'publish' && (
-            <div className="space-y-5 animate-in fade-in duration-150">
-              <div className={`p-3.5 rounded-md border flex items-center justify-between ${
-                isDark ? 'bg-[#0F3D3E]/20 border-[#E2DCC8]/25 text-[#E2DCC8]' : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <div>
-                    <p className="text-xs font-bold">Catalog is Live & Published</p>
-                    <p className="text-[10px] opacity-80">Accessible worldwide via fast CDN link</p>
-                  </div>
-                </div>
-                <span className="text-[9px] font-bold px-2 py-0.5 rounded-[3px] bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 uppercase">
-                  LIVE
-                </span>
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-[#E2DCC8]/70 mb-2">
-                  Live Public URL
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={publicShareUrl}
-                    className={`flex-1 px-3 py-1.5 text-xs rounded-[4px] border font-mono select-all ${
-                      isDark ? 'bg-[#100F0F] border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-slate-50 border-slate-200 text-slate-700'
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleCopyShareLink}
-                    className={`p-1.5 rounded-[4px] border transition-all cursor-pointer ${
-                      copiedLink
-                        ? 'bg-emerald-500 text-white border-emerald-500'
-                        : isDark ? 'border-[#E2DCC8]/20 bg-[#161616] text-[#E2DCC8] hover:bg-[#222]' : 'border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100'
-                    }`}
-                    title="Copy Link"
-                  >
-                    {copiedLink ? <Check size={16} /> : <Copy size={16} />}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Pinned Sticky Bottom Footer (Always stays fixed at the bottom of the modal) */}
-        <div className={`p-3.5 px-6 border-t shrink-0 ${isDark ? 'bg-[#100F0F] border-[#E2DCC8]/15' : 'bg-slate-50 border-slate-200'}`}>
-          {activeTab === 'download' && (
-            <button
-              type="button"
-              onClick={handleDownload}
-              disabled={isExporting}
-              className="w-full py-2.5 px-4 bg-[#0F3D3E] hover:bg-[#155455] active:scale-[0.99] text-[#F1F1F1] border border-[#E2DCC8]/30 font-bold rounded-[4px] shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50 text-xs uppercase tracking-wider cursor-pointer"
-            >
-              {isExporting ? (
-                <>
-                  <Loader2 size={15} className="animate-spin" />
-                  Generating {fileType === 'pdf_cmyk' ? 'Print PDF (CMYK)' : (fileType === 'pdf' ? 'PDF (Digital)' : 'PNG Image')}...
-                </>
-              ) : (
-                <>
-                  {fileType === 'pdf_cmyk' ? (
-                    <Printer size={15} />
-                  ) : fileType === 'pdf' ? (
-                    <FileDown size={15} />
-                  ) : (
-                    <ImageIcon size={15} />
-                  )}
-                  {fileType === 'pdf_cmyk'
-                    ? 'Download Print PDF (CMYK)'
-                    : fileType === 'pdf'
-                    ? 'Download PDF (Digital)'
-                    : 'Download PNG Image'}
-                </>
-              )}
-            </button>
-          )}
-
-          {activeTab === 'share' && (
-            <button
-              type="button"
-              onClick={handleCopyShareLink}
-              className="w-full py-2.5 px-4 bg-[#0F3D3E] hover:bg-[#155455] active:scale-[0.99] text-[#F1F1F1] border border-[#E2DCC8]/30 font-bold rounded-[4px] shadow-sm flex items-center justify-center gap-2 transition-all text-xs uppercase tracking-wider cursor-pointer"
-            >
-              {copiedLink ? <Check size={15} /> : <Copy size={15} />}
-              {copiedLink ? 'Link Copied to Clipboard!' : 'Copy Share Link'}
-            </button>
+            <ExportDownloadTab
+              isDark={isDark}
+              fileType={fileType}
+              setFileType={setFileType}
+              pageSelection={pageSelection}
+              setPageSelection={setPageSelection}
+              customRange={customRange}
+              setCustomRange={setCustomRange}
+              dpiQuality={dpiQuality}
+              setDpiQuality={setDpiQuality}
+              totalPages={totalPages}
+              currentPageIndex={currentPageIndex}
+              isExporting={isExporting}
+              exportProgress={exportProgress}
+            />
           )}
 
           {activeTab === 'embed' && (
-            <button
-              type="button"
-              onClick={handleCopyEmbedCode}
-              className="w-full py-2.5 px-4 bg-[#0F3D3E] hover:bg-[#155455] active:scale-[0.99] text-[#F1F1F1] border border-[#E2DCC8]/30 font-bold rounded-[4px] shadow-sm flex items-center justify-center gap-2 transition-all text-xs uppercase tracking-wider cursor-pointer"
-            >
-              {copiedEmbed ? <Check size={15} /> : <Code2 size={15} />}
-              {copiedEmbed ? 'Embed Code Copied!' : 'Copy Embed Code'}
-            </button>
+            <ExportEmbedTab
+              isDark={isDark}
+              embedMode={embedMode}
+              setEmbedMode={setEmbedMode}
+              embedWidth={embedWidth}
+              setEmbedWidth={setEmbedWidth}
+              embedHeight={embedHeight}
+              setEmbedHeight={setEmbedHeight}
+              flipbookUrl={flipbookUrl}
+              publicShareUrl={publicShareUrl}
+            />
           )}
 
           {activeTab === 'publish' && (
-            <button
-              type="button"
-              onClick={() => window.open(publicShareUrl, '_blank')}
-              className="w-full py-2.5 px-4 bg-[#0F3D3E] hover:bg-[#155455] active:scale-[0.99] text-[#F1F1F1] border border-[#E2DCC8]/30 font-bold rounded-[4px] shadow-sm flex items-center justify-center gap-2 transition-all text-xs uppercase tracking-wider cursor-pointer"
-            >
-              <ExternalLink size={15} />
-              Open Live Catalog Viewer
-            </button>
+            <ExportPublishTab
+              isDark={isDark}
+              publicShareUrl={publicShareUrl}
+              copiedLink={copiedLink}
+              handleCopyShareLink={handleCopyShareLink}
+            />
           )}
         </div>
+
+        {/* Sticky Bottom Footer */}
+        <ExportFooter
+          isDark={isDark}
+          activeTab={activeTab}
+          isExporting={isExporting}
+          fileType={fileType}
+          copiedLink={copiedLink}
+          copiedEmbed={copiedEmbed}
+          publicShareUrl={publicShareUrl}
+          handleDownload={handleDownload}
+          handleCopyShareLink={handleCopyShareLink}
+          handleCopyEmbedCode={handleCopyEmbedCode}
+        />
       </div>
     </div>
   );

@@ -114,6 +114,9 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
   catalogSetupName: '',
   viewingCatalogId: null,
   publicCatalog: null,
+  saveStatus: 'saved',
+  lastSavedAt: null,
+  setSaveStatus: (status) => set({ saveStatus: status }),
 
   setCurrentPageIndex: (index) => set({ currentPageIndex: index }),
   setSelectedPageIndex: (index) => set({ selectedPageIndex: index }),
@@ -268,7 +271,7 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
     const state = get();
     const catalog = state.catalog;
 
-    set({ isLoading: true });
+    set({ isLoading: true, saveStatus: 'saving' });
     try {
       let backendId = String(catalog.id);
       let isNew = backendId.startsWith('cat-');
@@ -341,7 +344,8 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
         }
       }
 
-      set({ isLoading: false });
+      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      set({ isLoading: false, saveStatus: 'saved', lastSavedAt: timeStr, error: null });
       if (typeof window !== 'undefined') {
         localStorage.setItem('active_catalog_id', backendId);
       }
@@ -350,7 +354,7 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
       console.error('Failed to save catalog', error);
       const errMsg =
         error.response?.data?.detail || error.response?.data?.error || 'Failed to save catalog to server';
-      set({ error: errMsg, isLoading: false });
+      set({ error: errMsg, isLoading: false, saveStatus: 'error' });
       throw error;
     }
   },
@@ -708,12 +712,18 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
     get().pushHistory();
     set((state) => {
       if (state.catalog.pages.length <= 1) return state;
-      let targetIndex: number;
-      if (typeof indexOrId === 'string') {
-        targetIndex = state.catalog.pages.findIndex((p) => p.id === indexOrId);
-      } else {
+      let targetIndex = -1;
+
+      // Prioritize direct numerical array index
+      if (typeof indexOrId === 'number' && indexOrId >= 0 && indexOrId < state.catalog.pages.length) {
         targetIndex = indexOrId;
+      } else {
+        const foundIdx = state.catalog.pages.findIndex((p) => String(p.id) === String(indexOrId));
+        if (foundIdx !== -1) {
+          targetIndex = foundIdx;
+        }
       }
+
       if (targetIndex < 0 || targetIndex >= state.catalog.pages.length) return state;
 
       const newPages = state.catalog.pages
@@ -739,17 +749,23 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
   duplicatePage: (indexOrId) => {
     const { catalog } = get();
     get().pushHistory();
-    let index: number;
-    if (typeof indexOrId === 'string') {
-      index = catalog.pages.findIndex((p) => p.id === indexOrId);
-    } else {
+    let index = -1;
+
+    // Prioritize direct numerical array index
+    if (typeof indexOrId === 'number' && indexOrId >= 0 && indexOrId < catalog.pages.length) {
       index = indexOrId;
+    } else {
+      const foundIdx = catalog.pages.findIndex((p) => String(p.id) === String(indexOrId));
+      if (foundIdx !== -1) {
+        index = foundIdx;
+      }
     }
+
     if (index === -1 || !catalog.pages[index]) return;
     const pageToDuplicate = catalog.pages[index];
     const newPage = JSON.parse(JSON.stringify(pageToDuplicate));
     newPage.id = `page-dup-${Date.now()}`;
-    newPage.elements = newPage.elements.map((el: any) => ({
+    newPage.elements = (newPage.elements || []).map((el: any) => ({
       ...el,
       id: `el-pdup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     }));
@@ -780,6 +796,74 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
         currentPageIndex: newCurrentPageIndex !== -1 ? newCurrentPageIndex : 0,
       };
     }),
+
+  movePage: (fromIndex, toIndex) => {
+    get().pushHistory();
+    set((state) => {
+      const totalPages = state.catalog.pages.length;
+      if (fromIndex < 0 || fromIndex >= totalPages || toIndex < 0 || toIndex >= totalPages || fromIndex === toIndex) {
+        return state;
+      }
+      const newPages = [...state.catalog.pages];
+      const [movedPage] = newPages.splice(fromIndex, 1);
+      newPages.splice(toIndex, 0, movedPage);
+      const renumberedPages = newPages.map((p, i) => ({ ...p, pageNumber: i + 1 }));
+      return {
+        catalog: { ...state.catalog, pages: renumberedPages, updatedAt: new Date().toISOString() },
+        currentPageIndex: toIndex,
+      };
+    });
+  },
+
+  updatePage: (pageIndex, updates) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (!newPages[pageIndex]) return state;
+      newPages[pageIndex] = { ...newPages[pageIndex], ...updates };
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+      };
+    });
+  },
+
+  togglePageLock: (pageIndex) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (!newPages[pageIndex]) return state;
+      const currentLocked = Boolean(newPages[pageIndex].locked);
+      newPages[pageIndex] = { ...newPages[pageIndex], locked: !currentLocked };
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+      };
+    });
+  },
+
+  togglePageVisibility: (pageIndex) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (!newPages[pageIndex]) return state;
+      const currentVisible = newPages[pageIndex].visible !== false;
+      newPages[pageIndex] = { ...newPages[pageIndex], visible: !currentVisible };
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+      };
+    });
+  },
+
+  setPageTitle: (pageIndex, title) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (!newPages[pageIndex]) return state;
+      newPages[pageIndex] = { ...newPages[pageIndex], title };
+      return {
+        catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() },
+      };
+    });
+  },
 
   setPageOrientation: (pageIndex, orientation) => {
     get().pushHistory();
