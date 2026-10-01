@@ -3,7 +3,7 @@ import { Canvas, Circle, ActiveSelection, Rect, config, util, Point } from 'fabr
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { CatalogPage, CanvasElement } from '../../types';
-import { elementToFabricObject } from './fabricRenderer';
+import { elementToFabricObject, applyTextEffectsToFabricObject } from './fabricRenderer';
 import { SpatialIndex, DistanceBadge } from '../../utils/spatialIndex';
 import { initCanvaGlobals, applyCanvaSelectionStyle, renderCanvaHoverOutline, CANVA_THEME } from '../../utils/canvaControls';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
@@ -379,7 +379,7 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
           window.dispatchEvent(new CustomEvent('catalog:playVideo', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'table') {
           window.dispatchEvent(new CustomEvent('catalog:editTable', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
-        } else if (el.type === 'text') {
+        } else if (el.type === 'text' || obj?.type === 'textbox' || obj?.type === 'text' || obj?.type === 'i-text' || (el as any).shapeType === 'text') {
           window.dispatchEvent(new CustomEvent('catalog:editText', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
         } else if (el.type === 'product-block') {
           window.dispatchEvent(new CustomEvent('catalog:editProductCard', { detail: { id: el.id, pageIndex: pageIdxRef.current } }));
@@ -691,8 +691,14 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
             const childSx = Math.abs(child.scaleX || 1);
             const childSy = Math.abs(child.scaleY || 1);
 
-            if (child.type === 'i-text' || child.type === 'text' || child.type === 'FabricText') {
-              updates.width = Math.max(20, Math.round((child.width || (el?.width || 0)) * childSx));
+            if (child.type === 'i-text' || child.type === 'text' || child.type === 'FabricText' || child.type === 'textbox') {
+              const newFontSize = Math.max(6, Math.round((child.fontSize || el?.fontSize || 16) * childSx));
+              const newWidth = Math.max(20, Math.round((child.width || el?.width || 100) * childSx));
+              updates.fontSize = newFontSize;
+              updates.width = newWidth;
+              child.set({ fontSize: newFontSize, width: newWidth, scaleX: 1, scaleY: 1 });
+              if (typeof child.initDimensions === 'function') child.initDimensions();
+              child.setCoords();
             } else if (child instanceof Circle) {
               const newRadius = (child.radius || (el?.width ? el.width / 2 : 0)) * childSx;
               updates.width = Math.round(newRadius * 2);
@@ -738,16 +744,23 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
         
         if (el && el.type === 'text') {
           if (sx !== 1 || sy !== 1) {
-            const newWidth = Math.max(20, (obj.width || el.width) * sx);
+            const newFontSize = Math.max(6, Math.round((obj.fontSize || el.fontSize || 16) * sx));
+            const newWidth = Math.max(20, Math.round((obj.width || el.width || 100) * sx));
+            updates.fontSize = newFontSize;
             updates.width = newWidth;
             obj.set({
+              fontSize: newFontSize,
               width: newWidth,
               scaleX: 1,
               scaleY: 1
             });
+            if (typeof obj.initDimensions === 'function') obj.initDimensions();
             obj.setCoords();
           } else {
             updates.width = obj.width || el.width;
+            if (obj.fontSize !== undefined) {
+              updates.fontSize = obj.fontSize;
+            }
           }
           updates.height = obj.height || el.height;
         } else if (obj instanceof Circle) {
@@ -1213,13 +1226,13 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
                     fontFamily: resolvedFont,
                     fontWeight: is3GridTitle ? 'normal' : (el.fontWeight || 'normal'),
                     fontStyle: el.fontStyle || 'normal',
-                    fill: el.fill || '#000000',
                     textAlign: el.textAlign || 'left',
                     lineHeight: el.lineHeight || 1.2,
                     underline: el.textDecoration?.includes('underline') || false,
-                    charSpacing: 0,
+                    charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 16)) * 1000) : 0,
                     objectCaching: false,
                   });
+                  applyTextEffectsToFabricObject(existingObj, el);
                   existingObj._lastFill = el.fill || '';
                   if (!isActiveObj) {
                     let safeW = el.width || 100;
@@ -1549,6 +1562,87 @@ const FabricStage: React.FC<Props> = ({ page, pageIdx, isActive, zoom, canvasBg,
     });
     return unsub;
   }, []);
+
+  // Synchronous, zero-latency real-time preview listener for typography, sliders, and color controls
+  useEffect(() => {
+    const handleLiveUpdate = (e: Event) => {
+      const { id, updates } = (e as CustomEvent).detail || {};
+      if (!id || !updates || !isActiveRef.current) return;
+      const canvas = fabricCanvasRef.current || canvasInstance;
+      if (!canvas) return;
+
+      // Find target Fabric object (standalone or inside active selection)
+      let obj = canvas.getObjects().find((o: any) => o.id === id);
+      if (!obj) {
+        const activeObj = canvas.getActiveObject() as any;
+        if (activeObj?.id === id) {
+          obj = activeObj;
+        } else if (typeof activeObj?.getObjects === 'function') {
+          obj = activeObj.getObjects().find((o: any) => o.id === id);
+        }
+      }
+      if (!obj) return;
+
+      const isTextType = obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text' || obj.type === 'FabricText' || obj.type?.toLowerCase().includes('text') || typeof (obj as any)._renderText === 'function';
+
+      if (isTextType) {
+        if (updates.letterSpacing !== undefined) {
+          const fontSize = updates.fontSize || obj.fontSize || 16;
+          obj.set('charSpacing', Math.round(((updates.letterSpacing) / fontSize) * 1000));
+        }
+        if (updates.lineHeight !== undefined) {
+          obj.set('lineHeight', updates.lineHeight);
+        }
+        if (updates.fontSize !== undefined) {
+          obj.set('fontSize', updates.fontSize);
+          if (updates.width !== undefined) {
+            obj.set('width', updates.width);
+          }
+        }
+        if (updates.fontFamily !== undefined) {
+          obj.set('fontFamily', updates.fontFamily);
+        }
+        if (updates.fontWeight !== undefined) {
+          obj.set('fontWeight', updates.fontWeight);
+        }
+        if (updates.fontStyle !== undefined) {
+          obj.set('fontStyle', updates.fontStyle);
+        }
+        if (updates.textAlign !== undefined) {
+          obj.set('textAlign', updates.textAlign);
+        }
+        if (updates.text !== undefined) {
+          obj.set('text', updates.text);
+        }
+        if (updates.textDecoration !== undefined) {
+          obj.set('underline', updates.textDecoration.includes('underline'));
+        }
+
+        applyTextEffectsToFabricObject(obj, { ...obj, ...updates } as any);
+
+        if (typeof (obj as any)._clearCache === 'function') {
+          (obj as any)._clearCache();
+        }
+        if (typeof (obj as any).initDimensions === 'function') {
+          (obj as any).initDimensions();
+        }
+      }
+
+      if (updates.fill !== undefined) {
+        obj.set('fill', updates.fill);
+      }
+      if (updates.opacity !== undefined) {
+        obj.set('opacity', updates.opacity);
+      }
+
+      obj.dirty = true;
+      obj.setCoords();
+      canvas.requestRenderAll();
+    };
+
+    window.addEventListener('catalog:liveUpdateElement', handleLiveUpdate);
+    return () => window.removeEventListener('catalog:liveUpdateElement', handleLiveUpdate);
+  }, [canvasInstance]);
 
   useEffect(() => {
     const forceRender = () => {

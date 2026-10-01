@@ -364,6 +364,7 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
         }
         return {
           catalog: JSON.parse(JSON.stringify(catalogToLoad)),
+          editingSystemTemplate: null,
           currentView: 'editor',
           currentPageIndex: 0,
           selectedElementIds: [],

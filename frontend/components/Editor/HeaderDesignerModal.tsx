@@ -786,10 +786,14 @@ export const HeaderDesignerModal: React.FC = () => {
         updates.height = elObj?.height || 2;
         obj.set({ width: newW, scaleX: 1, scaleY: 1 });
         obj.setCoords();
-      } else if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text') {
-        updates.width = Math.round((obj.width || 0) * sx);
+      } else if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
+        const newFontSize = Math.max(6, Math.round((obj.fontSize || elObj?.fontSize || 16) * sx));
+        const newWidth = Math.max(20, Math.round((obj.width || elObj?.width || 100) * sx));
+        updates.fontSize = newFontSize;
+        updates.width = newWidth;
         updates.text = obj.text || '';
-        obj.set({ scaleX: 1, scaleY: 1 });
+        obj.set({ fontSize: newFontSize, width: newWidth, scaleX: 1, scaleY: 1 });
+        if (typeof obj.initDimensions === 'function') obj.initDimensions();
         obj.setCoords();
       } else if (obj instanceof Circle || obj.type === 'circle') {
         const newRadius = (obj.radius || (obj.width ? obj.width / 2 : 18)) * sx;
@@ -1163,7 +1167,7 @@ export const HeaderDesignerModal: React.FC = () => {
               fontWeight: el.fontWeight || 'normal',
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
-              charSpacing: (el.letterSpacing || 0) * 10
+              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 14)) * 1000) : 0
             });
             applyElementFill(fabricObj, el.fill || '#000000', el.width, el.height);
           } else if (el.type === 'shape') {
@@ -1186,7 +1190,7 @@ export const HeaderDesignerModal: React.FC = () => {
               fontWeight: el.fontWeight || 'normal',
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
-              charSpacing: (el.letterSpacing || 0) * 10,
+              charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 14)) * 1000) : 0,
               angle: el.rotation || 0,
               opacity: el.opacity ?? 1,
               originX: 'left',
@@ -1606,42 +1610,18 @@ export const HeaderDesignerModal: React.FC = () => {
           {/* Apply to Catalog Button */}
           <button
             onClick={handleApplyToCatalog}
-            className={`flex items-center gap-2 px-3.5 py-2 border rounded-[6px] text-xs font-bold transition-all shadow-sm ${isDark
-              ? 'bg-[#1c1c1f] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/50 text-white'
-              : 'bg-white hover:bg-slate-50 border-slate-300 hover:border-[#0F3D3E]/50 text-slate-800'
-              }`}
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-cyan-950/40"
             title="Apply this designed header directly to the currently opened catalog"
           >
             {appliedSuccess ? (
               <>
-                <CheckCircle2 size={15} className="text-emerald-500" />
-                <span className="text-emerald-500">Applied!</span>
+                <CheckCircle2 size={15} className="text-emerald-300" />
+                <span className="text-emerald-300">Applied to Catalog!</span>
               </>
             ) : (
               <>
-                <Sparkles size={15} className={isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]'} />
+                <Sparkles size={15} className="text-[#E2DCC8]" />
                 <span>Apply to Catalog</span>
-              </>
-            )}
-          </button>
-
-          {/* Save as Theme Button */}
-          <button
-            onClick={handleSaveTheme}
-            disabled={isSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#144f51] hover:from-[#134d4f] hover:to-[#175b5d] border border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[6px] text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-cyan-950/40"
-          >
-            {savedSuccess ? (
-              <>
-                <Check size={16} className="text-emerald-300" />
-                <span className="text-emerald-300">Saved to Themes!</span>
-              </>
-            ) : isSaving ? (
-              <span>Saving...</span>
-            ) : (
-              <>
-                <Save size={15} />
-                <span>Save Header Theme</span>
               </>
             )}
           </button>

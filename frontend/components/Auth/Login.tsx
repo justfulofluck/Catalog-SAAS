@@ -59,6 +59,26 @@ const Login: React.FC = () => {
 
       // Step 1: Info -> Plan
       if (regStep === 'info') {
+        if (!name.trim()) {
+          alert("Please enter your full name.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!businessName.trim()) {
+          alert("Please enter your business or company name.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!email.trim() || !email.includes('@')) {
+          alert("Please enter a valid email address.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!password || password.length < 6) {
+          alert("Password must be at least 6 characters long.");
+          setIsSubmitting(false);
+          return;
+        }
         setRegStep('plan');
         setIsSubmitting(false);
         return;
@@ -66,20 +86,23 @@ const Login: React.FC = () => {
 
       // Step 2: Submit Registration
       try {
+        const cleanEmail = email.trim();
+        const cleanName = name.trim();
+        const cleanBusinessName = businessName.trim();
+
         await authApi.register({
-          email,
-          username: email, // Auto-fill username with email to satisfy backend
+          email: cleanEmail,
+          username: cleanEmail,
           password: password,
           password1: password,
           password2: password,
-          name,
-          business_name: businessName,
+          name: cleanName,
+          business_name: cleanBusinessName,
           plan_slug: selectedPlanSlug
         });
-        alert("Account created successfully! Please sign in.");
-        setIsLoginMode(true);
-        // Clear sensitive fields
-        setPassword('');
+
+        // Automatically log user in upon successful registration
+        await login(cleanEmail, undefined, password);
       } catch (error: any) {
         console.error("Registration failed", error);
 
@@ -95,7 +118,6 @@ const Login: React.FC = () => {
         let errorMsg = "Registration failed.";
         if (error.response?.data) {
           const data = error.response.data;
-          // Handle string errors (like 500 html or simple messages)
           if (typeof data === 'string') {
             errorMsg = data;
           } else {
@@ -113,8 +135,8 @@ const Login: React.FC = () => {
     } else {
       // LOGIN FLOW
       try {
-        const isEmail = email.includes('@');
-        await login(isEmail ? email : undefined, isEmail ? undefined : email, password);
+        const cleanEmail = email.trim();
+        await login(cleanEmail, undefined, password);
       } catch (err) {
         console.error("Login failed", err);
       } finally {
@@ -287,15 +309,15 @@ const Login: React.FC = () => {
         )}
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Email or Username</label>
+          <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Email Address</label>
           <div className="relative group">
             <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
             <input
-              type="text"
+              type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@company.com or username"
+              placeholder="name@company.com"
               className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
             />
           </div>

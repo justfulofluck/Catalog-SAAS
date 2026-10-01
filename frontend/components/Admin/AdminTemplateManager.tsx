@@ -12,7 +12,12 @@ import {
     Sparkles,
     SlidersHorizontal,
     FileText,
-    ExternalLink
+    ExternalLink,
+    BookOpen,
+    ArrowUpToLine,
+    ArrowDownToLine,
+    Check,
+    X
 } from 'lucide-react';
 
 export const AdminTemplateManager: React.FC = () => {
@@ -23,7 +28,8 @@ export const AdminTemplateManager: React.FC = () => {
         deleteSystemTemplate,
         openTemplateInVisualEditor,
         setIsAdminHeaderDesignerOpen,
-        setIsAdminFooterDesignerOpen
+        setIsAdminFooterDesignerOpen,
+        showToast
     } = useStore();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -58,13 +64,13 @@ export const AdminTemplateManager: React.FC = () => {
     const getTypeBadge = (type: string) => {
         switch (type) {
             case 'header':
-                return { label: 'Header', style: 'bg-amber-500/15 text-amber-300 border-amber-500/30' };
+                return { label: 'Header Blueprint', style: 'bg-amber-500/15 text-amber-300 border-amber-500/30' };
             case 'footer':
-                return { label: 'Footer', style: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' };
+                return { label: 'Footer Blueprint', style: 'bg-cyan-500/15 text-cyan-300 border-cyan-500/30' };
             case 'full_catalog':
                 return { label: 'Full Catalog', style: 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]/50' };
             case 'cover':
-                return { label: 'Cover Page', style: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' };
+                return { label: 'Cover Blueprint', style: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' };
             case 'product_grid':
                 return { label: 'Product Grid', style: 'bg-purple-500/15 text-purple-300 border-purple-500/30' };
             default:
@@ -74,16 +80,16 @@ export const AdminTemplateManager: React.FC = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Filters & Search Controls */}
+            {/* Filters, Search & Import Controls */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-[#161616] p-4 rounded-[6px] border border-[#262626]">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[240px]">
+                <div className="relative flex-1 min-w-[220px]">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#666666]" size={15} />
                     <input
                         type="text"
                         value={searchQuery}
                         onChange={e => setSearchQuery(e.target.value)}
-                        placeholder="Search templates by name, industry, or type..."
+                        placeholder="Search blueprints by name, industry, or type..."
                         className="w-full pl-10 pr-4 py-2 bg-[#1c1c1c] border border-[#262626] rounded-[4px] text-xs font-medium text-white placeholder-[#666666] outline-none focus:border-[#0F3D3E] transition-all"
                     />
                 </div>
@@ -91,12 +97,11 @@ export const AdminTemplateManager: React.FC = () => {
                 {/* Filter by Type */}
                 <div className="flex items-center gap-1.5 bg-[#121212] p-1 rounded-[4px] border border-[#262626] overflow-x-auto">
                     {[
-                        { id: 'all', label: 'All' },
-                        { id: 'full_catalog', label: 'Catalogs' },
+                        { id: 'all', label: 'All Blueprints' },
                         { id: 'cover', label: 'Covers' },
-                        { id: 'product_grid', label: 'Grids' },
                         { id: 'header', label: 'Headers' },
-                        { id: 'footer', label: 'Footers' }
+                        { id: 'footer', label: 'Footers' },
+                        { id: 'full_catalog', label: 'Catalogs' }
                     ].map(tab => (
                         <button
                             key={tab.id}
@@ -108,22 +113,16 @@ export const AdminTemplateManager: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Filter by Category */}
-                {categories.length > 0 && (
-                    <div className="flex items-center gap-2">
-                        <Filter size={14} className="text-[#666666]" />
-                        <select
-                            value={selectedCategory}
-                            onChange={e => setSelectedCategory(e.target.value)}
-                            className="bg-[#1c1c1c] border border-[#262626] text-xs font-bold text-white py-1.5 px-3 rounded-[4px] outline-none focus:border-[#0F3D3E] cursor-pointer"
-                        >
-                            <option value="all">All Industries</option>
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+                {/* Action Buttons: Launch Studio */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => openTemplateInVisualEditor(null)}
+                        className="px-3.5 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-[#0F3D3E]/25 active:scale-95"
+                    >
+                        <BookOpen size={14} />
+                        <span>Launch Studio</span>
+                    </button>
+                </div>
             </div>
 
             {/* Templates List View Table */}
@@ -133,24 +132,24 @@ export const AdminTemplateManager: React.FC = () => {
                         <Layers size={28} />
                     </div>
                     <div>
-                        <h3 className="font-space text-sm font-bold uppercase tracking-wider text-white">No Templates Found</h3>
+                        <h3 className="font-space text-sm font-bold uppercase tracking-wider text-white">No Master Blueprints Found</h3>
                         <p className="text-xs text-[#888888] font-medium max-w-sm mx-auto mt-1">
-                            {searchQuery || selectedType !== 'all' ? 'Try adjusting your search terms or filter.' : 'Click "Catalog Studio" to build your first global system template!'}
+                            {searchQuery || selectedType !== 'all' ? 'Try adjusting your search terms or filter.' : 'Launch Cover Studio to create your first blueprint.'}
                         </p>
                     </div>
-                    {(!searchQuery && selectedType === 'all') && (
+                    <div className="flex items-center justify-center gap-3 pt-2">
                         <button
                             onClick={() => openTemplateInVisualEditor(null)}
-                            className="px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white font-bold text-xs rounded-[4px] shadow-md transition-all inline-flex items-center gap-2"
+                            className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white font-bold text-xs rounded-[4px] shadow-md transition-all inline-flex items-center gap-2"
                         >
-                            <Sparkles size={14} /> Create First Template
+                            <BookOpen size={14} /> Launch Cover Studio
                         </button>
-                    )}
+                    </div>
                 </div>
             ) : (
                 <div className="bg-[#161616] rounded-[6px] border border-[#262626] overflow-hidden shadow-xl">
                     <div className="px-6 py-4 border-b border-[#262626] flex items-center justify-between text-xs text-[#888888] font-medium">
-                        <span>Showing <strong className="text-white">{filteredTemplates.length}</strong> template blueprints</span>
+                        <span>Showing <strong className="text-white">{filteredTemplates.length}</strong> master blueprints</span>
                     </div>
 
                     <div className="divide-y divide-[#242424]">
@@ -174,8 +173,8 @@ export const AdminTemplateManager: React.FC = () => {
                                                 />
                                             ) : (
                                                 <div className="text-[#666666] flex flex-col items-center gap-1">
-                                                    <Layout size={18} />
-                                                    <span className="text-[8px] font-bold uppercase tracking-wider">Canvas</span>
+                                                    {template.type === 'header' ? <ArrowUpToLine size={18} className="text-amber-400" /> : template.type === 'footer' ? <ArrowDownToLine size={18} className="text-cyan-400" /> : <BookOpen size={18} className="text-emerald-400" />}
+                                                    <span className="text-[8px] font-bold uppercase tracking-wider">{template.type}</span>
                                                 </div>
                                             )}
                                         </div>
@@ -192,7 +191,7 @@ export const AdminTemplateManager: React.FC = () => {
                                             </div>
 
                                             <p className="text-xs text-[#888888] line-clamp-1 font-normal">
-                                                {template.description || 'Global master template blueprint ready for all SaaS users.'}
+                                                {template.description || 'Master blueprint ready for all SaaS users.'}
                                             </p>
 
                                             <div className="flex flex-wrap items-center gap-3 text-[11px] text-[#666666] font-medium pt-0.5">
@@ -201,16 +200,8 @@ export const AdminTemplateManager: React.FC = () => {
                                                 </span>
                                                 <span>•</span>
                                                 <span>
-                                                    Base: <strong className="text-slate-300 font-mono">{template.theme_id || 'default'}</strong>
+                                                    Blueprint Type: <strong className="text-slate-300 font-mono capitalize">{template.type || 'cover'}</strong>
                                                 </span>
-                                                {template.type !== 'product_grid' && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <span>
-                                                            <strong className="text-slate-300">{template.pages_data?.length || 1}</strong> Page(s)
-                                                        </span>
-                                                    </>
-                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -231,7 +222,7 @@ export const AdminTemplateManager: React.FC = () => {
                                             {template.is_active ? 'Live' : 'Draft'}
                                         </button>
 
-                                        {/* Visual Editor Button */}
+                                        {/* Studio Editor Button */}
                                         <button
                                             onClick={() => {
                                                 if (template.type === 'header') {
@@ -242,18 +233,38 @@ export const AdminTemplateManager: React.FC = () => {
                                                     openTemplateInVisualEditor(template);
                                                 }
                                             }}
-                                            className="px-3.5 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 active:scale-95 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all"
-                                            title="Open interactive visual editor"
+                                            className={`px-3.5 py-1.5 border active:scale-95 text-white rounded-[4px] text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm transition-all ${
+                                                template.type === 'header'
+                                                    ? 'bg-amber-600/30 hover:bg-amber-600/50 border-amber-500/40 text-amber-200'
+                                                    : template.type === 'footer'
+                                                    ? 'bg-cyan-600/30 hover:bg-cyan-600/50 border-cyan-500/40 text-cyan-200'
+                                                    : 'bg-[#0F3D3E] hover:bg-[#155455] border-[#E2DCC8]/30'
+                                            }`}
+                                            title="Open studio blueprint designer"
                                         >
-                                            <Sparkles size={13} />
-                                            Visual Editor
+                                            {template.type === 'header' ? (
+                                                <>
+                                                    <ArrowUpToLine size={13} />
+                                                    Header Studio
+                                                </>
+                                            ) : template.type === 'footer' ? (
+                                                <>
+                                                    <ArrowDownToLine size={13} />
+                                                    Footer Studio
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <BookOpen size={13} />
+                                                    Cover Studio
+                                                </>
+                                            )}
                                         </button>
 
                                         {/* Delete Button */}
                                         <button
                                             onClick={() => handleDelete(template)}
                                             className="p-1.5 text-[#666666] hover:text-red-400 hover:bg-red-950/20 rounded-[4px] transition-colors"
-                                            title="Delete Template"
+                                            title="Delete Blueprint"
                                         >
                                             <Trash2 size={15} />
                                         </button>
@@ -267,3 +278,4 @@ export const AdminTemplateManager: React.FC = () => {
         </div>
     );
 };
+

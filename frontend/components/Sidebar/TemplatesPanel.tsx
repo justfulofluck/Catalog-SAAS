@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   LayoutTemplate, Check, Info, BookOpen, 
   List, Flag, X, ArrowUpToLine, ArrowDownToLine, Grid3X3,
@@ -15,22 +15,36 @@ type TemplateCategory = 'headers' | 'grids' | 'footers' | 'covers' | 'toc_outro'
 
 interface TemplatesPanelProps {
   hideHeader?: boolean;
+  lockToCovers?: boolean;
 }
 
-const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) => {
+const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false, lockToCovers = false }) => {
   const { 
     catalog, currentPageIndex, 
     applyCoverTemplate, applyIndexTemplate, applyClosingTemplate, 
     applyInventoryLayout, applyHeaderTemplate, applyFooterTemplate, 
     systemTemplates,
+    fetchSystemTemplates,
     setIsHeaderDesignerOpen,
     setIsFooterDesignerOpen,
     deleteSystemTemplate,
     uiTheme, setEditorTab 
   } = useStore();
 
-  const [activeCategory, setActiveCategory] = useState<TemplateCategory>('headers');
+  const [activeCategory, setActiveCategory] = useState<TemplateCategory>(lockToCovers ? 'covers' : 'headers');
   const [appliedId, setAppliedId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (fetchSystemTemplates) {
+      fetchSystemTemplates();
+    }
+  }, [fetchSystemTemplates]);
+
+  useEffect(() => {
+    if (lockToCovers) {
+      setActiveCategory('covers');
+    }
+  }, [lockToCovers]);
 
   const isDark = uiTheme === 'dark';
   const currentPage = catalog.pages[currentPageIndex] || null;
@@ -60,13 +74,15 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
         }`}>
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-white shadow-sm">
-              <LayoutTemplate size={13} />
+              {lockToCovers ? <BookOpen size={13} className="text-emerald-400" /> : <LayoutTemplate size={13} />}
             </div>
             <div>
               <h3 className={`text-[10px] font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
-                Template Studio
+                {lockToCovers ? 'Cover Studio Presets' : 'Template Studio'}
               </h3>
-              <p className={`text-[8px] font-medium ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>Modular Page Outfits</p>
+              <p className={`text-[8px] font-medium ${isDark ? 'text-[#888]' : 'text-slate-500'}`}>
+                {lockToCovers ? 'Master Cover Blueprints & Styles' : 'Modular Page Outfits'}
+              </p>
             </div>
           </div>
           <button
@@ -80,34 +96,43 @@ const TemplatesPanel: React.FC<TemplatesPanelProps> = ({ hideHeader = false }) =
         </div>
       )}
 
-      {/* Category Pill Navigation */}
-      <div className={`p-2 border-b shrink-0 transition-colors ${
-        isDark ? 'bg-[#141414] border-[#262626]' : 'bg-slate-50 border-slate-200'
-      }`}>
-        <div className={`grid grid-cols-5 gap-1 p-0.5 rounded-[4px] border ${
-          isDark ? 'bg-[#101010] border-[#262626]' : 'bg-slate-200/60 border-slate-200'
+      {/* Category Pill Navigation - only shown when NOT locked to covers */}
+      {!lockToCovers ? (
+        <div className={`p-2 border-b shrink-0 transition-colors ${
+          isDark ? 'bg-[#141414] border-[#262626]' : 'bg-slate-50 border-slate-200'
         }`}>
-          {categories.map((cat) => {
-            const Icon = cat.icon;
-            const isActive = activeCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id as TemplateCategory)}
-                className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-[3px] text-[9px] font-bold transition-all ${
-                  isActive
-                    ? 'bg-[#0F3D3E] text-white shadow-sm'
-                    : (isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900')
-                }`}
-                title={cat.desc}
-              >
-                <Icon size={12} className="mb-0.5" />
-                <span className="truncate max-w-full tracking-tight">{cat.label}</span>
-              </button>
-            );
-          })}
+          <div className={`grid grid-cols-5 gap-1 p-0.5 rounded-[4px] border ${
+            isDark ? 'bg-[#101010] border-[#262626]' : 'bg-slate-200/60 border-slate-200'
+          }`}>
+            {categories.map((cat) => {
+              const Icon = cat.icon;
+              const isActive = activeCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveCategory(cat.id as TemplateCategory)}
+                  className={`flex flex-col items-center justify-center py-1.5 px-0.5 rounded-[3px] text-[9px] font-bold transition-all ${
+                    isActive
+                      ? 'bg-[#0F3D3E] text-white shadow-sm'
+                      : (isDark ? 'text-[#888] hover:text-white' : 'text-slate-600 hover:text-slate-900')
+                  }`}
+                  title={cat.desc}
+                >
+                  <Icon size={12} className="mb-0.5" />
+                  <span className="truncate max-w-full tracking-tight">{cat.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="px-3 py-2 bg-emerald-950/20 border-b border-emerald-500/20 flex items-center justify-between">
+          <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider flex items-center gap-1.5">
+            <Sparkles size={11} /> Cover Blueprint Presets
+          </span>
+          <span className="text-[9px] text-[#888888]">Click to apply layout</span>
+        </div>
+      )}
 
       {/* Templates Content Scroll Area */}
       <div className="flex-1 overflow-y-auto p-3.5 space-y-3 custom-scrollbar">

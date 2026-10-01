@@ -421,7 +421,83 @@ const Dashboard: React.FC = () => {
 
           {/* Right Column (Col Span 4) */}
           <div className="lg:col-span-4 space-y-5">
-            
+
+            {/* Subscription & Plan Quota Widget */}
+            <div className={`rounded-[4px] border overflow-hidden shadow-sm ${
+              isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'
+            }`}>
+              <div className={`px-5 py-3.5 border-b flex items-center justify-between ${
+                isDark ? 'bg-[#171616] border-[#E2DCC8]/15' : 'bg-slate-50 border-slate-200'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <Zap size={14} className={isDark ? "text-[#E2DCC8]" : "text-[#0F3D3E]"} />
+                  <span className={`text-xs font-bold uppercase tracking-wider font-space ${
+                    isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
+                  }`}>
+                    Plan & Usage Quota
+                  </span>
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${
+                  isDark ? 'bg-[#0F3D3E]/40 border-[#E2DCC8]/30 text-[#E2DCC8]' : 'bg-teal-50 border-teal-200 text-[#0F3D3E]'
+                }`}>
+                  {user?.subscription_plan || 'Starter Trial'}
+                </span>
+              </div>
+
+              <div className="p-4 space-y-4">
+                {/* Catalog Usage Progress */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={`font-medium ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Catalogs</span>
+                    <span className="font-mono font-bold">
+                      {savedCatalogs.length} / {user?.subscription_features?.max_catalogs || 3}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ${
+                        savedCatalogs.length >= (user?.subscription_features?.max_catalogs || 3) 
+                          ? 'bg-amber-500' 
+                          : 'bg-[#0F3D3E]'
+                      }`}
+                      style={{ 
+                        width: `${Math.min(100, (savedCatalogs.length / (user?.subscription_features?.max_catalogs || 3)) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Product Inventory Usage Progress */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className={`font-medium ${isDark ? 'text-[#E2DCC8]/70' : 'text-slate-600'}`}>Products</span>
+                    <span className="font-mono font-bold">
+                      {products.length} / {user?.subscription_features?.max_products || 50}
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-black/30 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ${
+                        products.length >= (user?.subscription_features?.max_products || 50) 
+                          ? 'bg-amber-500' 
+                          : 'bg-[#0F3D3E]'
+                      }`}
+                      style={{ 
+                        width: `${Math.min(100, (products.length / (user?.subscription_features?.max_products || 50)) * 100)}%` 
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setView('pricing')}
+                  className="w-full py-2.5 bg-[#0F3D3E] hover:bg-[#155455] text-white border border-[#E2DCC8]/25 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-sm transition-all flex items-center justify-center gap-1.5"
+                >
+                  <Sparkles size={13} className="text-[#E2DCC8]" /> Upgrade Plan
+                </button>
+              </div>
+            </div>
+
             {/* Top Categories Breakdown Panel */}
             <div className={`rounded-[4px] border overflow-hidden shadow-sm ${
               isDark ? 'bg-[#141414] border-[#E2DCC8]/15' : 'bg-white border-slate-200'

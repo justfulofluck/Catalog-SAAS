@@ -315,15 +315,21 @@ export interface Product {
 }
 
 export interface SubscriptionPlan {
-  id: string;
+  id: string | number;
   name: string;
   slug: string;
   price: number;
+  currency?: string;
+  is_active?: boolean;
   features: {
-    max_catalogs: number;
-    max_products: number;
-    max_storage_mb: number;
-    ai_enabled: boolean;
+    max_catalogs?: number;
+    max_products?: number;
+    max_storage_mb?: number;
+    custom_watermark?: boolean;
+    pdf_export?: boolean;
+    ai_enabled?: boolean;
+    priority_support?: boolean;
+    [key: string]: any;
   };
 }
 

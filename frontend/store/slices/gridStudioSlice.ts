@@ -92,6 +92,7 @@ export const createGridStudioSlice: AppSlice<GridStudioSlice> = (set, get) => ({
           updatedAt: new Date().toISOString()
         },
         currentView: 'editor',
+        editingSystemTemplate: null,
         currentPageIndex: 0,
         selectedElementIds: []
       };
@@ -838,6 +839,7 @@ export const createGridStudioSlice: AppSlice<GridStudioSlice> = (set, get) => ({
         updatedAt: new Date().toISOString()
       },
       currentView: 'editor',
+      editingSystemTemplate: null,
       currentPageIndex: 0,
       selectedElementIds: []
     };

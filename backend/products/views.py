@@ -36,6 +36,20 @@ class ProductViewSet(viewsets.ModelViewSet):
         serializer.save(user=self.request.user)
 
     def create(self, request, *args, **kwargs):
+        # Enforce subscription product quota for regular users
+        if not (request.user.is_staff or request.user.is_superuser):
+            subscription = getattr(request.user, 'subscription', None)
+            if subscription and subscription.plan and subscription.plan.features:
+                max_products = subscription.plan.features.get('max_products')
+                if max_products is not None and max_products > 0:
+                    current_count = Product.objects.filter(user=request.user).count()
+                    if current_count >= max_products:
+                        return Response(
+                            {
+                                "error": f"You have reached the maximum product limit ({max_products}) for your {subscription.plan.name}. Please upgrade to add more products."
+                            },
+                            status=status.HTTP_403_FORBIDDEN
+                        )
         serializer = self.get_serializer(data=request.data)
         if not serializer.is_valid():
             print(f"DEBUG: Product validation errors: {serializer.errors}")

@@ -19,6 +19,7 @@ logs/
 .kilo/
 .opencode/
 .agents/
+graphify-out/
 
 # ──────────────────────── Environment Variables ──────────────────
 .env

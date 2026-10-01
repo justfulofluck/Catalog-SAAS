@@ -52,6 +52,9 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         status: 'active',
         joinedAt: new Date().toISOString(),
         businessName: userData?.business_name,
+        subscription_plan: userData?.subscription_plan,
+        subscription_end_date: userData?.subscription_end_date,
+        subscription_features: userData?.subscription_features,
       };
 
       set({
@@ -157,10 +160,11 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
     try {
       await authApi.logout();
     } catch (e) {
-      console.error(e);
+      console.warn('Logout request completed:', e);
     }
 
     sessionStorage.removeItem('cs_session');
+    sessionStorage.removeItem('cs_editing_template');
     localStorage.removeItem('cs_access_token');
     localStorage.removeItem('cs_refresh_token');
 
@@ -168,7 +172,12 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
       isAuthenticated: false,
       isAdminAuthenticated: false,
       user: null,
-      currentView: 'dashboard', // Will trigger Login due to !isAuthenticated check in App
+      currentView: 'dashboard',
+      editingSystemTemplate: null,
+      savedCatalogs: [],
+      products: [],
+      categories: [],
+      mediaItems: [],
     });
   },
 
@@ -195,6 +204,34 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
     }
   },
 
+  updateUserAdmin: async (id: string | number, data: any) => {
+    try {
+      await authApi.updateUserAdmin(id, data);
+      await get().fetchUsers();
+      get().showToast('User updated successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to update user', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to update user';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
+
+  deleteUserAdmin: async (id: string | number) => {
+    try {
+      await authApi.deleteUserAdmin(id);
+      await get().fetchUsers();
+      get().showToast('User deleted successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to delete user', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to delete user';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
+
   checkAuth: async () => {
     try {
       const user: any = await authApi.user();
@@ -210,6 +247,9 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         joinedAt: new Date().toISOString(),
         businessId: user.business_id,
         businessName: user.business_name,
+        subscription_plan: user.subscription_plan,
+        subscription_end_date: user.subscription_end_date,
+        subscription_features: user.subscription_features,
       };
 
       if (isStaff) {
@@ -225,6 +265,20 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         get().fetchMedia();
         get().fetchAdminAssets();
         get().fetchSystemTemplates();
+
+        if (typeof window !== 'undefined' && window.location.pathname === '/editor') {
+          try {
+            const savedTplStr = sessionStorage.getItem('cs_editing_template');
+            if (savedTplStr) {
+              const savedTpl = JSON.parse(savedTplStr);
+              if (savedTpl) {
+                get().openTemplateInVisualEditor(savedTpl);
+              }
+            }
+          } catch (e) {
+            console.warn('Could not restore template from session:', e);
+          }
+        }
       } else {
         set({
           isAuthenticated: true,

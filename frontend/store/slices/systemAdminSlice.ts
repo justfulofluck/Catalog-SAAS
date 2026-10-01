@@ -89,7 +89,7 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
           ? template.pages_data.map((p: any, idx: number) => ({
               id: `p-${idx + 1}`,
               pageNumber: idx + 1,
-              type: p.type || (template.type === 'cover' ? 'cover' : 'interior'),
+              type: 'cover',
               elements: p.elements || [],
               backgroundColor: p.backgroundColor || '#ffffff',
             }))
@@ -97,11 +97,17 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
               {
                 id: 'p-1',
                 pageNumber: 1,
-                type: template.type === 'cover' ? 'cover' : 'interior',
+                type: 'cover',
                 elements: [],
                 backgroundColor: '#ffffff',
               },
             ];
+
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('cs_editing_template', JSON.stringify(template));
+        }
+      } catch (e) {}
 
       set({
         editingSystemTemplate: template,
@@ -109,31 +115,39 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
           ...get().catalog,
           name: template.name,
           pages: pages as any,
-          hasHeader: template.type === 'header',
-          hasFooter: template.type === 'footer',
-          headerElements: template.type === 'header' ? template.pages_data?.[0]?.elements || [] : [],
-          footerElements: template.type === 'footer' ? template.pages_data?.[0]?.elements || [] : [],
+          hasHeader: false,
+          hasFooter: false,
+          headerElements: [],
+          footerElements: [],
         },
         currentPageIndex: 0,
+        editorTab: 'text',
         currentView: 'editor',
       });
     } else {
-      // Create new template in full visual canvas
+      // Create new Cover template in visual canvas
       const newTemplateSkeleton: SystemTemplate = {
         id: 0,
         uuid: `tmp-${Date.now()}`,
-        name: 'New Custom Template',
+        name: 'New Cover Template',
         category: 'General',
         type: 'cover',
+        description: '',
         pages_data: [{ pageNumber: 1, type: 'cover', elements: [] }],
         is_active: true,
       };
+
+      try {
+        if (typeof window !== 'undefined') {
+          sessionStorage.setItem('cs_editing_template', JSON.stringify(newTemplateSkeleton));
+        }
+      } catch (e) {}
 
       set({
         editingSystemTemplate: newTemplateSkeleton,
         catalog: {
           ...get().catalog,
-          name: 'New Custom Template',
+          name: 'New Cover Template',
           pages: [{ id: 'p-1', pageNumber: 1, type: 'cover', elements: [], backgroundColor: '#ffffff' }],
           hasHeader: false,
           hasFooter: false,
@@ -141,20 +155,23 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
           footerElements: [],
         },
         currentPageIndex: 0,
+        editorTab: 'text',
         currentView: 'editor',
       });
     }
   },
 
   saveActiveTemplateFromEditor: async (options) => {
-    const { editingSystemTemplate, catalog, createSystemTemplate, updateSystemTemplate } = get();
-    const targetName = options?.name || editingSystemTemplate?.name || catalog.name || 'Custom Template';
+    const { editingSystemTemplate, catalog, createSystemTemplate, updateSystemTemplate, showToast } = get();
+    const targetName = options?.name || editingSystemTemplate?.name || catalog.name || 'New Cover Blueprint';
     const targetCategory = options?.category || editingSystemTemplate?.category || 'General';
     const targetType = options?.type || editingSystemTemplate?.type || 'cover';
+    const targetDescription = options?.description ?? editingSystemTemplate?.description ?? '';
+    const targetIsActive = options?.is_active ?? editingSystemTemplate?.is_active ?? true;
 
     const pagesData = catalog.pages.map((p) => ({
       pageNumber: p.pageNumber,
-      type: p.type,
+      type: 'cover',
       elements: p.elements,
       backgroundColor: p.backgroundColor,
     }));
@@ -165,8 +182,18 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
         name: targetName,
         category: targetCategory,
         type: targetType,
+        description: targetDescription,
+        is_active: targetIsActive,
         pages_data: pagesData,
       });
+      if (res) {
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
+          }
+        } catch (e) {}
+        showToast('Cover Blueprint updated successfully!', 'success', 'Blueprint Saved');
+      }
       return !!res;
     } else {
       // Create new
@@ -174,12 +201,19 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
         name: targetName,
         category: targetCategory,
         type: targetType,
-        thumbnail: 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800',
+        description: targetDescription,
+        is_active: targetIsActive,
+        thumbnail: options?.thumbnail || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800',
         pages_data: pagesData,
-        is_active: true,
       });
       if (res) {
         set({ editingSystemTemplate: res });
+        try {
+          if (typeof window !== 'undefined') {
+            sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
+          }
+        } catch (e) {}
+        showToast('Master Cover Blueprint published successfully!', 'success', 'Blueprint Created');
       }
       return !!res;
     }
@@ -188,9 +222,11 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
   fetchSystemSettings: async () => {
     try {
       const settings = await systemSettingsApi.get();
-      set({ systemSettings: settings });
+      if (settings) {
+        set({ systemSettings: settings });
+      }
     } catch (err) {
-      console.error('Failed to fetch system settings:', err);
+      console.warn('Could not fetch public system settings:', err);
     }
   },
 

@@ -16,9 +16,11 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
     const isPublicAuthEndpoint = 
         config.url?.includes('/auth/login/') ||
+        config.url?.includes('/auth/logout/') ||
         config.url?.includes('/auth/registration/') ||
         config.url?.includes('/auth/token/refresh/') ||
-        config.url?.includes('/auth/password-reset/');
+        config.url?.includes('/auth/password-reset/') ||
+        config.url?.includes('/users/force-logout/');
 
     const token = localStorage.getItem('cs_access_token');
     if (token && !isPublicAuthEndpoint && !config.headers['Authorization']) {
@@ -38,8 +40,12 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             if (
                 originalRequest.url?.includes('/auth/login/') ||
+                originalRequest.url?.includes('/auth/logout/') ||
                 originalRequest.url?.includes('/auth/token/refresh/') ||
-                originalRequest.url?.includes('/auth/registration/')
+                originalRequest.url?.includes('/auth/registration/') ||
+                originalRequest.url?.includes('/users/force-logout/') ||
+                originalRequest.url?.includes('/users/system-settings/') ||
+                originalRequest.url?.includes('/plans/')
             ) {
                 return Promise.reject(error);
             }
@@ -91,10 +97,15 @@ export const authApi = {
     verifyOtpAndReset: (data: any) => api.post('/auth/password-reset/otp/confirm/', data),
     updateUser: (data: any) => api.patch('/auth/user/', data),
     getAllUsers: () => api.get('/users/'),
+    updateUserAdmin: (id: string | number, data: any) => api.patch(`/users/${id}/`, data),
+    deleteUserAdmin: (id: string | number) => api.delete(`/users/${id}/`),
 };
 
 export const subscriptionApi = {
     getPlans: () => api.get('/plans/'),
+    createPlan: (data: any) => api.post('/plans/', data),
+    updatePlanDetails: (id: number | string, data: any) => api.patch(`/plans/${id}/`, data),
+    deletePlan: (id: number | string) => api.delete(`/plans/${id}/`),
     updatePlan: (data: { plan_slug: string }) => api.post('/subscriptions/update/', data),
     adminGetAllSubscriptions: () => api.get('/admin-subscriptions/'),
 };

@@ -68,6 +68,8 @@ export interface AuthSlice {
   checkAuth: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   fetchUsers: () => Promise<void>;
+  updateUserAdmin: (id: string | number, data: any) => Promise<{ success: boolean; message?: string }>;
+  deleteUserAdmin: (id: string | number) => Promise<{ success: boolean; message?: string }>;
 }
 
 export interface SubscriptionSlice {
@@ -77,6 +79,9 @@ export interface SubscriptionSlice {
   fetchPlans: () => Promise<void>;
   updateSubscription: (planSlug: string) => Promise<{ success: boolean; message: string }>;
   fetchAllSubscriptions: () => Promise<void>;
+  createAdminPlan: (data: Partial<SubscriptionPlan>) => Promise<{ success: boolean; message?: string }>;
+  updateAdminPlan: (id: string | number, data: Partial<SubscriptionPlan>) => Promise<{ success: boolean; message?: string }>;
+  deleteAdminPlan: (id: string | number) => Promise<{ success: boolean; message?: string }>;
 }
 
 export interface ProductsSlice {
@@ -132,7 +137,14 @@ export interface SystemAdminSlice {
   updateSystemTemplate: (id: string | number, template: Partial<SystemTemplate>) => Promise<SystemTemplate | null>;
   deleteSystemTemplate: (id: string | number) => Promise<boolean>;
   openTemplateInVisualEditor: (template?: SystemTemplate | null) => void;
-  saveActiveTemplateFromEditor: (options?: { name?: string; category?: string; type?: any }) => Promise<boolean>;
+  saveActiveTemplateFromEditor: (options?: {
+    name?: string;
+    category?: string;
+    type?: any;
+    description?: string;
+    is_active?: boolean;
+    thumbnail?: string;
+  }) => Promise<boolean>;
 
   isAdminHeaderDesignerOpen: boolean;
   editingAdminHeaderTemplate: SystemTemplate | null;
@@ -170,6 +182,7 @@ export interface UiSlice {
     | 'stock'
     | 'header-footer'
     | 'text'
+    | 'text-effects'
     | 'colors'
     | 'elements'
     | 'properties'

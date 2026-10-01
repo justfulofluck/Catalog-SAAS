@@ -24,6 +24,17 @@ class CustomLoginView(LoginView):
     authentication_classes = []
 
     def post(self, request, *args, **kwargs):
+        # Auto-populate username with email if missing so both auth backend lookups succeed cleanly
+        if hasattr(request, 'data'):
+            email = request.data.get('email')
+            if email and not request.data.get('username'):
+                if hasattr(request.data, '_mutable') and not request.data._mutable:
+                    request.data._mutable = True
+                    request.data['username'] = email
+                    request.data._mutable = False
+                elif isinstance(request.data, dict):
+                    request.data['username'] = email
+
         response = super().post(request, *args, **kwargs)
         system_settings = SystemSetting.get_settings()
         if system_settings.maintenance_mode and response.status_code == 200:
@@ -48,6 +59,27 @@ class PublicRegisterView(RegisterView):
                 {"error": "Public registration is currently disabled by administrator."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        if hasattr(request, 'data'):
+            email = request.data.get('email')
+            if email:
+                if not request.data.get('username'):
+                    if hasattr(request.data, '_mutable') and not request.data._mutable:
+                        request.data._mutable = True
+                        request.data['username'] = email
+                        request.data._mutable = False
+                    elif isinstance(request.data, dict):
+                        request.data['username'] = email
+                password = request.data.get('password')
+                if password:
+                    if not request.data.get('password1'):
+                        if hasattr(request.data, '_mutable') and not request.data._mutable:
+                            request.data._mutable = True
+                            request.data['password1'] = password
+                            request.data['password2'] = password
+                            request.data._mutable = False
+                        elif isinstance(request.data, dict):
+                            request.data['password1'] = password
+                            request.data['password2'] = password
         return super().post(request, *args, **kwargs)
 
 
@@ -55,16 +87,16 @@ class PublicUserDetailsView(UserDetailsView):
     permission_classes = [permissions.AllowAny]
 
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows admins to view all users.
+    API endpoint that allows admins to view, edit, suspend, and delete user accounts.
     """
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
 
     def get_queryset(self):
-        return User.objects.all()
+        return User.objects.all().order_by("-date_joined")
 
 
 class RequestPasswordResetOTP(APIView):
@@ -238,10 +270,112 @@ class UpdateSubscriptionView(APIView):
         })
 
 
-class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SubscriptionPlan.objects.filter(is_active=True)
+class SubscriptionPlanViewSet(viewsets.ModelViewSet):
+    queryset = SubscriptionPlan.objects.all().order_by('price')
     serializer_class = SubscriptionPlanSerializer
+
+    def get_authenticators(self):
+        if self.action in ['list', 'retrieve']:
+            return []
+        return super().get_authenticators()
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+    def list(self, request, *args, **kwargs):
+        try:
+            if not SubscriptionPlan.objects.exists():
+                default_plans = [
+                    {
+                        'name': 'Starter Plan',
+                        'slug': 'starter',
+                        'price': 0,
+                        'currency': 'INR',
+                        'features': {
+                            'max_catalogs': 3,
+                            'max_products': 50,
+                            'custom_watermark': False,
+                            'pdf_export': True,
+                            'max_storage_mb': 500,
+                            'ai_enabled': False,
+                        },
+                        'is_active': True,
+                    },
+                    {
+                        'name': 'Growth Plan',
+                        'slug': 'growth',
+                        'price': 999,
+                        'currency': 'INR',
+                        'features': {
+                            'max_catalogs': 15,
+                            'max_products': 500,
+                            'custom_watermark': True,
+                            'pdf_export': True,
+                            'max_storage_mb': 2048,
+                            'ai_enabled': True,
+                        },
+                        'is_active': True,
+                    },
+                    {
+                        'name': 'Pro Enterprise',
+                        'slug': 'pro',
+                        'price': 2499,
+                        'currency': 'INR',
+                        'features': {
+                            'max_catalogs': 100,
+                            'max_products': 5000,
+                            'custom_watermark': True,
+                            'pdf_export': True,
+                            'max_storage_mb': 10240,
+                            'ai_enabled': True,
+                            'priority_support': True,
+                        },
+                        'is_active': True,
+                    },
+                ]
+                for p in default_plans:
+                    SubscriptionPlan.objects.get_or_create(slug=p['slug'], defaults=p)
+        except Exception as e:
+            print(f"Error checking default plans in list: {e}")
+
+        user = getattr(request, 'user', None)
+        is_admin = bool(
+            user and 
+            getattr(user, 'is_authenticated', False) and 
+            (getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False))
+        )
+
+        if is_admin:
+            qs = SubscriptionPlan.objects.all().order_by('price')
+        else:
+            qs = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
+
+
+from dj_rest_auth.views import LogoutView
+
+class CustomLogoutView(LogoutView):
     permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        try:
+            cookie_name = getattr(settings, "REST_AUTH", {}).get(
+                "JWT_AUTH_COOKIE", "catstudio-auth"
+            )
+            refresh_cookie_name = getattr(settings, "REST_AUTH", {}).get(
+                "JWT_AUTH_REFRESH_COOKIE", "catstudio-refresh-token"
+            )
+            response.delete_cookie(cookie_name, path="/")
+            response.delete_cookie(refresh_cookie_name, path="/")
+        except Exception as e:
+            print(f"Error clearing cookies in logout: {e}")
+        return response
 
 
 class ForceLogoutView(APIView):
@@ -251,7 +385,6 @@ class ForceLogoutView(APIView):
     def post(self, request):
         response = Response({"message": "Force logged out"}, status=status.HTTP_200_OK)
         try:
-            # Attempt to delete cookies based on settings
             cookie_name = getattr(settings, "REST_AUTH", {}).get(
                 "JWT_AUTH_COOKIE", "catstudio-auth"
             )
@@ -259,8 +392,8 @@ class ForceLogoutView(APIView):
                 "JWT_AUTH_REFRESH_COOKIE", "catstudio-refresh-token"
             )
 
-            response.delete_cookie(cookie_name)
-            response.delete_cookie(refresh_cookie_name)
+            response.delete_cookie(cookie_name, path="/")
+            response.delete_cookie(refresh_cookie_name, path="/")
         except Exception as e:
             print(f"Error clearing cookies: {e}")
 
@@ -268,6 +401,11 @@ class ForceLogoutView(APIView):
 
 
 class SystemSettingsView(APIView):
+    def get_authenticators(self):
+        if self.request.method == 'GET':
+            return []
+        return super().get_authenticators()
+
     def get_permissions(self):
         if self.request.method == 'GET':
             return [permissions.AllowAny()]

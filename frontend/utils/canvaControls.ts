@@ -195,9 +195,53 @@ function initImageCropTransform(target: any, transform: any) {
 }
 
 /**
- * Action handler for image width cropping (ml, mr handles).
- * - Default: Crops only the dragged side, keeping opposite edge completely pinned.
- * - Alt key: Symmetrically crops both sides inwards towards center (matching Canva).
+ * Computes Canva-style Smart Cover Crop dimensions and offsets.
+ * Given target frame dimensions (frameW, frameH) and intrinsic image dimensions (naturalW, naturalH),
+ * this calculates the exact crop rectangle (cropX, cropY, cropWidth, cropHeight)
+ * so that the image always covers the entire frame while centering the visible area.
+ * 
+ * - When frameAspect == naturalAspect -> 100% full image (no crop, cropX=0, cropY=0, cropWidth=naturalW, cropHeight=naturalH).
+ * - When frameAspect > naturalAspect  -> Image expands horizontally, top & bottom cropped symmetrically (zooms in).
+ *                                        When stretched frame is dragged back inwards, it smoothly zooms OUT back to 100%.
+ * - When frameAspect < naturalAspect  -> Image expands vertically, left & right cropped symmetrically.
+ *                                        When narrow frame is widened back, it smoothly zooms OUT back to 100%.
+ */
+export function computeCoverCrop(
+  frameW: number,
+  frameH: number,
+  naturalW: number,
+  naturalH: number
+): { cropX: number; cropY: number; cropWidth: number; cropHeight: number } {
+  const safeFrameW = Math.max(1, frameW);
+  const safeFrameH = Math.max(1, frameH);
+  const safeNatW = Math.max(1, naturalW);
+  const safeNatH = Math.max(1, naturalH);
+
+  const frameAspect = safeFrameW / safeFrameH;
+  const naturalAspect = safeNatW / safeNatH;
+
+  if (frameAspect >= naturalAspect) {
+    // Frame is wider than or equal to image natural aspect: full width used, height cropped symmetrically
+    const cropWidth = safeNatW;
+    const cropHeight = Math.max(1, Math.min(safeNatH, safeNatW / frameAspect));
+    const cropX = 0;
+    const cropY = Math.max(0, (safeNatH - cropHeight) / 2);
+    return { cropX, cropY, cropWidth, cropHeight };
+  } else {
+    // Frame is taller than or equal to image natural aspect: full height used, width cropped symmetrically
+    const cropHeight = safeNatH;
+    const cropWidth = Math.max(1, Math.min(safeNatW, safeNatH * frameAspect));
+    const cropX = Math.max(0, (safeNatW - cropWidth) / 2);
+    const cropY = 0;
+    return { cropX, cropY, cropWidth, cropHeight };
+  }
+}
+
+/**
+ * Action handler for image width cropping & frame expansion (ml, mr handles).
+ * - Dragging outwards beyond natural bounds: expands the frame width and smoothly adapts image zoom (Canva Cover-fit).
+ * - Dragging inwards: smoothly zooms OUT back to original 100% natural image, then crops width symmetrically.
+ * - Alt key: Symmetrically applies from the center.
  */
 export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
   const target = transform.target;
@@ -206,59 +250,53 @@ export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: 
   const start = initImageCropTransform(target, transform);
   const isAlt = !!eventData.altKey;
   const corner = transform.corner; // 'mr' or 'ml'
+  const naturalW = start.naturalWidth;
+  const naturalH = start.naturalHeight;
+  const targetH = start.origH;
 
+  let newW: number;
   if (corner === 'mr') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
-      const rawNewW = Math.max(15, local.x);
-      const maxCropW = start.naturalWidth - start.cropX;
-      const maxW = Math.max(15, maxCropW * start.scaleX);
-      const newW = Math.min(maxW, rawNewW);
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropX = start.cropX;
-      target.cropWidth = newCropW;
+      newW = Math.max(15, local.x);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.leftAnchor, 'left', 'top');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfW = Math.max(7.5, Math.abs(local.x));
-      const centerCropX = start.cropX + start.cropWidth / 2;
-      const maxHalfCropW = Math.min(centerCropX, start.naturalWidth - centerCropX);
-      const halfW = Math.min(Math.max(7.5, maxHalfCropW * start.scaleX), rawHalfW);
-      const newW = halfW * 2;
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropWidth = newCropW;
-      target.cropX = Math.max(0, centerCropX - newCropW / 2);
+      newW = Math.max(15, Math.abs(local.x) * 2);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   } else if (corner === 'ml') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
-      const rawNewW = Math.max(15, -local.x);
-      const startRightCrop = start.cropX + start.cropWidth;
-      const maxW = Math.max(15, startRightCrop * start.scaleX);
-      const newW = Math.min(maxW, rawNewW);
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropWidth = newCropW;
-      target.cropX = Math.max(0, startRightCrop - newCropW);
+      newW = Math.max(15, -local.x);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.rightAnchor, 'right', 'top');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfW = Math.max(7.5, Math.abs(local.x));
-      const centerCropX = start.cropX + start.cropWidth / 2;
-      const maxHalfCropW = Math.min(centerCropX, start.naturalWidth - centerCropX);
-      const halfW = Math.min(Math.max(7.5, maxHalfCropW * start.scaleX), rawHalfW);
-      const newW = halfW * 2;
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropWidth = newCropW;
-      target.cropX = Math.max(0, centerCropX - newCropW / 2);
+      newW = Math.max(15, Math.abs(local.x) * 2);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   }
@@ -266,10 +304,12 @@ export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: 
   // If target is a Group (e.g. image with overlay), sync child objects
   if (typeof target.getObjects === 'function') {
     target.getObjects().forEach((child: any) => {
-      child.set({ width: target.width });
+      child.set({ width: target.width, height: target.height });
       if (child.type === 'FabricImage' || child.type === 'image' || child._element) {
         child.cropX = target.cropX;
+        child.cropY = target.cropY;
         child.cropWidth = target.cropWidth;
+        child.cropHeight = target.cropHeight;
       }
     });
   }
@@ -280,9 +320,10 @@ export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: 
 }
 
 /**
- * Action handler for image height cropping (mt, mb handles).
- * - Default: Crops only the dragged side, keeping opposite edge completely pinned.
- * - Alt key: Symmetrically crops both sides inwards towards center (matching Canva).
+ * Action handler for image height cropping & frame expansion (mt, mb handles).
+ * - Dragging outwards beyond natural bounds: expands the frame height and smoothly adapts image zoom (Canva Cover-fit).
+ * - Dragging inwards: smoothly zooms OUT back to original 100% natural image, then crops height symmetrically.
+ * - Alt key: Symmetrically applies from the center.
  */
 export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
   const target = transform.target;
@@ -291,59 +332,53 @@ export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x:
   const start = initImageCropTransform(target, transform);
   const isAlt = !!eventData.altKey;
   const corner = transform.corner; // 'mb' or 'mt'
+  const naturalW = start.naturalWidth;
+  const naturalH = start.naturalHeight;
+  const targetW = start.origW;
 
+  let newH: number;
   if (corner === 'mb') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
-      const rawNewH = Math.max(15, local.y);
-      const maxCropH = start.naturalHeight - start.cropY;
-      const maxH = Math.max(15, maxCropH * start.scaleY);
-      const newH = Math.min(maxH, rawNewH);
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropY = start.cropY;
-      target.cropHeight = newCropH;
+      newH = Math.max(15, local.y);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.topAnchor, 'left', 'top');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfH = Math.max(7.5, Math.abs(local.y));
-      const centerCropY = start.cropY + start.cropHeight / 2;
-      const maxHalfCropH = Math.min(centerCropY, start.naturalHeight - centerCropY);
-      const halfH = Math.min(Math.max(7.5, maxHalfCropH * start.scaleY), rawHalfH);
-      const newH = halfH * 2;
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropHeight = newCropH;
-      target.cropY = Math.max(0, centerCropY - newCropH / 2);
+      newH = Math.max(15, Math.abs(local.y) * 2);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   } else if (corner === 'mt') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'left', 'bottom', x, y);
-      const rawNewH = Math.max(15, -local.y);
-      const startBottomCrop = start.cropY + start.cropHeight;
-      const maxH = Math.max(15, startBottomCrop * start.scaleY);
-      const newH = Math.min(maxH, rawNewH);
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropHeight = newCropH;
-      target.cropY = Math.max(0, startBottomCrop - newCropH);
+      newH = Math.max(15, -local.y);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.bottomAnchor, 'left', 'bottom');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfH = Math.max(7.5, Math.abs(local.y));
-      const centerCropY = start.cropY + start.cropHeight / 2;
-      const maxHalfCropH = Math.min(centerCropY, start.naturalHeight - centerCropY);
-      const halfH = Math.min(Math.max(7.5, maxHalfCropH * start.scaleY), rawHalfH);
-      const newH = halfH * 2;
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropHeight = newCropH;
-      target.cropY = Math.max(0, centerCropY - newCropH / 2);
+      newH = Math.max(15, Math.abs(local.y) * 2);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   }
@@ -351,9 +386,11 @@ export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x:
   // If target is a Group (e.g. image with overlay), sync child objects
   if (typeof target.getObjects === 'function') {
     target.getObjects().forEach((child: any) => {
-      child.set({ height: target.height });
+      child.set({ width: target.width, height: target.height });
       if (child.type === 'FabricImage' || child.type === 'image' || child._element) {
+        child.cropX = target.cropX;
         child.cropY = target.cropY;
+        child.cropWidth = target.cropWidth;
         child.cropHeight = target.cropHeight;
       }
     });
@@ -674,6 +711,210 @@ export function renderCanvaMoveButton(
 }
 
 /**
+ * Action handler for scaling Textbox elements from corner handles (tl, tr, bl, br).
+ * In Canva: Corner dragging dynamically scales the Textbox's font size (fontSize) and width
+ * proportionally without stretching, distorting, or skewing the text object.
+ */
+function initTextboxScaleTransform(target: any, transform: any) {
+  if (target._textScaleTransformStart && target._textScaleTransformStart.transform === transform) {
+    return target._textScaleTransformStart;
+  }
+  const startFontSize = target.fontSize || 16;
+  const startWidth = target.width || 100;
+  const startHeight = target.height || 40;
+
+  const leftTopAnchor = getPointOnObject(target, 'left', 'top');
+  const rightTopAnchor = getPointOnObject(target, 'right', 'top');
+  const leftBottomAnchor = getPointOnObject(target, 'left', 'bottom');
+  const rightBottomAnchor = getPointOnObject(target, 'right', 'bottom');
+  const centerAnchor = getPointOnObject(target, 'center', 'center');
+
+  const startState = {
+    transform,
+    startFontSize,
+    startWidth,
+    startHeight,
+    leftTopAnchor,
+    rightTopAnchor,
+    leftBottomAnchor,
+    rightBottomAnchor,
+    centerAnchor,
+  };
+
+  target._textScaleTransformStart = startState;
+  return startState;
+}
+
+export function textboxScaleFontSizeHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+
+  const start = initTextboxScaleTransform(target, transform);
+  const isAlt = !!eventData.altKey;
+  const corner = transform.corner; // 'tl' | 'tr' | 'bl' | 'br'
+  const diag = Math.hypot(start.startWidth, start.startHeight) || 1;
+
+  let scale = 1;
+
+  if (isAlt) {
+    const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
+    const halfW = start.startWidth / 2 || 1;
+    const halfH = start.startHeight / 2 || 1;
+    const halfDiag = Math.hypot(halfW, halfH) || 1;
+    const dist = (Math.abs(local.x) * halfW + Math.abs(local.y) * halfH) / halfDiag;
+    scale = Math.max(0.08, dist / halfDiag);
+  } else if (corner === 'br') {
+    const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
+    const dist = (local.x * start.startWidth + local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  } else if (corner === 'bl') {
+    const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
+    const dist = (-local.x * start.startWidth + local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  } else if (corner === 'tr') {
+    const local = getTransformLocalPoint(transform, 'left', 'bottom', x, y);
+    const dist = (local.x * start.startWidth + -local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  } else if (corner === 'tl') {
+    const local = getTransformLocalPoint(transform, 'right', 'bottom', x, y);
+    const dist = (-local.x * start.startWidth + -local.y * start.startHeight) / diag;
+    scale = Math.max(0.08, dist / diag);
+  }
+
+  const newFontSize = Math.max(6, Math.round(start.startFontSize * scale));
+  const newWidth = Math.max(20, Math.round(start.startWidth * scale));
+
+  target.set({
+    fontSize: newFontSize,
+    width: newWidth,
+    scaleX: 1,
+    scaleY: 1,
+  });
+
+  if (typeof target.initDimensions === 'function') {
+    target.initDimensions();
+  }
+
+  // Re-anchor to pinned corner/center
+  if (isAlt) {
+    setPointOnObject(target, start.centerAnchor, 'center', 'center');
+  } else if (corner === 'br') {
+    setPointOnObject(target, start.leftTopAnchor, 'left', 'top');
+  } else if (corner === 'bl') {
+    setPointOnObject(target, start.rightTopAnchor, 'right', 'top');
+  } else if (corner === 'tr') {
+    setPointOnObject(target, start.leftBottomAnchor, 'left', 'bottom');
+  } else if (corner === 'tl') {
+    setPointOnObject(target, start.rightBottomAnchor, 'right', 'bottom');
+  }
+
+  target.setCoords();
+  if (target.canvas) {
+    target.canvas.fire('object:scaling', { target, transform });
+    target.canvas.fire('object:resizing', { target, transform });
+    target.canvas.requestRenderAll();
+  }
+  return true;
+}
+
+/**
+ * Action handler for changing Textbox wrapping width via side pill handles (ml, mr).
+ * In Canva:
+ * - Font size stays strictly unchanged.
+ * - Changing width reflows text dynamically across lines (word-wrap).
+ * - Textbox height auto-adjusts immediately according to the wrapped lines.
+ * - Dragging 'mr' pins the left-top anchor; dragging 'ml' pins the right-top anchor.
+ * - Alt key resizes width symmetrically from the center.
+ */
+function initTextboxWidthTransform(target: any, transform: any) {
+  if (target._textWidthTransformStart && target._textWidthTransformStart.transform === transform) {
+    return target._textWidthTransformStart;
+  }
+  const startWidth = target.width || 100;
+  const startFontSize = target.fontSize || 16;
+  const leftAnchor = getPointOnObject(target, 'left', 'top');
+  const rightAnchor = getPointOnObject(target, 'right', 'top');
+  const centerAnchor = getPointOnObject(target, 'center', 'top');
+
+  const startState = {
+    transform,
+    startWidth,
+    startFontSize,
+    leftAnchor,
+    rightAnchor,
+    centerAnchor,
+  };
+
+  target._textWidthTransformStart = startState;
+  return startState;
+}
+
+export function textboxWrapWidthHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
+  const target = transform.target;
+  if (!target) return false;
+
+  const start = initTextboxWidthTransform(target, transform);
+  const isAlt = !!eventData.altKey;
+  const corner = transform.corner; // 'mr' or 'ml'
+  const minWidth = Math.max(20, (start.startFontSize || 16) * 1.2); // at least 1 character wide
+
+  let newWidth: number;
+
+  if (corner === 'mr') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(local.x));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.leftAnchor, 'left', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(Math.abs(local.x) * 2));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.centerAnchor, 'center', 'top');
+    }
+  } else if (corner === 'ml') {
+    if (!isAlt) {
+      const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(-local.x));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.rightAnchor, 'right', 'top');
+    } else {
+      const local = getTransformLocalPoint(transform, 'center', 'top', x, y);
+      newWidth = Math.max(minWidth, Math.round(Math.abs(local.x) * 2));
+      target.set({
+        width: newWidth,
+        scaleX: 1,
+        scaleY: 1,
+      });
+      if (typeof target.initDimensions === 'function') target.initDimensions();
+      setPointOnObject(target, start.centerAnchor, 'center', 'top');
+    }
+  }
+
+  target.setCoords();
+  if (target.canvas) {
+    target.canvas.fire('object:resizing', { target, transform });
+    target.canvas.requestRenderAll();
+  }
+  return true;
+}
+
+/**
  * Creates the complete Canva-style control set:
  * - 4 circular white corner controls
  * - 2 vertical white pill side handles (ml, mr)
@@ -682,12 +923,14 @@ export function renderCanvaMoveButton(
  */
 export function createCanvaControls(isTextbox: boolean = false, isImage: boolean = false): Record<string, Control> {
   const controls: Record<string, Control> = {
-    // 4 Corner Circles
+    // 4 Corner Circles (Font-size scaling for text, proportional scale for others)
     tl: new Control({
       x: -0.5,
       y: -0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -698,7 +941,9 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0.5,
       y: -0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -709,7 +954,9 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: -0.5,
       y: 0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -720,7 +967,9 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       x: 0.5,
       y: 0.5,
       cursorStyleHandler: controlsUtils.scaleCursorStyleHandler,
-      actionHandler: controlsUtils.scalingEqually,
+      actionHandler: isTextbox ? textboxScaleFontSizeHandler : controlsUtils.scalingEqually,
+      actionName: isTextbox ? 'resizing' : undefined,
+      getActionName: isTextbox ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
       render: renderCanvaCornerControl,
       sizeX: CANVA_THEME.cornerSize,
       sizeY: CANVA_THEME.cornerSize,
@@ -735,7 +984,7 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       actionHandler: isImage
         ? imageCropWidthHandler
         : isTextbox
-          ? controlsUtils.changeWidth
+          ? textboxWrapWidthHandler
           : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: (isTextbox || isImage) ? 'resizing' : undefined,
@@ -752,7 +1001,7 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       actionHandler: isImage
         ? imageCropWidthHandler
         : isTextbox
-          ? controlsUtils.changeWidth
+          ? textboxWrapWidthHandler
           : controlsUtils.scalingXOrSkewingY,
       cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
       actionName: (isTextbox || isImage) ? 'resizing' : undefined,
@@ -764,37 +1013,39 @@ export function createCanvaControls(isTextbox: boolean = false, isImage: boolean
       touchSizeY: 28,
     }),
 
-    // Top & Bottom Horizontal Pill Handles (Height Resizing for Images, Scaling for others)
-    mt: new Control({
-      x: 0,
-      y: -0.5,
-      actionHandler: isImage
-        ? imageCropHeightHandler
-        : controlsUtils.scalingYOrSkewingX,
-      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'resizing' : undefined,
-      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
-      render: renderCanvaTopBottomPillControl,
-      sizeX: CANVA_THEME.topPillWidth + 4,
-      sizeY: CANVA_THEME.topPillHeight + 4,
-      touchSizeX: 28,
-      touchSizeY: 24,
-    }),
-    mb: new Control({
-      x: 0,
-      y: 0.5,
-      actionHandler: isImage
-        ? imageCropHeightHandler
-        : controlsUtils.scalingYOrSkewingX,
-      cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
-      actionName: isImage ? 'resizing' : undefined,
-      getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
-      render: renderCanvaTopBottomPillControl,
-      sizeX: CANVA_THEME.topPillWidth + 4,
-      sizeY: CANVA_THEME.topPillHeight + 4,
-      touchSizeX: 28,
-      touchSizeY: 24,
-    }),
+    // Top & Bottom Horizontal Pill Handles (Height Resizing for Images, Scaling for shapes; OMITTED FOR TEXTBOXES matching Canva)
+    ...(!isTextbox ? {
+      mt: new Control({
+        x: 0,
+        y: -0.5,
+        actionHandler: isImage
+          ? imageCropHeightHandler
+          : controlsUtils.scalingYOrSkewingX,
+        cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+        actionName: isImage ? 'resizing' : undefined,
+        getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+        render: renderCanvaTopBottomPillControl,
+        sizeX: CANVA_THEME.topPillWidth + 4,
+        sizeY: CANVA_THEME.topPillHeight + 4,
+        touchSizeX: 28,
+        touchSizeY: 24,
+      }),
+      mb: new Control({
+        x: 0,
+        y: 0.5,
+        actionHandler: isImage
+          ? imageCropHeightHandler
+          : controlsUtils.scalingYOrSkewingX,
+        cursorStyleHandler: controlsUtils.scaleSkewCursorStyleHandler,
+        actionName: isImage ? 'resizing' : undefined,
+        getActionName: isImage ? () => 'resizing' : controlsUtils.scaleOrSkewActionName,
+        render: renderCanvaTopBottomPillControl,
+        sizeX: CANVA_THEME.topPillWidth + 4,
+        sizeY: CANVA_THEME.topPillHeight + 4,
+        touchSizeX: 28,
+        touchSizeY: 24,
+      }),
+    } : {}),
 
     // Bottom Action Button: Rotate
     rotate: new Control({
@@ -1092,7 +1343,11 @@ export function applyCanvaSelectionStyle(obj: any) {
     });
     return;
   }
-  const isText = obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text';
+  const isText = obj.type === 'textbox' ||
+    obj.type === 'text' ||
+    obj.type === 'i-text' ||
+    obj.text !== undefined ||
+    (obj as any).shapeType === 'text';
   const isLine = obj.type === 'line' ||
     obj.shapeType === 'line' ||
     obj.shapeType === 'curved-line' ||
@@ -1236,6 +1491,7 @@ export function initCanvaGlobals() {
       (Textbox as any).createControls = () => ({
         controls: createCanvaControls(true),
       });
+      (Textbox.prototype as any).controls = createCanvaControls(true);
     }
 
     if (ActiveSelection) {
