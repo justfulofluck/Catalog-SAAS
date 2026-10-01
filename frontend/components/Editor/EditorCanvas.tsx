@@ -82,7 +82,7 @@ const EditorCanvas: React.FC = () => {
     removeHeaderElement, removeFooterElement,
     copySelectedElements, pasteElements, addInteriorPageWithInheritedLayout,
     duplicatePage, removePage, openColorPicker,
-    activeCropElementId
+    activeCropElementId, editingSystemTemplate
   } = useStore();
 
   const currentPage = catalog.pages[currentPageIndex];
@@ -1214,7 +1214,11 @@ const EditorCanvas: React.FC = () => {
                     <span className="text-[11px] font-bold tracking-tight text-white/80">
                       Page {pageIdx + 1}
                     </span>
-                    {page.type && (
+                    {editingSystemTemplate ? (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-emerald-950/60 text-emerald-300 border border-emerald-500/30">
+                        Cover Blueprint
+                      </span>
+                    ) : page.type && (
                       <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/20">
                         {page.type}
                       </span>
@@ -1238,7 +1242,7 @@ const EditorCanvas: React.FC = () => {
                         openColorPicker({
                           type: 'background',
                           color: page.backgroundColor || '#ffffff',
-                          title: `Page ${pageIdx + 1} Background`
+                          title: `Cover Page Background`
                         });
                       }}
                       className="flex items-center gap-1.5 hover:opacity-85 transition-all group cursor-pointer"
@@ -1253,56 +1257,60 @@ const EditorCanvas: React.FC = () => {
                       </span>
                     </button>
 
-                    <div className="w-px h-3.5 bg-white/15 mx-0.5" />
+                    {!editingSystemTemplate && (
+                      <>
+                        <div className="w-px h-3.5 bg-white/15 mx-0.5" />
 
-                    {/* Quick duplicate */}
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        duplicatePage(page.id);
-                      }}
-                      className="p-1 text-white/70 hover:text-white transition-colors active:scale-95 cursor-pointer"
-                      title="Duplicate Page"
-                    >
-                      <Copy size={13} />
-                    </button>
+                        {/* Quick duplicate */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            duplicatePage(page.id);
+                          }}
+                          className="p-1 text-white/70 hover:text-white transition-colors active:scale-95 cursor-pointer"
+                          title="Duplicate Page"
+                        >
+                          <Copy size={13} />
+                        </button>
 
-                    {/* Quick Add page right next to current page */}
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.stopPropagation()}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        addPage('interior', pageIdx);
-                      }}
-                      className="p-1 text-white/70 hover:text-white transition-colors active:scale-95 cursor-pointer"
-                      title="Add Page Next"
-                    >
-                      <Plus size={13} />
-                    </button>
+                        {/* Quick Add page right next to current page */}
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            addPage('interior', pageIdx);
+                          }}
+                          className="p-1 text-white/70 hover:text-white transition-colors active:scale-95 cursor-pointer"
+                          title="Add Page Next"
+                        >
+                          <Plus size={13} />
+                        </button>
 
-                    {/* Quick delete page if > 1 page */}
-                    {catalog.pages.length > 1 && (
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          removePage(page.id);
-                        }}
-                        className="p-1 text-white/70 hover:text-red-400 hover:bg-red-500/20 rounded-[3px] transition-colors active:scale-95 cursor-pointer"
-                        title="Delete Page"
-                      >
-                        <Trash2 size={13} />
-                      </button>
+                        {/* Quick delete page if > 1 page */}
+                        {catalog.pages.length > 1 && (
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              removePage(page.id);
+                            }}
+                            className="p-1 text-white/70 hover:text-red-400 hover:bg-red-500/20 rounded-[3px] transition-colors active:scale-95 cursor-pointer"
+                            title="Delete Page"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </div>
@@ -1815,73 +1823,74 @@ const EditorCanvas: React.FC = () => {
               </div>
             );
           })}
+          {/* Add New Page (Hidden in Cover Studio Mode) */}
+          {!editingSystemTemplate && (
+            <div className="relative z-[70] shrink-0 flex flex-col items-center mb-10" ref={addPageMenuRef}>
+              <div className="relative" style={{ width: (catalog.pages[catalog.pages.length - 1]?.orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH) * zoom }}>
+                <button
+                  onClick={() => setShowAddPageMenu(prev => !prev)}
+                  className={`w-full border-2 border-dashed rounded-[4px] flex items-center justify-center gap-3 py-4 transition-all ${uiTheme === 'dark'
+                    ? 'border-slate-700 hover:border-indigo-500 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10'
+                    : 'border-slate-300 hover:border-indigo-400 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50'
+                    }`}
+                >
+                  <Plus size={16} />
+                  <span className="text-[12px] font-bold uppercase tracking-widest">Add a New Page</span>
+                </button>
 
-          {/* Add New Page */}
-          <div className="relative z-[70] shrink-0 flex flex-col items-center mb-10" ref={addPageMenuRef}>
-            <div className="relative" style={{ width: (catalog.pages[catalog.pages.length - 1]?.orientation === 'landscape' ? PAGE_HEIGHT : PAGE_WIDTH) * zoom }}>
-              <button
-                onClick={() => setShowAddPageMenu(prev => !prev)}
-                className={`w-full border-2 border-dashed rounded-[4px] flex items-center justify-center gap-3 py-4 transition-all ${uiTheme === 'dark'
-                  ? 'border-slate-700 hover:border-indigo-500 text-slate-500 hover:text-indigo-400 hover:bg-indigo-500/10'
-                  : 'border-slate-300 hover:border-indigo-400 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50/50'
-                  }`}
-              >
-                <Plus size={16} />
-                <span className="text-[12px] font-bold uppercase tracking-widest">Add a New Page</span>
-              </button>
-
-              {/* Page type popover */}
-              {showAddPageMenu && (
-                <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 border shadow-2xl rounded-[4px] overflow-hidden z-50 py-1 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-                  }`}>
-                  <p className={`px-4 py-2.5 text-[9px] font-black uppercase tracking-widest border-b ${uiTheme === 'dark' ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'
+                {/* Page type popover */}
+                {showAddPageMenu && (
+                  <div className={`absolute bottom-full mb-3 left-1/2 -translate-x-1/2 w-64 border shadow-2xl rounded-[4px] overflow-hidden z-50 py-1 ${uiTheme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
                     }`}>
-                    Select Page Type
-                  </p>
-                  <div className="p-1.5 space-y-0.5">
-                    {([
-                      { icon: BookOpen, label: 'Hero Cover', sub: 'cover', type: 'cover' as PageType },
-                      { icon: List, label: 'Index Page', sub: 'index', type: 'index' as PageType },
-                      { icon: FileText, label: 'Blank Interior', sub: 'interior', type: 'interior' as PageType },
-                      { icon: FileText, label: 'Closing Page', sub: 'closing', type: 'closing' as PageType },
-                    ]).map(({ icon: Icon, label, sub, type }) => (
+                    <p className={`px-4 py-2.5 text-[9px] font-black uppercase tracking-widest border-b ${uiTheme === 'dark' ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'
+                      }`}>
+                      Select Page Type
+                    </p>
+                    <div className="p-1.5 space-y-0.5">
+                      {([
+                        { icon: BookOpen, label: 'Hero Cover', sub: 'cover', type: 'cover' as PageType },
+                        { icon: List, label: 'Index Page', sub: 'index', type: 'index' as PageType },
+                        { icon: FileText, label: 'Blank Interior', sub: 'interior', type: 'interior' as PageType },
+                        { icon: FileText, label: 'Closing Page', sub: 'closing', type: 'closing' as PageType },
+                      ]).map(({ icon: Icon, label, sub, type }) => (
+                        <button
+                          key={type}
+                          onClick={() => { addPage(type); setShowAddPageMenu(false); }}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
+                            }`}
+                        >
+                          <div className={`w-8 h-8 rounded-[4px] flex items-center justify-center shrink-0 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'
+                            }`}>
+                            <Icon size={15} className={uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'} />
+                          </div>
+                          <div>
+                            <p className="text-[11px] font-bold leading-none mb-0.5">{label}</p>
+                            <p className={`text-[9px] uppercase tracking-wider ${uiTheme === 'dark' ? 'text-slate-500' : 'text-slate-400'
+                              }`}>{sub}</p>
+                          </div>
+                        </button>
+                      ))}
+                      <div className={`h-px mx-2 my-1 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`} />
                       <button
-                        key={type}
-                        onClick={() => { addPage(type); setShowAddPageMenu(false); }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
+                        onClick={() => { addInteriorPageWithInheritedLayout(); setShowAddPageMenu(false); }}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
                           }`}
                       >
-                        <div className={`w-8 h-8 rounded-[4px] flex items-center justify-center shrink-0 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'
-                          }`}>
-                          <Icon size={15} className={uiTheme === 'dark' ? 'text-slate-400' : 'text-slate-500'} />
+                        <div className="w-8 h-8 rounded-[4px] bg-indigo-600 flex items-center justify-center shrink-0">
+                          <Sparkles size={15} className="text-white" />
                         </div>
                         <div>
-                          <p className="text-[11px] font-bold leading-none mb-0.5">{label}</p>
+                          <p className="text-[11px] font-bold leading-none mb-0.5">Inherit Layout</p>
                           <p className={`text-[9px] uppercase tracking-wider ${uiTheme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                            }`}>{sub}</p>
+                            }`}>Clone current page</p>
                         </div>
                       </button>
-                    ))}
-                    <div className={`h-px mx-2 my-1 ${uiTheme === 'dark' ? 'bg-slate-700' : 'bg-slate-100'}`} />
-                    <button
-                      onClick={() => { addInteriorPageWithInheritedLayout(); setShowAddPageMenu(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[4px] text-left transition-colors ${uiTheme === 'dark' ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'
-                        }`}
-                    >
-                      <div className="w-8 h-8 rounded-[4px] bg-indigo-600 flex items-center justify-center shrink-0">
-                        <Sparkles size={15} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-bold leading-none mb-0.5">Inherit Layout</p>
-                        <p className={`text-[9px] uppercase tracking-wider ${uiTheme === 'dark' ? 'text-slate-500' : 'text-slate-400'
-                          }`}>Clone current page</p>
-                      </div>
-                    </button>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 

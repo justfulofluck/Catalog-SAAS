@@ -14,6 +14,7 @@ import {
     Sparkles,
     ChevronRight,
     Layout,
+    BookOpen,
     Activity,
     Menu,
     X
@@ -188,12 +189,12 @@ const AdminDashboard: React.FC = () => {
                                     openTemplateInVisualEditor(null);
                                     setIsMobileSidebarOpen(false);
                                 }}
-                                className="w-full flex items-center justify-between px-3 py-2 bg-[#181818] hover:bg-[#202020] border border-[#0F3D3E]/40 hover:border-[#0F3D3E] rounded-[4px] text-[11px] font-bold text-white transition-all group"
+                                className="w-full flex items-center justify-between px-3 py-2 bg-[#181818] hover:bg-[#202020] border border-emerald-500/20 hover:border-emerald-500/40 rounded-[4px] text-[11px] font-bold text-emerald-300 transition-all group"
                             >
                                 <span className="flex items-center gap-2">
-                                    <Layout size={13} className="text-[#E2DCC8]" /> Catalog Studio
+                                    <BookOpen size={13} className="text-emerald-400" /> Cover Studio
                                 </span>
-                                <ChevronRight size={13} className="text-[#666666] group-hover:text-white transition-colors" />
+                                <ChevronRight size={13} className="text-[#666666] group-hover:text-emerald-300 transition-colors" />
                             </button>
                         </div>
                     </div>

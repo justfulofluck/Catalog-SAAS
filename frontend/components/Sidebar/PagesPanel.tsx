@@ -491,12 +491,18 @@ const FabricThumb: React.FC<{ page: CatalogPage; canvasBg: string; catalog: any;
   );
 });
 
-const PagesPanel: React.FC = () => {
+interface PagesPanelProps {
+  isCoverOnly?: boolean;
+}
+
+const PagesPanel: React.FC<PagesPanelProps> = ({ isCoverOnly = false }) => {
   const {
     catalog, activeThemeId, currentPageIndex, setCurrentPageIndex,
     addPage, removePage, duplicatePage, reorderPages, setPageBackground, uiTheme, products,
+    editingSystemTemplate
   } = useStore();
 
+  const isCoverMode = isCoverOnly || Boolean(editingSystemTemplate);
   const theme = THEMES.find(t => t.id === activeThemeId) || THEMES[0];
   const canvasBg = catalog.backgroundColor || theme.backgroundColor;
 
@@ -549,11 +555,11 @@ const PagesPanel: React.FC = () => {
       <div className={`h-12 px-3 border-b shrink-0 flex items-center justify-between transition-colors ${isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-100 bg-white'}`}>
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-[4px] bg-[#0F3D3E] flex items-center justify-center text-white shadow-sm">
-            <FileText size={13} />
+            {isCoverMode ? <BookOpen size={13} className="text-emerald-400" /> : <FileText size={13} />}
           </div>
           <div>
             <h3 className={`text-xs font-bold uppercase tracking-wider ${isDark ? 'text-white' : 'text-slate-900'}`}>
-              Pages ({catalog.pages.length})
+              {isCoverMode ? 'Cover Blueprint Canvas' : `Pages (${catalog.pages.length})`}
             </h3>
           </div>
         </div>
@@ -723,59 +729,68 @@ const PagesPanel: React.FC = () => {
             })}
           </div>
 
-          {/* Add Page Button */}
+          {/* Add Page Button or Cover Blueprint Mode Banner */}
           <div className={`shrink-0 p-2 border-t ${isDark ? 'border-slate-800' : 'border-slate-100'}`} ref={addMenuRef}>
-            <div className="relative">
-              <button
-                onClick={() => setAddMenuOpen(!isAddMenuOpen)}
-                className={`w-full flex items-center justify-center gap-2 py-2 rounded-[4px] border-2 border-dashed text-[11px] font-bold uppercase tracking-wide transition-all ${isDark ? 'border-slate-700 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10' : 'border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
-              >
-                <Plus size={13} /> Add Page
-              </button>
+            {isCoverMode ? (
+              <div className="p-2.5 rounded-[4px] bg-[#161616] border border-[#262626] text-center">
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider flex items-center justify-center gap-1.5">
+                  <Sparkles size={11} /> Cover Blueprint Designer
+                </p>
+                <p className="text-[9px] text-[#888888] mt-0.5">Single Cover Canvas for Master Templates</p>
+              </div>
+            ) : (
+              <div className="relative">
+                <button
+                  onClick={() => setAddMenuOpen(!isAddMenuOpen)}
+                  className={`w-full flex items-center justify-center gap-2 py-2 rounded-[4px] border-2 border-dashed text-[11px] font-bold uppercase tracking-wide transition-all ${isDark ? 'border-slate-700 text-slate-500 hover:border-indigo-500 hover:text-indigo-400 hover:bg-indigo-500/10' : 'border-slate-200 text-slate-400 hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50'}`}
+                >
+                  <Plus size={13} /> Add Page
+                </button>
 
-              {isAddMenuOpen && (
-                <div className={`absolute bottom-full mb-2 left-0 right-0 border shadow-2xl rounded-[4px] overflow-hidden z-50 py-1 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-                  <p className={`px-3 py-2 text-[9px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Select Page Type</p>
-                  <div className="p-1 space-y-0.5">
-                    {[
-                      { icon: BookOpen, label: '1. Cover Page', type: 'cover' as PageType },
-                      { icon: LayoutGrid, label: '2. Product Page', type: 'product' as PageType },
-                      { icon: List, label: '3. Index Page', type: 'index' as PageType },
-                      { icon: Layers, label: '4. Intro / Section', type: 'intro' as PageType },
-                      { icon: LogOut, label: '5. Outro / Closing', type: 'closing' as PageType },
-                      { icon: FileText, label: '6. Blank Page', type: 'blank' as PageType },
-                    ].map(({ icon: Icon, label, type }) => (
+                {isAddMenuOpen && (
+                  <div className={`absolute bottom-full mb-2 left-0 right-0 border shadow-2xl rounded-[4px] overflow-hidden z-50 py-1 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                    <p className={`px-3 py-2 text-[9px] font-black uppercase tracking-widest border-b ${isDark ? 'text-slate-500 border-slate-700' : 'text-slate-400 border-slate-100'}`}>Select Page Type</p>
+                    <div className="p-1 space-y-0.5">
+                      {[
+                        { icon: BookOpen, label: '1. Cover Page', type: 'cover' as PageType },
+                        { icon: LayoutGrid, label: '2. Product Page', type: 'product' as PageType },
+                        { icon: List, label: '3. Index Page', type: 'index' as PageType },
+                        { icon: Layers, label: '4. Intro / Section', type: 'intro' as PageType },
+                        { icon: LogOut, label: '5. Outro / Closing', type: 'closing' as PageType },
+                        { icon: FileText, label: '6. Blank Page', type: 'blank' as PageType },
+                      ].map(({ icon: Icon, label, type }) => (
+                        <button
+                          key={type}
+                          onClick={() => handleAddPage(type)}
+                          className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-left transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
+                        >
+                          <div className={`w-7 h-7 rounded-[4px] flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
+                            <Icon size={13} className={isDark ? 'text-slate-400' : 'text-slate-500'} />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold leading-none mb-0.5">{label}</p>
+                            <p className={`text-[9px] uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{type}</p>
+                          </div>
+                        </button>
+                      ))}
+                      <div className={`h-px mx-2 my-1 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`} />
                       <button
-                        key={type}
-                        onClick={() => handleAddPage(type)}
-                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-left transition-colors ${isDark ? 'hover:bg-slate-700 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
+                        onClick={() => { addPage('product'); setAddMenuOpen(false); }}
+                        className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-left transition-colors ${isDark ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
                       >
-                        <div className={`w-7 h-7 rounded-[4px] flex items-center justify-center ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`}>
-                          <Icon size={13} className={isDark ? 'text-slate-400' : 'text-slate-500'} />
+                        <div className="w-7 h-7 rounded-[4px] bg-indigo-600 flex items-center justify-center">
+                          <Sparkles size={13} className="text-white" />
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold leading-none mb-0.5">{label}</p>
-                          <p className={`text-[9px] uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{type}</p>
+                          <p className="text-[10px] font-bold leading-none mb-0.5">Inherit Layout</p>
+                          <p className={`text-[9px] uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Clone current</p>
                         </div>
                       </button>
-                    ))}
-                    <div className={`h-px mx-2 my-1 ${isDark ? 'bg-slate-700' : 'bg-slate-100'}`} />
-                    <button
-                      onClick={() => { addPage('product'); setAddMenuOpen(false); }}
-                      className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[4px] text-left transition-colors ${isDark ? 'hover:bg-indigo-600/20 text-slate-300' : 'hover:bg-indigo-50 text-slate-700'}`}
-                    >
-                      <div className="w-7 h-7 rounded-[4px] bg-indigo-600 flex items-center justify-center">
-                        <Sparkles size={13} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold leading-none mb-0.5">Inherit Layout</p>
-                        <p className={`text-[9px] uppercase tracking-wider ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Clone current</p>
-                      </div>
-                    </button>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
     </div>
   );

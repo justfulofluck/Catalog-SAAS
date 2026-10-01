@@ -132,7 +132,14 @@ export interface SystemAdminSlice {
   updateSystemTemplate: (id: string | number, template: Partial<SystemTemplate>) => Promise<SystemTemplate | null>;
   deleteSystemTemplate: (id: string | number) => Promise<boolean>;
   openTemplateInVisualEditor: (template?: SystemTemplate | null) => void;
-  saveActiveTemplateFromEditor: (options?: { name?: string; category?: string; type?: any }) => Promise<boolean>;
+  saveActiveTemplateFromEditor: (options?: {
+    name?: string;
+    category?: string;
+    type?: any;
+    description?: string;
+    is_active?: boolean;
+    thumbnail?: string;
+  }) => Promise<boolean>;
 
   isAdminHeaderDesignerOpen: boolean;
   editingAdminHeaderTemplate: SystemTemplate | null;

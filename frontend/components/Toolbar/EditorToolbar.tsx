@@ -31,7 +31,11 @@ import {
   Sun,
   Moon,
   FileDown,
-  Flag
+  Flag,
+  Sparkles,
+  BookOpen,
+  Check,
+  X
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ShapeType } from '../../types';
@@ -49,6 +53,12 @@ const EditorToolbar: React.FC = () => {
   const [isCommiting, setIsCommiting] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPublishCoverModalOpen, setIsPublishCoverModalOpen] = useState(false);
+  const [coverName, setCoverName] = useState('');
+  const [coverCategory, setCoverCategory] = useState('General');
+  const [coverDescription, setCoverDescription] = useState('');
+  const [coverIsActive, setCoverIsActive] = useState(true);
+
   const [exportDefaultTab, setExportDefaultTab] = useState<'download' | 'share' | 'embed' | 'publish'>('download');
   const [isLineMenuOpen, setIsLineMenuOpen] = useState(false);
   const [isShapeMenuOpen, setIsShapeMenuOpen] = useState(false);
@@ -57,11 +67,21 @@ const EditorToolbar: React.FC = () => {
   const shapeMenuRef = useRef<HTMLDivElement>(null);
   const textMenuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    if (editingSystemTemplate) {
+      setCoverName(editingSystemTemplate.name || catalog.name || 'New Cover Blueprint');
+      setCoverCategory(editingSystemTemplate.category || 'General');
+      setCoverDescription(editingSystemTemplate.description || '');
+      setCoverIsActive(editingSystemTemplate.is_active ?? true);
+    }
+  }, [editingSystemTemplate, catalog.name]);
+
   const handleBackFromEditor = () => {
-    if (editingSystemTemplate || isAdminAuthenticated) {
+    if (isAdminAuthenticated && editingSystemTemplate) {
       useStore.setState({ editingSystemTemplate: null });
       setView('admin-dashboard');
     } else {
+      useStore.setState({ editingSystemTemplate: null });
       setView('dashboard');
     }
   };
@@ -206,21 +226,21 @@ const EditorToolbar: React.FC = () => {
           className={`flex items-center gap-2 p-2 rounded-[4px] transition-all group ${
             isDark ? 'hover:bg-[#0F3D3E]/30 text-[#E2DCC8]/70 hover:text-[#F1F1F1]' : 'hover:bg-slate-100 text-slate-600 hover:text-slate-900'
           }`}
-          title={editingSystemTemplate || isAdminAuthenticated ? "Back to Super Admin Portal" : "Back to Dashboard"}
+          title={isAdminAuthenticated && editingSystemTemplate ? "Back to Super Admin Portal" : "Back to Dashboard"}
         >
           <LayoutDashboard size={18} />
         </button>
         <ChevronRight size={14} className={isDark ? "text-[#E2DCC8]/30" : "text-slate-300"} />
         <div className="flex flex-col">
           <span className={`text-[9px] font-black uppercase tracking-widest leading-none mb-1 ${
-            isDark ? 'text-[#E2DCC8]/60' : 'text-slate-400'
+            isDark ? 'text-emerald-400/90' : 'text-emerald-700'
           }`}>
-            {editingSystemTemplate ? 'Global Template Studio' : 'Active Publication'}
+            {editingSystemTemplate ? 'Cover Studio • Master Blueprint' : 'Active Publication'}
           </span>
           <span className={`font-black text-xs uppercase tracking-tight ${
             isDark ? 'text-[#F1F1F1]' : 'text-slate-800'
           }`}>
-            {catalog.name || 'Untitled Project'}
+            {catalog.name || (editingSystemTemplate ? 'New Cover Blueprint' : 'Untitled Project')}
           </span>
         </div>
       </div>
@@ -452,21 +472,33 @@ const EditorToolbar: React.FC = () => {
           {isDark ? <Sun size={16} className="text-amber-400" /> : <Moon size={16} className="text-indigo-600" />}
         </button>
 
-        {/* Download PDF / Images Icon Button */}
-        <button
-          onClick={() => {
-            setExportDefaultTab('download');
-            setIsExportModalOpen(true);
-          }}
-          className="p-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
-          title="Download PDF or Images"
-        >
-          <FileDown size={16} />
-        </button>
+        {/* Download PDF / Images Icon Button - only in regular catalog editor */}
+        {!editingSystemTemplate && (
+          <button
+            onClick={() => {
+              setExportDefaultTab('download');
+              setIsExportModalOpen(true);
+            }}
+            className="p-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
+            title="Download PDF or Images"
+          >
+            <FileDown size={16} />
+          </button>
+        )}
 
         {editingSystemTemplate ? (
-          <button onClick={async () => { setIsSavingTemplate(true); await saveActiveTemplateFromEditor(); setIsSavingTemplate(false); }} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer">
-            {isSavingTemplate ? 'Saving...' : 'Save Global Template'}
+          <button
+            onClick={() => {
+              setCoverName(editingSystemTemplate.name || catalog.name || 'New Cover Blueprint');
+              setCoverCategory(editingSystemTemplate.category || 'General');
+              setCoverDescription(editingSystemTemplate.description || '');
+              setCoverIsActive(editingSystemTemplate.is_active ?? true);
+              setIsPublishCoverModalOpen(true);
+            }}
+            className="px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#186062] text-white border border-[#E2DCC8]/40 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+          >
+            <Sparkles size={13} className="text-emerald-300" />
+            Publish Blueprint
           </button>
         ) : (
           <button onClick={handleSave} disabled={isCommiting} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer">
@@ -481,6 +513,218 @@ const EditorToolbar: React.FC = () => {
         onClose={() => setIsExportModalOpen(false)}
         defaultTab={exportDefaultTab}
       />
+
+      {/* Publish Master Cover Blueprint Modal */}
+      {isPublishCoverModalOpen && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-200">
+          <div
+            className={`w-full max-w-lg rounded-[8px] border shadow-2xl overflow-hidden flex flex-col ${
+              isDark ? 'bg-[#18181b] border-[#2c2c30] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
+          >
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+              isDark ? 'border-[#2c2c30] bg-[#141416]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[4px] bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <BookOpen size={16} />
+                </div>
+                <div>
+                  <h3 className="font-space text-sm font-bold tracking-wide">
+                    {editingSystemTemplate?.id ? 'Update Cover Blueprint' : 'Publish Master Cover Blueprint'}
+                  </h3>
+                  <p className="text-[11px] text-[#888888]">
+                    Save this front cover design as a global blueprint for all tenants
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsPublishCoverModalOpen(false)}
+                className="p-1.5 rounded-[4px] text-[#888888] hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <div className="p-6 space-y-4">
+              {/* Cover Name */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Cover Blueprint Name <span className="text-red-400">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={coverName}
+                  onChange={(e) => setCoverName(e.target.value)}
+                  placeholder="e.g. Minimalist Bold Editorial Cover"
+                  className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none transition-all ${
+                    isDark
+                      ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                  }`}
+                />
+              </div>
+
+              {/* Target Industry / Category */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Target Industry / Category
+                </label>
+                <select
+                  value={coverCategory}
+                  onChange={(e) => setCoverCategory(e.target.value)}
+                  className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none cursor-pointer transition-all ${
+                    isDark
+                      ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                  }`}
+                >
+                  <option value="General">General / Multi-Purpose</option>
+                  <option value="Industrial / Lighting">Industrial / Lighting</option>
+                  <option value="Electronics & Tech">Electronics & Tech</option>
+                  <option value="Fashion & Apparel">Fashion & Apparel</option>
+                  <option value="Furniture & Interior">Furniture & Interior</option>
+                  <option value="Automotive & Tools">Automotive & Tools</option>
+                  <option value="Cosmetics & Beauty">Cosmetics & Beauty</option>
+                  <option value="Jewelry & Luxury">Jewelry & Luxury</option>
+                  <option value="Food & Beverage">Food & Beverage</option>
+                  <option value="Medical & Healthcare">Medical & Healthcare</option>
+                  <option value="Real Estate">Real Estate</option>
+                </select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Description / Layout Notes
+                </label>
+                <textarea
+                  rows={2}
+                  value={coverDescription}
+                  onChange={(e) => setCoverDescription(e.target.value)}
+                  placeholder="Brief description of this cover blueprint layout..."
+                  className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none resize-none transition-all ${
+                    isDark
+                      ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'
+                      : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
+                  }`}
+                />
+              </div>
+
+              {/* Publication Status (Live vs Draft) */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold uppercase tracking-wider text-[#cccccc]">
+                  Publication Status
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setCoverIsActive(true)}
+                    className={`p-3 rounded-[6px] border text-left transition-all flex items-start gap-3 ${
+                      coverIsActive
+                        ? 'bg-emerald-950/40 border-emerald-500/60 text-white'
+                        : isDark
+                        ? 'bg-[#111113] border-[#333338] text-[#888888] hover:border-[#44444a]'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      coverIsActive ? 'border-emerald-400 bg-emerald-400' : 'border-[#666666]'
+                    }`}>
+                      {coverIsActive && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Live / Published
+                      </p>
+                      <p className="text-[10px] text-[#888888] mt-0.5">
+                        Available immediately for all tenants
+                      </p>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setCoverIsActive(false)}
+                    className={`p-3 rounded-[6px] border text-left transition-all flex items-start gap-3 ${
+                      !coverIsActive
+                        ? 'bg-zinc-800/60 border-amber-500/60 text-white'
+                        : isDark
+                        ? 'bg-[#111113] border-[#333338] text-[#888888] hover:border-[#44444a]'
+                        : 'bg-slate-50 border-slate-200 text-slate-600 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className={`mt-0.5 w-3.5 h-3.5 rounded-full border flex items-center justify-center ${
+                      !coverIsActive ? 'border-amber-400 bg-amber-400' : 'border-[#666666]'
+                    }`}>
+                      {!coverIsActive && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                        Draft (Inactive)
+                      </p>
+                      <p className="text-[10px] text-[#888888] mt-0.5">
+                        Hidden from tenant template selectors
+                      </p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={`px-6 py-4 border-t flex items-center justify-end gap-3 ${
+              isDark ? 'border-[#2c2c30] bg-[#141416]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setIsPublishCoverModalOpen(false)}
+                className="px-4 py-2 rounded-[4px] border border-[#333338] hover:bg-white/5 text-xs font-bold text-[#aaaaaa] hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingTemplate || !coverName.trim()}
+                onClick={async () => {
+                  setIsSavingTemplate(true);
+                  try {
+                    const success = await saveActiveTemplateFromEditor({
+                      name: coverName.trim(),
+                      category: coverCategory,
+                      description: coverDescription.trim(),
+                      is_active: coverIsActive,
+                      type: 'cover'
+                    });
+                    if (success) {
+                      setIsPublishCoverModalOpen(false);
+                    }
+                  } catch (err) {
+                    console.error('Save cover blueprint error:', err);
+                  } finally {
+                    setIsSavingTemplate(false);
+                  }
+                }}
+                className="px-5 py-2 rounded-[4px] bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/40 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#0F3D3E]/30 transition-all active:scale-95 disabled:opacity-50"
+              >
+                {isSavingTemplate ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Publishing...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Save Master Blueprint</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

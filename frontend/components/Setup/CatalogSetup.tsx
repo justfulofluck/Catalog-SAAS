@@ -279,8 +279,14 @@ const TemplateElementsRenderer: React.FC<TemplateElementsRendererProps> = ({
 };
 
 const CatalogSetup: React.FC = () => {
-  const { setView, categories, products, generateCatalogFromTemplate, uiTheme, systemTemplates } = useStore();
+  const { setView, categories, products, generateCatalogFromTemplate, uiTheme, systemTemplates, fetchSystemTemplates } = useStore();
   const isDark = uiTheme === 'dark';
+
+  useEffect(() => {
+    if (fetchSystemTemplates) {
+      fetchSystemTemplates();
+    }
+  }, [fetchSystemTemplates]);
   
   // Navigation Stepper State (5 Distinct Phases)
   const [step, setStep] = useState(1);

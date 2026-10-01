@@ -27,6 +27,7 @@ import SingleItemsPanel from './components/Sidebar/SingleItemsPanel';
 import ElementsPanel from './components/Sidebar/ElementsPanel';
 import VideosPanel from './components/Sidebar/VideosPanel';
 import CropStudioPanel from './components/Sidebar/CropStudioPanel';
+import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
 import { AdminHeaderDesignerModal, AdminFooterDesignerModal } from './components/Admin/HeaderFooterStudio';
@@ -64,7 +65,8 @@ import {
   Sliders,
   Package,
   PenTool,
-  Video
+  Video,
+  Palette
 } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -91,7 +93,8 @@ const App: React.FC = () => {
     isFooterDesignerOpen,
     isAdminHeaderDesignerOpen,
     isAdminFooterDesignerOpen,
-    isCreateProductModalOpen
+    isCreateProductModalOpen,
+    editingSystemTemplate
   } = useStore();
 
   const [loading, setLoading] = useState(true);
@@ -123,7 +126,9 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const getViewFromPath = (pathname: string): View => {
-      if (pathname === '/admin/dashboard') return 'admin-dashboard';
+      if (pathname === '/admin/dashboard') {
+        return isAdminAuthenticated ? 'admin-dashboard' : (isAuthenticated ? 'dashboard' : 'admin-login');
+      }
       if (pathname === '/admin') return 'admin-login';
       if (pathname === '/editor') return 'editor';
       if (pathname === '/catalog-setup') return 'catalog-setup';
@@ -230,7 +235,10 @@ const App: React.FC = () => {
     return <AdminLogin />;
   }
 
-  if (isAdminAuthenticated && currentView === 'admin-dashboard') {
+  if (currentView === 'admin-dashboard') {
+    if (!isAdminAuthenticated) {
+      return isAuthenticated ? <Dashboard /> : <AdminLogin />;
+    }
     if (isAdminHeaderDesignerOpen) {
       return <AdminHeaderDesignerModal />;
     }
@@ -258,6 +266,8 @@ const App: React.FC = () => {
   // Editor View (Fullscreen)
   if (currentView === 'editor') {
     const isDark = uiTheme === 'dark';
+    const isCoverStudioMode = Boolean(editingSystemTemplate);
+
     return (
       <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-[#f1f5f9] text-slate-800'}`}>
         <EditorToolbar />
@@ -267,165 +277,270 @@ const App: React.FC = () => {
             {/* Icon rail - always visible, fixed width */}
             <div className={`flex flex-col border-r shrink-0 h-full transition-colors duration-200 ${isDark ? 'border-[#E2DCC8]/15 bg-[#100F0F]' : 'border-slate-200 bg-white'}`}>
               <div className="flex flex-col w-14 items-center py-6 gap-6">
-                <button
-                  onClick={() => {
-                    if (editorTab === 'pages' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('pages');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'pages' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Pages"
-                >
-                  <FileText size={20} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (editorTab === 'grid-studio' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('grid-studio');
-                      setSidebarExpanded(true);
+                {isCoverStudioMode ? (
+                  <>
+                    {/* Cover Studio Creation Tools */}
 
-                      // If currently on cover page, auto-focus on first product page so user is not stuck on cover
-                      const state = useStore.getState();
-                      const pages = state.catalog?.pages || [];
-                      const currIdx = state.currentPageIndex;
-                      if (pages[currIdx]?.type === 'cover' && pages.length > 1) {
-                        const firstProductPageIdx = pages.findIndex(p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing');
-                        if (firstProductPageIdx !== -1) {
-                          state.setCurrentPageIndex(firstProductPageIdx);
-                          window.dispatchEvent(new CustomEvent('catalog:scrollToPage', { detail: { pageIndex: firstProductPageIdx } }));
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'text' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('text');
+                          setSidebarExpanded(true);
                         }
-                      }
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'grid-studio' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="3-Product Grid Studio"
-                >
-                  <Sparkles size={20} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (editorTab === 'single-items' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('single-items');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'single-items' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Single Items / Products Placement"
-                >
-                  <Package size={20} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (editorTab === 'text' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('text');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'text' && isSidebarExpanded 
-                      ? 'bg-[#7c3aed] text-white shadow-lg shadow-purple-900/30' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Text & Typography"
-                >
-                  <Type size={20} />
-                </button>
-                <button
-                  onClick={() => {
-                    if (editorTab === 'media' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('media');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'media' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Media & Stock Images"
-                >
-                  <Images size={20} />
-                </button>
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'text' && isSidebarExpanded 
+                          ? 'bg-[#7c3aed] text-white shadow-lg shadow-purple-900/30' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Typography & Titles"
+                    >
+                      <Type size={20} />
+                    </button>
 
-                <button
-                  onClick={() => {
-                    if (editorTab === 'elements' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('elements');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'elements' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Elements & Blocks"
-                >
-                  <PenTool size={20} />
-                </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'media' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('media');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'media' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Media, Logos & Stock Imagery"
+                    >
+                      <Images size={20} />
+                    </button>
 
-                <button
-                  onClick={() => {
-                    if (editorTab === 'buttons' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('buttons');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'buttons' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Buttons"
-                >
-                  <MousePointer2 size={20} />
-                </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'elements' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('elements');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'elements' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Elements, Badges & Shapes"
+                    >
+                      <PenTool size={20} />
+                    </button>
 
-                <button
-                  onClick={() => {
-                    if (editorTab === 'header-footer' && isSidebarExpanded) {
-                      setSidebarExpanded(false);
-                    } else {
-                      setEditorTab('header-footer');
-                      setSidebarExpanded(true);
-                    }
-                  }}
-                  className={`p-2.5 rounded-[4px] transition-all ${
-                    editorTab === 'header-footer' && isSidebarExpanded 
-                      ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
-                      : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
-                  }`}
-                  title="Header & Footer Settings"
-                >
-                  <LayoutTemplate size={20} />
-                </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'buttons' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('buttons');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'buttons' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Buttons & Badges"
+                    >
+                      <MousePointer2 size={20} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'colors' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('colors');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'colors' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Palette & Theme Colors"
+                    >
+                      <Palette size={20} />
+                    </button>
+
+                  </>
+                ) : (
+                  <>
+                    {/* Standard User Catalog Tabs */}
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'pages' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('pages');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'pages' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Pages"
+                    >
+                      <FileText size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'grid-studio' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('grid-studio');
+                          setSidebarExpanded(true);
+
+                          // If currently on cover page, auto-focus on first product page so user is not stuck on cover
+                          const state = useStore.getState();
+                          const pages = state.catalog?.pages || [];
+                          const currIdx = state.currentPageIndex;
+                          if (pages[currIdx]?.type === 'cover' && pages.length > 1) {
+                            const firstProductPageIdx = pages.findIndex(p => p.type !== 'cover' && p.type !== 'index' && p.type !== 'closing');
+                            if (firstProductPageIdx !== -1) {
+                              state.setCurrentPageIndex(firstProductPageIdx);
+                              window.dispatchEvent(new CustomEvent('catalog:scrollToPage', { detail: { pageIndex: firstProductPageIdx } }));
+                            }
+                          }
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'grid-studio' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="3-Product Grid Studio"
+                    >
+                      <Sparkles size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'single-items' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('single-items');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'single-items' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Single Items / Products Placement"
+                    >
+                      <Package size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'text' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('text');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'text' && isSidebarExpanded 
+                          ? 'bg-[#7c3aed] text-white shadow-lg shadow-purple-900/30' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Text & Typography"
+                    >
+                      <Type size={20} />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'media' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('media');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'media' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Media & Stock Images"
+                    >
+                      <Images size={20} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'elements' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('elements');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'elements' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/40 shadow-md ring-1 ring-[#0F3D3E]' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Elements & Blocks"
+                    >
+                      <PenTool size={20} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'buttons' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('buttons');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'buttons' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Buttons"
+                    >
+                      <MousePointer2 size={20} />
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (editorTab === 'header-footer' && isSidebarExpanded) {
+                          setSidebarExpanded(false);
+                        } else {
+                          setEditorTab('header-footer');
+                          setSidebarExpanded(true);
+                        }
+                      }}
+                      className={`p-2.5 rounded-[4px] transition-all ${
+                        editorTab === 'header-footer' && isSidebarExpanded 
+                          ? 'bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 shadow-md' 
+                          : (isDark ? 'text-[#E2DCC8]/60 hover:text-[#F1F1F1] hover:bg-[#0F3D3E]/30' : 'text-slate-400 hover:text-slate-800 hover:bg-slate-100')
+                      }`}
+                      title="Header & Footer Settings"
+                    >
+                      <LayoutTemplate size={20} />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
@@ -434,14 +549,15 @@ const App: React.FC = () => {
               <div className={`h-full z-30 shadow-xl border-r transition-all duration-200 ${
                 (editorTab === 'grid-studio' || editorTab === 'single-items') ? 'w-[780px]' : (editorTab === 'text' || editorTab === 'colors' || editorTab === 'elements' || editorTab === 'crop') ? 'w-[360px]' : 'w-[330px]'
               } shrink-0 ${isDark ? 'border-[#E2DCC8]/15 bg-[#141414]' : 'border-slate-200 bg-white'}`}>
-                {editorTab === 'pages' && <PagesPanel />}
-                {editorTab === 'grid-studio' && <GridStudioPanel />}
-                {editorTab === 'single-items' && <SingleItemsPanel />}
+                {editorTab === 'templates' && !isCoverStudioMode && <TemplatesPanel />}
+                {editorTab === 'pages' && !isCoverStudioMode && <PagesPanel />}
+                {editorTab === 'grid-studio' && !isCoverStudioMode && <GridStudioPanel />}
+                {editorTab === 'single-items' && !isCoverStudioMode && <SingleItemsPanel />}
                 {editorTab === 'text' && <TextPanel />}
                 {editorTab === 'media' && <MediaAssetLibrary />}
                 {editorTab === 'elements' && <ElementsPanel />}
                 {editorTab === 'buttons' && <ButtonsPanel />}
-                {editorTab === 'header-footer' && <HeaderFooterPanel />}
+                {editorTab === 'header-footer' && !isCoverStudioMode && <HeaderFooterPanel />}
                 {editorTab === 'colors' && <ColorPanel />}
                 {editorTab === 'crop' && <CropStudioPanel />}
               </div>
