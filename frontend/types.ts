@@ -229,6 +229,7 @@ export interface GridTemplate {
 export interface CatalogPage {
   id: string;
   pageNumber: number;
+  title?: string;
   elements: CanvasElement[];
   type: PageType;
   categoryId?: string;
@@ -236,6 +237,8 @@ export interface CatalogPage {
   backgroundColor?: string;
   hasHeader?: boolean;
   hasFooter?: boolean;
+  locked?: boolean;
+  visible?: boolean;
 }
 
 // Added PageTemplate interface for predefined layouts used in constants.ts

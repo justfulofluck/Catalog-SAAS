@@ -516,19 +516,29 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
                                         <label className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider leading-none">Letter Spacing</label>
                                         <input
                                             type="number"
-                                            value={Math.round((element.letterSpacing || 0))}
-                                            onChange={e => handleLiveUpdate({ letterSpacing: parseFloat(e.target.value) || 0 })}
+                                            min="0"
+                                            value={Math.max(0, Math.round(element.letterSpacing || 0))}
+                                            onChange={e => {
+                                                const val = parseFloat(e.target.value);
+                                                handleLiveUpdate({ letterSpacing: isNaN(val) ? 0 : Math.max(0, val) });
+                                            }}
                                             className="text-[11px] font-black text-white bg-black/60 border border-white/20 rounded-md px-1.5 py-0.5 w-12 text-right outline-none focus:border-[#8B3DFF] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none m-0"
                                         />
                                     </div>
                                     <input
                                         type="range"
-                                        min="-50"
+                                        min="0"
                                         max="1000"
                                         step="1"
-                                        value={element.letterSpacing || 0}
-                                        onInput={e => handleLiveUpdate({ letterSpacing: parseFloat((e.target as HTMLInputElement).value) })}
-                                        onChange={e => handleLiveUpdate({ letterSpacing: parseFloat(e.target.value) })}
+                                        value={Math.max(0, element.letterSpacing || 0)}
+                                        onInput={e => {
+                                            const val = parseFloat((e.target as HTMLInputElement).value);
+                                            handleLiveUpdate({ letterSpacing: isNaN(val) ? 0 : Math.max(0, val) });
+                                        }}
+                                        onChange={e => {
+                                            const val = parseFloat(e.target.value);
+                                            handleLiveUpdate({ letterSpacing: isNaN(val) ? 0 : Math.max(0, val) });
+                                        }}
                                         className="w-full h-1.5 bg-zinc-700 rounded-full appearance-none cursor-pointer accent-[#8B3DFF]"
                                     />
                                 </div>

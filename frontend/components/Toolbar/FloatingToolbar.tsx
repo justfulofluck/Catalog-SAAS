@@ -39,7 +39,8 @@ import {
   AlignRight,
   ChevronDown,
   Search,
-  Grid
+  Grid,
+  GripVertical
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, CATEGORIZED_FONTS } from '../../constants';
@@ -206,6 +207,54 @@ const FloatingToolbar: React.FC<Props> = ({
 
   const centerX = (minX + maxX) / 2;
 
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const dragStartPos = useRef<{ x: number; y: number } | null>(null);
+
+  // Reset drag offset when selection changes
+  const prevSelectedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const currentId = selectedElements[0]?.id || null;
+    if (currentId !== prevSelectedIdRef.current) {
+      prevSelectedIdRef.current = currentId;
+      setDragOffset({ x: 0, y: 0 });
+      dragOffsetRef.current = { x: 0, y: 0 };
+      if (toolbarRef.current) {
+        toolbarRef.current.style.transform = 'translateX(-50%)';
+      }
+    }
+  }, [selectedElements]);
+
+  const handleDragStart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragStartPos.current = { x: e.clientX - dragOffsetRef.current.x, y: e.clientY - dragOffsetRef.current.y };
+    document.addEventListener('mousemove', handleDragMove);
+    document.addEventListener('mouseup', handleDragEnd);
+    if (toolbarRef.current) {
+      toolbarRef.current.style.transition = 'none';
+    }
+  };
+
+  const handleDragMove = (e: MouseEvent) => {
+    if (!dragStartPos.current || !toolbarRef.current) return;
+    const newX = e.clientX - dragStartPos.current.x;
+    const newY = e.clientY - dragStartPos.current.y;
+    dragOffsetRef.current = { x: newX, y: newY };
+    toolbarRef.current.style.transform = `translate(calc(-50% + ${newX}px), ${newY}px)`;
+  };
+
+  const handleDragEnd = () => {
+    dragStartPos.current = null;
+    document.removeEventListener('mousemove', handleDragMove);
+    document.removeEventListener('mouseup', handleDragEnd);
+    setDragOffset({ ...dragOffsetRef.current });
+    if (toolbarRef.current) {
+      toolbarRef.current.style.transition = '';
+    }
+  };
+
   // Position toolbar centered above selection, flip to bottom only if pushed extremely off-canvas
   const toolbarHeight = 44; // Approx height of horizontal bar
   let toolbarTop = minY * zoom - toolbarHeight - 16;
@@ -220,7 +269,7 @@ const FloatingToolbar: React.FC<Props> = ({
     position: 'absolute',
     left: `${centerX * zoom}px`,
     top: `${toolbarTop}px`,
-    transform: 'translateX(-50%)',
+    transform: `translate(calc(-50% + ${dragOffset.x}px), ${dragOffset.y}px)`,
     zIndex: 3500,
     pointerEvents: 'auto',
   };
@@ -349,11 +398,20 @@ const FloatingToolbar: React.FC<Props> = ({
 
   return (
     <div
-      className="flex flex-row items-center gap-0.5 bg-[#141416] text-[#EDEDED] shadow-[0_12px_40px_rgba(0,0,0,0.6)] border border-[#E2DCC8]/20 rounded-[4px] p-1 animate-in zoom-in-95 duration-200 backdrop-blur-md"
+      ref={toolbarRef}
+      className="flex flex-row items-center gap-0.5 bg-[#141416] text-[#EDEDED] shadow-[0_12px_40px_rgba(0,0,0,0.6)] border border-[#E2DCC8]/20 rounded-[4px] p-1 animate-in zoom-in-95 duration-200 backdrop-blur-md select-none"
       style={toolbarStyle as React.CSSProperties}
       onClick={(e) => e.stopPropagation()}
       onMouseDown={(e) => e.stopPropagation()}
     >
+      {/* Drag / Grab Handle */}
+      <div
+        onMouseDown={handleDragStart}
+        className="cursor-move p-1 text-white/40 hover:text-white rounded-[4px] transition-colors flex items-center justify-center shrink-0 active:scale-95"
+        title="Drag Toolbar"
+      >
+        <GripVertical size={15} />
+      </div>
 
       {/* STANDALONE CUSTOM TABLE CONTROLS */}
       {isStandaloneTable && (

@@ -169,6 +169,8 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
     const targetDescription = options?.description ?? editingSystemTemplate?.description ?? '';
     const targetIsActive = options?.is_active ?? editingSystemTemplate?.is_active ?? true;
 
+    set({ saveStatus: 'saving' });
+
     const pagesData = catalog.pages.map((p) => ({
       pageNumber: p.pageNumber,
       type: 'cover',
@@ -176,46 +178,54 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
       backgroundColor: p.backgroundColor,
     }));
 
-    if (editingSystemTemplate && editingSystemTemplate.id) {
-      // Update existing
-      const res = await updateSystemTemplate(editingSystemTemplate.id, {
-        name: targetName,
-        category: targetCategory,
-        type: targetType,
-        description: targetDescription,
-        is_active: targetIsActive,
-        pages_data: pagesData,
-      });
-      if (res) {
-        try {
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
-          }
-        } catch (e) {}
-        showToast('Cover Blueprint updated successfully!', 'success', 'Blueprint Saved');
+    try {
+      if (editingSystemTemplate && editingSystemTemplate.id) {
+        // Update existing
+        const res = await updateSystemTemplate(editingSystemTemplate.id, {
+          name: targetName,
+          category: targetCategory,
+          type: targetType,
+          description: targetDescription,
+          is_active: targetIsActive,
+          pages_data: pagesData,
+        });
+        if (res) {
+          try {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
+            }
+          } catch (e) {}
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          set({ saveStatus: 'saved', lastSavedAt: timeStr });
+          showToast('Cover Blueprint updated successfully!', 'success', 'Blueprint Saved');
+        }
+        return !!res;
+      } else {
+        // Create new
+        const res = await createSystemTemplate({
+          name: targetName,
+          category: targetCategory,
+          type: targetType,
+          description: targetDescription,
+          is_active: targetIsActive,
+          thumbnail: options?.thumbnail || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800',
+          pages_data: pagesData,
+        });
+        if (res) {
+          const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          set({ editingSystemTemplate: res, saveStatus: 'saved', lastSavedAt: timeStr });
+          try {
+            if (typeof window !== 'undefined') {
+              sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
+            }
+          } catch (e) {}
+          showToast('Master Cover Blueprint published successfully!', 'success', 'Blueprint Created');
+        }
+        return !!res;
       }
-      return !!res;
-    } else {
-      // Create new
-      const res = await createSystemTemplate({
-        name: targetName,
-        category: targetCategory,
-        type: targetType,
-        description: targetDescription,
-        is_active: targetIsActive,
-        thumbnail: options?.thumbnail || 'https://images.unsplash.com/photo-1600210492486-724fe5c67fb0?auto=format&fit=crop&q=80&w=800',
-        pages_data: pagesData,
-      });
-      if (res) {
-        set({ editingSystemTemplate: res });
-        try {
-          if (typeof window !== 'undefined') {
-            sessionStorage.setItem('cs_editing_template', JSON.stringify(res));
-          }
-        } catch (e) {}
-        showToast('Master Cover Blueprint published successfully!', 'success', 'Blueprint Created');
-      }
-      return !!res;
+    } catch (err) {
+      set({ saveStatus: 'error' });
+      throw err;
     }
   },
 
