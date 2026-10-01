@@ -35,10 +35,14 @@ import {
   Sparkles,
   BookOpen,
   Check,
-  X
+  X,
+  Code,
+  FileJson,
+  Upload
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { ShapeType } from '../../types';
+import { normalizeTemplateFromJSON } from '../../utils/templateJsonParser';
 import SceneTreePanel from './SceneTreePanel';
 import ExportModal from '../Editor/ExportModal';
 
@@ -54,6 +58,9 @@ const EditorToolbar: React.FC = () => {
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [isPublishCoverModalOpen, setIsPublishCoverModalOpen] = useState(false);
+  const [isJsonEditorOpen, setIsJsonEditorOpen] = useState(false);
+  const [jsonText, setJsonText] = useState('');
+  const [jsonError, setJsonError] = useState<string | null>(null);
   const [coverName, setCoverName] = useState('');
   const [coverCategory, setCoverCategory] = useState('General');
   const [coverDescription, setCoverDescription] = useState('');
@@ -487,19 +494,48 @@ const EditorToolbar: React.FC = () => {
         )}
 
         {editingSystemTemplate ? (
-          <button
-            onClick={() => {
-              setCoverName(editingSystemTemplate.name || catalog.name || 'New Cover Blueprint');
-              setCoverCategory(editingSystemTemplate.category || 'General');
-              setCoverDescription(editingSystemTemplate.description || '');
-              setCoverIsActive(editingSystemTemplate.is_active ?? true);
-              setIsPublishCoverModalOpen(true);
-            }}
-            className="px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#186062] text-white border border-[#E2DCC8]/40 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
-          >
-            <Sparkles size={13} className="text-emerald-300" />
-            Publish Blueprint
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                const currentPage = catalog.pages[currentPageIndex] || catalog.pages[0];
+                const currentData = {
+                  name: editingSystemTemplate.name || catalog.name || 'Cover Blueprint',
+                  category: editingSystemTemplate.category || 'General',
+                  type: editingSystemTemplate.type || 'cover',
+                  description: editingSystemTemplate.description || '',
+                  backgroundColor: currentPage?.backgroundColor || '#ffffff',
+                  pages_data: catalog.pages.map((p, idx) => ({
+                    pageNumber: idx + 1,
+                    type: 'cover',
+                    backgroundColor: p.backgroundColor || '#ffffff',
+                    elements: p.elements || []
+                  }))
+                };
+                setJsonText(JSON.stringify(currentData, null, 2));
+                setJsonError(null);
+                setIsJsonEditorOpen(true);
+              }}
+              className="px-3 py-2 bg-[#1b1b1b] hover:bg-[#252525] border border-[#383838] hover:border-[#E2DCC8]/40 text-[#E2DCC8] rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-sm active:scale-95 cursor-pointer"
+              title="Inspect and live-edit raw template JSON"
+            >
+              <Code size={13} />
+              <span>JSON Code</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setCoverName(editingSystemTemplate.name || catalog.name || 'New Cover Blueprint');
+                setCoverCategory(editingSystemTemplate.category || 'General');
+                setCoverDescription(editingSystemTemplate.description || '');
+                setCoverIsActive(editingSystemTemplate.is_active ?? true);
+                setIsPublishCoverModalOpen(true);
+              }}
+              className="px-4 py-2 bg-gradient-to-r from-[#0F3D3E] to-[#155455] hover:from-[#134d4f] hover:to-[#186062] text-white border border-[#E2DCC8]/40 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-md transition-all active:scale-95 cursor-pointer"
+            >
+              <Sparkles size={13} className="text-emerald-300" />
+              Publish Blueprint
+            </button>
+          </div>
         ) : (
           <button onClick={handleSave} disabled={isCommiting} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer">
             <Save size={14} /> {isCommiting ? 'Saving...' : 'Commit'}
@@ -720,6 +756,111 @@ const EditorToolbar: React.FC = () => {
                     <span>Save Master Blueprint</span>
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Live Template JSON Inspector / Code Editor Modal */}
+      {isJsonEditorOpen && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center z-[200] p-4 animate-in fade-in duration-200">
+          <div
+            className={`w-full max-w-3xl rounded-[8px] border shadow-2xl overflow-hidden flex flex-col max-h-[90vh] ${
+              isDark ? 'bg-[#141414] border-[#2e2e2e] text-white' : 'bg-white border-slate-200 text-slate-900'
+            }`}
+          >
+            {/* Header */}
+            <div className={`px-6 py-4 border-b flex items-center justify-between ${
+              isDark ? 'border-[#262626] bg-[#181818]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-[4px] bg-[#0F3D3E] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8]">
+                  <FileJson size={16} />
+                </div>
+                <div>
+                  <h3 className="font-space text-sm font-bold tracking-wide">
+                    Live Blueprint JSON Code Editor
+                  </h3>
+                  <p className="text-[11px] text-[#888888]">
+                    Inspect, edit, or paste full template JSON directly onto the visual canvas
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsJsonEditorOpen(false)}
+                className="p-1.5 rounded-[4px] text-[#888888] hover:text-white hover:bg-white/10 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Code Body */}
+            <div className="p-6 space-y-4 overflow-y-auto custom-scrollbar flex-1">
+              <div className="relative font-mono">
+                <textarea
+                  value={jsonText}
+                  onChange={(e) => {
+                    setJsonText(e.target.value);
+                    try {
+                      JSON.parse(e.target.value);
+                      setJsonError(null);
+                    } catch (err: any) {
+                      setJsonError(err.message || 'Invalid JSON syntax');
+                    }
+                  }}
+                  rows={15}
+                  className="w-full p-4 bg-[#100F0F] border border-[#2e2e2e] focus:border-[#0F3D3E] rounded-[6px] text-xs font-mono text-emerald-300 placeholder-[#444444] outline-none leading-relaxed transition-all resize-y"
+                  spellCheck={false}
+                />
+              </div>
+
+              {jsonError && (
+                <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-[4px] text-red-300 text-xs font-mono">
+                  <strong>JSON Error:</strong> {jsonError}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className={`px-6 py-4 border-t flex items-center justify-between ${
+              isDark ? 'border-[#262626] bg-[#161616]' : 'border-slate-200 bg-slate-50'
+            }`}>
+              <button
+                type="button"
+                onClick={() => setIsJsonEditorOpen(false)}
+                className="px-4 py-2 rounded-[4px] border border-[#333338] hover:bg-white/5 text-xs font-bold text-[#aaaaaa] hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                disabled={!!jsonError || !jsonText.trim()}
+                onClick={() => {
+                  try {
+                    const parsed = JSON.parse(jsonText);
+                    const { template, pages } = normalizeTemplateFromJSON(parsed);
+
+                    useStore.setState({
+                      editingSystemTemplate: editingSystemTemplate ? { ...editingSystemTemplate, ...template } : template,
+                      catalog: {
+                        ...catalog,
+                        name: template.name || catalog.name,
+                        pages: pages as any
+                      },
+                      currentPageIndex: 0
+                    });
+
+                    setIsJsonEditorOpen(false);
+                  } catch (err: any) {
+                    setJsonError(err.message);
+                  }
+                }}
+                className="px-5 py-2 rounded-[4px] bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/40 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-[#0F3D3E]/30 transition-all active:scale-95 disabled:opacity-50"
+              >
+                <Check size={14} />
+                <span>Apply to Visual Canvas</span>
               </button>
             </div>
           </div>

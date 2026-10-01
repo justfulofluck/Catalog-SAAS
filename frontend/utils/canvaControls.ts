@@ -195,9 +195,53 @@ function initImageCropTransform(target: any, transform: any) {
 }
 
 /**
- * Action handler for image width cropping (ml, mr handles).
- * - Default: Crops only the dragged side, keeping opposite edge completely pinned.
- * - Alt key: Symmetrically crops both sides inwards towards center (matching Canva).
+ * Computes Canva-style Smart Cover Crop dimensions and offsets.
+ * Given target frame dimensions (frameW, frameH) and intrinsic image dimensions (naturalW, naturalH),
+ * this calculates the exact crop rectangle (cropX, cropY, cropWidth, cropHeight)
+ * so that the image always covers the entire frame while centering the visible area.
+ * 
+ * - When frameAspect == naturalAspect -> 100% full image (no crop, cropX=0, cropY=0, cropWidth=naturalW, cropHeight=naturalH).
+ * - When frameAspect > naturalAspect  -> Image expands horizontally, top & bottom cropped symmetrically (zooms in).
+ *                                        When stretched frame is dragged back inwards, it smoothly zooms OUT back to 100%.
+ * - When frameAspect < naturalAspect  -> Image expands vertically, left & right cropped symmetrically.
+ *                                        When narrow frame is widened back, it smoothly zooms OUT back to 100%.
+ */
+export function computeCoverCrop(
+  frameW: number,
+  frameH: number,
+  naturalW: number,
+  naturalH: number
+): { cropX: number; cropY: number; cropWidth: number; cropHeight: number } {
+  const safeFrameW = Math.max(1, frameW);
+  const safeFrameH = Math.max(1, frameH);
+  const safeNatW = Math.max(1, naturalW);
+  const safeNatH = Math.max(1, naturalH);
+
+  const frameAspect = safeFrameW / safeFrameH;
+  const naturalAspect = safeNatW / safeNatH;
+
+  if (frameAspect >= naturalAspect) {
+    // Frame is wider than or equal to image natural aspect: full width used, height cropped symmetrically
+    const cropWidth = safeNatW;
+    const cropHeight = Math.max(1, Math.min(safeNatH, safeNatW / frameAspect));
+    const cropX = 0;
+    const cropY = Math.max(0, (safeNatH - cropHeight) / 2);
+    return { cropX, cropY, cropWidth, cropHeight };
+  } else {
+    // Frame is taller than or equal to image natural aspect: full height used, width cropped symmetrically
+    const cropHeight = safeNatH;
+    const cropWidth = Math.max(1, Math.min(safeNatW, safeNatH * frameAspect));
+    const cropX = Math.max(0, (safeNatW - cropWidth) / 2);
+    const cropY = 0;
+    return { cropX, cropY, cropWidth, cropHeight };
+  }
+}
+
+/**
+ * Action handler for image width cropping & frame expansion (ml, mr handles).
+ * - Dragging outwards beyond natural bounds: expands the frame width and smoothly adapts image zoom (Canva Cover-fit).
+ * - Dragging inwards: smoothly zooms OUT back to original 100% natural image, then crops width symmetrically.
+ * - Alt key: Symmetrically applies from the center.
  */
 export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
   const target = transform.target;
@@ -206,59 +250,53 @@ export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: 
   const start = initImageCropTransform(target, transform);
   const isAlt = !!eventData.altKey;
   const corner = transform.corner; // 'mr' or 'ml'
+  const naturalW = start.naturalWidth;
+  const naturalH = start.naturalHeight;
+  const targetH = start.origH;
 
+  let newW: number;
   if (corner === 'mr') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
-      const rawNewW = Math.max(15, local.x);
-      const maxCropW = start.naturalWidth - start.cropX;
-      const maxW = Math.max(15, maxCropW * start.scaleX);
-      const newW = Math.min(maxW, rawNewW);
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropX = start.cropX;
-      target.cropWidth = newCropW;
+      newW = Math.max(15, local.x);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.leftAnchor, 'left', 'top');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfW = Math.max(7.5, Math.abs(local.x));
-      const centerCropX = start.cropX + start.cropWidth / 2;
-      const maxHalfCropW = Math.min(centerCropX, start.naturalWidth - centerCropX);
-      const halfW = Math.min(Math.max(7.5, maxHalfCropW * start.scaleX), rawHalfW);
-      const newW = halfW * 2;
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropWidth = newCropW;
-      target.cropX = Math.max(0, centerCropX - newCropW / 2);
+      newW = Math.max(15, Math.abs(local.x) * 2);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   } else if (corner === 'ml') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'right', 'top', x, y);
-      const rawNewW = Math.max(15, -local.x);
-      const startRightCrop = start.cropX + start.cropWidth;
-      const maxW = Math.max(15, startRightCrop * start.scaleX);
-      const newW = Math.min(maxW, rawNewW);
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropWidth = newCropW;
-      target.cropX = Math.max(0, startRightCrop - newCropW);
+      newW = Math.max(15, -local.x);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.rightAnchor, 'right', 'top');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfW = Math.max(7.5, Math.abs(local.x));
-      const centerCropX = start.cropX + start.cropWidth / 2;
-      const maxHalfCropW = Math.min(centerCropX, start.naturalWidth - centerCropX);
-      const halfW = Math.min(Math.max(7.5, maxHalfCropW * start.scaleX), rawHalfW);
-      const newW = halfW * 2;
-      const newCropW = newW / start.scaleX;
-
-      target.set({ width: Math.round(newW) });
-      target.cropWidth = newCropW;
-      target.cropX = Math.max(0, centerCropX - newCropW / 2);
+      newW = Math.max(15, Math.abs(local.x) * 2);
+      const crop = computeCoverCrop(newW, targetH, naturalW, naturalH);
+      target.set({ width: Math.round(newW), height: Math.round(targetH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   }
@@ -266,10 +304,12 @@ export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: 
   // If target is a Group (e.g. image with overlay), sync child objects
   if (typeof target.getObjects === 'function') {
     target.getObjects().forEach((child: any) => {
-      child.set({ width: target.width });
+      child.set({ width: target.width, height: target.height });
       if (child.type === 'FabricImage' || child.type === 'image' || child._element) {
         child.cropX = target.cropX;
+        child.cropY = target.cropY;
         child.cropWidth = target.cropWidth;
+        child.cropHeight = target.cropHeight;
       }
     });
   }
@@ -280,9 +320,10 @@ export function imageCropWidthHandler(eventData: MouseEvent, transform: any, x: 
 }
 
 /**
- * Action handler for image height cropping (mt, mb handles).
- * - Default: Crops only the dragged side, keeping opposite edge completely pinned.
- * - Alt key: Symmetrically crops both sides inwards towards center (matching Canva).
+ * Action handler for image height cropping & frame expansion (mt, mb handles).
+ * - Dragging outwards beyond natural bounds: expands the frame height and smoothly adapts image zoom (Canva Cover-fit).
+ * - Dragging inwards: smoothly zooms OUT back to original 100% natural image, then crops height symmetrically.
+ * - Alt key: Symmetrically applies from the center.
  */
 export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x: number, y: number): boolean {
   const target = transform.target;
@@ -291,59 +332,53 @@ export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x:
   const start = initImageCropTransform(target, transform);
   const isAlt = !!eventData.altKey;
   const corner = transform.corner; // 'mb' or 'mt'
+  const naturalW = start.naturalWidth;
+  const naturalH = start.naturalHeight;
+  const targetW = start.origW;
 
+  let newH: number;
   if (corner === 'mb') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'left', 'top', x, y);
-      const rawNewH = Math.max(15, local.y);
-      const maxCropH = start.naturalHeight - start.cropY;
-      const maxH = Math.max(15, maxCropH * start.scaleY);
-      const newH = Math.min(maxH, rawNewH);
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropY = start.cropY;
-      target.cropHeight = newCropH;
+      newH = Math.max(15, local.y);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.topAnchor, 'left', 'top');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfH = Math.max(7.5, Math.abs(local.y));
-      const centerCropY = start.cropY + start.cropHeight / 2;
-      const maxHalfCropH = Math.min(centerCropY, start.naturalHeight - centerCropY);
-      const halfH = Math.min(Math.max(7.5, maxHalfCropH * start.scaleY), rawHalfH);
-      const newH = halfH * 2;
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropHeight = newCropH;
-      target.cropY = Math.max(0, centerCropY - newCropH / 2);
+      newH = Math.max(15, Math.abs(local.y) * 2);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   } else if (corner === 'mt') {
     if (!isAlt) {
       const local = getTransformLocalPoint(transform, 'left', 'bottom', x, y);
-      const rawNewH = Math.max(15, -local.y);
-      const startBottomCrop = start.cropY + start.cropHeight;
-      const maxH = Math.max(15, startBottomCrop * start.scaleY);
-      const newH = Math.min(maxH, rawNewH);
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropHeight = newCropH;
-      target.cropY = Math.max(0, startBottomCrop - newCropH);
+      newH = Math.max(15, -local.y);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.bottomAnchor, 'left', 'bottom');
     } else {
       const local = getTransformLocalPoint(transform, 'center', 'center', x, y);
-      const rawHalfH = Math.max(7.5, Math.abs(local.y));
-      const centerCropY = start.cropY + start.cropHeight / 2;
-      const maxHalfCropH = Math.min(centerCropY, start.naturalHeight - centerCropY);
-      const halfH = Math.min(Math.max(7.5, maxHalfCropH * start.scaleY), rawHalfH);
-      const newH = halfH * 2;
-      const newCropH = newH / start.scaleY;
-
-      target.set({ height: Math.round(newH) });
-      target.cropHeight = newCropH;
-      target.cropY = Math.max(0, centerCropY - newCropH / 2);
+      newH = Math.max(15, Math.abs(local.y) * 2);
+      const crop = computeCoverCrop(targetW, newH, naturalW, naturalH);
+      target.set({ width: Math.round(targetW), height: Math.round(newH) });
+      target.cropX = crop.cropX;
+      target.cropY = crop.cropY;
+      target.cropWidth = crop.cropWidth;
+      target.cropHeight = crop.cropHeight;
       setPointOnObject(target, start.centerAnchor, 'center', 'center');
     }
   }
@@ -351,9 +386,11 @@ export function imageCropHeightHandler(eventData: MouseEvent, transform: any, x:
   // If target is a Group (e.g. image with overlay), sync child objects
   if (typeof target.getObjects === 'function') {
     target.getObjects().forEach((child: any) => {
-      child.set({ height: target.height });
+      child.set({ width: target.width, height: target.height });
       if (child.type === 'FabricImage' || child.type === 'image' || child._element) {
+        child.cropX = target.cropX;
         child.cropY = target.cropY;
+        child.cropWidth = target.cropWidth;
         child.cropHeight = target.cropHeight;
       }
     });

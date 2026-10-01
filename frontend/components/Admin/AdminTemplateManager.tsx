@@ -15,7 +15,9 @@ import {
     ExternalLink,
     BookOpen,
     ArrowUpToLine,
-    ArrowDownToLine
+    ArrowDownToLine,
+    Check,
+    X
 } from 'lucide-react';
 
 export const AdminTemplateManager: React.FC = () => {
@@ -26,7 +28,8 @@ export const AdminTemplateManager: React.FC = () => {
         deleteSystemTemplate,
         openTemplateInVisualEditor,
         setIsAdminHeaderDesignerOpen,
-        setIsAdminFooterDesignerOpen
+        setIsAdminFooterDesignerOpen,
+        showToast
     } = useStore();
 
     const [searchQuery, setSearchQuery] = useState('');
@@ -77,10 +80,10 @@ export const AdminTemplateManager: React.FC = () => {
 
     return (
         <div className="space-y-6 animate-in fade-in duration-300">
-            {/* Filters & Search Controls */}
+            {/* Filters, Search & Import Controls */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-[#161616] p-4 rounded-[6px] border border-[#262626]">
                 {/* Search */}
-                <div className="relative flex-1 min-w-[240px]">
+                <div className="relative flex-1 min-w-[220px]">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#666666]" size={15} />
                     <input
                         type="text"
@@ -110,22 +113,16 @@ export const AdminTemplateManager: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Filter by Category */}
-                {categories.length > 0 && (
-                    <div className="flex items-center gap-2">
-                        <Filter size={14} className="text-[#666666]" />
-                        <select
-                            value={selectedCategory}
-                            onChange={e => setSelectedCategory(e.target.value)}
-                            className="bg-[#1c1c1c] border border-[#262626] text-xs font-bold text-white py-1.5 px-3 rounded-[4px] outline-none focus:border-[#0F3D3E] cursor-pointer"
-                        >
-                            <option value="all">All Industries</option>
-                            {categories.map(cat => (
-                                <option key={cat} value={cat}>{cat}</option>
-                            ))}
-                        </select>
-                    </div>
-                )}
+                {/* Action Buttons: Launch Studio */}
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => openTemplateInVisualEditor(null)}
+                        className="px-3.5 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-[#0F3D3E]/25 active:scale-95"
+                    >
+                        <BookOpen size={14} />
+                        <span>Launch Studio</span>
+                    </button>
+                </div>
             </div>
 
             {/* Templates List View Table */}
@@ -137,17 +134,17 @@ export const AdminTemplateManager: React.FC = () => {
                     <div>
                         <h3 className="font-space text-sm font-bold uppercase tracking-wider text-white">No Master Blueprints Found</h3>
                         <p className="text-xs text-[#888888] font-medium max-w-sm mx-auto mt-1">
-                            {searchQuery || selectedType !== 'all' ? 'Try adjusting your search terms or filter.' : 'Launch Cover Studio, Header Studio, or Footer Studio to create your first master blueprint.'}
+                            {searchQuery || selectedType !== 'all' ? 'Try adjusting your search terms or filter.' : 'Launch Cover Studio to create your first blueprint.'}
                         </p>
                     </div>
-                    {(!searchQuery && selectedType === 'all') && (
+                    <div className="flex items-center justify-center gap-3 pt-2">
                         <button
                             onClick={() => openTemplateInVisualEditor(null)}
-                            className="px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white font-bold text-xs rounded-[4px] shadow-md transition-all inline-flex items-center gap-2"
+                            className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white font-bold text-xs rounded-[4px] shadow-md transition-all inline-flex items-center gap-2"
                         >
                             <BookOpen size={14} /> Launch Cover Studio
                         </button>
-                    )}
+                    </div>
                 </div>
             ) : (
                 <div className="bg-[#161616] rounded-[6px] border border-[#262626] overflow-hidden shadow-xl">
@@ -281,3 +278,4 @@ export const AdminTemplateManager: React.FC = () => {
         </div>
     );
 };
+
