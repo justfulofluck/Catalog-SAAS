@@ -5,9 +5,16 @@ from django.utils import timezone
 import datetime
 
 class CustomRegisterSerializer(RegisterSerializer):
-    name = serializers.CharField(required=False)
-    business_name = serializers.CharField(required=False)
-    plan_slug = serializers.CharField(required=False)
+    name = serializers.CharField(required=False, allow_blank=True)
+    business_name = serializers.CharField(required=False, allow_blank=True)
+    plan_slug = serializers.CharField(required=False, allow_blank=True)
+
+    def get_cleaned_data(self):
+        data_dict = super().get_cleaned_data()
+        data_dict['name'] = self.validated_data.get('name', '')
+        data_dict['business_name'] = self.validated_data.get('business_name', '')
+        data_dict['plan_slug'] = self.validated_data.get('plan_slug', 'starter')
+        return data_dict
 
     def custom_signup(self, request, user):
         user.name = self.validated_data.get('name', '')
@@ -16,22 +23,36 @@ class CustomRegisterSerializer(RegisterSerializer):
         
         # Handle Subscription
         plan_slug = self.validated_data.get('plan_slug', 'starter')
-        try:
-            plan = SubscriptionPlan.objects.get(slug=plan_slug)
-        except SubscriptionPlan.DoesNotExist:
-            # Fallback to starter if not found
-            plan = SubscriptionPlan.objects.filter(slug='starter').first()
-            
-        if plan:
-            end_date = None
-            if plan.slug == 'starter':
-                end_date = timezone.now() + datetime.timedelta(days=7)
-                
-            UserSubscription.objects.create(
-                user=user,
-                plan=plan,
-                end_date=end_date
+        plan = SubscriptionPlan.objects.filter(slug=plan_slug).first() or SubscriptionPlan.objects.filter(slug='starter').first()
+        if not plan:
+            plan = SubscriptionPlan.objects.create(
+                name='Starter Plan',
+                slug='starter',
+                price=0,
+                currency='INR',
+                features={
+                    "max_catalogs": 3,
+                    "max_products": 50,
+                    "custom_watermark": False,
+                    "pdf_export": True
+                },
+                is_active=True
             )
+            
+        end_date = None
+        if plan.slug == 'starter':
+            end_date = timezone.now() + datetime.timedelta(days=7)
+        else:
+            end_date = timezone.now() + datetime.timedelta(days=30)
+            
+        UserSubscription.objects.get_or_create(
+            user=user,
+            defaults={
+                'plan': plan,
+                'end_date': end_date,
+                'is_active': True
+            }
+        )
 
 class UserSerializer(serializers.ModelSerializer):
     subscription_plan = serializers.CharField(source='subscription.plan.name', read_only=True)

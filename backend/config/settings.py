@@ -136,9 +136,11 @@ MEDIA_ROOT = BASE_DIR / "media"
 BASE_URL = "http://localhost:8000"
 
 # Authentication Settings
-# Updated for allauth >= 0.63
-ACCOUNT_LOGIN_METHODS = {"email", "username"}
+# Updated for allauth & dj_rest_auth strictly using Email + Password
+ACCOUNT_LOGIN_METHODS = {"email"}
+ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_EMAIL_VERIFICATION = "none"
 
 # Deprecated settings removed to resolve warnings:

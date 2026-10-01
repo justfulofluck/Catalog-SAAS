@@ -24,6 +24,17 @@ class CustomLoginView(LoginView):
     authentication_classes = []
 
     def post(self, request, *args, **kwargs):
+        # Auto-populate username with email if missing so both auth backend lookups succeed cleanly
+        if hasattr(request, 'data'):
+            email = request.data.get('email')
+            if email and not request.data.get('username'):
+                if hasattr(request.data, '_mutable') and not request.data._mutable:
+                    request.data._mutable = True
+                    request.data['username'] = email
+                    request.data._mutable = False
+                elif isinstance(request.data, dict):
+                    request.data['username'] = email
+
         response = super().post(request, *args, **kwargs)
         system_settings = SystemSetting.get_settings()
         if system_settings.maintenance_mode and response.status_code == 200:
@@ -48,6 +59,27 @@ class PublicRegisterView(RegisterView):
                 {"error": "Public registration is currently disabled by administrator."},
                 status=status.HTTP_403_FORBIDDEN,
             )
+        if hasattr(request, 'data'):
+            email = request.data.get('email')
+            if email:
+                if not request.data.get('username'):
+                    if hasattr(request.data, '_mutable') and not request.data._mutable:
+                        request.data._mutable = True
+                        request.data['username'] = email
+                        request.data._mutable = False
+                    elif isinstance(request.data, dict):
+                        request.data['username'] = email
+                password = request.data.get('password')
+                if password:
+                    if not request.data.get('password1'):
+                        if hasattr(request.data, '_mutable') and not request.data._mutable:
+                            request.data._mutable = True
+                            request.data['password1'] = password
+                            request.data['password2'] = password
+                            request.data._mutable = False
+                        elif isinstance(request.data, dict):
+                            request.data['password1'] = password
+                            request.data['password2'] = password
         return super().post(request, *args, **kwargs)
 
 
@@ -244,6 +276,28 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [permissions.AllowAny]
 
 
+from dj_rest_auth.views import LogoutView
+
+class CustomLogoutView(LogoutView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+        try:
+            cookie_name = getattr(settings, "REST_AUTH", {}).get(
+                "JWT_AUTH_COOKIE", "catstudio-auth"
+            )
+            refresh_cookie_name = getattr(settings, "REST_AUTH", {}).get(
+                "JWT_AUTH_REFRESH_COOKIE", "catstudio-refresh-token"
+            )
+            response.delete_cookie(cookie_name, path="/")
+            response.delete_cookie(refresh_cookie_name, path="/")
+        except Exception as e:
+            print(f"Error clearing cookies in logout: {e}")
+        return response
+
+
 class ForceLogoutView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
@@ -251,7 +305,6 @@ class ForceLogoutView(APIView):
     def post(self, request):
         response = Response({"message": "Force logged out"}, status=status.HTTP_200_OK)
         try:
-            # Attempt to delete cookies based on settings
             cookie_name = getattr(settings, "REST_AUTH", {}).get(
                 "JWT_AUTH_COOKIE", "catstudio-auth"
             )
@@ -259,8 +312,8 @@ class ForceLogoutView(APIView):
                 "JWT_AUTH_REFRESH_COOKIE", "catstudio-refresh-token"
             )
 
-            response.delete_cookie(cookie_name)
-            response.delete_cookie(refresh_cookie_name)
+            response.delete_cookie(cookie_name, path="/")
+            response.delete_cookie(refresh_cookie_name, path="/")
         except Exception as e:
             print(f"Error clearing cookies: {e}")
 

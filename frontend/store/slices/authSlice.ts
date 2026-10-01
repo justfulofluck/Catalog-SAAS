@@ -52,6 +52,9 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         status: 'active',
         joinedAt: new Date().toISOString(),
         businessName: userData?.business_name,
+        subscription_plan: userData?.subscription_plan,
+        subscription_end_date: userData?.subscription_end_date,
+        subscription_features: userData?.subscription_features,
       };
 
       set({
@@ -157,7 +160,7 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
     try {
       await authApi.logout();
     } catch (e) {
-      console.error(e);
+      console.warn('Logout request completed:', e);
     }
 
     sessionStorage.removeItem('cs_session');
@@ -168,7 +171,12 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
       isAuthenticated: false,
       isAdminAuthenticated: false,
       user: null,
-      currentView: 'dashboard', // Will trigger Login due to !isAuthenticated check in App
+      currentView: 'dashboard',
+      editingSystemTemplate: null,
+      savedCatalogs: [],
+      products: [],
+      categories: [],
+      mediaItems: [],
     });
   },
 
@@ -210,6 +218,9 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         joinedAt: new Date().toISOString(),
         businessId: user.business_id,
         businessName: user.business_name,
+        subscription_plan: user.subscription_plan,
+        subscription_end_date: user.subscription_end_date,
+        subscription_features: user.subscription_features,
       };
 
       if (isStaff) {

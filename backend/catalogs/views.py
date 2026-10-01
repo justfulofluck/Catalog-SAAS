@@ -16,8 +16,7 @@ class SystemTemplateViewSet(viewsets.ModelViewSet):
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
-        if self.action in ['create', 'update', 'partial_update', 'destroy']:
-            return [permissions.IsAuthenticated()]
+        # Only Super Admin is permitted to create, update, or delete system templates
         return [permissions.IsAdminUser()]
 
 class ThemeViewSet(viewsets.ReadOnlyModelViewSet):
@@ -39,6 +38,23 @@ class CatalogViewSet(viewsets.ModelViewSet):
         if self.action == 'create':
             return CatalogCreateSerializer
         return CatalogSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Enforce subscription catalog quota for regular users
+        if not (request.user.is_staff or request.user.is_superuser):
+            subscription = getattr(request.user, 'subscription', None)
+            if subscription and subscription.plan and subscription.plan.features:
+                max_catalogs = subscription.plan.features.get('max_catalogs')
+                if max_catalogs is not None and max_catalogs > 0:
+                    current_count = Catalog.objects.filter(owner=request.user).count()
+                    if current_count >= max_catalogs:
+                        return Response(
+                            {
+                                "error": f"You have reached the maximum catalog limit ({max_catalogs}) for your {subscription.plan.name}. Please upgrade to create more catalogs."
+                            },
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+        return super().create(request, *args, **kwargs)
 
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)

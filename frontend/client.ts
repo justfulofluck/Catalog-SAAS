@@ -16,9 +16,11 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
     const isPublicAuthEndpoint = 
         config.url?.includes('/auth/login/') ||
+        config.url?.includes('/auth/logout/') ||
         config.url?.includes('/auth/registration/') ||
         config.url?.includes('/auth/token/refresh/') ||
-        config.url?.includes('/auth/password-reset/');
+        config.url?.includes('/auth/password-reset/') ||
+        config.url?.includes('/users/force-logout/');
 
     const token = localStorage.getItem('cs_access_token');
     if (token && !isPublicAuthEndpoint && !config.headers['Authorization']) {
@@ -38,8 +40,10 @@ api.interceptors.response.use(
         if (error.response?.status === 401 && !originalRequest._retry) {
             if (
                 originalRequest.url?.includes('/auth/login/') ||
+                originalRequest.url?.includes('/auth/logout/') ||
                 originalRequest.url?.includes('/auth/token/refresh/') ||
-                originalRequest.url?.includes('/auth/registration/')
+                originalRequest.url?.includes('/auth/registration/') ||
+                originalRequest.url?.includes('/users/force-logout/')
             ) {
                 return Promise.reject(error);
             }

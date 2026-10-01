@@ -126,7 +126,9 @@ export const createProductsSlice: AppSlice<ProductsSlice> = (set, get) => ({
       }));
     } catch (error: any) {
       console.error('Failed to add product', error.response?.data || error);
-      set({ error: 'Failed to add product' });
+      const errMsg = error.response?.data?.error || error.response?.data?.detail || 'Failed to add product';
+      get().showToast(errMsg, 'error');
+      set({ error: errMsg });
     }
   },
 

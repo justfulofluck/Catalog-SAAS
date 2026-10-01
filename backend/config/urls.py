@@ -20,7 +20,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
-from users.views import PublicRegisterView, CustomLoginView
+from users.views import PublicRegisterView, CustomLoginView, CustomLogoutView
 from dj_rest_auth.views import UserDetailsView
 from dj_rest_auth.jwt_auth import get_refresh_view
 from rest_framework import permissions
@@ -36,8 +36,9 @@ class CustomRefreshView(RefreshView):
 urlpatterns = [
     path("admin/", admin.site.urls),
     # Explicit public auth endpoints with empty authentication_classes
-    # so expired or invalid Authorization headers do not block login or refresh
+    # so expired or invalid Authorization headers do not block login, refresh, or logout
     path("api/auth/login/", CustomLoginView.as_view(), name="rest_login"),
+    path("api/auth/logout/", CustomLogoutView.as_view(), name="rest_logout"),
     path("api/auth/token/refresh/", CustomRefreshView.as_view(), name="token_refresh"),
     path("api/token/refresh/", CustomRefreshView.as_view(), name="token_refresh_alt"),
     path("api/auth/registration/", PublicRegisterView.as_view(), name="rest_register"),

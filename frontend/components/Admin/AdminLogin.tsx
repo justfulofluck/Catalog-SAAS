@@ -163,15 +163,15 @@ const AdminLogin: React.FC = () => {
                     </div>
                 )}
                 <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading ml-1">Team Email or Admin ID</label>
+                    <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading ml-1">Administrator Email</label>
                     <div className="relative group">
                         <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#666666] group-focus-within:text-[#E2DCC8] transition-colors" />
                         <input
-                            type="text"
+                            type="email"
                             required
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="admin@catalog.team or admin_id"
+                            placeholder="admin@catalog.team"
                             className="w-full bg-[#1c1c1c] border border-[#262626] rounded-[11px] pl-12 pr-4 py-3.5 text-sm font-medium text-white focus:border-[#0F3D3E] focus:ring-2 focus:ring-[#0F3D3E]/20 outline-none transition-all placeholder:text-[#555555]"
                         />
                     </div>
