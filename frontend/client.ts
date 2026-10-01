@@ -99,6 +99,9 @@ export const authApi = {
 
 export const subscriptionApi = {
     getPlans: () => api.get('/plans/'),
+    createPlan: (data: any) => api.post('/plans/', data),
+    updatePlanDetails: (id: number | string, data: any) => api.patch(`/plans/${id}/`, data),
+    deletePlan: (id: number | string) => api.delete(`/plans/${id}/`),
     updatePlan: (data: { plan_slug: string }) => api.post('/subscriptions/update/', data),
     adminGetAllSubscriptions: () => api.get('/admin-subscriptions/'),
 };

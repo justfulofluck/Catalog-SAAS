@@ -77,6 +77,9 @@ export interface SubscriptionSlice {
   fetchPlans: () => Promise<void>;
   updateSubscription: (planSlug: string) => Promise<{ success: boolean; message: string }>;
   fetchAllSubscriptions: () => Promise<void>;
+  createAdminPlan: (data: Partial<SubscriptionPlan>) => Promise<{ success: boolean; message?: string }>;
+  updateAdminPlan: (id: string | number, data: Partial<SubscriptionPlan>) => Promise<{ success: boolean; message?: string }>;
+  deleteAdminPlan: (id: string | number) => Promise<{ success: boolean; message?: string }>;
 }
 
 export interface ProductsSlice {

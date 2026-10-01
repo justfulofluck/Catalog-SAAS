@@ -48,4 +48,49 @@ export const createSubscriptionSlice: AppSlice<SubscriptionSlice> = (set, get) =
       set({ error: 'Failed to fetch subscriptions. Please verify admin permissions.' });
     }
   },
+
+  createAdminPlan: async (data: Partial<SubscriptionPlan>) => {
+    const { subscriptionApi } = await import('../../client');
+    try {
+      await subscriptionApi.createPlan(data);
+      await get().fetchPlans();
+      get().showToast('Subscription plan created successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to create plan', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to create subscription plan';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
+
+  updateAdminPlan: async (id: string | number, data: Partial<SubscriptionPlan>) => {
+    const { subscriptionApi } = await import('../../client');
+    try {
+      await subscriptionApi.updatePlanDetails(id, data);
+      await get().fetchPlans();
+      get().showToast('Subscription plan updated successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to update plan', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to update subscription plan';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
+
+  deleteAdminPlan: async (id: string | number) => {
+    const { subscriptionApi } = await import('../../client');
+    try {
+      await subscriptionApi.deletePlan(id);
+      await get().fetchPlans();
+      get().showToast('Subscription plan deleted successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to delete plan', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to delete subscription plan';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
 });

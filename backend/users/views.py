@@ -270,13 +270,23 @@ class UpdateSubscriptionView(APIView):
         })
 
 
-class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
+class SubscriptionPlanViewSet(viewsets.ModelViewSet):
     serializer_class = SubscriptionPlanSerializer
-    permission_classes = [permissions.AllowAny]
+
+    def get_permissions(self):
+        if self.action in ['list', 'retrieve']:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
     def get_queryset(self):
-        plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
-        if not plans.exists() or plans.count() < 3:
+        is_admin = bool(
+            self.request.user and 
+            self.request.user.is_authenticated and 
+            (self.request.user.is_staff or self.request.user.is_superuser)
+        )
+        
+        # Check if database has initial default tiers seeded
+        if not SubscriptionPlan.objects.exists() or SubscriptionPlan.objects.count() < 3:
             default_plans = [
                 {
                     'name': 'Starter Plan',
@@ -330,8 +340,10 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
                     slug=p['slug'],
                     defaults=p
                 )
-            plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
-        return plans
+
+        if is_admin:
+            return SubscriptionPlan.objects.all().order_by('price')
+        return SubscriptionPlan.objects.filter(is_active=True).order_by('price')
 
 
 from dj_rest_auth.views import LogoutView
