@@ -271,6 +271,7 @@ class UpdateSubscriptionView(APIView):
 
 
 class SubscriptionPlanViewSet(viewsets.ModelViewSet):
+    queryset = SubscriptionPlan.objects.all().order_by('price')
     serializer_class = SubscriptionPlanSerializer
 
     def get_permissions(self):
@@ -279,67 +280,72 @@ class SubscriptionPlanViewSet(viewsets.ModelViewSet):
         return [permissions.IsAdminUser()]
 
     def get_queryset(self):
+        request = getattr(self, 'request', None)
+        user = getattr(request, 'user', None) if request else None
         is_admin = bool(
-            self.request.user and 
-            self.request.user.is_authenticated and 
-            (self.request.user.is_staff or self.request.user.is_superuser)
+            user and 
+            getattr(user, 'is_authenticated', False) and 
+            (getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False))
         )
         
-        # Check if database has initial default tiers seeded
-        if not SubscriptionPlan.objects.exists() or SubscriptionPlan.objects.count() < 3:
-            default_plans = [
-                {
-                    'name': 'Starter Plan',
-                    'slug': 'starter',
-                    'price': 0,
-                    'currency': 'INR',
-                    'features': {
-                        'max_catalogs': 3,
-                        'max_products': 50,
-                        'custom_watermark': False,
-                        'pdf_export': True,
-                        'max_storage_mb': 500,
-                        'ai_enabled': False,
+        # Ensure default plans exist in DB safely
+        try:
+            if not SubscriptionPlan.objects.exists():
+                default_plans = [
+                    {
+                        'name': 'Starter Plan',
+                        'slug': 'starter',
+                        'price': 0,
+                        'currency': 'INR',
+                        'features': {
+                            'max_catalogs': 3,
+                            'max_products': 50,
+                            'custom_watermark': False,
+                            'pdf_export': True,
+                            'max_storage_mb': 500,
+                            'ai_enabled': False,
+                        },
+                        'is_active': True,
                     },
-                    'is_active': True,
-                },
-                {
-                    'name': 'Growth Plan',
-                    'slug': 'growth',
-                    'price': 999,
-                    'currency': 'INR',
-                    'features': {
-                        'max_catalogs': 15,
-                        'max_products': 500,
-                        'custom_watermark': True,
-                        'pdf_export': True,
-                        'max_storage_mb': 2048,
-                        'ai_enabled': True,
+                    {
+                        'name': 'Growth Plan',
+                        'slug': 'growth',
+                        'price': 999,
+                        'currency': 'INR',
+                        'features': {
+                            'max_catalogs': 15,
+                            'max_products': 500,
+                            'custom_watermark': True,
+                            'pdf_export': True,
+                            'max_storage_mb': 2048,
+                            'ai_enabled': True,
+                        },
+                        'is_active': True,
                     },
-                    'is_active': True,
-                },
-                {
-                    'name': 'Pro Enterprise',
-                    'slug': 'pro',
-                    'price': 2499,
-                    'currency': 'INR',
-                    'features': {
-                        'max_catalogs': 100,
-                        'max_products': 5000,
-                        'custom_watermark': True,
-                        'pdf_export': True,
-                        'max_storage_mb': 10240,
-                        'ai_enabled': True,
-                        'priority_support': True,
+                    {
+                        'name': 'Pro Enterprise',
+                        'slug': 'pro',
+                        'price': 2499,
+                        'currency': 'INR',
+                        'features': {
+                            'max_catalogs': 100,
+                            'max_products': 5000,
+                            'custom_watermark': True,
+                            'pdf_export': True,
+                            'max_storage_mb': 10240,
+                            'ai_enabled': True,
+                            'priority_support': True,
+                        },
+                        'is_active': True,
                     },
-                    'is_active': True,
-                },
-            ]
-            for p in default_plans:
-                SubscriptionPlan.objects.update_or_create(
-                    slug=p['slug'],
-                    defaults=p
-                )
+                ]
+                for p in default_plans:
+                    SubscriptionPlan.objects.get_or_create(
+                        slug=p['slug'],
+                        defaults=p
+                    )
+        except Exception as e:
+            print(f"Error checking default plans: {e}")
 
         if is_admin:
             return SubscriptionPlan.objects.all().order_by('price')
