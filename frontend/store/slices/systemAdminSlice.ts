@@ -200,9 +200,11 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
   fetchSystemSettings: async () => {
     try {
       const settings = await systemSettingsApi.get();
-      set({ systemSettings: settings });
+      if (settings) {
+        set({ systemSettings: settings });
+      }
     } catch (err) {
-      console.error('Failed to fetch system settings:', err);
+      console.warn('Could not fetch public system settings:', err);
     }
   },
 

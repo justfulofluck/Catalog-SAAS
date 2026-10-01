@@ -43,7 +43,9 @@ api.interceptors.response.use(
                 originalRequest.url?.includes('/auth/logout/') ||
                 originalRequest.url?.includes('/auth/token/refresh/') ||
                 originalRequest.url?.includes('/auth/registration/') ||
-                originalRequest.url?.includes('/users/force-logout/')
+                originalRequest.url?.includes('/users/force-logout/') ||
+                originalRequest.url?.includes('/users/system-settings/') ||
+                originalRequest.url?.includes('/plans/')
             ) {
                 return Promise.reject(error);
             }

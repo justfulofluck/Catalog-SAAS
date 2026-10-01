@@ -274,6 +274,11 @@ class SubscriptionPlanViewSet(viewsets.ModelViewSet):
     queryset = SubscriptionPlan.objects.all().order_by('price')
     serializer_class = SubscriptionPlanSerializer
 
+    def get_authenticators(self):
+        if self.action in ['list', 'retrieve']:
+            return []
+        return super().get_authenticators()
+
     def get_permissions(self):
         if self.action in ['list', 'retrieve']:
             return [permissions.AllowAny()]
@@ -396,6 +401,11 @@ class ForceLogoutView(APIView):
 
 
 class SystemSettingsView(APIView):
+    def get_authenticators(self):
+        if self.request.method == 'GET':
+            return []
+        return super().get_authenticators()
+
     def get_permissions(self):
         if self.request.method == 'GET':
             return [permissions.AllowAny()]
