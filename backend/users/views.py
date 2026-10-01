@@ -279,16 +279,7 @@ class SubscriptionPlanViewSet(viewsets.ModelViewSet):
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
 
-    def get_queryset(self):
-        request = getattr(self, 'request', None)
-        user = getattr(request, 'user', None) if request else None
-        is_admin = bool(
-            user and 
-            getattr(user, 'is_authenticated', False) and 
-            (getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False))
-        )
-        
-        # Ensure default plans exist in DB safely
+    def list(self, request, *args, **kwargs):
         try:
             if not SubscriptionPlan.objects.exists():
                 default_plans = [
@@ -340,16 +331,24 @@ class SubscriptionPlanViewSet(viewsets.ModelViewSet):
                     },
                 ]
                 for p in default_plans:
-                    SubscriptionPlan.objects.get_or_create(
-                        slug=p['slug'],
-                        defaults=p
-                    )
+                    SubscriptionPlan.objects.get_or_create(slug=p['slug'], defaults=p)
         except Exception as e:
-            print(f"Error checking default plans: {e}")
+            print(f"Error checking default plans in list: {e}")
+
+        user = getattr(request, 'user', None)
+        is_admin = bool(
+            user and 
+            getattr(user, 'is_authenticated', False) and 
+            (getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False))
+        )
 
         if is_admin:
-            return SubscriptionPlan.objects.all().order_by('price')
-        return SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+            qs = SubscriptionPlan.objects.all().order_by('price')
+        else:
+            qs = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+
+        serializer = self.get_serializer(qs, many=True)
+        return Response(serializer.data)
 
 
 from dj_rest_auth.views import LogoutView

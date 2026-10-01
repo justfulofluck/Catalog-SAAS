@@ -9,9 +9,11 @@ export const createSubscriptionSlice: AppSlice<SubscriptionSlice> = (set, get) =
     try {
       const response = await subscriptionApi.getPlans();
       const data = (response as any).data || response;
-      set({ plans: Array.isArray(data) ? data : [] });
+      if (Array.isArray(data) && data.length > 0) {
+        set({ plans: data });
+      }
     } catch (error) {
-      console.error('Failed to fetch plans', error);
+      console.warn('Could not refresh plans from backend:', error);
     }
   },
 
