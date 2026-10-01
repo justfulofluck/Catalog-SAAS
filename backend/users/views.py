@@ -271,9 +271,67 @@ class UpdateSubscriptionView(APIView):
 
 
 class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SubscriptionPlan.objects.filter(is_active=True)
     serializer_class = SubscriptionPlanSerializer
     permission_classes = [permissions.AllowAny]
+
+    def get_queryset(self):
+        plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+        if not plans.exists() or plans.count() < 3:
+            default_plans = [
+                {
+                    'name': 'Starter Plan',
+                    'slug': 'starter',
+                    'price': 0,
+                    'currency': 'INR',
+                    'features': {
+                        'max_catalogs': 3,
+                        'max_products': 50,
+                        'custom_watermark': False,
+                        'pdf_export': True,
+                        'max_storage_mb': 500,
+                        'ai_enabled': False,
+                    },
+                    'is_active': True,
+                },
+                {
+                    'name': 'Growth Plan',
+                    'slug': 'growth',
+                    'price': 999,
+                    'currency': 'INR',
+                    'features': {
+                        'max_catalogs': 15,
+                        'max_products': 500,
+                        'custom_watermark': True,
+                        'pdf_export': True,
+                        'max_storage_mb': 2048,
+                        'ai_enabled': True,
+                    },
+                    'is_active': True,
+                },
+                {
+                    'name': 'Pro Enterprise',
+                    'slug': 'pro',
+                    'price': 2499,
+                    'currency': 'INR',
+                    'features': {
+                        'max_catalogs': 100,
+                        'max_products': 5000,
+                        'custom_watermark': True,
+                        'pdf_export': True,
+                        'max_storage_mb': 10240,
+                        'ai_enabled': True,
+                        'priority_support': True,
+                    },
+                    'is_active': True,
+                },
+            ]
+            for p in default_plans:
+                SubscriptionPlan.objects.update_or_create(
+                    slug=p['slug'],
+                    defaults=p
+                )
+            plans = SubscriptionPlan.objects.filter(is_active=True).order_by('price')
+        return plans
 
 
 from dj_rest_auth.views import LogoutView
