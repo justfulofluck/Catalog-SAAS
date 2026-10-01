@@ -95,6 +95,8 @@ export const authApi = {
     verifyOtpAndReset: (data: any) => api.post('/auth/password-reset/otp/confirm/', data),
     updateUser: (data: any) => api.patch('/auth/user/', data),
     getAllUsers: () => api.get('/users/'),
+    updateUserAdmin: (id: string | number, data: any) => api.patch(`/users/${id}/`, data),
+    deleteUserAdmin: (id: string | number) => api.delete(`/users/${id}/`),
 };
 
 export const subscriptionApi = {

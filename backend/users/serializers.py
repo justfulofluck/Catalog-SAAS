@@ -63,7 +63,7 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = ('id', 'email', 'name', 'avatar', 'is_verified', 'business_name', 'is_staff', 'is_superuser', 
                   'date_joined', 'is_active', 'subscription_plan', 'subscription_end_date', 'subscription_features')
-        read_only_fields = ('email', 'is_verified', 'is_staff', 'is_superuser')
+        read_only_fields = ('email', 'is_verified', 'date_joined')
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)

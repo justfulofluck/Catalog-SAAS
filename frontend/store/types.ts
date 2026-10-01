@@ -68,6 +68,8 @@ export interface AuthSlice {
   checkAuth: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
   fetchUsers: () => Promise<void>;
+  updateUserAdmin: (id: string | number, data: any) => Promise<{ success: boolean; message?: string }>;
+  deleteUserAdmin: (id: string | number) => Promise<{ success: boolean; message?: string }>;
 }
 
 export interface SubscriptionSlice {

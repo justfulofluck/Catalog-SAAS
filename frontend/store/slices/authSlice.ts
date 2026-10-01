@@ -203,6 +203,34 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
     }
   },
 
+  updateUserAdmin: async (id: string | number, data: any) => {
+    try {
+      await authApi.updateUserAdmin(id, data);
+      await get().fetchUsers();
+      get().showToast('User updated successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to update user', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to update user';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
+
+  deleteUserAdmin: async (id: string | number) => {
+    try {
+      await authApi.deleteUserAdmin(id);
+      await get().fetchUsers();
+      get().showToast('User deleted successfully!', 'success');
+      return { success: true };
+    } catch (error: any) {
+      console.error('Failed to delete user', error);
+      const errMsg = error.response?.data?.detail || error.response?.data?.error || 'Failed to delete user';
+      get().showToast(errMsg, 'error');
+      return { success: false, message: errMsg };
+    }
+  },
+
   checkAuth: async () => {
     try {
       const user: any = await authApi.user();

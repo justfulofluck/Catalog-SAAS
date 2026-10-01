@@ -87,16 +87,16 @@ class PublicUserDetailsView(UserDetailsView):
     permission_classes = [permissions.AllowAny]
 
 
-class UserViewSet(viewsets.ReadOnlyModelViewSet):
+class UserViewSet(viewsets.ModelViewSet):
     """
-    API endpoint that allows admins to view all users.
+    API endpoint that allows admins to view, edit, suspend, and delete user accounts.
     """
     queryset = User.objects.all().order_by("-date_joined")
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAdminUser]
 
     def get_queryset(self):
-        return User.objects.all()
+        return User.objects.all().order_by("-date_joined")
 
 
 class RequestPasswordResetOTP(APIView):
