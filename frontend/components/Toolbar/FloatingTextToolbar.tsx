@@ -70,11 +70,13 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
     const color = element.fill || '#1e293b';
     const activeEffect = element.effectStyle || 'none';
 
-    const isNearTop = (element.y * zoom) < 60;
-    const elementHeight = (element.height || 40) * zoom;
+    const toolbarHeight = 44;
+    const verticalGap = 32; // 32px clean breathing room between selection border and floating bar
+    const isNearTop = (element.y * zoom) < (toolbarHeight + verticalGap + 10);
+    const elementHeight = ((element.height || 40) * (element.scaleY || 1)) * zoom;
     const initialTop = isNearTop 
-        ? (element.y * zoom) + elementHeight + 16 
-        : (element.y * zoom) - 52;
+        ? (element.y * zoom) + elementHeight + verticalGap 
+        : (element.y * zoom) - toolbarHeight - verticalGap;
 
     const currentToolbarTop = initialTop + dragOffset.y;
     // Popovers are 260-320px tall; if toolbar top is less than 300px from canvas top, popover must open downwards
@@ -97,8 +99,8 @@ export const FloatingTextToolbar: React.FC<Props> = ({ element, onUpdate, zoom }
         
         const baseLeft = element.x * zoom;
         const baseTop = isNearTop 
-            ? (element.y * zoom) + elementHeight + 16 
-            : (element.y * zoom) - 52;
+            ? (element.y * zoom) + elementHeight + verticalGap 
+            : (element.y * zoom) - toolbarHeight - verticalGap;
         
         toolbarRef.current.style.left = `${baseLeft + newX}px`;
         toolbarRef.current.style.top = `${baseTop + newY}px`;

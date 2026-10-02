@@ -19,6 +19,7 @@
     "ogl": "^1.0.11",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
+    "react-router-dom": "^7.18.4",
     "sortablejs": "1.15.2",
     "svg2pdf.js": "^2.8.1",
     "zustand": "^5.0.9"

@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft } from 'lucide-react';
 import { authApi } from '../../client';
@@ -7,6 +8,8 @@ import GradientBlinds from '../Common/GradientBlinds';
 import { AppIcon } from '../Common/AppIcon';
 
 const Login: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { login, setView, error, plans, fetchPlans, systemSettings, fetchSystemSettings } = useStore();
 
   // Auth Modes: 'signin' | 'signup'
@@ -103,6 +106,8 @@ const Login: React.FC = () => {
 
         // Automatically log user in upon successful registration
         await login(cleanEmail, undefined, password);
+        const from = (location.state as any)?.from?.pathname || '/';
+        navigate(from, { replace: true });
       } catch (error: any) {
         console.error("Registration failed", error);
 
@@ -137,6 +142,8 @@ const Login: React.FC = () => {
       try {
         const cleanEmail = email.trim();
         await login(cleanEmail, undefined, password);
+        const from = (location.state as any)?.from?.pathname || '/';
+        navigate(from, { replace: true });
       } catch (err) {
         console.error("Login failed", err);
       } finally {

@@ -127,6 +127,7 @@ const YourWork: React.FC = () => {
 
   const handleLoad = (id: string) => {
     loadCatalog(id);
+    setView('editor');
   };
 
   const formatDate = (dateString?: string) => {

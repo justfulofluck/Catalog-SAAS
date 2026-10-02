@@ -1,5 +1,6 @@
 import { AppSlice, UiSlice } from '../types';
 import { ToastNotification } from '../../types';
+import { navigateToView } from '../../navigation/navigationBridge';
 
 export const createUiSlice: AppSlice<UiSlice> = (set, get) => ({
   currentView: 'dashboard',
@@ -23,34 +24,7 @@ export const createUiSlice: AppSlice<UiSlice> = (set, get) => ({
 
   setView: (view) => {
     set({ currentView: view });
-    // Keep browser URL pathname synced with currentView
-    if (typeof window !== 'undefined') {
-      const pathToView: Record<string, string> = {
-        dashboard: '/',
-        editor: '/editor',
-        'products-list': '/inventory/products',
-        'create-product': '/inventory/products/create',
-        'edit-product': '/inventory/products/edit',
-        'category-list': '/inventory/categories',
-        'create-category': '/inventory/categories/create',
-        'edit-category': '/inventory/categories/edit',
-        'media-library': '/inventory/media',
-        'catalog-setup': '/catalog-setup',
-        'catalog-products': '/catalog-products',
-        'your-work': '/your-work',
-        publish: '/publish',
-        pricing: '/pricing',
-        settings: '/settings',
-        'admin-login': '/admin',
-        'admin-dashboard': '/admin/dashboard',
-        'business-selection': '/onboarding',
-        'business-onboarding': '/onboarding/business',
-      };
-      const targetPath = pathToView[view];
-      if (targetPath && window.location.pathname !== targetPath) {
-        window.history.pushState({ view }, '', targetPath);
-      }
-    }
+    navigateToView(view);
   },
 
   setSidebarExpanded: (expanded) => set({ isSidebarExpanded: expanded }),

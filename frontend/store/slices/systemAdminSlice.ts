@@ -124,6 +124,7 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
         editorTab: 'text',
         currentView: 'editor',
       });
+      get().setView('editor');
     } else {
       // Create new Cover template in visual canvas
       const newTemplateSkeleton: SystemTemplate = {
@@ -158,6 +159,7 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
         editorTab: 'text',
         currentView: 'editor',
       });
+      get().setView('editor');
     }
   },
 

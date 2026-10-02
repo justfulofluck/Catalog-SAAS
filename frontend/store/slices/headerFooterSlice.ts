@@ -149,6 +149,11 @@ export const createHeaderFooterSlice: AppSlice<HeaderFooterSlice> = (set, get) =
           headerElements: newHeaderElements,
           headerMigrated: true,
           updatedAt: new Date().toISOString(),
+          pages: (state.catalog.pages || []).map((p) =>
+            p.type === 'cover' || p.type === 'closing'
+              ? { ...p, hasHeader: false }
+              : { ...p, hasHeader: p.hasHeader !== false }
+          ),
         },
       };
     });
@@ -174,6 +179,11 @@ export const createHeaderFooterSlice: AppSlice<HeaderFooterSlice> = (set, get) =
           footerElements: newFooterElements,
           footerMigrated: true,
           updatedAt: new Date().toISOString(),
+          pages: (state.catalog.pages || []).map((p) =>
+            p.type === 'cover' || p.type === 'closing'
+              ? { ...p, hasFooter: false }
+              : { ...p, hasFooter: p.hasFooter !== false }
+          ),
         },
       };
     });

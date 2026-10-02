@@ -23,6 +23,7 @@ import {
   Copy,
   Check
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { Canvas } from 'fabric';
 import { useStore } from '../../store/useStore';
 import { PAGE_WIDTH, PAGE_HEIGHT, THEMES, CatalogPage } from '../../constants';
@@ -63,6 +64,7 @@ const playFlipSound = () => {
 };
 
 export const PublicViewer: React.FC = () => {
+  const { uuid } = useParams<{ uuid?: string }>();
   const {
     savedCatalogs,
     viewingCatalogId,
@@ -73,8 +75,15 @@ export const PublicViewer: React.FC = () => {
     isLoading,
     isAuthenticated,
     products,
-    showToast
+    showToast,
+    openPublicViewer
   } = useStore();
+
+  useEffect(() => {
+    if (uuid && uuid !== viewingCatalogId) {
+      openPublicViewer(uuid);
+    }
+  }, [uuid, viewingCatalogId, openPublicViewer]);
 
   const catalog =
     publicCatalog ||

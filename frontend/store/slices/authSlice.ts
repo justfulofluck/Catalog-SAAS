@@ -61,11 +61,12 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         isAuthenticated: true,
         isAdminAuthenticated: isStaff,
         user: userObj,
-        currentView: 'dashboard',
+        currentView: isStaff ? 'admin-dashboard' : 'dashboard',
         editorTab: 'pages',
         isLoading: false,
         error: null,
       });
+      get().setView(isStaff ? 'admin-dashboard' : 'dashboard');
 
       sessionStorage.setItem('cs_session', '1');
 
@@ -151,6 +152,7 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
       get().fetchUsers();
       get().fetchSystemTemplates();
       get().fetchAllSubscriptions();
+      get().setView('admin-dashboard');
     } catch (error: any) {
       set({ error: error.response?.data?.non_field_errors?.[0] || 'Admin login failed', isLoading: false });
     }
@@ -172,13 +174,14 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
       isAuthenticated: false,
       isAdminAuthenticated: false,
       user: null,
-      currentView: 'dashboard',
+      currentView: 'login',
       editingSystemTemplate: null,
       savedCatalogs: [],
       products: [],
       categories: [],
       mediaItems: [],
     });
+    get().setView('login');
   },
 
   updateUser: (updates) =>

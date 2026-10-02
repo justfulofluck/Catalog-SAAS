@@ -1033,22 +1033,40 @@ const EditorCanvas: React.FC = () => {
                   />
 
                   {/* Fabric Rendering Canvas Stage */}
-                  <FabricStage
-                    page={page}
-                    pageIdx={pageIdx}
-                    isActive={isActive}
-                    zoom={zoom}
-                    editingId={isActive ? editingId : null}
-                    canvasBg={
-                      page.backgroundColor ||
-                      catalog.backgroundColor ||
-                      theme?.backgroundColor ||
-                      '#ffffff'
-                    }
-                    headerElements={catalog.headerElements || EMPTY_ARRAY}
-                    footerElements={catalog.footerElements || EMPTY_ARRAY}
-                    footerHeight={catalog.footerHeight || 38}
-                  />
+                  {(() => {
+                    const pageHasHeader = Boolean(
+                      catalog.hasHeader !== false &&
+                      page.hasHeader !== false &&
+                      (catalog.headerElements?.length || 0) > 0 &&
+                      page.type !== 'cover' &&
+                      page.type !== 'closing'
+                    );
+                    const pageHasFooter = Boolean(
+                      catalog.hasFooter !== false &&
+                      page.hasFooter !== false &&
+                      (catalog.footerElements?.length || 0) > 0 &&
+                      page.type !== 'cover' &&
+                      page.type !== 'closing'
+                    );
+                    return (
+                      <FabricStage
+                        page={page}
+                        pageIdx={pageIdx}
+                        isActive={isActive}
+                        zoom={zoom}
+                        editingId={isActive ? editingId : null}
+                        canvasBg={
+                          page.backgroundColor ||
+                          catalog.backgroundColor ||
+                          theme?.backgroundColor ||
+                          '#ffffff'
+                        }
+                        headerElements={pageHasHeader ? (catalog.headerElements || EMPTY_ARRAY) : EMPTY_ARRAY}
+                        footerElements={pageHasFooter ? (catalog.footerElements || EMPTY_ARRAY) : EMPTY_ARRAY}
+                        footerHeight={catalog.footerHeight || 38}
+                      />
+                    );
+                  })()}
 
                   {/* Image crop overlay */}
                   {isActive && activeCropElementId && <ImageCropOverlay zoom={zoom} />}

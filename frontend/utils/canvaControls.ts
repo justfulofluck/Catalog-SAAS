@@ -1366,20 +1366,19 @@ export function applyCanvaSelectionStyle(obj: any) {
   if (isLine) {
     // Ensure origin is centered for correct endpoint dragging and rotation
     if (obj.originX !== 'center' || obj.originY !== 'center') {
-      if (typeof obj.translateToCenterPoint === 'function') {
-        const center = obj.getCenterPoint();
-        obj.set({
-          originX: 'center',
-          originY: 'center',
-          left: center.x,
-          top: center.y,
-        });
-      } else {
-        obj.set({
-          originX: 'center',
-          originY: 'center',
-        });
-      }
+      const center = typeof obj.getCenterPoint === 'function'
+        ? obj.getCenterPoint()
+        : new Point(
+            (obj.left || 0) + (obj.originX === 'left' ? (obj.width || 0) / 2 : obj.originX === 'right' ? -(obj.width || 0) / 2 : 0),
+            (obj.top || 0) + (obj.originY === 'top' ? (obj.height || 0) / 2 : obj.originY === 'bottom' ? -(obj.height || 0) / 2 : 0)
+          );
+      obj.set({
+        originX: 'center',
+        originY: 'center',
+        left: center.x,
+        top: center.y,
+      });
+      obj.setCoords();
     }
 
     obj.set({
