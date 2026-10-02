@@ -166,7 +166,20 @@ const PageNavigator: React.FC = () => {
                     <Layout size={16} className="text-slate-400" />
                   </div>
                 ) : (
-                  <div className="w-full h-full relative" style={{ backgroundColor: page.backgroundColor || '#ffffff' }}>
+                  <div
+                    className="w-full h-full relative overflow-hidden"
+                    style={{
+                      background: page.backgroundColor || '#ffffff',
+                      ...(page.backgroundImage
+                        ? {
+                            backgroundImage: `url(${page.backgroundImage})`,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                          }
+                        : {}),
+                    }}
+                  >
                     {page.elements.slice(0, 15).map((el) => {
                       const curW = 794;
                       const curH = 1123;

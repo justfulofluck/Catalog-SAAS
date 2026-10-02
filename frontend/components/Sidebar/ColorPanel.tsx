@@ -7,7 +7,11 @@ import {
   Check,
   Search,
   RotateCcw,
-  Palette
+  Palette,
+  UploadCloud,
+  Image as ImageIcon,
+  Trash2,
+  Sliders
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import AdvancedColorPicker from '../Properties/AdvancedColorPicker';
@@ -52,6 +56,8 @@ export const ColorPanel: React.FC = () => {
     openColorPicker,
     closeColorPicker,
     setPageBackground,
+    setPageBackgroundImage,
+    setPageBackgroundOpacity,
     updateAllPageBackgrounds,
     updateElement,
     pushHistory,
@@ -62,8 +68,33 @@ export const ColorPanel: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isCustomPickerOpen, setIsCustomPickerOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const currentPage = catalog.pages[currentPageIndex];
+
+  const handleBackgroundImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('Please select a valid image file (PNG, JPG, WebP).');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      if (dataUrl) {
+        setPageBackgroundImage(currentPageIndex, dataUrl, currentPage?.backgroundOpacity ?? 1);
+      }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
+
+  const handleRemoveBackgroundImage = () => {
+    setPageBackgroundImage(currentPageIndex, null);
+  };
 
   // Determine active target type and current color
   const targetType = colorPickerTarget?.type || 'background';
@@ -250,7 +281,7 @@ export const ColorPanel: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 min-w-0 w-full">
             {/* Rainbow + Custom Picker Swatch */}
             <button
               onClick={() => setIsCustomPickerOpen(!isCustomPickerOpen)}
@@ -289,9 +320,9 @@ export const ColorPanel: React.FC = () => {
               <Pipette size={16} />
             </button>
 
-            {/* Current Color Indicator Swatch */}
+            {/* Current Color Indicator Swatch - Strict min-w-0 and overflow-hidden to prevent boundary overflow */}
             <div
-              className="flex-1 h-9 rounded-[6px] border px-3 flex items-center gap-2.5 shadow-inner border-[#333] bg-[#1a1a1a]"
+              className="flex-1 min-w-0 h-9 rounded-[6px] border px-2.5 flex items-center gap-2 shadow-inner border-[#333] bg-[#1a1a1a] overflow-hidden"
             >
               <div
                 className="w-5 h-5 rounded-[4px] border border-white/20 shadow-sm shrink-0 overflow-hidden relative"
@@ -303,8 +334,8 @@ export const ColorPanel: React.FC = () => {
                   </div>
                 )}
               </div>
-              <span className="text-[11px] font-mono font-bold uppercase truncate text-slate-200">
-                {currentColor === 'transparent' ? 'No Color / Transparent' : currentColor}
+              <span className="text-[10px] font-mono font-bold uppercase truncate min-w-0 flex-1 text-slate-200" title={currentColor}>
+                {currentColor === 'transparent' ? 'Transparent' : currentColor}
               </span>
             </div>
           </div>
@@ -321,6 +352,123 @@ export const ColorPanel: React.FC = () => {
             </div>
           )}
         </section>
+
+        {/* Canva-style Background Image Upload & Management Section */}
+        {targetType === 'background' && (
+          <section className="space-y-2.5 pt-3 border-t border-[#262626]">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#888888] flex items-center gap-1.5">
+                <ImageIcon size={12} className="text-[#0F3D3E] dark:text-[#E2DCC8]" />
+                Background Image
+              </span>
+              {currentPage?.backgroundImage && (
+                <span className="text-[9px] font-bold text-emerald-400 bg-emerald-950/60 border border-emerald-800 px-1.5 py-0.5 rounded">
+                  Active
+                </span>
+              )}
+            </div>
+
+            {/* Hidden file input for uploading page background image */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/svg+xml"
+              className="hidden"
+              onChange={handleBackgroundImageUpload}
+            />
+
+            {currentPage?.backgroundImage ? (
+              <div className="space-y-3 p-3 rounded-[6px] border bg-[#18181a] border-[#2c2c30]">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-12 h-16 rounded-[4px] border border-[#3a3a40] overflow-hidden bg-black shrink-0 relative group shadow-sm cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Click to replace background image"
+                  >
+                    <img
+                      src={currentPage.backgroundImage}
+                      alt="Page background"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <UploadCloud size={14} className="text-white" />
+                    </div>
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="text-[11px] font-bold text-white truncate">
+                      Canva Background Image
+                    </div>
+                    <p className="text-[9px] text-[#888] leading-tight">
+                      Full-bleed image covers canvas behind all page elements.
+                    </p>
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-2 py-1 text-[9px] font-bold rounded bg-[#252528] hover:bg-[#303035] text-[#E2DCC8] border border-[#444] transition-all flex items-center gap-1"
+                        title="Replace background image"
+                      >
+                        <UploadCloud size={10} />
+                        Replace
+                      </button>
+                      <button
+                        onClick={handleRemoveBackgroundImage}
+                        className="px-2 py-1 text-[9px] font-bold rounded bg-rose-950/50 hover:bg-rose-900/60 text-rose-300 border border-rose-800/40 transition-all flex items-center gap-1"
+                        title="Remove background image"
+                      >
+                        <Trash2 size={10} />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Opacity slider for background image */}
+                <div className="space-y-1 pt-2 border-t border-[#26262a]">
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="text-[#888] font-semibold flex items-center gap-1">
+                      <Sliders size={10} /> Image Opacity
+                    </span>
+                    <span className="font-mono font-bold text-[#E2DCC8]">
+                      {Math.round((currentPage.backgroundOpacity ?? 1) * 100)}%
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="100"
+                    step="5"
+                    value={Math.round((currentPage.backgroundOpacity ?? 1) * 100)}
+                    onChange={(e) => {
+                      const val = Number(e.target.value) / 100;
+                      setPageBackgroundOpacity(currentPageIndex, val);
+                    }}
+                    className="w-full h-1.5 bg-[#2a2a2e] rounded-lg appearance-none cursor-pointer accent-[#0F3D3E]"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-3.5 rounded-[6px] border-2 border-dashed cursor-pointer transition-all flex flex-col items-center justify-center gap-1 text-center group ${
+                  isDark
+                    ? 'border-[#333] hover:border-[#0F3D3E] hover:bg-[#181818] bg-[#141414]'
+                    : 'border-slate-300 hover:border-[#0F3D3E] hover:bg-slate-50 bg-slate-50/50'
+                }`}
+              >
+                <div className="w-7 h-7 rounded-full bg-[#0F3D3E]/20 text-[#E2DCC8] border border-[#0F3D3E]/40 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <UploadCloud size={14} />
+                </div>
+                <div className="text-[11px] font-bold text-slate-200 group-hover:text-white transition-colors">
+                  Upload Background Image
+                </div>
+                <p className="text-[9px] text-[#888] leading-tight">
+                  Click to choose PNG, JPG, or WebP (covers page like Canva)
+                </p>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Colors in this design (Document Colors) */}
         {colorsInDesign.length > 0 && (

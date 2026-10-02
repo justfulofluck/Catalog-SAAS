@@ -1,6 +1,7 @@
 import React from 'react';
-import { ChevronUp, ChevronDown, Copy, Trash2, Plus } from 'lucide-react';
+import { ChevronUp, ChevronDown, Copy, Trash2, Plus, Palette } from 'lucide-react';
 import { CatalogPage } from '../../../types';
+import { useStore } from '../../../store/useStore';
 
 interface PageHeaderBarProps {
   page: CatalogPage;
@@ -32,7 +33,7 @@ export const PageHeaderBar: React.FC<PageHeaderBarProps> = ({
       className="relative z-[60] flex items-center justify-between px-1 mb-1.5 transition-all select-none pointer-events-auto"
       style={{ width: pageWidth * zoom }}
     >
-      {/* Left: Page Index and Type Tag */}
+      {/* Left: Page Index, Type Tag and Background Quick-Control */}
       <div className="flex items-center gap-2">
         <span className="text-[12px] font-black tracking-wider uppercase text-[#E2DCC8] shrink-0">
           Page {pageIdx + 1}
@@ -46,6 +47,35 @@ export const PageHeaderBar: React.FC<PageHeaderBarProps> = ({
             {page.type}
           </span>
         )}
+
+        {/* Canva-style Page Background Quick-Control */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            useStore.getState().setCurrentPageIndex(pageIdx);
+            useStore.getState().openColorPicker({
+              type: 'background',
+              title: 'Page Background',
+              color: page.backgroundColor || '#ffffff',
+            });
+            useStore.getState().setEditorTab('colors');
+          }}
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] bg-[#141416]/90 hover:bg-[#1f1f24] text-[#E2DCC8] border border-[#E2DCC8]/20 hover:border-[#E2DCC8]/50 shadow-sm transition-all text-[10px] font-bold cursor-pointer"
+          title="Change Page Background Color or Upload Image"
+        >
+          {page.backgroundImage ? (
+            <div className="w-3.5 h-3.5 rounded-full border border-white/40 overflow-hidden bg-cover bg-center shrink-0" style={{ backgroundImage: `url(${page.backgroundImage})` }} />
+          ) : (
+            <div
+              className="w-3.5 h-3.5 rounded-full border border-white/40 shrink-0 shadow-sm"
+              style={{ background: page.backgroundColor || '#ffffff' }}
+            />
+          )}
+          <span className="text-[10px] font-bold tracking-tight">Background</span>
+          <Palette size={11} className="opacity-70" />
+        </button>
       </div>
 
       {/* Right: Application Themed Page Actions Toolbar (Hidden on Cover Pages) */}

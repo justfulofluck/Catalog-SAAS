@@ -237,7 +237,19 @@ export const ExportModal: React.FC<ExportModalProps> = ({
           const pageHasHeader = Boolean(catalog.hasHeader !== false && page.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
           const pageHasFooter = Boolean(catalog.hasFooter !== false && page.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
 
+          const pageIsLandscape = page.orientation === 'landscape';
           const allElements = [
+            ...(page.backgroundImage ? [{
+              id: `bg-img-${page.id}`,
+              type: 'image' as const,
+              x: 0,
+              y: 0,
+              width: pageIsLandscape ? PAGE_HEIGHT : PAGE_WIDTH,
+              height: pageIsLandscape ? PAGE_WIDTH : PAGE_HEIGHT,
+              src: page.backgroundImage,
+              opacity: page.backgroundOpacity ?? 1,
+              zIndex: -9999,
+            }] : []),
             ...page.elements.map(el => ({
               ...el,
               zIndex: el.zIndex !== undefined ? el.zIndex : 0,

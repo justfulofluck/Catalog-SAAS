@@ -82,7 +82,16 @@ export async function renderProductBlock(
     const specItems: { label: string; value: string }[] = [];
     if (el.visibleFieldKeys && el.visibleFieldKeys.length > 0) {
       el.visibleFieldKeys.forEach(k => {
-        if (k === 'name' || k === 'title' || k === 'price') return;
+        const normKey = String(k || '').trim().toLowerCase();
+        if (
+          normKey === 'name' ||
+          normKey === 'title' ||
+          normKey === 'price' ||
+          normKey === 'product' ||
+          normKey === 'products' ||
+          normKey === 'product_name' ||
+          normKey === 'product name'
+        ) return;
         const override = el.fieldOverrides?.[k];
         if (override?.enabled === false) return;
 
@@ -110,6 +119,16 @@ export async function renderProductBlock(
       }
       if (product.customFields) {
         Object.entries(product.customFields).forEach(([k, v]) => {
+          const normKey = String(k || '').trim().toLowerCase();
+          if (
+            normKey === 'name' ||
+            normKey === 'title' ||
+            normKey === 'price' ||
+            normKey === 'product' ||
+            normKey === 'products' ||
+            normKey === 'product_name' ||
+            normKey === 'product name'
+          ) return;
           if (v !== undefined && v !== null && v !== '' && typeof v !== 'object') {
             const label = resolveFieldLabel(k, categories, product) || k;
             specItems.push({ label: String(label), value: String(v) });
@@ -316,25 +335,7 @@ export async function renderProductBlock(
     // THEME 2: Editorial Overlay (Hero Background Image + Dark Gradient + Overlay Details)
     // ─────────────────────────────────────────────────────────────
     else if (theme === 'editorial-overlay') {
-      if (loadedImg) {
-        const natW = loadedImg.width || 1;
-        const natH = loadedImg.height || 1;
-        const scale = Math.max(el.width / natW, el.height / natH);
-        const rW = natW * scale;
-        const rH = natH * scale;
-        loadedImg.set({
-          left: (el.width - rW) / 2,
-          top: (el.height - rH) / 2,
-          scaleX: scale,
-          scaleY: scale,
-          originX: 'left',
-          originY: 'top',
-          objectCaching: false
-        });
-        objs.push(loadedImg);
-      }
-
-      // True Linear Dark Gradient Overlay from transparent top to rich dark bottom
+      // 1. Dark Gradient Background covering exact card bounds
       const gradOverlay = new Rect({
         left: 0,
         top: 0,
@@ -342,24 +343,24 @@ export async function renderProductBlock(
         height: el.height,
         originX: 'left',
         originY: 'top',
+        rx: cardRx,
+        ry: cardRx,
         fill: new Gradient({
           type: 'linear',
           coords: { x1: 0, y1: 0, x2: 0, y2: el.height },
           colorStops: [
-            { offset: 0, color: 'rgba(0, 0, 0, 0.0)' },
-            { offset: 0.38, color: 'rgba(0, 0, 0, 0.08)' },
-            { offset: 0.60, color: 'rgba(0, 0, 0, 0.62)' },
-            { offset: 0.85, color: 'rgba(0, 0, 0, 0.92)' },
-            { offset: 1, color: 'rgba(0, 0, 0, 0.98)' }
+            { offset: 0, color: '#1e293b' },
+            { offset: 0.40, color: '#0f172a' },
+            { offset: 0.70, color: '#090d16' },
+            { offset: 1, color: '#020617' }
           ]
         }),
         objectCaching: false
       });
       objs.push(gradOverlay);
 
-      // Pre-create and measure all text blocks to compute exact layout without collision
+      // 2. Measure bottom stack heights so we allocate proper space
       const chipsToRender = specItems.filter(s => s.label !== 'SKU').slice(0, 3);
-
       const priceH = showPrice ? Math.ceil((priceFontSize + 2) * 1.3) + 4 : 0;
       const titleEstimatedH = showTitle ? measureWrappedTextHeight(displayName, contentWidth, titleFontSize, 1.15, 'bold') + 4 : 0;
       const skuEstimatedH = (showSku && displaySku) ? measureWrappedTextHeight(`SKU: ${displaySku}`, contentWidth, 8.5, 1.2, 'normal') + 4 : 0;
@@ -380,11 +381,35 @@ export async function renderProductBlock(
         });
       }
       const chipsTotalH = chipsRows * 20;
-
       const totalContentH = priceH + titleEstimatedH + skuEstimatedH + chipsTotalH;
-      let currentStackY = Math.max(cardPadding, el.height - cardPadding - totalContentH);
 
-      // 1. Render Price
+      // Bottom stack placement
+      const bottomStackY = Math.max(cardPadding + 60, el.height - cardPadding - totalContentH);
+      const heroAreaH = bottomStackY - cardPadding;
+
+      // 3. Render Product Image cleanly contained within top hero area
+      if (loadedImg) {
+        const natW = loadedImg.width || 1;
+        const natH = loadedImg.height || 1;
+        const maxImgW = contentWidth - 4;
+        const maxImgH = Math.max(40, heroAreaH - 4);
+        const scale = Math.min(maxImgW / natW, maxImgH / natH, 1.5);
+        const rW = natW * scale;
+        const rH = natH * scale;
+        loadedImg.set({
+          left: cardPadding + (contentWidth - rW) / 2,
+          top: cardPadding + (heroAreaH - rH) / 2,
+          scaleX: scale,
+          scaleY: scale,
+          originX: 'left',
+          originY: 'top',
+          objectCaching: false
+        });
+        objs.push(loadedImg);
+      }
+
+      // 4. Render Price
+      let currentStackY = bottomStackY;
       if (showPrice) {
         const priceTextObj = new Textbox(displayPrice, {
           left: cardPadding,
@@ -404,7 +429,7 @@ export async function renderProductBlock(
         currentStackY += priceH;
       }
 
-      // 2. Render Title
+      // 5. Render Title
       if (showTitle) {
         const titleTextObj = new Textbox(displayName, {
           left: cardPadding,
@@ -426,7 +451,7 @@ export async function renderProductBlock(
         currentStackY += actualTitleH;
       }
 
-      // 3. Render SKU
+      // 6. Render SKU
       if (showSku && displaySku) {
         const skuTextObj = new Textbox(`SKU: ${displaySku}`, {
           left: cardPadding,
@@ -434,7 +459,7 @@ export async function renderProductBlock(
           width: contentWidth,
           fontSize: 8.5,
           fontFamily: cardFontFamily,
-          fill: '#e2e8f0',
+          fill: '#cbd5e1',
           originX: 'left',
           originY: 'top',
           splitByGrapheme: false,
@@ -446,7 +471,7 @@ export async function renderProductBlock(
         currentStackY += actualSkuH;
       }
 
-      // 4. Render Chips / Spec Badges
+      // 7. Render Chips / Spec Badges
       if (chipsToRender.length > 0 && currentStackY + 16 <= el.height) {
         let chipX = cardPadding;
         let chipY = currentStackY + 2;
@@ -469,7 +494,9 @@ export async function renderProductBlock(
               top: chipY,
               width: chipW,
               height: chipH,
-              fill: 'rgba(255, 255, 255, 0.22)',
+              fill: 'rgba(255, 255, 255, 0.15)',
+              stroke: 'rgba(255, 255, 255, 0.25)',
+              strokeWidth: 1,
               rx: 3,
               ry: 3,
               originX: 'left',

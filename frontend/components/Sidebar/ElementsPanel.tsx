@@ -4,6 +4,7 @@ import { TextBlockDetailView } from './Elements/views/TextBlockDetailView';
 import { ChecklistDetailView } from './Elements/views/ChecklistDetailView';
 import { VideoEmbedDetailView } from './Elements/views/VideoEmbedDetailView';
 import { TablesDetailView } from './Elements/views/TablesDetailView';
+import { ImageFramesDetailView } from './Elements/views/ImageFramesDetailView';
 import { ElementsOverview } from './Elements/views/ElementsOverview';
 
 export const ElementsPanel: React.FC = () => {
@@ -18,6 +19,16 @@ export const ElementsPanel: React.FC = () => {
   if (activeElementDetail === 'text-blocks') {
     return (
       <TextBlockDetailView
+        isDark={isDark}
+        onBack={() => setActiveElementDetail(null)}
+        onClose={handleClose}
+      />
+    );
+  }
+
+  if (activeElementDetail === 'image-frames') {
+    return (
+      <ImageFramesDetailView
         isDark={isDark}
         onBack={() => setActiveElementDetail(null)}
         onClose={handleClose}

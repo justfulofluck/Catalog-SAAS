@@ -1560,11 +1560,6 @@ export const AdminHeaderDesignerModal: React.FC = () => {
 
     setAppliedSuccess(true);
     setTimeout(() => setAppliedSuccess(false), 2500);
-
-    // Auto-save the catalog to backend so browser refresh preserves the applied header!
-    setTimeout(() => {
-      saveCatalog().catch(err => console.warn('Auto-saving catalog after applying header:', err));
-    }, 150);
   };
 
 

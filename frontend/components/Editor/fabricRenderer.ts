@@ -9,6 +9,7 @@ export * from './Fabric/shapes';
 export * from './Fabric/textEffects';
 export * from './Fabric/productCardRenderer';
 export * from './Fabric/tableRenderer';
+export * from './Fabric/frameRenderer';
 
 import {
   getCachedImageElement,
@@ -24,6 +25,7 @@ import {
 
 import { renderProductBlock } from './Fabric/productCardRenderer';
 import { renderTableElement, renderChecklistElement } from './Fabric/tableRenderer';
+import { renderImageFrame } from './Fabric/frameRenderer';
 
 // Ensure all fabric images are loaded with crossOrigin = 'anonymous' to prevent tainted canvases
 config.imageProperties = { ...config.imageProperties, crossOrigin: 'anonymous' };
@@ -49,6 +51,12 @@ async function _elementToFabricObject(
   const setCommon = (obj: any) => {
     Object.entries(common).forEach(([k, v]) => { try { obj.set(k as any, v); } catch { } });
   };
+
+  if (el.isFrame || el.frameShape) {
+    const frameObj = await renderImageFrame(el, products, catalog);
+    setCommon(frameObj);
+    return frameObj;
+  }
 
   if (el.svgContent) {
     try {
@@ -340,7 +348,21 @@ async function _elementToFabricObject(
         const sw = Math.max(1, Math.min(nw - sx, cropW));
         const sh = Math.max(1, Math.min(nh - sy, cropH));
 
-        ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+        const radius = el.borderRadius || el.cornerRadius || el.rx || 0;
+        if (radius > 0) {
+          ctx.save();
+          ctx.beginPath();
+          if (typeof ctx.roundRect === 'function') {
+            ctx.roundRect(-w / 2, -h / 2, w, h, radius);
+          } else {
+            ctx.rect(-w / 2, -h / 2, w, h);
+          }
+          ctx.clip();
+          ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+          ctx.restore();
+        } else {
+          ctx.drawImage(imageElement, sx, sy, sw, sh, -w / 2, -h / 2, w, h);
+        }
       };
 
       if (fabricFilters.length > 0) {

@@ -668,7 +668,7 @@ const EditorToolbar: React.FC = () => {
                   type="text"
                   value={coverName}
                   onChange={(e) => setCoverName(e.target.value)}
-                  placeholder="e.g. Minimalist Bold Editorial Cover"
+                  placeholder="e.g. Modern Minimalist Cover"
                   className={`w-full px-3.5 py-2.5 text-xs font-medium rounded-[4px] border outline-none transition-all ${
                     isDark
                       ? 'bg-[#111113] border-[#333338] text-white focus:border-[#0F3D3E]'

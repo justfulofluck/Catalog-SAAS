@@ -40,7 +40,7 @@ export const Phase1Identity: React.FC<CatalogSetupState> = ({
               }`} size={16} />
               <input
                 type="text"
-                placeholder="e.g. V-TAC Architectural Lighting 2026"
+                placeholder="e.g. Annual Product Collection 2026"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 onKeyDown={(e) => {

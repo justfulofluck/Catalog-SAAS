@@ -403,6 +403,8 @@ export interface CatalogSlice {
   setPageOrientation: (pageIndex: number, orientation: 'portrait' | 'landscape') => void;
   setCatalogOrientation: (orientation: 'portrait' | 'landscape') => void;
   setPageBackground: (pageIndex: number, color: string) => void;
+  setPageBackgroundImage: (pageIndex: number, imageUrl: string | null, opacity?: number) => void;
+  setPageBackgroundOpacity: (pageIndex: number, opacity: number) => void;
 
   toggleCatalogProduct: (productId: string) => void;
   removeProductFromCanvas: (productId: string) => void;

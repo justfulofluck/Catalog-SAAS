@@ -1,6 +1,7 @@
 export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'comment' | 'table' | 'checklist' | 'video';
 export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
 export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line' | 'curved-line' | 'elbow-line' | 'chevron' | 'none';
+export type FrameShapeType = 'circle' | 'roundedRect' | 'oval' | 'hexagon' | 'diamond' | 'pill' | 'octagon';
 export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image' | 'minimal-pill';
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
@@ -159,6 +160,13 @@ export interface CanvasElement {
   showControls?: boolean;
   videoTitle?: string;
 
+  // Frame specific
+  isFrame?: boolean;
+  frameShape?: FrameShapeType;
+  frameStrokeStyle?: 'solid' | 'dashed' | 'dotted';
+  frameShadow?: 'none' | 'subtle' | 'medium' | 'glow' | 'strong';
+  productImageIndex?: number;
+
   // Table specific
   tableData?: TableData;
 
@@ -235,6 +243,8 @@ export interface CatalogPage {
   categoryId?: string;
   orientation?: 'portrait' | 'landscape';
   backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
   hasHeader?: boolean;
   hasFooter?: boolean;
   locked?: boolean;

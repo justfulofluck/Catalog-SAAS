@@ -48,3 +48,15 @@ export interface TableTemplate {
   getCanvasElements: (groupId: string) => CanvasElement[];
 }
 
+export interface ImageFrameTemplate {
+  id: string;
+  title: string;
+  frameShape: 'circle' | 'roundedRect' | 'oval' | 'hexagon' | 'diamond' | 'pill' | 'octagon';
+  description: string;
+  width: number;
+  height: number;
+  cornerRadius?: number;
+  getSvg: (isDark?: boolean) => string;
+  getCanvasElement: (x: number, y: number) => CanvasElement;
+}
+
