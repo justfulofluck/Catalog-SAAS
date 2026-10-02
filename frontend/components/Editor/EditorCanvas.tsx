@@ -572,6 +572,15 @@ const EditorCanvas: React.FC = () => {
           if (targetId) {
             const tEl = targetPage.elements?.find((el) => el.id === targetId);
             if (tEl) {
+              if (tEl.isFrame) {
+                updateElement(targetPageIndex, targetId, {
+                  src: normalizeImageUrl(data.url || productObj?.image),
+                  productId: data.productId,
+                  productData: productObj || tEl.productData,
+                  opacity: 1,
+                });
+                return;
+              }
               updateElement(targetPageIndex, targetId, {
                 type: tEl.type === 'product-block' ? 'product-block' : 'image',
                 src: normalizeImageUrl(data.url || productObj?.image),
@@ -616,6 +625,14 @@ const EditorCanvas: React.FC = () => {
 
           if (targetId) {
             const tEl = targetPage.elements?.find((el) => el.id === targetId);
+            if (tEl?.isFrame) {
+              updateElement(targetPageIndex, targetId, {
+                src: normalizeImageUrl(data.url),
+                productId: data.productId,
+                opacity: 1,
+              });
+              return;
+            }
             updateElement(targetPageIndex, targetId, {
               type: tEl?.type === 'product-block' ? 'product-block' : 'image',
               src: normalizeImageUrl(data.url),
@@ -623,6 +640,7 @@ const EditorCanvas: React.FC = () => {
               cardTheme: tEl?.cardTheme,
               opacity: 1,
             });
+            return;
           } else if (isHeaderDrop && targetPage.type !== 'cover') {
             const headerY = 10;
             useStore.getState().addHeaderElement({
@@ -1158,6 +1176,30 @@ const EditorCanvas: React.FC = () => {
                         </div>
                       );
                     })}
+
+                  {/* Drag Over Snap Indicator */}
+                  {dragOverTargetId && dragOverPageIndex === pageIdx && (() => {
+                    const overEl = page.elements?.find((el) => el.id === dragOverTargetId);
+                    if (!overEl) return null;
+                    return (
+                      <div
+                        className="absolute pointer-events-none border-2 border-emerald-500 bg-emerald-500/20 rounded-lg z-[90] animate-pulse ring-4 ring-emerald-500/30 transition-all"
+                        style={{
+                          left: overEl.x * zoom,
+                          top: overEl.y * zoom,
+                          width: overEl.width * zoom,
+                          height: overEl.height * zoom,
+                          transform: `rotate(${overEl.rotation || 0}deg)`,
+                          transformOrigin: 'top left',
+                        }}
+                      >
+                        <div className="absolute top-2 left-2 bg-emerald-600 text-white text-[10px] font-bold px-2 py-0.5 rounded shadow flex items-center gap-1">
+                          <span>✨</span>
+                          <span>{overEl.isFrame ? `Drop into ${overEl.frameShape || ''} frame` : 'Drop to replace image'}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Interactive Table Overlay */}
                   {page.elements
