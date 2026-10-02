@@ -426,7 +426,7 @@ const CreateProductForm: React.FC = () => {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Premium Executive Desk"
+                      placeholder="e.g. Smart LED Spotlight"
                       value={formData.name}
                       onChange={(e) => handleInputChange('name', e.target.value)}
                       className={`w-full border rounded-[4px] px-3.5 py-2.5 text-xs font-semibold focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E]/30 outline-none transition-all ${
@@ -452,7 +452,7 @@ const CreateProductForm: React.FC = () => {
                       isDark ? 'text-[#888888]' : 'text-slate-500'
                     }`}>Description</label>
                     <textarea
-                      placeholder="Provide a rich technical description..."
+                      placeholder="Enter product details or specifications..."
                       value={formData.description}
                       onChange={(e) => handleInputChange('description', e.target.value)}
                       className={`w-full border rounded-[4px] p-3 text-xs font-medium min-h-[72px] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E]/30 outline-none transition-all ${
@@ -702,7 +702,7 @@ const CreateProductForm: React.FC = () => {
                     <label className={`text-[10px] font-bold uppercase tracking-widest ml-1 ${isDark ? 'text-[#888888]' : 'text-slate-500'}`}>Title</label>
                     <input type="text" required value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className={`w-full border rounded-[4px] px-6 py-4 text-base font-bold focus:border-[#0F3D3E] outline-none ${
                       isDark ? 'bg-[#1c1c1c] border-[#262626] text-white' : 'bg-slate-50 border-slate-200 text-slate-900'
-                    }`} placeholder="e.g. Premium Executive Desk" />
+                    }`} placeholder="e.g. Smart LED Spotlight" />
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
@@ -725,7 +725,7 @@ const CreateProductForm: React.FC = () => {
                           value={formData.sku}
                           onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
                           className={`w-full border rounded-[4px] pl-12 pr-6 py-4 text-base font-bold outline-none transition-all ${isAutoSku ? 'bg-[#0F3D3E]/10 border-[#0F3D3E]/30 ' + (isDark ? 'text-white' : 'text-slate-900') + ' cursor-not-allowed' : (isDark ? 'bg-[#1c1c1c] border-[#262626] text-white' : 'bg-slate-50 border-slate-200 text-slate-900')}`}
-                          placeholder="OFC-99-A"
+                          placeholder="e.g. PRD-001"
                         />
                       </div>
                     </div>
@@ -751,7 +751,7 @@ const CreateProductForm: React.FC = () => {
                   </div>
                   <textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} className={`w-full border rounded-[4px] p-6 text-base font-medium min-h-[180px] focus:border-[#0F3D3E] outline-none ${
                     isDark ? 'bg-[#1c1c1c] border-[#262626] text-white placeholder-[#666666]' : 'bg-slate-50 border-slate-200 text-slate-900 placeholder-slate-400'
-                  }`} placeholder="Provide a rich technical description..." />
+                  }`} placeholder="Enter product details or specifications..." />
                 </section>
               </div>
             </div>

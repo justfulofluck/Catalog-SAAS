@@ -1008,10 +1008,25 @@ const EditorCanvas: React.FC = () => {
                   style={{
                     width: curW * zoom,
                     height: curH * zoom,
-                    backgroundColor: page.backgroundColor || '#ffffff',
+                    background: page.backgroundColor || '#ffffff',
                     zIndex: isActive || dragOverPageIndex === pageIdx ? 200 : 1,
                   }}
                 >
+                  {/* Canva-style Full-bleed Background Image */}
+                  {page.backgroundImage && (
+                    <div
+                      className="absolute inset-0 pointer-events-none select-none overflow-hidden"
+                      style={{
+                        backgroundImage: `url(${page.backgroundImage})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        opacity: page.backgroundOpacity ?? 1,
+                        zIndex: 0,
+                      }}
+                    />
+                  )}
+
                   {/* Header / Footer guidelines & Safety margin box */}
                   <CanvasHeaderFooterGuides
                     catalog={catalog}

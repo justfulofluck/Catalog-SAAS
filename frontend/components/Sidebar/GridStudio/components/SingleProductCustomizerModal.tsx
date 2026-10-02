@@ -208,7 +208,7 @@ export const SingleProductCustomizerModal: React.FC<SingleProductCustomizerModal
                     type="text"
                     value={customTitle}
                     onChange={(e) => setCustomTitle(e.target.value)}
-                    placeholder="Product title..."
+                    placeholder="Enter title..."
                     className={`w-full px-3 py-1.5 text-xs rounded border outline-none font-bold ${
                       isDark ? 'bg-[#141414] border-[#333] text-[#F1F1F1] focus:border-[#0F3D3E]' : 'bg-white border-slate-300 text-slate-900 focus:border-[#0F3D3E]'
                     }`}
@@ -259,7 +259,7 @@ export const SingleProductCustomizerModal: React.FC<SingleProductCustomizerModal
                     type="text"
                     value={customPrice}
                     onChange={(e) => setCustomPrice(e.target.value)}
-                    placeholder="₹290"
+                    placeholder="e.g. 299.00"
                     className={`w-full px-2.5 py-1 text-xs rounded border outline-none font-mono font-bold ${
                       isDark ? 'bg-[#141414] border-[#333] text-[#00a651] focus:border-[#0F3D3E]' : 'bg-white border-slate-300 text-[#00a651] focus:border-[#0F3D3E]'
                     }`}
@@ -285,7 +285,7 @@ export const SingleProductCustomizerModal: React.FC<SingleProductCustomizerModal
                     type="text"
                     value={customSku}
                     onChange={(e) => setCustomSku(e.target.value)}
-                    placeholder="SKU-100"
+                    placeholder="e.g. SKU-101"
                     className={`w-full px-2.5 py-1 text-xs rounded border outline-none font-mono ${
                       isDark ? 'bg-[#141414] border-[#333] text-[#F1F1F1] focus:border-[#0F3D3E]' : 'bg-white border-slate-300 text-slate-800 focus:border-[#0F3D3E]'
                     }`}

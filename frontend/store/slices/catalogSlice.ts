@@ -27,72 +27,16 @@ export const INITIAL_CATALOG: Catalog = {
   footerFontSize: 9,
   headerLogoHeight: 24,
   selectedCategoryIds: [],
-  hasHeader: true,
-  hasFooter: true,
+  hasHeader: false,
+  hasFooter: false,
   headerMigrated: false,
   footerMigrated: false,
   marginTop: 0,
   marginBottom: 0,
   marginLeft: 18.9,
   marginRight: 18.9,
-  headerElements: [
-    {
-      id: 'default-header-title',
-      type: 'text',
-      text: 'Company Catalog 2026',
-      x: 40,
-      y: 15,
-      width: 714,
-      height: 25,
-      fontSize: 11,
-      fontFamily: 'Inter',
-      fontWeight: 'bold',
-      textAlign: 'center',
-      fill: '#475569',
-      zIndex: 10,
-      rotation: 0,
-      opacity: 1,
-      verticalAlign: 'middle',
-    },
-  ],
-  footerElements: [
-    {
-      id: 'default-footer-text',
-      type: 'text',
-      text: 'Proprietary & Confidential',
-      x: 40,
-      y: 15,
-      width: 350,
-      height: 25,
-      fontSize: 9,
-      fontFamily: 'Inter',
-      fontWeight: 'normal',
-      textAlign: 'left',
-      fill: '#94a3b8',
-      zIndex: 10,
-      rotation: 0,
-      opacity: 1,
-      verticalAlign: 'middle',
-    },
-    {
-      id: 'default-footer-page',
-      type: 'text',
-      text: 'Page {{page}}',
-      x: 600,
-      y: 15,
-      width: 154,
-      height: 25,
-      fontSize: 9,
-      fontFamily: 'Inter',
-      fontWeight: 'bold',
-      textAlign: 'right',
-      fill: '#94a3b8',
-      zIndex: 10,
-      rotation: 0,
-      opacity: 1,
-      verticalAlign: 'middle',
-    },
-  ],
+  headerElements: [],
+  footerElements: [],
   showPrice: true,
   showSKU: true,
   showTitle: true,
@@ -946,6 +890,31 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
       const newPages = [...state.catalog.pages];
       if (newPages[pageIndex]) {
         newPages[pageIndex].backgroundColor = color;
+      }
+      return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() } };
+    });
+  },
+
+  setPageBackgroundImage: (pageIndex, imageUrl, opacity) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (newPages[pageIndex]) {
+        newPages[pageIndex].backgroundImage = imageUrl || undefined;
+        if (opacity !== undefined) {
+          newPages[pageIndex].backgroundOpacity = opacity;
+        }
+      }
+      return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() } };
+    });
+  },
+
+  setPageBackgroundOpacity: (pageIndex, opacity) => {
+    get().pushHistory();
+    set((state) => {
+      const newPages = [...state.catalog.pages];
+      if (newPages[pageIndex]) {
+        newPages[pageIndex].backgroundOpacity = opacity;
       }
       return { catalog: { ...state.catalog, pages: newPages, updatedAt: new Date().toISOString() } };
     });

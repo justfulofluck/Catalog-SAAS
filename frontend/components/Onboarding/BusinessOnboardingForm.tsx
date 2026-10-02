@@ -69,7 +69,7 @@ const OnboardingForm: React.FC = () => {
                                         required
                                         value={businessName}
                                         onChange={(e) => setBusinessName(e.target.value)}
-                                        placeholder="e.g. Downtown Electronics"
+                                        placeholder="e.g. Acme Corporation"
                                         className={`w-full border rounded-[4px] px-6 py-4 text-lg font-bold outline-none transition-all ${
                                             isDark 
                                                 ? 'bg-[#1c1c1c] border-[#262626] text-white focus:border-[#0F3D3E]' 

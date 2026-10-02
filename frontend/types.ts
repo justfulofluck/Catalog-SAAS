@@ -235,6 +235,8 @@ export interface CatalogPage {
   categoryId?: string;
   orientation?: 'portrait' | 'landscape';
   backgroundColor?: string;
+  backgroundImage?: string;
+  backgroundOpacity?: number;
   hasHeader?: boolean;
   hasFooter?: boolean;
   locked?: boolean;

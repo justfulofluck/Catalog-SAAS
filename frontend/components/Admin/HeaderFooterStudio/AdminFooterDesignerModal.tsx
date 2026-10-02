@@ -1557,11 +1557,6 @@ export const AdminFooterDesignerModal: React.FC = () => {
 
     setAppliedSuccess(true);
     setTimeout(() => setAppliedSuccess(false), 2500);
-
-    // Auto-save the catalog to backend so height and footer elements persist
-    setTimeout(() => {
-      saveCatalog().catch(err => console.warn('Auto-saving catalog after applying footer:', err));
-    }, 150);
   };
 
 

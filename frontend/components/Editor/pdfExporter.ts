@@ -175,6 +175,17 @@ export async function exportCatalogToPDF(
       };
 
       const allElements = [
+        ...(page.backgroundImage ? [{
+          id: `bg-img-${page.id}`,
+          type: 'image' as const,
+          x: 0,
+          y: 0,
+          width: pageIsLandscape ? PAGE_HEIGHT : PAGE_WIDTH,
+          height: pageIsLandscape ? PAGE_WIDTH : PAGE_HEIGHT,
+          src: page.backgroundImage,
+          opacity: page.backgroundOpacity ?? 1,
+          zIndex: -9999,
+        }] : []),
         ...page.elements.map(el => ({
           ...el,
           zIndex: el.zIndex !== undefined ? el.zIndex : 0,

@@ -21,6 +21,13 @@ export const useAutoSaver = (catalog: Catalog) => {
     const store = useStore.getState();
     store.setSaveStatus('unsaved');
 
+    // Super Admin Template Builder (Cover, Header, Footer Blueprints):
+    // Never auto-save blueprint templates to backend on keystrokes/drags.
+    // Templates must only be saved when the Super Admin explicitly clicks Save/Update Blueprint.
+    if (store.editingSystemTemplate || store.isAdminAuthenticated) {
+      return;
+    }
+
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current);
     }
@@ -30,9 +37,7 @@ export const useAutoSaver = (catalog: Catalog) => {
       isAutoSavingRef.current = true;
       try {
         const currentStore = useStore.getState();
-        if (currentStore.editingSystemTemplate) {
-          await currentStore.saveActiveTemplateFromEditor();
-        } else {
+        if (!currentStore.editingSystemTemplate && !currentStore.isAdminAuthenticated) {
           await currentStore.saveCatalog();
         }
       } catch (err) {
@@ -66,16 +71,12 @@ export const useAutoSaver = (catalog: Catalog) => {
     catalog.marginRight,
   ]);
 
-  // Save immediately on page unload if there are pending unsaved changes
+  // Save immediately on page unload if there are pending unsaved changes (ONLY for regular user catalogs)
   useEffect(() => {
     const handleBeforeUnload = () => {
       const store = useStore.getState();
-      if (store.saveStatus === 'unsaved') {
-        if (store.editingSystemTemplate) {
-          store.saveActiveTemplateFromEditor().catch(() => {});
-        } else {
-          store.saveCatalog().catch(() => {});
-        }
+      if (store.saveStatus === 'unsaved' && !store.editingSystemTemplate && !store.isAdminAuthenticated) {
+        store.saveCatalog().catch(() => {});
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
