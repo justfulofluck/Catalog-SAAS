@@ -369,6 +369,7 @@ const PublishView: React.FC = () => {
 
   const handleEdit = (id: string) => {
     loadCatalog(id);
+    setView('editor');
   };
 
   const handleRenameStart = (id: string, currentName: string) => {

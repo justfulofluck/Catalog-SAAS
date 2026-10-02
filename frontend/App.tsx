@@ -41,6 +41,9 @@ import PricingView from './components/Pricing/PricingView';
 import ToastContainer from './components/Common/ToastContainer';
 import ConfirmModal from './components/Common/ConfirmModal';
 import { AppIcon } from './components/Common/AppIcon';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { NavigationSync } from './navigation/NavigationSync';
+import BusinessSelection from './components/Onboarding/BusinessSelection';
 import { useStore, View } from './store/useStore';
 import {
   LayoutDashboard,
@@ -98,6 +101,7 @@ const App: React.FC = () => {
     editingSystemTemplate
   } = useStore();
 
+  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const [isCategoriesMenuOpen, setCategoriesMenuOpen] = useState(true);
@@ -126,80 +130,17 @@ const App: React.FC = () => {
   }, [isProjectSettingsOpen, setIsProjectSettingsOpen, isUserMenuOpen]);
 
   useEffect(() => {
-    const getViewFromPath = (pathname: string): View => {
-      const state = useStore.getState();
-      if (pathname === '/admin/dashboard') {
-        return state.isAdminAuthenticated ? 'admin-dashboard' : (state.isAuthenticated ? 'dashboard' : 'admin-login');
-      }
-      if (pathname === '/admin') {
-        return state.isAdminAuthenticated ? 'admin-dashboard' : 'admin-login';
-      }
-      if (pathname === '/editor') return 'editor';
-      if (pathname === '/catalog-setup') return 'catalog-setup';
-      if (pathname === '/catalog-products') return 'catalog-products';
-      if (pathname === '/your-work') return 'your-work';
-      if (pathname === '/publish') return 'publish';
-      if (pathname === '/pricing') return 'pricing';
-      if (pathname === '/settings') return 'settings';
-      if (pathname === '/inventory/products') return 'products-list';
-      if (pathname === '/inventory/products/create') return 'create-product';
-      if (pathname === '/inventory/products/edit') return 'edit-product';
-      if (pathname === '/inventory/categories') return 'category-list';
-      if (pathname === '/inventory/categories/create') return 'create-category';
-      if (pathname === '/inventory/categories/edit') return 'edit-category';
-      if (pathname === '/inventory/media') return 'media-library';
-      if (pathname === '/onboarding') return 'business-selection';
-      if (pathname === '/onboarding/business') return 'business-onboarding';
-      if (pathname === '/' || pathname === '') {
-        return state.isAdminAuthenticated ? 'admin-dashboard' : 'dashboard';
-      }
-      return state.currentView;
-    };
-
     const init = async () => {
       try {
         await checkAuth();
       } catch (err) {
         console.debug('No active session found.');
+      } finally {
+        setLoading(false);
       }
-
-      const path = window.location.pathname;
-
-      const viewerMatch = path.match(/\/viewer\/([^\/]+)/);
-      if (viewerMatch) {
-        const uuid = viewerMatch[1];
-        const { openPublicViewer } = useStore.getState();
-        openPublicViewer(uuid);
-      } else {
-        const viewFromPath = getViewFromPath(path);
-        if (viewFromPath !== currentView) {
-          setView(viewFromPath);
-        }
-      }
-
-      setLoading(false);
     };
     init();
-
-    const handlePopState = () => {
-      const path = window.location.pathname;
-      const viewerMatch = path.match(/\/viewer\/([^\/]+)/);
-      if (viewerMatch) {
-        const uuid = viewerMatch[1];
-        const { openPublicViewer } = useStore.getState();
-        openPublicViewer(uuid);
-      } else {
-        const viewFromPath = getViewFromPath(path);
-        setView(viewFromPath);
-      }
-    };
-
-    window.addEventListener('popstate', handlePopState);
-
-    return () => {
-      window.removeEventListener('popstate', handlePopState);
-    };
-  }, [checkAuth]); // Removed currentView and setView from dependencies to prevent re-running checkAuth on view change
+  }, [checkAuth]);
 
   useEffect(() => {
     if (document.fonts) {
@@ -236,41 +177,7 @@ const App: React.FC = () => {
     );
   }
 
-  // Admin Routes
-  if (currentView === 'admin-login') {
-    return <AdminLogin />;
-  }
-
-  if (currentView === 'admin-dashboard') {
-    if (!isAdminAuthenticated) {
-      return isAuthenticated ? <Dashboard /> : <AdminLogin />;
-    }
-    if (isAdminHeaderDesignerOpen) {
-      return <AdminHeaderDesignerModal />;
-    }
-    if (isAdminFooterDesignerOpen) {
-      return <AdminFooterDesignerModal />;
-    }
-    return <AdminDashboard />;
-  }
-
-  // Public Viewers
-  if (currentView === 'public-viewer') {
-    return <PublicViewer />;
-  }
-
-  // Pricing View (Fullscreen)
-  if (currentView === 'pricing') {
-    return <PricingView />;
-  }
-
-  // Standard Authentication Check
-  if (!isAuthenticated && !isAdminAuthenticated) {
-    return <Login />;
-  }
-
-  // Editor View (Fullscreen)
-  if (currentView === 'editor') {
+  const renderEditor = () => {
     const isDark = uiTheme === 'dark';
     const isCoverStudioMode = Boolean(editingSystemTemplate);
 
@@ -580,41 +487,16 @@ const App: React.FC = () => {
           </div>
         </div>
 
-        {/* Master Header Designer / Studio Modal */}
-        {isHeaderDesignerOpen && <HeaderDesignerModal />}
-        {/* Master Footer Designer / Studio Modal */}
-        {isFooterDesignerOpen && <FooterDesignerModal />}
-        <ToastContainer />
-        <ConfirmModal />
       </div>
     );
-  }
-
-  const sidebarWidth = isSidebarExpanded ? 'w-72' : 'w-20';
-
-  const renderContent = () => {
-    switch (currentView as string) {
-      case 'dashboard': return <Dashboard />;
-      case 'products-list': return <ProductsListView />;
-      case 'create-product': return <CreateProductForm />;
-      case 'edit-product': return <EditProductForm />;
-      case 'category-list': return <CategoryListView />;
-      case 'create-category': return <CreateCategoryForm />;
-      case 'edit-category': return <EditCategoryForm />;
-      case 'media-library': return <MediaLibraryView />;
-      case 'catalog-setup': return <CatalogSetup />;
-      case 'settings': return <SettingsView />;
-      case 'your-work': return <YourWork />;
-      case 'publish': return <PublishView />;
-      case 'pricing': return <PricingView />;
-      default: return <Dashboard />;
-    }
   };
 
-  const isDark = uiTheme === 'dark';
+  const renderMainShell = () => {
+    const sidebarWidth = isSidebarExpanded ? 'w-72' : 'w-20';
+    const isDark = uiTheme === 'dark';
 
-  return (
-    <div className={`flex h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-[#f8fafc] text-slate-800'}`}>
+    return (
+      <div className={`flex h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-[#f8fafc] text-slate-800'}`}>
       <aside className={`${sidebarWidth} ${isDark ? 'bg-[#161616] border-[#262626] text-[#F1F1F1]' : 'bg-white border-slate-200 text-slate-800'} border-r flex flex-col pt-6 pb-3 z-30 shrink-0 transition-all duration-300 ease-in-out`}>
         <div className={`flex ${isSidebarExpanded ? 'items-center justify-between px-5' : 'flex-col items-center gap-6 px-2'} mb-8`}>
           <div onClick={() => setView('dashboard')} className="flex items-center gap-2.5 cursor-pointer group shrink-0 overflow-hidden max-w-full">
@@ -821,17 +703,113 @@ const App: React.FC = () => {
           </div>
         </div>
       </aside>
-      <div className={`flex flex-1 flex-col overflow-hidden transition-colors duration-200 ${isDark ? 'bg-[#100F0F]' : 'bg-[#f8fafc]'}`}>
-        <div key={currentView} className="page-view-transition">
-          {renderContent()}
+        <div className={`flex flex-1 flex-col overflow-hidden transition-colors duration-200 ${isDark ? 'bg-[#100F0F]' : 'bg-[#f8fafc]'}`}>
+          <div key={location.pathname} className="page-view-transition">
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
+              <Route path="/inventory/products" element={<ProductsListView />} />
+              <Route path="/inventory/products/create" element={<CreateProductForm />} />
+              <Route path="/inventory/products/edit" element={<EditProductForm />} />
+              <Route path="/inventory/categories" element={<CategoryListView />} />
+              <Route path="/inventory/categories/create" element={<CreateCategoryForm />} />
+              <Route path="/inventory/categories/edit" element={<EditCategoryForm />} />
+              <Route path="/inventory/media" element={<MediaLibraryView />} />
+              <Route path="/catalog-setup" element={<CatalogSetup />} />
+              <Route path="/catalog-products" element={<CatalogSetup />} />
+              <Route path="/your-work" element={<YourWork />} />
+              <Route path="/publish" element={<PublishView />} />
+              <Route path="/settings" element={<SettingsView />} />
+              <Route path="/onboarding" element={<BusinessSelection />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
         </div>
       </div>
+    );
+  };
+
+  return (
+    <>
+      <NavigationSync />
+      <Routes>
+        {/* Auth routes */}
+        <Route
+          path="/login"
+          element={
+            isAuthenticated ? (
+              <Navigate to="/" replace />
+            ) : (
+              <Login />
+            )
+          }
+        />
+        <Route
+          path="/admin"
+          element={
+            isAdminAuthenticated ? (
+              <Navigate to="/admin/dashboard" replace />
+            ) : (
+              <AdminLogin />
+            )
+          }
+        />
+        <Route
+          path="/admin/dashboard"
+          element={
+            !isAdminAuthenticated ? (
+              isAuthenticated ? <Navigate to="/" replace /> : <Navigate to="/admin" replace />
+            ) : isAdminHeaderDesignerOpen ? (
+              <AdminHeaderDesignerModal />
+            ) : isAdminFooterDesignerOpen ? (
+              <AdminFooterDesignerModal />
+            ) : (
+              <AdminDashboard />
+            )
+          }
+        />
+        <Route path="/viewer" element={<PublicViewer />} />
+        <Route path="/viewer/:uuid" element={<PublicViewer />} />
+        <Route path="/pricing" element={<PricingView />} />
+        <Route
+          path="/editor"
+          element={
+            !isAuthenticated && !isAdminAuthenticated ? (
+              <Navigate to="/login" replace state={{ from: location }} />
+            ) : (
+              renderEditor()
+            )
+          }
+        />
+        <Route
+          path="/editor/:id"
+          element={
+            !isAuthenticated && !isAdminAuthenticated ? (
+              <Navigate to="/login" replace state={{ from: location }} />
+            ) : (
+              renderEditor()
+            )
+          }
+        />
+        <Route
+          path="/*"
+          element={
+            !isAuthenticated && !isAdminAuthenticated ? (
+              <Navigate to="/login" replace state={{ from: location }} />
+            ) : (
+              renderMainShell()
+            )
+          }
+        />
+      </Routes>
+
+      {/* Global Modals & Notifications */}
       {isHeaderDesignerOpen && <HeaderDesignerModal />}
       {isFooterDesignerOpen && <FooterDesignerModal />}
       {isCreateProductModalOpen && <CreateProductModal />}
       <ToastContainer />
       <ConfirmModal />
-    </div>
+    </>
   );
 };
 

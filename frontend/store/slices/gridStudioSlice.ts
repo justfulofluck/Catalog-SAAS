@@ -46,7 +46,8 @@ export const createGridStudioSlice: AppSlice<GridStudioSlice> = (set, get) => ({
     });
   },
 
-  generateCatalogFromTemplate: (name, template, categoryIds, options = { includeCover: true, includeIndex: true, includeCategoryCovers: true, selectedTemplateId: 'tpl-blank' } as any) => set((state) => {
+  generateCatalogFromTemplate: (name, template, categoryIds, options = { includeCover: true, includeIndex: true, includeCategoryCovers: true, selectedTemplateId: 'tpl-blank' } as any) => {
+    set((state) => {
     const theme = THEMES.find(t => t.id === state.activeThemeId) || THEMES[0];
 
     // Special Case: Blank Template (4 blank pages: Cover, Index, Product, Closing)
@@ -843,7 +844,9 @@ export const createGridStudioSlice: AppSlice<GridStudioSlice> = (set, get) => ({
       currentPageIndex: 0,
       selectedElementIds: []
     };
-  }),
+    });
+    get().setView('editor');
+  },
 
   applyCoverTemplate: (pageIndex: number | null, template: PageTemplate) => {
     get().pushHistory();

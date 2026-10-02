@@ -359,25 +359,24 @@ export const createCatalogSlice: AppSlice<CatalogSlice> = (set, get) => ({
     }
   },
 
-  loadCatalog: (id) =>
-    set((state) => {
-      const catalogToLoad = state.savedCatalogs.find((c) => String(c.id) === String(id));
-      if (catalogToLoad) {
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('active_catalog_id', String(id));
-        }
-        return {
-          catalog: JSON.parse(JSON.stringify(catalogToLoad)),
-          editingSystemTemplate: null,
-          currentView: 'editor',
-          currentPageIndex: 0,
-          selectedElementIds: [],
-          undoStack: [],
-          redoStack: [],
-        };
+  loadCatalog: (id) => {
+    const catalogToLoad = get().savedCatalogs.find((c) => String(c.id) === String(id));
+    if (catalogToLoad) {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('active_catalog_id', String(id));
       }
-      return {};
-    }),
+      set({
+        catalog: JSON.parse(JSON.stringify(catalogToLoad)),
+        editingSystemTemplate: null,
+        currentView: 'editor',
+        currentPageIndex: 0,
+        selectedElementIds: [],
+        undoStack: [],
+        redoStack: [],
+      });
+      get().setView('editor');
+    }
+  },
 
   deleteCatalog: async (id) => {
     const { catalogsApi } = await import('../../client');

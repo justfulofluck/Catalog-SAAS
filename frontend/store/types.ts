@@ -35,6 +35,7 @@ export interface User {
 }
 
 export type View =
+  | 'login'
   | 'dashboard'
   | 'products-list'
   | 'create-product'

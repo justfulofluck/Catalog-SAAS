@@ -159,9 +159,9 @@ export async function exportCatalogToPDF(
       offscreenCanvas.clear();
       offscreenCanvas.backgroundColor = page.backgroundColor || catalog.backgroundColor || '#ffffff';
 
-      // Header & Footer elements calculation
-      const pageHasHeader = Boolean(catalog.hasHeader !== false && page.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover');
-      const pageHasFooter = Boolean(catalog.hasFooter !== false && page.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover');
+      // Header & Footer elements calculation (Never on cover or closing pages)
+      const pageHasHeader = Boolean(catalog.hasHeader !== false && page.hasHeader !== false && (catalog.headerElements?.length || 0) > 0 && page.type !== 'cover' && page.type !== 'closing');
+      const pageHasFooter = Boolean(catalog.hasFooter !== false && page.hasFooter !== false && (catalog.footerElements?.length || 0) > 0 && page.type !== 'cover' && page.type !== 'closing');
       const footerYOffset = PAGE_HEIGHT - (catalog.footerHeight ?? 38) - (catalog.marginBottom || 0);
 
       const pageCategory = getPageCategoryName(page, categories, products, catalog);

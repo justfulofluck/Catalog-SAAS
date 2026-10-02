@@ -2,12 +2,14 @@ import React, { useRef } from 'react';
 import {
   ChevronDown, Search, X, Check, Minus, Plus, Bold, Italic,
   AlignLeft, AlignCenter, AlignRight, Palette, ArrowUp, ArrowDown,
-  ChevronsUp, ChevronsDown, Copy, Trash2, ZoomIn, ZoomOut, RotateCcw
+  ChevronsUp, ChevronsDown, Copy, Trash2, ZoomIn, ZoomOut, RotateCcw,
+  Grid3x3
 } from 'lucide-react';
 import { CanvasElement } from '../../../types';
-import { CATEGORIZED_FONTS, PAGE_WIDTH } from '../../../constants';
+import { CATEGORIZED_FONTS, PAGE_WIDTH, PX_PER_MM } from '../../../constants';
 import { CANVAS_PAD_X, CANVAS_PAD_Y, toMm } from './constants';
 import AdvancedColorPicker from '../../Properties/AdvancedColorPicker';
+import { PageGridOverlay } from '../HeaderDesigner/PageGridOverlay';
 
 interface FooterCanvasStageProps {
   isDark: boolean;
@@ -50,6 +52,14 @@ export const FooterCanvasStage: React.FC<FooterCanvasStageProps> = ({
   const fontMenuRef = useRef<HTMLDivElement>(null);
   const [showColorPicker, setShowColorPicker] = React.useState<boolean>(false);
 
+  // Page Grid & Guidelines states (defaulting to ON for intuitive design alignment)
+  const [showGrid, setShowGrid] = React.useState<boolean>(true);
+  const [showCenterGuides, setShowCenterGuides] = React.useState<boolean>(true);
+  const [showMargins, setShowMargins] = React.useState<boolean>(true);
+  const [snapToGrid, setSnapToGrid] = React.useState<boolean>(true);
+  const [isGridMenuOpen, setIsGridMenuOpen] = React.useState<boolean>(false);
+  const gridMenuRef = useRef<HTMLDivElement>(null);
+
   // Close floating popovers on outside click
   React.useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -59,10 +69,43 @@ export const FooterCanvasStage: React.FC<FooterCanvasStageProps> = ({
       if (fontMenuRef.current && !fontMenuRef.current.contains(e.target as Node)) {
         setIsFontMenuOpen(false);
       }
+      if (gridMenuRef.current && !gridMenuRef.current.contains(e.target as Node)) {
+        setIsGridMenuOpen(false);
+      }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
+  // Magnetic snap to grid during object moving
+  React.useEffect(() => {
+    const canvas = fabricCanvasRef.current;
+    if (!canvas) return;
+
+    const handleObjectMoving = (e: any) => {
+      if (!snapToGrid) return;
+      const obj = e.target;
+      if (!obj) return;
+      const snapPx = PX_PER_MM * 2.5; // ~9.45px (2.5mm precision)
+      const isCentered = obj.originX === 'center';
+      const curX = isCentered ? (obj.left || 0) - (obj.width || 0) / 2 - CANVAS_PAD_X : (obj.left || 0) - CANVAS_PAD_X;
+      const curY = isCentered ? (obj.top || 0) - (obj.height || 0) / 2 - CANVAS_PAD_Y : (obj.top || 0) - CANVAS_PAD_Y;
+
+      const snappedX = Math.round(curX / snapPx) * snapPx;
+      const snappedY = Math.round(curY / snapPx) * snapPx;
+
+      obj.set({
+        left: isCentered ? snappedX + (obj.width || 0) / 2 + CANVAS_PAD_X : snappedX + CANVAS_PAD_X,
+        top: isCentered ? snappedY + (obj.height || 0) / 2 + CANVAS_PAD_Y : snappedY + CANVAS_PAD_Y,
+      });
+      obj.setCoords();
+    };
+
+    canvas.on('object:moving', handleObjectMoving);
+    return () => {
+      canvas.off('object:moving', handleObjectMoving);
+    };
+  }, [snapToGrid, fabricCanvasRef]);
 
   const filteredFonts = CATEGORIZED_FONTS.map(group => ({
     ...group,
@@ -530,8 +573,114 @@ export const FooterCanvasStage: React.FC<FooterCanvasStageProps> = ({
           </div>
         )}
 
-        {/* Right Side: Zoom Controls */}
+        {/* Right Side: Grid & Zoom Controls */}
         <div className="flex items-center gap-2">
+          {/* Page Grid Controls Dropdown */}
+          <div className="relative" ref={gridMenuRef}>
+            <button
+              onClick={() => setIsGridMenuOpen(!isGridMenuOpen)}
+              className={`h-7 px-2.5 rounded-[4px] border flex items-center gap-1.5 text-xs font-bold transition-all ${
+                showGrid || showCenterGuides || showMargins
+                  ? isDark
+                    ? 'bg-[#0F3D3E] border-[#E2DCC8]/50 text-white shadow-sm'
+                    : 'bg-[#0F3D3E] border-[#0F3D3E] text-white shadow-sm'
+                  : isDark
+                    ? 'bg-[#1a1a1c] hover:bg-[#252528] border-[#38383c] hover:border-[#E2DCC8]/40 text-slate-300'
+                    : 'bg-slate-100 hover:bg-slate-200 border-slate-300 hover:border-[#0F3D3E]/40 text-slate-700'
+              }`}
+              title="Page Grid & Alignment Guides"
+            >
+              <Grid3x3 size={13} className={showGrid ? 'text-cyan-400' : 'text-slate-400'} />
+              <span>Grid</span>
+              <span className={`text-[9px] px-1 py-0.2 rounded font-mono font-bold ${
+                showGrid ? 'bg-cyan-950/80 text-cyan-300 border border-cyan-500/30' : 'text-slate-400'
+              }`}>
+                {showGrid ? 'ON' : 'OFF'}
+              </span>
+              <ChevronDown size={11} className={`text-slate-400 transition-transform ${isGridMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isGridMenuOpen && (
+              <div className={`absolute top-full right-0 mt-1.5 w-64 border rounded-[8px] shadow-2xl p-2.5 z-[110] animate-in fade-in zoom-in-95 flex flex-col gap-1.5 ${
+                isDark ? 'bg-[#18181b] border-[#38383c] text-white' : 'bg-white border-slate-300 text-slate-800'
+              }`}>
+                <div className={`text-[10px] font-black uppercase tracking-wider pb-1.5 border-b flex items-center justify-between ${
+                  isDark ? 'text-[#E2DCC8] border-[#2e2e32]' : 'text-[#0F3D3E] border-slate-200'
+                }`}>
+                  <span>Page Grid & Guides</span>
+                  <button
+                    onClick={() => {
+                      const allOn = !showGrid;
+                      setShowGrid(allOn);
+                      setShowCenterGuides(allOn);
+                      setShowMargins(allOn);
+                    }}
+                    className="text-[9px] hover:underline lowercase font-mono opacity-80"
+                  >
+                    {showGrid ? 'hide all' : 'show all'}
+                  </button>
+                </div>
+
+                <label className="flex items-center justify-between p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-xs">
+                  <span className="flex items-center gap-2 font-medium">
+                    <Grid3x3 size={13} className="text-cyan-500" />
+                    <span>Millimeter Grid (10mm)</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showGrid}
+                    onChange={(e) => setShowGrid(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F3D3E] rounded cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-xs">
+                  <span className="flex items-center gap-2 font-medium">
+                    <span className="w-3 h-0.5 border-b-2 border-dashed border-cyan-400" />
+                    <span>Center Guides (105mm)</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showCenterGuides}
+                    onChange={(e) => setShowCenterGuides(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F3D3E] rounded cursor-pointer"
+                  />
+                </label>
+
+                <label className="flex items-center justify-between p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-xs">
+                  <span className="flex items-center gap-2 font-medium">
+                    <span className="w-3 h-0.5 border-b-2 border-dashed border-purple-400" />
+                    <span>Print Safety Margins (10mm)</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={showMargins}
+                    onChange={(e) => setShowMargins(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F3D3E] rounded cursor-pointer"
+                  />
+                </label>
+
+                <div className={`h-px my-0.5 ${isDark ? 'bg-[#2a2a2e]' : 'bg-slate-200'}`} />
+
+                <label className="flex items-center justify-between p-1.5 rounded hover:bg-black/5 dark:hover:bg-white/5 cursor-pointer text-xs">
+                  <span className="flex items-center gap-2 font-semibold">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    <span>Magnetic Snap to Grid</span>
+                  </span>
+                  <input
+                    type="checkbox"
+                    checked={snapToGrid}
+                    onChange={(e) => setSnapToGrid(e.target.checked)}
+                    className="w-4 h-4 accent-[#0F3D3E] rounded cursor-pointer"
+                  />
+                </label>
+              </div>
+            )}
+          </div>
+
+          <div className={`h-4 w-px mx-0.5 ${isDark ? 'bg-[#333]' : 'bg-slate-200'}`} />
+
+          {/* Zoom Controls */}
           <div className={`flex items-center border rounded overflow-hidden h-7 ${
             isDark ? 'bg-[#1a1a1c] border-[#333]' : 'bg-slate-100 border-slate-300'
           }`}>
@@ -596,6 +745,21 @@ export const FooterCanvasStage: React.FC<FooterCanvasStageProps> = ({
             </span>
             <span>{toMm(footerHeight)}mm</span>
           </div>
+
+          {/* Page Grid & Alignment Guidelines Overlay */}
+          <PageGridOverlay
+            isDark={isDark}
+            width={PAGE_WIDTH}
+            height={footerHeight}
+            zoom={zoom}
+            padX={CANVAS_PAD_X}
+            padY={CANVAS_PAD_Y}
+            showGrid={showGrid}
+            showCenterGuides={showCenterGuides}
+            showMargins={showMargins}
+            gridSizeMm={10}
+            marginMm={10}
+          />
 
           {/* Fabric Canvas DOM Node */}
           <canvas ref={canvasElRef} className="rounded-[4px] ring-1 ring-black/20" />

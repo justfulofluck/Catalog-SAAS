@@ -241,50 +241,42 @@ const EditorToolbar: React.FC = () => {
           <LayoutDashboard size={18} />
         </button>
         <ChevronRight size={14} className={isDark ? "text-[#E2DCC8]/30" : "text-slate-300"} />
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={`text-[9px] font-black uppercase tracking-widest leading-none ${
-              isDark ? 'text-emerald-400/90' : 'text-emerald-700'
-            }`}>
-              {editingSystemTemplate ? 'Cover Studio • Master Blueprint' : 'Active Publication'}
-            </span>
-            {/* Canva-style Cloud Auto-Save Indicator */}
-            <div className={`flex items-center gap-1.5 pl-2 border-l ${isDark ? 'border-white/10' : 'border-slate-200'}`}>
-              {saveStatus === 'saving' && (
-                <span className="text-[10px] text-amber-400 font-medium flex items-center gap-1 animate-pulse" title="Auto-saving changes to cloud...">
-                  <Loader2 size={11} className="animate-spin text-amber-400" />
-                  <span>Saving...</span>
-                </span>
-              )}
-              {saveStatus === 'saved' && (
-                <span className={`text-[10px] font-medium flex items-center gap-1 ${isDark ? 'text-emerald-400/80' : 'text-emerald-600'}`} title="All changes saved to cloud">
-                  <Cloud size={12} className={isDark ? 'text-emerald-400' : 'text-emerald-600'} />
-                  <span>Saved{lastSavedAt ? ` (${lastSavedAt})` : ''}</span>
-                </span>
-              )}
-              {saveStatus === 'unsaved' && (
-                <span className={`text-[10px] font-medium flex items-center gap-1 ${isDark ? 'text-[#888888]' : 'text-slate-400'}`} title="Unsaved changes (auto-saving shortly...)">
-                  <Cloud size={12} className={isDark ? 'text-[#888888]' : 'text-slate-400'} />
-                  <span>Changes detected...</span>
-                </span>
-              )}
-              {saveStatus === 'error' && (
-                <button
-                  onClick={handleSave}
-                  className="text-[10px] text-red-400 hover:text-red-300 font-medium flex items-center gap-1 cursor-pointer bg-red-950/40 px-1.5 py-0.5 rounded border border-red-800/50"
-                  title="Auto-save failed. Click to retry."
-                >
-                  <AlertCircle size={11} className="text-red-400" />
-                  <span>Retry Save</span>
-                </button>
-              )}
-            </div>
-          </div>
-          <span className={`font-black text-xs uppercase tracking-tight ${
+        <div className="flex items-center gap-3">
+          <span className={`font-black text-xs uppercase tracking-tight truncate max-w-[200px] md:max-w-[320px] ${
             isDark ? 'text-[#F1F1F1]' : 'text-slate-800'
           }`}>
             {catalog.name || (editingSystemTemplate ? 'New Cover Blueprint' : 'Untitled Project')}
           </span>
+
+          {/* Clean Cloud Auto-Save Indicator */}
+          <div className="flex items-center">
+            {saveStatus === 'saving' && (
+              <span className="text-[11px] text-amber-400 font-medium flex items-center gap-1.5 animate-pulse" title="Saving changes...">
+                <Loader2 size={13} className="animate-spin text-amber-400" />
+                <span>Saving...</span>
+              </span>
+            )}
+            {saveStatus === 'saved' && (
+              <span className={`flex items-center transition-colors ${isDark ? 'text-emerald-400' : 'text-emerald-600'}`} title="All changes saved to cloud">
+                <Cloud size={14} />
+              </span>
+            )}
+            {saveStatus === 'unsaved' && (
+              <span className={`flex items-center transition-colors ${isDark ? 'text-[#777777]' : 'text-slate-400'}`} title="Unsaved changes">
+                <Cloud size={14} />
+              </span>
+            )}
+            {saveStatus === 'error' && (
+              <button
+                onClick={handleSave}
+                className="text-[10px] text-red-400 hover:text-red-300 font-medium flex items-center gap-1 cursor-pointer bg-red-950/40 px-1.5 py-0.5 rounded border border-red-800/50"
+                title="Auto-save failed. Click to retry."
+              >
+                <AlertCircle size={12} className="text-red-400" />
+                <span>Retry</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

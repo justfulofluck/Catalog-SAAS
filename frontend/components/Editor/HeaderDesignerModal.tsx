@@ -298,14 +298,21 @@ export const HeaderDesignerModal: React.FC = () => {
       const isDivider = (typeof obj.id === 'string' && (
         obj.id.startsWith('hdr-div') ||
         obj.id.startsWith('hdr-dbl') ||
-        obj.id.startsWith('hdr-shape') && elObj?.shapeType === 'line'
-      )) || elObj?.shapeType === 'line' || obj.isDivider === true;
+        obj.id.startsWith('hdr-shape') && elObj?.shapeType === 'line' ||
+        obj.id.includes('line') ||
+        obj.id.includes('accent') ||
+        obj.id.includes('divider')
+      )) || elObj?.shapeType === 'line' || elObj?.shapeType === 'curved-line' || elObj?.shapeType === 'elbow-line' || (elObj?.height !== undefined && elObj.height <= 4 && (elObj.width || 0) >= 20) || obj.isDivider === true;
 
       let posX = Math.round((obj.left || 0) - CANVAS_PAD_X);
       let posY = Math.round((obj.top || 0) - CANVAS_PAD_Y);
 
       if (isDivider || obj.originX === 'center' || obj.originY === 'center') {
-        if (typeof obj.calcTransformMatrix === 'function') {
+        const coords = typeof obj.getCoords === 'function' ? obj.getCoords() : null;
+        if (coords && coords.length > 0) {
+          posX = Math.round(coords[0].x - CANVAS_PAD_X);
+          posY = Math.round(coords[0].y - CANVAS_PAD_Y);
+        } else if (typeof obj.calcTransformMatrix === 'function') {
           const matrix = obj.calcTransformMatrix();
           const topLeft = util.transformPoint(new Point(-obj.width / 2, -obj.height / 2), matrix);
           posX = Math.round(topLeft.x - CANVAS_PAD_X);
@@ -326,9 +333,10 @@ export const HeaderDesignerModal: React.FC = () => {
 
       if (isDivider) {
         const newW = Math.max(10, Math.round((obj.width || 0) * sx));
+        const preserveHeight = elObj?.height || 1.5;
         updates.width = newW;
-        updates.height = elObj?.height || 2;
-        obj.set({ width: newW, scaleX: 1, scaleY: 1 });
+        updates.height = preserveHeight;
+        obj.set({ width: newW, height: preserveHeight, scaleX: 1, scaleY: 1 });
         obj.setCoords();
       } else if (obj instanceof IText || obj.type === 'i-text' || obj.type === 'text' || obj.type === 'textbox') {
         const newFontSize = Math.max(6, Math.round((obj.fontSize || elObj?.fontSize || 16) * sx));
@@ -364,8 +372,8 @@ export const HeaderDesignerModal: React.FC = () => {
         });
         obj.setCoords();
       } else {
-        const newW = Math.max(10, Math.round((obj.width || 0) * sx));
-        const newH = Math.max(10, Math.round((obj.height || 0) * sy));
+        const newW = Math.max(1, Math.round((obj.width || 0) * sx));
+        const newH = Math.max(1, Math.round((obj.height || 0) * sy));
         updates.width = newW;
         updates.height = newH;
         obj.set({ width: newW, height: newH, scaleX: 1, scaleY: 1 });
@@ -639,9 +647,17 @@ export const HeaderDesignerModal: React.FC = () => {
         const obj = existingMap.get(el.id);
 
         if (obj) {
+          const isCentered = obj.originX === 'center';
+          const targetLeft = isCentered
+            ? (el.x || 0) + (el.width || 0) / 2 + CANVAS_PAD_X
+            : (el.x || 0) + CANVAS_PAD_X;
+          const targetTop = isCentered
+            ? (el.y || 0) + (el.height || 0) / 2 + CANVAS_PAD_Y
+            : (el.y || 0) + CANVAS_PAD_Y;
+
           obj.set({
-            left: (el.x || 0) + CANVAS_PAD_X,
-            top: (el.y || 0) + CANVAS_PAD_Y,
+            left: targetLeft,
+            top: targetTop,
             angle: el.rotation || 0,
             opacity: el.opacity ?? 1,
             visible: el.visible !== false,
@@ -691,16 +707,18 @@ export const HeaderDesignerModal: React.FC = () => {
             const isCurvedLine = el.shapeType === 'curved-line';
             const isElbowLine = el.shapeType === 'elbow-line';
             const isLineAny = isStraightLine || isCurvedLine || isElbowLine;
+            const isThinLineRect = (el.height <= 4 && (el.width || 0) >= 20) || (typeof el.id === 'string' && (el.id.includes('line') || el.id.includes('divider') || el.id.includes('accent')));
+            const treatAsLine = isLineAny || isThinLineRect;
 
             const shapeProps = {
-              left: (el.x || 0) + CANVAS_PAD_X,
-              top: (el.y || 0) + CANVAS_PAD_Y,
+              left: treatAsLine ? (el.x || 0) + (el.width || 0) / 2 + CANVAS_PAD_X : (el.x || 0) + CANVAS_PAD_X,
+              top: treatAsLine ? (el.y || 0) + (el.height || 0) / 2 + CANVAS_PAD_Y : (el.y || 0) + CANVAS_PAD_Y,
               width: el.width,
               height: el.height,
               angle: el.rotation || 0,
               opacity: el.opacity ?? 1,
-              originX: 'left' as const,
-              originY: 'top' as const,
+              originX: treatAsLine ? ('center' as const) : ('left' as const),
+              originY: treatAsLine ? ('center' as const) : ('top' as const),
               objectCaching: false,
             };
 

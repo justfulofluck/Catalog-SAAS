@@ -255,14 +255,15 @@ const FloatingToolbar: React.FC<Props> = ({
     }
   };
 
-  // Position toolbar centered above selection, flip to bottom only if pushed extremely off-canvas
+  // Position toolbar centered above selection with generous breathing room, flip to bottom only if pushed extremely off-canvas
   const toolbarHeight = 44; // Approx height of horizontal bar
-  let toolbarTop = minY * zoom - toolbarHeight - 16;
+  const verticalSpacing = 38; // Increased from 16 to 38px to maintain clean distance above selection bounding box and handles
+  let toolbarTop = minY * zoom - toolbarHeight - verticalSpacing;
   const isOffTop = toolbarTop < -80;
   const isPopoverOffTop = toolbarTop < 300;
 
   if (isOffTop) {
-    toolbarTop = maxY * zoom + 12;
+    toolbarTop = maxY * zoom + 32;
   }
 
   const toolbarStyle: React.CSSProperties = {

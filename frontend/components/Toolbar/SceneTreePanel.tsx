@@ -167,9 +167,13 @@ const SceneTreePanel: React.FC = () => {
 
     if (!isSceneTreeOpen || !currentPage) return null;
 
-    const displayElements = [...currentPage.elements].reverse();
-    const headerDisplayElements = [...(catalog.headerElements || [])].filter(el => !el.id?.startsWith('hdr-bg')).reverse();
-    const footerDisplayElements = [...(catalog.footerElements || [])].filter(el => !el.id?.startsWith('ftr-bg')).reverse();
+    const isCoverOrClosing = currentPage.type === 'cover' || currentPage.type === 'closing';
+    const headerDisplayElements = (!isCoverOrClosing && catalog.hasHeader !== false && currentPage.hasHeader !== false)
+      ? [...(catalog.headerElements || [])].filter(el => !el.id?.startsWith('hdr-bg')).reverse()
+      : [];
+    const footerDisplayElements = (!isCoverOrClosing && catalog.hasFooter !== false && currentPage.hasFooter !== false)
+      ? [...(catalog.footerElements || [])].filter(el => !el.id?.startsWith('ftr-bg')).reverse()
+      : [];
 
     return (
         <div
