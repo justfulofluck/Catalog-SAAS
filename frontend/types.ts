@@ -2,7 +2,7 @@ export type ElementType = 'text' | 'image' | 'shape' | 'product-block' | 'commen
 export type PageType = 'cover' | 'intro' | 'product' | 'interior' | 'index' | 'blank' | 'closing';
 export type ShapeType = 'rect' | 'roundedRect' | 'circle' | 'triangle' | 'rightTriangle' | 'triangleDown' | 'diamond' | 'pentagon' | 'hexagon' | 'octagon' | 'star' | 'arrow' | 'arrow4' | 'parallelogram' | 'cross' | 'cloud' | 'wave' | 'pill' | 'line' | 'curved-line' | 'elbow-line' | 'chevron' | 'none';
 export type FrameShapeType = 'circle' | 'roundedRect' | 'oval' | 'hexagon' | 'diamond' | 'pill' | 'octagon';
-export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image' | 'minimal-pill';
+export type CardTheme = 'classic-stack' | 'split-row' | 'editorial-overlay' | 'minimal-image' | 'minimal-pill' | 'clean-badge' | 'minimal-row' | string;
 export type PaginationStyle = 'simple' | 'pill' | 'minimal' | 'none';
 export type LogoStyle = 'text' | 'boxed' | 'modern' | 'none';
 
@@ -260,12 +260,43 @@ export interface PageTemplate {
   backgroundColor?: string;
 }
 
+export interface CardThemeConfig {
+  id?: string;
+  name: string;
+  category?: string;
+  layout: 'classic-stack' | 'editorial-overlay' | 'clean-badge' | 'minimal-row' | 'split-row';
+  backgroundColor: string;
+  borderColor: string;
+  borderWidth: number;
+  borderRadius: number;
+  padding: number;
+  titleColor: string;
+  titleFontSize?: number;
+  titleFontWeight?: 'normal' | 'medium' | 'bold' | 'black';
+  priceColor: string;
+  priceFontSize?: number;
+  priceBadgeStyle?: 'pill' | 'tag' | 'minimal' | 'solid-box' | 'none';
+  priceBadgeBg?: string;
+  priceBadgeTextColor?: string;
+  skuColor: string;
+  skuFontSize?: number;
+  showSku: boolean;
+  specsColor: string;
+  specsFontSize?: number;
+  specsStyle?: 'list' | 'chips' | '2col-grid';
+  showCategoryBadge?: boolean;
+  categoryBadgeBg?: string;
+  categoryBadgeTextColor?: string;
+  accentColor?: string;
+  showDivider?: boolean;
+}
+
 export interface SystemTemplate {
   id: number;
   uuid: string;
   name: string;
   category: string;
-  type: 'full_catalog' | 'cover' | 'product_grid' | 'header' | 'footer';
+  type: 'full_catalog' | 'cover' | 'product_grid' | 'header' | 'footer' | 'card_theme';
   description?: string;
   thumbnail?: string;
   theme_id?: string;

@@ -16,6 +16,7 @@ import {
 import { resolveProductImage } from '../../../utils/imageUtils';
 import { resolveFieldLabel } from '../../../utils/fieldUtils';
 import { CatalogSetupState } from './useCatalogSetup';
+import { useStore } from '../../../store/useStore';
 
 export const Phase5Schema: React.FC<CatalogSetupState> = ({
   activeSchemaTab,
@@ -40,6 +41,26 @@ export const Phase5Schema: React.FC<CatalogSetupState> = ({
   products,
   isDark
 }) => {
+  const systemTemplates = useStore(state => state.systemTemplates) || [];
+  const customCardThemes = systemTemplates.filter(t => t.type === 'card_theme' && t.is_active !== false);
+
+  const allAvailableThemes = [
+    { id: 'classic-stack', label: 'Classic Clean' },
+    { id: 'editorial-overlay', label: 'Dark Luxe' },
+    { id: 'clean-badge', label: 'Clean Badge' },
+    { id: 'minimal-row', label: 'Compact Row' },
+    ...customCardThemes.map(t => ({
+      id: String(t.id),
+      label: t.name,
+      isCustom: true
+    }))
+  ];
+
+  const selectedCustomTheme = customCardThemes.find(
+    t => String(t.id) === String(cardFields.cardTheme) || t.name === cardFields.cardTheme
+  );
+  const activeCustomConfig = selectedCustomTheme?.grid_data;
+
   return (
     <div className="p-8 w-full space-y-6 flex-1 max-w-none">
       {/* If user has mixed layouts, show Tab Switcher */}
@@ -411,30 +432,30 @@ export const Phase5Schema: React.FC<CatalogSetupState> = ({
                 <div className={`p-3.5 rounded-[4px] border space-y-2.5 ${
                   isDark ? 'bg-[#100F0F] border-[#E2DCC8]/15' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <h4 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Card Visual Style</h4>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setCardFields(prev => ({ ...prev, cardTheme: 'classic-stack' }))}
-                      className={`py-2 px-3 rounded-[4px] text-xs font-bold uppercase tracking-wider border transition-all ${
-                        cardFields.cardTheme === 'classic-stack'
-                          ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/40 shadow-sm'
-                          : (isDark ? 'bg-[#181818] border-[#333] text-[#888]' : 'bg-white border-slate-200 text-slate-600')
-                      }`}
-                    >
-                      Classic Clean
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setCardFields(prev => ({ ...prev, cardTheme: 'editorial-overlay' }))}
-                      className={`py-2 px-3 rounded-[4px] text-xs font-bold uppercase tracking-wider border transition-all ${
-                        cardFields.cardTheme === 'editorial-overlay'
-                          ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/40 shadow-sm'
-                          : (isDark ? 'bg-[#181818] border-[#333] text-[#888]' : 'bg-white border-slate-200 text-slate-600')
-                      }`}
-                    >
-                      Dark Luxe
-                    </button>
+                  <div className="flex items-center justify-between">
+                    <h4 className={`text-xs font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>Card Visual Style</h4>
+                    <span className="text-[10px] font-mono text-zinc-500">{allAvailableThemes.length} styles</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                    {allAvailableThemes.map(theme => (
+                      <button
+                        key={theme.id}
+                        type="button"
+                        onClick={() => setCardFields(prev => ({ ...prev, cardTheme: theme.id as any }))}
+                        className={`py-2 px-3 rounded-[4px] text-xs font-bold uppercase tracking-wider border transition-all text-left truncate flex items-center justify-between ${
+                          cardFields.cardTheme === theme.id
+                            ? 'bg-[#0F3D3E] text-white border-[#E2DCC8]/40 shadow-sm'
+                            : (isDark ? 'bg-[#181818] border-[#333] text-[#888]' : 'bg-white border-slate-200 text-slate-600')
+                        }`}
+                      >
+                        <span className="truncate">{theme.label}</span>
+                        {(theme as any).isCustom && (
+                          <span className="text-[8px] font-mono px-1 py-0.2 rounded bg-violet-500/20 text-violet-300 shrink-0 ml-1">
+                            Admin
+                          </span>
+                        )}
+                      </button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -458,11 +479,15 @@ export const Phase5Schema: React.FC<CatalogSetupState> = ({
 
                 {/* Mockup Card Box */}
                 <div className="flex justify-center p-6 bg-slate-900/50 rounded-[4px] border border-white/5">
-                  <div className={`w-64 rounded-[6px] border p-4 shadow-xl space-y-3 transition-all ${
-                    cardFields.cardTheme === 'editorial-overlay' 
-                      ? 'bg-[#0f172a] text-white border-slate-700' 
-                      : 'bg-white text-slate-900 border-slate-200'
-                  }`}>
+                  <div
+                    className="w-64 rounded-[6px] border p-4 shadow-xl space-y-3 transition-all"
+                    style={{
+                      backgroundColor: activeCustomConfig?.backgroundColor || (cardFields.cardTheme === 'editorial-overlay' ? '#0f172a' : '#ffffff'),
+                      borderColor: activeCustomConfig?.borderColor || (cardFields.cardTheme === 'editorial-overlay' ? '#334155' : '#e2e8f0'),
+                      borderRadius: `${activeCustomConfig?.borderRadius !== undefined ? activeCustomConfig.borderRadius : 6}px`,
+                      color: activeCustomConfig?.titleColor || (cardFields.cardTheme === 'editorial-overlay' ? '#ffffff' : '#0f172a')
+                    }}
+                  >
                     {/* Image */}
                     <div className="aspect-[4/3] w-full rounded-[4px] overflow-hidden bg-slate-100 flex items-center justify-center p-2">
                       {cardSampleProduct ? (

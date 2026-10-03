@@ -62,6 +62,7 @@ class SystemTemplate(models.Model):
         ('product_grid', 'Product Grid Layout'),
         ('header', 'Master Header Template'),
         ('footer', 'Master Footer Template'),
+        ('card_theme', 'Product Card Theme'),
     ]
 
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)

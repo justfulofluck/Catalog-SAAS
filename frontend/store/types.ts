@@ -155,6 +155,10 @@ export interface SystemAdminSlice {
   editingAdminFooterTemplate: SystemTemplate | null;
   setIsAdminFooterDesignerOpen: (isOpen: boolean, template?: SystemTemplate | null) => void;
 
+  isAdminCardThemeDesignerOpen: boolean;
+  editingAdminCardTheme: SystemTemplate | null;
+  setIsAdminCardThemeDesignerOpen: (isOpen: boolean, template?: SystemTemplate | null) => void;
+
   fetchSystemSettings: () => Promise<void>;
   updateSystemSettings: (updates: Partial<SystemSetting>) => Promise<boolean>;
   changeAdminPassword: (data: { current_password?: string; new_password: string }) => Promise<{ success: boolean; message: string }>;
