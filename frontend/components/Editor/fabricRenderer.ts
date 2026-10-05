@@ -115,6 +115,7 @@ async function _elementToFabricObject(
       textAlign: el.textAlign || 'left',
       lineHeight: el.lineHeight || 1.2,
       underline: el.textDecoration?.includes('underline') || false,
+      linethrough: el.textDecoration?.includes('line-through') || false,
       charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 16)) * 1000) : 0,
       splitByGrapheme: false,
       editable: false, // Disable Fabric's native text editing — the app uses its own HTML overlay

@@ -672,6 +672,7 @@ export const HeaderDesignerModal: React.FC = () => {
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
               underline: el.textDecoration?.includes('underline') || false,
+              linethrough: el.textDecoration?.includes('line-through') || false,
             });
             applyElementFill(obj, el.fill, el.width, el.height);
             if (typeof (obj as any).initDimensions === 'function') (obj as any).initDimensions();
@@ -694,6 +695,7 @@ export const HeaderDesignerModal: React.FC = () => {
               fontStyle: el.fontStyle || 'normal',
               textAlign: el.textAlign || 'left',
               underline: el.textDecoration?.includes('underline') || false,
+              linethrough: el.textDecoration?.includes('line-through') || false,
               charSpacing: el.letterSpacing ? Math.round(((el.letterSpacing) / (el.fontSize || 16)) * 1000) : 0,
               angle: el.rotation || 0,
               opacity: el.opacity ?? 1,
@@ -983,10 +985,6 @@ export const HeaderDesignerModal: React.FC = () => {
 
     setAppliedSuccess(true);
     setTimeout(() => setAppliedSuccess(false), 2500);
-
-    setTimeout(() => {
-      saveCatalog().catch(err => console.warn('Auto-saving catalog after applying header:', err));
-    }, 150);
   };
 
   if (!isHeaderDesignerOpen) return null;

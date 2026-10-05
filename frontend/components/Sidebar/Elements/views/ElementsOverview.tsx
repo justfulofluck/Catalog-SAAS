@@ -1,5 +1,5 @@
 import React from 'react';
-import { Compass, X } from 'lucide-react';
+import { SquareMousePointer, X } from 'lucide-react';
 import { ELEMENT_ITEMS } from '../elementItems';
 import { ElementCardPreview } from '../ElementCardPreview';
 
@@ -23,7 +23,7 @@ export const ElementsOverview: React.FC<ElementsOverviewProps> = ({
       <div className={`p-3.5 border-b flex items-center justify-between shrink-0 ${isDark ? 'border-[#222] bg-[#161616]' : 'border-slate-200 bg-slate-50'}`}>
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#0F3D3E] text-[#E2DCC8] flex items-center justify-center shadow-sm">
-            <Compass size={16} />
+            <SquareMousePointer size={16} />
           </div>
           <div>
             <h2 className="text-xs font-black uppercase tracking-wider">Elements</h2>

@@ -69,7 +69,7 @@ import {
   Type,
   Sliders,
   Package,
-  PenTool,
+  SquareMousePointer,
   Video,
   Palette
 } from 'lucide-react';
@@ -250,7 +250,7 @@ const App: React.FC = () => {
                       }`}
                       title="Elements, Badges & Shapes"
                     >
-                      <PenTool size={20} />
+                      <SquareMousePointer size={20} />
                     </button>
 
                     <button
@@ -414,7 +414,7 @@ const App: React.FC = () => {
                       }`}
                       title="Elements & Blocks"
                     >
-                      <PenTool size={20} />
+                      <SquareMousePointer size={20} />
                     </button>
 
                     <button

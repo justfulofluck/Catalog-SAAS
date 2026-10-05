@@ -19,7 +19,8 @@ import {
   Package,
   Sun,
   Moon,
-  Info
+  Info,
+  ArrowLeft
 } from 'lucide-react';
 
 // Sample preview products
@@ -306,7 +307,6 @@ export const AdminCardThemeDesignerModal: React.FC = () => {
     if (!editingAdminCardTheme) {
       setTemplateName(preset.name);
     }
-    showToast?.(`Loaded preset "${preset.name}"`, 'info');
   };
 
   const handleSave = async () => {
@@ -355,7 +355,20 @@ export const AdminCardThemeDesignerModal: React.FC = () => {
       {/* ── TOP NAV BAR ────────────────────────────────────────── */}
       <header className="h-14 bg-[#121214] border-b border-[#26262a] px-5 flex items-center justify-between gap-4 shrink-0 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-[4px] bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/30 flex items-center justify-center shadow-sm">
+          {/* Back Button */}
+          <button
+            type="button"
+            onClick={() => setIsAdminCardThemeDesignerOpen(false, null)}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-[4px] border border-[#38383c] hover:border-[#E2DCC8]/50 bg-[#1a1a1c] hover:bg-[#252528] text-white transition-all shadow-sm group active:scale-95 cursor-pointer shrink-0"
+            title="Back to Super Admin Dashboard"
+          >
+            <ArrowLeft size={14} className="text-[#E2DCC8] group-hover:-translate-x-0.5 transition-transform" />
+            <span className="text-xs font-bold text-[#E2DCC8]">Back</span>
+          </button>
+
+          <div className="h-6 w-px bg-[#26262a] shrink-0" />
+
+          <div className="w-8 h-8 rounded-[4px] bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/30 flex items-center justify-center shadow-sm shrink-0">
             <Sparkles size={16} />
           </div>
           <div>

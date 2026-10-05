@@ -971,10 +971,6 @@ export const FooterDesignerModal: React.FC = () => {
 
     setAppliedSuccess(true);
     setTimeout(() => setAppliedSuccess(false), 2500);
-
-    setTimeout(() => {
-      saveCatalog().catch(err => console.warn('Auto-saving catalog after applying footer:', err));
-    }, 150);
   };
 
   if (!isFooterDesignerOpen) return null;
