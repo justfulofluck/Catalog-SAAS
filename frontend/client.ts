@@ -95,6 +95,8 @@ export const authApi = {
     register: (data: any) => api.post('/auth/registration/', data),
     requestOtp: (email: string) => api.post('/auth/password-reset/otp/request/', { email }),
     verifyOtpAndReset: (data: any) => api.post('/auth/password-reset/otp/confirm/', data),
+    requestVerificationOtp: (email: string) => api.post('/auth/email-verification/request/', { email }),
+    verifyEmailOtp: (data: { email: string; otp: string }) => api.post('/auth/email-verification/confirm/', data),
     updateUser: (data: any) => api.patch('/auth/user/', data),
     getAllUsers: () => api.get('/users/'),
     updateUserAdmin: (id: string | number, data: any) => api.patch(`/users/${id}/`, data),
@@ -173,6 +175,8 @@ export const systemTemplatesApi = {
 export const systemSettingsApi = {
     get: () => api.get<SystemSetting>('/users/system-settings/'),
     update: (data: Partial<SystemSetting>) => api.patch<SystemSetting>('/users/system-settings/', data),
+    testEmail: (recipientEmail: string) => 
+        api.post<{ message: string }>('/users/system-settings/test-email/', { recipient_email: recipientEmail }),
     changeAdminPassword: (data: { current_password?: string; new_password: string }) => 
         api.post<{ message: string }>('/users/change-admin-password/', data),
 };

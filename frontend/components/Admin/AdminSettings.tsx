@@ -16,10 +16,13 @@ import {
   XCircle,
   HelpCircle,
   Sparkles,
-  RefreshCw
+  RefreshCw,
+  Send,
+  Server
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
 import { SystemSetting } from '../../types';
+import { systemSettingsApi } from '../../client';
 
 export const AdminSettings: React.FC = () => {
   const { systemSettings, fetchSystemSettings, updateSystemSettings, changeAdminPassword, isLoading } = useStore();
@@ -33,9 +36,24 @@ export const AdminSettings: React.FC = () => {
     enable_free_watermark: true,
     watermark_text: 'Made with catalogmakerr.',
     default_currency: 'INR',
+    // SMTP Configuration
+    smtp_host: '',
+    smtp_port: 587,
+    smtp_user: '',
+    smtp_password: '',
+    smtp_use_tls: true,
+    smtp_use_ssl: false,
+    smtp_default_from_email: '',
+    require_email_verification: false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+
+  // Test Email State
+  const [testEmailRecipient, setTestEmailRecipient] = useState('');
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testEmailStatus, setTestEmailStatus] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // Security / Password Rotation State
   const [currentPassword, setCurrentPassword] = useState('');
@@ -61,7 +79,18 @@ export const AdminSettings: React.FC = () => {
         enable_free_watermark: systemSettings.enable_free_watermark !== undefined ? systemSettings.enable_free_watermark : true,
         watermark_text: systemSettings.watermark_text || 'Made with catalogmakerr.',
         default_currency: systemSettings.default_currency || 'INR',
+        smtp_host: systemSettings.smtp_host || '',
+        smtp_port: systemSettings.smtp_port || 587,
+        smtp_user: systemSettings.smtp_user || '',
+        smtp_password: '', // Kept empty so existing password is not displayed or accidentally changed
+        smtp_use_tls: systemSettings.smtp_use_tls !== undefined ? systemSettings.smtp_use_tls : true,
+        smtp_use_ssl: !!systemSettings.smtp_use_ssl,
+        smtp_default_from_email: systemSettings.smtp_default_from_email || '',
+        require_email_verification: !!systemSettings.require_email_verification,
       });
+      if (systemSettings.support_email && !testEmailRecipient) {
+        setTestEmailRecipient(systemSettings.support_email);
+      }
     }
   }, [systemSettings]);
 
@@ -86,6 +115,24 @@ export const AdminSettings: React.FC = () => {
       await updateSystemSettings(formData);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleSendTestEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!testEmailRecipient) return;
+    setTestEmailLoading(true);
+    setTestEmailStatus(null);
+    try {
+      const res = await systemSettingsApi.testEmail(testEmailRecipient);
+      setTestEmailStatus({ success: true, message: res.data.message });
+    } catch (err: any) {
+      setTestEmailStatus({
+        success: false,
+        message: err.response?.data?.error || 'Failed to send test email. Please check your SMTP settings.'
+      });
+    } finally {
+      setTestEmailLoading(false);
     }
   };
 
@@ -262,6 +309,39 @@ export const AdminSettings: React.FC = () => {
                 </button>
               </div>
 
+              {/* Require Email Verification Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-[6px] bg-[#111111] border border-[#262626] transition-all">
+                <div className="space-y-1 pr-4">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-white">Require Email Verification</span>
+                    <span className={`text-[9px] font-bold px-2 py-0.5 rounded-[2px] uppercase tracking-wider ${
+                      formData.require_email_verification 
+                        ? 'bg-blue-950/60 text-blue-400 border border-blue-800/40' 
+                        : 'bg-[#262626] text-[#888888]'
+                    }`}>
+                      {formData.require_email_verification ? 'Enforced' : 'Off (Immediate Access)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#888888]">
+                    When enforced, newly registered users must verify their email with an OTP code before logging in.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggle('require_email_verification')}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    formData.require_email_verification ? 'bg-[#0F3D3E]' : 'bg-[#2b2b2b]'
+                  }`}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      formData.require_email_verification ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
               {/* Maintenance Mode Toggle */}
               <div className={`p-4 rounded-[6px] border transition-all ${
                 formData.maintenance_mode 
@@ -372,6 +452,186 @@ export const AdminSettings: React.FC = () => {
                   placeholder="Made with catalogmakerr."
                   className="w-full bg-[#111111] border border-[#262626] rounded-[4px] px-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all"
                 />
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: SMTP Email Server & Delivery */}
+          <div className="bg-[#161616] rounded-[8px] border border-[#262626] p-7 space-y-6 shadow-xl">
+            <div className="flex items-center gap-3 border-b border-[#262626] pb-4">
+              <div className="w-9 h-9 rounded-[4px] bg-[#0F3D3E]/30 border border-[#0F3D3E] text-[#E2DCC8] flex items-center justify-center">
+                <Server size={18} />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold font-space text-white uppercase tracking-wider">SMTP & Email Server Delivery</h3>
+                  <span className={`text-[9px] font-bold px-2 py-0.5 rounded-[2px] uppercase tracking-wider ${
+                    formData.smtp_host && formData.smtp_user 
+                      ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-800/40' 
+                      : 'bg-amber-950/40 text-amber-400 border border-amber-800/30'
+                  }`}>
+                    {formData.smtp_host && formData.smtp_user ? 'Configured in Admin' : 'Using Server Environment (.env)'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#888888]">Configure real-time outgoing mail dispatch for OTPs, welcome emails, and invoices.</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading">
+                  SMTP Host Server
+                </label>
+                <input
+                  type="text"
+                  value={formData.smtp_host || ''}
+                  onChange={(e) => handleInputChange('smtp_host', e.target.value)}
+                  placeholder="smtp.gmail.com or mail.yourdomain.com"
+                  className="w-full bg-[#111111] border border-[#262626] rounded-[4px] px-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all font-mono"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading">
+                  Port
+                </label>
+                <input
+                  type="number"
+                  value={formData.smtp_port || 587}
+                  onChange={(e) => handleInputChange('smtp_port', parseInt(e.target.value) || 587)}
+                  placeholder="587"
+                  className="w-full bg-[#111111] border border-[#262626] rounded-[4px] px-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all font-mono"
+                />
+              </div>
+
+              <div className="sm:col-span-2 space-y-1.5">
+                <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading">
+                  SMTP Username / Email
+                </label>
+                <input
+                  type="text"
+                  value={formData.smtp_user || ''}
+                  onChange={(e) => handleInputChange('smtp_user', e.target.value)}
+                  placeholder="your-smtp-account@gmail.com"
+                  className="w-full bg-[#111111] border border-[#262626] rounded-[4px] px-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading flex items-center justify-between">
+                  <span>SMTP Password</span>
+                  {systemSettings?.has_smtp_password && (
+                    <span className="text-[9px] text-emerald-400 font-normal lowercase">(saved in database)</span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type={showSmtpPassword ? 'text' : 'password'}
+                    value={formData.smtp_password || ''}
+                    onChange={(e) => handleInputChange('smtp_password', e.target.value)}
+                    placeholder={systemSettings?.has_smtp_password ? '•••••••• (leave blank to keep)' : 'Enter SMTP password'}
+                    className="w-full bg-[#111111] border border-[#262626] rounded-[4px] pl-4 pr-10 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666666] hover:text-[#E2DCC8]"
+                  >
+                    {showSmtpPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="sm:col-span-3 space-y-1.5">
+                <label className="text-[10px] font-bold text-[#999999] uppercase tracking-widest font-heading">
+                  Default From Email Address (Sender header)
+                </label>
+                <input
+                  type="email"
+                  value={formData.smtp_default_from_email || ''}
+                  onChange={(e) => handleInputChange('smtp_default_from_email', e.target.value)}
+                  placeholder="CatalogStudio <noreply@yourdomain.com>"
+                  className="w-full bg-[#111111] border border-[#262626] rounded-[4px] px-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all"
+                />
+              </div>
+
+              <div className="sm:col-span-3 grid grid-cols-2 gap-4 pt-1">
+                <div className="flex items-center justify-between p-3 rounded-[4px] bg-[#111111] border border-[#262626]">
+                  <span className="text-xs text-white font-medium">Use TLS (Port 587)</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle('smtp_use_tls')}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      formData.smtp_use_tls ? 'bg-[#0F3D3E]' : 'bg-[#2b2b2b]'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        formData.smtp_use_tls ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-[4px] bg-[#111111] border border-[#262626]">
+                  <span className="text-xs text-white font-medium">Use SSL (Port 465)</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle('smtp_use_ssl')}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      formData.smtp_use_ssl ? 'bg-[#0F3D3E]' : 'bg-[#2b2b2b]'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                        formData.smtp_use_ssl ? 'translate-x-4' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Test Email Dispatcher subcard */}
+            <div className="pt-4 border-t border-[#262626] space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">Send Test Email</h4>
+                  <p className="text-[11px] text-[#888888]">Verify SMTP delivery credentials right now</p>
+                </div>
+              </div>
+
+              {testEmailStatus && (
+                <div className={`p-3 rounded-[4px] border flex items-center gap-2.5 text-xs animate-in fade-in duration-200 ${
+                  testEmailStatus.success 
+                    ? 'bg-emerald-950/40 border-emerald-800/50 text-emerald-300' 
+                    : 'bg-red-950/40 border-red-800/50 text-red-300'
+                }`}>
+                  {testEmailStatus.success ? <CheckCircle2 size={16} className="shrink-0" /> : <XCircle size={16} className="shrink-0" />}
+                  <span>{testEmailStatus.message}</span>
+                </div>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                <div className="relative flex-1">
+                  <Mail size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#666666]" />
+                  <input
+                    type="email"
+                    value={testEmailRecipient}
+                    onChange={(e) => setTestEmailRecipient(e.target.value)}
+                    placeholder="recipient@example.com"
+                    className="w-full bg-[#111111] border border-[#262626] rounded-[4px] pl-10 pr-4 py-2.5 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSendTestEmail}
+                  disabled={testEmailLoading || !testEmailRecipient}
+                  className="akio-btn-secondary py-2.5 px-5 shrink-0 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {testEmailLoading ? <RefreshCw size={14} className="animate-spin" /> : <Send size={14} />}
+                  <span>{testEmailLoading ? 'Sending...' : 'Send Test Mail'}</span>
+                </button>
               </div>
             </div>
           </div>

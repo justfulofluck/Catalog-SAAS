@@ -84,9 +84,38 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
 
 
 class SystemSettingSerializer(serializers.ModelSerializer):
+    has_smtp_password = serializers.SerializerMethodField()
+
     class Meta:
         model = SystemSetting
         fields = '__all__'
+        extra_kwargs = {
+            'smtp_password': {'write_only': True, 'required': False, 'allow_blank': True}
+        }
+
+    def get_has_smtp_password(self, obj):
+        return bool(obj.smtp_password)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        request = self.context.get('request')
+        is_admin = bool(request and request.user and (request.user.is_staff or request.user.is_superuser))
+        if not is_admin:
+            # Strip sensitive SMTP configuration for public/unauthenticated requests
+            sensitive_fields = [
+                'smtp_host', 'smtp_port', 'smtp_user', 'smtp_password',
+                'smtp_use_tls', 'smtp_use_ssl', 'smtp_default_from_email',
+                'has_smtp_password'
+            ]
+            for f in sensitive_fields:
+                data.pop(f, None)
+        return data
+
+    def update(self, instance, validated_data):
+        # If smtp_password is not sent or is blank, keep the current stored password
+        if 'smtp_password' in validated_data and not validated_data['smtp_password']:
+            validated_data.pop('smtp_password')
+        return super().update(instance, validated_data)
 
 
 

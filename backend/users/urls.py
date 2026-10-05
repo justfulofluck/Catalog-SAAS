@@ -10,6 +10,9 @@ from .views import (
     AdminSubscriptionViewSet,
     SystemSettingsView,
     AdminChangePasswordView,
+    AdminTestEmailView,
+    RequestEmailVerificationOTP,
+    ConfirmEmailVerificationOTP,
 )
 
 router = DefaultRouter()
@@ -19,7 +22,11 @@ router.register(r"admin-subscriptions", AdminSubscriptionViewSet, basename="admi
 
 
 urlpatterns = [
-    path("", include(router.urls)),
+    path("users/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
+    path("users/system-settings/test-email/", AdminTestEmailView.as_view(), name="system-settings-test-email"),
+    path("users/force-logout/", ForceLogoutView.as_view(), name="force-logout"),
+    path("users/change-admin-password/", AdminChangePasswordView.as_view(), name="admin-change-password"),
+    path("subscriptions/update/", UpdateSubscriptionView.as_view(), name="update-subscription"),
     path(
         "auth/password-reset/otp/request/",
         RequestPasswordResetOTP.as_view(),
@@ -30,8 +37,15 @@ urlpatterns = [
         ResetPasswordWithOTP.as_view(),
         name="password-reset-otp-confirm",
     ),
-    path("users/force-logout/", ForceLogoutView.as_view(), name="force-logout"),
-    path("subscriptions/update/", UpdateSubscriptionView.as_view(), name="update-subscription"),
-    path("users/system-settings/", SystemSettingsView.as_view(), name="system-settings"),
-    path("users/change-admin-password/", AdminChangePasswordView.as_view(), name="admin-change-password"),
+    path(
+        "auth/email-verification/request/",
+        RequestEmailVerificationOTP.as_view(),
+        name="email-verification-request",
+    ),
+    path(
+        "auth/email-verification/confirm/",
+        ConfirmEmailVerificationOTP.as_view(),
+        name="email-verification-confirm",
+    ),
+    path("", include(router.urls)),
 ]

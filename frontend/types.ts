@@ -549,6 +549,17 @@ export interface SystemSetting {
   enable_free_watermark: boolean;
   watermark_text: string;
   default_currency: string;
+  // SMTP Server Configuration
+  smtp_host?: string;
+  smtp_port?: number;
+  smtp_user?: string;
+  smtp_password?: string;
+  smtp_use_tls?: boolean;
+  smtp_use_ssl?: boolean;
+  smtp_default_from_email?: string;
+  has_smtp_password?: boolean;
+  // Verification Policy
+  require_email_verification?: boolean;
   updated_at?: string;
 }
 

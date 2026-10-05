@@ -18,9 +18,21 @@ class PasswordResetOTP(models.Model):
     otp = models.CharField(max_length=6)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField()
+    attempts = models.IntegerField(default=0)
     
     def is_valid(self):
-        return timezone.now() < self.expires_at
+        return timezone.now() < self.expires_at and self.attempts < 5
+
+
+class EmailVerificationOTP(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='verification_otps')
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    attempts = models.IntegerField(default=0)
+
+    def is_valid(self):
+        return timezone.now() < self.expires_at and self.attempts < 5
 
 
 class SubscriptionPlan(models.Model):
@@ -62,6 +74,19 @@ class SystemSetting(models.Model):
     enable_free_watermark = models.BooleanField(default=True)
     watermark_text = models.CharField(max_length=200, default="Made with catalogmakerr.")
     default_currency = models.CharField(max_length=3, default="INR")
+
+    # SMTP / Mail Delivery Server Configuration
+    smtp_host = models.CharField(max_length=255, blank=True, default="")
+    smtp_port = models.IntegerField(default=587)
+    smtp_user = models.CharField(max_length=255, blank=True, default="")
+    smtp_password = models.CharField(max_length=255, blank=True, default="")
+    smtp_use_tls = models.BooleanField(default=True)
+    smtp_use_ssl = models.BooleanField(default=False)
+    smtp_default_from_email = models.CharField(max_length=255, blank=True, default="")
+    
+    # Account & Verification Policy
+    require_email_verification = models.BooleanField(default=False)
+
     updated_at = models.DateTimeField(auto_now=True)
 
     @classmethod
