@@ -14,7 +14,7 @@ def send_welcome_email(request, user, **kwargs):
     subject = "Welcome to Catalog Studio!"
     
     user_name = user.name or user.username
-    frontend_url = getattr(settings, 'FRONTEND_URL', 'http://localhost:3000')
+    frontend_url = settings.FRONTEND_URL
     dashboard_url = f"{frontend_url}/dashboard"
     year = datetime.now().year
     

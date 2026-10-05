@@ -10,6 +10,7 @@ from .serializers import (
 )
 from django.utils import timezone
 from django.conf import settings
+import logging
 import random
 import datetime
 from utils.email_service import send_email
@@ -17,6 +18,8 @@ from dj_rest_auth.app_settings import api_settings
 
 from dj_rest_auth.registration.views import RegisterView
 from dj_rest_auth.views import UserDetailsView, LoginView
+
+logger = logging.getLogger(__name__)
 
 
 class CustomLoginView(LoginView):
@@ -261,7 +264,7 @@ class UpdateSubscriptionView(APIView):
                 html_message=html_message
             )
         except Exception as e:
-            print(f"Failed to send subscription email: {e}")
+            logger.exception("Failed to send subscription email to %s", request.user.email)
 
         return Response({
             "message": f"Successfully upgraded to {plan.name}",

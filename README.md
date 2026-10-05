@@ -30,7 +30,58 @@ Built with modern web technologies:
 ## Project Structure
 
 ```
-catalogstudio/
-├── catalogstudio-frontend/    # Visual editor and user interface
-└── catalogstudio-backend/     # Data management and API (coming soon)
+Catalog-SAAS/
+├── frontend/                   # Visual editor and user interface
+└── backend/                    # Django API
 ```
+
+## Local Setup
+
+### 1. Environment variables
+
+Mail credentials and other deployment-specific values are read from the
+environment. Copy the sample file and fill it in:
+
+```bash
+cp .env.example .env
+```
+
+`.env` is gitignored — never commit real credentials.
+
+### 2. Backend
+
+```bash
+cd backend
+python -m venv venv
+./venv/bin/pip install -r requirements.txt
+./venv/bin/python manage.py migrate
+./venv/bin/python manage.py runserver
+```
+
+### 3. Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+## Email Configuration
+
+Outgoing mail (welcome emails, password-reset OTPs, subscription receipts) uses
+the SMTP server described in `.env`. See `.env.example` for every supported
+variable.
+
+- `EMAIL_HOST_USER` / `EMAIL_HOST_PASSWORD` — the SMTP mailbox. For a Google
+  account use an [App Password](https://myaccount.google.com/apppasswords),
+  not the account password.
+- `DEFAULT_FROM_EMAIL` — the `From` address. Should match the authenticated
+  mailbox; providers reject or spam mail claiming a different sender.
+- `FRONTEND_URL` — public URL of the React app, used for links inside emails.
+
+If the SMTP variables are missing, the backend falls back to Django's **console
+email backend** and prints messages to the terminal instead of failing, so
+signup and password reset keep working during local development.
+
+> **Note:** account email verification is currently disabled
+> (`ACCOUNT_EMAIL_VERIFICATION = "none"` in `backend/config/settings.py`).

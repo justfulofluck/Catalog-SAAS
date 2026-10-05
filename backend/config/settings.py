@@ -14,8 +14,25 @@ from pathlib import Path
 
 import os
 
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load local env files. Real environment variables always win, so these are a
+# developer convenience only and never override production configuration.
+# Repo-root `.env` takes precedence over `backend/.env`; copy `.env.example`
+# to `.env` and fill it in.
+load_dotenv(BASE_DIR.parent / ".env")
+load_dotenv(BASE_DIR / ".env")
+
+
+def env_bool(name, default=False):
+    """Read a boolean environment variable."""
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -158,12 +175,36 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # Email Configuration (SMTP)
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp.gmail.com"
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = "blueglobalcloud@gmail.com"
-EMAIL_HOST_PASSWORD = "pjooewfxcxhtldod"
+# Credentials are read from environment variables only -- never hardcode them
+# here, they would end up in version control. See `.env.example`.
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", True)
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", False)
+EMAIL_TIMEOUT = int(os.environ.get("EMAIL_TIMEOUT", "10"))
+
+# `email_service.send_email` sends from DEFAULT_FROM_EMAIL. Leaving it unset
+# makes Django fall back to `webmaster@localhost`, which providers reject or
+# bury in spam, so default it to the authenticated mailbox.
+DEFAULT_FROM_EMAIL = (
+    os.environ.get("DEFAULT_FROM_EMAIL") or EMAIL_HOST_USER or "noreply@localhost"
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+# Only talk to a real SMTP server when it is fully configured. Otherwise fall
+# back to the console backend so a missing password prints the mail instead of
+# raising an exception inside signup / password-reset requests.
+if EMAIL_HOST and EMAIL_HOST_USER and EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = os.environ.get(
+        "DJANGO_EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
+    )
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# Public URL of the React frontend, used to build links inside emails.
+FRONTEND_URL = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip("/")
 
 # REST Framework
 REST_FRAMEWORK = {

@@ -1,6 +1,10 @@
+import logging
 
-from django.core.mail import send_mail as django_send_mail
 from django.conf import settings
+from django.core.mail import send_mail as django_send_mail
+
+logger = logging.getLogger(__name__)
+
 
 def send_email(to_email, subject, message, html_message=None):
     """
@@ -10,14 +14,14 @@ def send_email(to_email, subject, message, html_message=None):
     try:
         django_send_mail(
             subject=subject,
-            message=message, # Plain text version
-            from_email=settings.DEFAULT_FROM_EMAIL if hasattr(settings, 'DEFAULT_FROM_EMAIL') else settings.EMAIL_HOST_USER,
+            message=message,  # Plain text version
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[to_email],
-            html_message=html_message or (message if '<html' in message else None), # Auto-detect HTML if not explicitly provided
+            html_message=html_message or (message if "<html" in message else None),  # Auto-detect HTML if not explicitly provided
             fail_silently=False,
         )
-        print(f"Email sent successfully to {to_email}")
+        logger.info("Email sent successfully to %s", to_email)
         return True
-    except Exception as e:
-        print(f"Failed to send email: {e}")
+    except Exception:
+        logger.exception("Failed to send email to %s", to_email)
         return False
