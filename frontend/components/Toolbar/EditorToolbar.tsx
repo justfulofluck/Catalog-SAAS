@@ -611,8 +611,21 @@ const EditorToolbar: React.FC = () => {
             )}
           </div>
         ) : (
-          <button onClick={handleSave} disabled={isCommiting} className="px-4 py-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer">
-            <Save size={14} /> {isCommiting ? 'Saving...' : 'Commit'}
+          <button
+            onClick={handleSave}
+            disabled={isCommiting}
+            className={`px-4 py-2 border rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer ${
+              saveStatus === 'unsaved'
+                ? 'bg-[#0F3D3E] hover:bg-[#155455] text-white border-[#E2DCC8]/50 ring-1 ring-[#E2DCC8]/30'
+                : 'bg-[#181818] hover:bg-[#222222] text-zinc-300 border-[#333333]'
+            }`}
+            title="Save all catalog changes to database"
+          >
+            <Save size={14} className={saveStatus === 'unsaved' ? 'text-amber-300' : 'text-zinc-400'} />
+            <span>{isCommiting ? 'Saving...' : 'Save'}</span>
+            {saveStatus === 'unsaved' && (
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            )}
           </button>
         )}
       </div>

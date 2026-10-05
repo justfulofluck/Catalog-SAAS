@@ -891,11 +891,11 @@ export const SingleItemsPanel: React.FC = () => {
                   <span className={`text-[9px] font-mono uppercase font-bold px-1.5 py-0.5 rounded-[3px] border ${
                     isDark ? 'text-slate-400 bg-[#181818] border-[#2a2a2a]' : 'text-slate-500 bg-slate-100 border-slate-200'
                   }`}>
-                    4 Layouts
+                    {4 + (useStore.getState().systemTemplates?.filter(t => t.type === 'card_theme' && t.is_active !== false).length || 0)} Themes
                   </span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto pr-1">
                   {[
                     {
                       id: 'classic-stack',
@@ -920,7 +920,14 @@ export const SingleItemsPanel: React.FC = () => {
                       name: 'Compact Row',
                       desc: 'Side-by-side thumbnail',
                       badge: 'Compact'
-                    }
+                    },
+                    ...(useStore.getState().systemTemplates?.filter(t => t.type === 'card_theme' && t.is_active !== false) || []).map(t => ({
+                      id: String(t.id),
+                      name: t.name,
+                      desc: t.description || 'Superadmin Blueprint Theme',
+                      badge: 'Admin',
+                      customConfig: t.grid_data
+                    }))
                   ].map((themeItem) => {
                     const isSelected = customCardTheme === themeItem.id;
                     return (
@@ -930,7 +937,19 @@ export const SingleItemsPanel: React.FC = () => {
                         onClick={() => {
                           const newTheme = themeItem.id;
                           setCustomCardTheme(newTheme);
-                          if (newTheme === 'editorial-overlay') {
+
+                          if ((themeItem as any).customConfig) {
+                            const cfg = (themeItem as any).customConfig;
+                            if (cfg.backgroundColor) setCustomFill(cfg.backgroundColor);
+                            if (cfg.borderColor) setCustomStroke(cfg.borderColor);
+                            if (cfg.borderRadius !== undefined) setCustomBorderRadius(cfg.borderRadius);
+                            if (cfg.titleColor) setCustomTitleColor(cfg.titleColor);
+                            if (cfg.titleFontSize) setCustomTitleFontSize(cfg.titleFontSize);
+                            if (cfg.priceColor) setCustomPriceColor(cfg.priceColor);
+                            if (cfg.priceFontSize) setCustomPriceFontSize(cfg.priceFontSize);
+                            if (cfg.specsColor) setCustomSpecsColor(cfg.specsColor);
+                            if (cfg.specsFontSize) setCustomSpecsFontSize(cfg.specsFontSize);
+                          } else if (newTheme === 'editorial-overlay') {
                             setCustomFill('#0f172a');
                             setCustomStroke('#1e293b');
                             setCustomTitleColor('#ffffff');
@@ -955,10 +974,17 @@ export const SingleItemsPanel: React.FC = () => {
                         }`}
                       >
                         <div className="flex items-center justify-between gap-1 mb-1">
-                          <span className={`text-[11px] font-bold tracking-tight ${isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>
+                          <span className={`text-[11px] font-bold tracking-tight truncate ${isSelected ? (isDark ? 'text-[#E2DCC8]' : 'text-[#0F3D3E]') : (isDark ? 'text-slate-200' : 'text-slate-800')}`}>
                             {themeItem.name}
                           </span>
-                          {isSelected && <Check size={12} className="text-[#00a651] shrink-0 font-bold" />}
+                          <div className="flex items-center gap-1 shrink-0">
+                            {(themeItem as any).badge === 'Admin' && (
+                              <span className="text-[7.5px] font-mono px-1 py-0.2 rounded bg-violet-500/20 text-violet-300">
+                                Admin
+                              </span>
+                            )}
+                            {isSelected && <Check size={12} className="text-[#00a651] font-bold" />}
+                          </div>
                         </div>
                         <p className={`text-[9.5px] leading-tight line-clamp-1 ${isSelected ? (isDark ? 'text-slate-300' : 'text-slate-600') : 'text-slate-500'}`}>
                           {themeItem.desc}
@@ -1466,6 +1492,10 @@ export const SingleItemsPanel: React.FC = () => {
                   // Active non-core variables for specs list
                   const activeSpecVars = sortedModalVars.filter(v => customActiveKeys.includes(v.key) && v.key !== 'name' && v.key !== 'price' && v.key !== 'sku');
 
+                  const systemTemplates = useStore.getState().systemTemplates || [];
+                  const customTmpl = systemTemplates.find(t => String(t.id) === String(customCardTheme) || t.name === customCardTheme);
+                  const effectivePreviewLayout = customTmpl?.grid_data?.layout || customCardTheme;
+
                   return (
                     <div
                       className="w-[280px] shadow-2xl transition-all flex flex-col justify-between overflow-hidden border"
@@ -1476,7 +1506,7 @@ export const SingleItemsPanel: React.FC = () => {
                       }}
                     >
                       {/* 1. Classic Stack Theme */}
-                      {customCardTheme === 'classic-stack' && (
+                      {(effectivePreviewLayout === 'classic-stack' || (!['editorial-overlay', 'clean-badge', 'minimal-row', 'split-row'].includes(effectivePreviewLayout))) && (
                         <div className="p-4 space-y-3 flex flex-col h-full justify-between">
                           {/* Image Header */}
                           <div className="w-full h-36 rounded bg-black/5 dark:bg-white/5 overflow-hidden flex items-center justify-center relative border border-black/5 dark:border-white/5">
@@ -1534,7 +1564,7 @@ export const SingleItemsPanel: React.FC = () => {
                       )}
 
                       {/* 2. Editorial Overlay Theme */}
-                      {customCardTheme === 'editorial-overlay' && (
+                      {effectivePreviewLayout === 'editorial-overlay' && (
                         <div className="relative h-72 overflow-hidden flex flex-col justify-end p-4">
                           {imgUrl ? (
                             <img
@@ -1585,7 +1615,7 @@ export const SingleItemsPanel: React.FC = () => {
                       )}
 
                       {/* 3. Clean Badge Theme */}
-                      {customCardTheme === 'clean-badge' && (
+                      {effectivePreviewLayout === 'clean-badge' && (
                         <div className="p-4 space-y-3">
                           <div className="flex items-center justify-between">
                             <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-[3px] border ${
@@ -1634,7 +1664,7 @@ export const SingleItemsPanel: React.FC = () => {
                       )}
 
                       {/* 4. Minimal Row Theme */}
-                      {customCardTheme === 'minimal-row' && (
+                      {(effectivePreviewLayout === 'minimal-row' || effectivePreviewLayout === 'split-row') && (
                         <div className="p-3.5 flex gap-3.5 items-center">
                           <div className="w-24 h-24 rounded bg-black/5 dark:bg-white/5 shrink-0 overflow-hidden flex items-center justify-center border border-black/5 dark:border-white/5">
                             {imgUrl ? (

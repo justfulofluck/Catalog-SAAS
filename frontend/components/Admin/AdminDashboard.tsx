@@ -49,6 +49,7 @@ const AdminDashboard: React.FC = () => {
         error,
         setIsAdminHeaderDesignerOpen,
         setIsAdminFooterDesignerOpen,
+        setIsAdminCardThemeDesignerOpen,
         openTemplateInVisualEditor
     } = useStore();
 
@@ -345,6 +346,19 @@ const AdminDashboard: React.FC = () => {
                                     <Sparkles size={13} /> Footer Studio
                                 </span>
                                 <ChevronRight size={13} className="text-[#666666] group-hover:text-cyan-300 transition-colors" />
+                            </button>
+
+                            <button
+                                onClick={() => {
+                                    setIsAdminCardThemeDesignerOpen(true, null);
+                                    setIsMobileSidebarOpen(false);
+                                }}
+                                className="w-full flex items-center justify-between px-3 py-2 bg-[#181818] hover:bg-[#202020] border border-violet-500/20 hover:border-violet-500/40 rounded-[4px] text-[11px] font-bold text-violet-300 transition-all group"
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Sparkles size={13} className="text-violet-400" /> Card Theme Studio
+                                </span>
+                                <ChevronRight size={13} className="text-[#666666] group-hover:text-violet-300 transition-colors" />
                             </button>
 
                             <button

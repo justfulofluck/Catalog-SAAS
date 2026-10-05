@@ -148,17 +148,22 @@ const ProjectSettingsPanel: React.FC = () => {
                         {/* Global Product Card Theme */}
                         <div className="space-y-1.5">
                             <span className="text-[9px] font-bold text-[#888888] uppercase block">Product Card Style</span>
-                            <div className="grid grid-cols-2 gap-1.5">
+                            <div className="grid grid-cols-2 gap-1.5 max-h-44 overflow-y-auto pr-1">
                                 {[
                                     { id: 'classic-stack', label: 'Classic Stack' },
-                                    { id: 'minimal-pill', label: 'Minimal Pill' },
-                                    { id: 'split-row', label: 'Split Row' },
-                                    { id: 'specs-table', label: 'Spec Sheet' }
+                                    { id: 'editorial-overlay', label: 'Dark Luxe' },
+                                    { id: 'clean-badge', label: 'Clean Badge' },
+                                    { id: 'minimal-row', label: 'Split Row' },
+                                    ...(useStore.getState().systemTemplates?.filter(t => t.type === 'card_theme' && t.is_active !== false) || []).map(t => ({
+                                        id: String(t.id),
+                                        label: t.name,
+                                        isCustom: true
+                                    }))
                                 ].map(theme => (
                                     <button
                                         key={theme.id}
                                         onClick={() => useStore.getState().applyGlobalProductCardStyle({ cardTheme: theme.id })}
-                                        className={`p-2 rounded-[4px] border text-[10px] font-bold text-center transition-all hover:bg-[#0F3D3E] hover:text-[#F1F1F1] hover:border-[#0F3D3E] ${
+                                        className={`p-2 rounded-[4px] border text-[10px] font-bold text-center transition-all truncate hover:bg-[#0F3D3E] hover:text-[#F1F1F1] hover:border-[#0F3D3E] ${
                                             isDark 
                                                 ? 'border-[#262626] bg-[#1a1a1a] text-[#cccccc]' 
                                                 : 'border-slate-200 bg-slate-50 text-slate-700'

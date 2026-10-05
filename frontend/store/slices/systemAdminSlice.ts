@@ -23,6 +23,14 @@ export const createSystemAdminSlice: AppSlice<SystemAdminSlice> = (set, get) => 
       editingAdminFooterTemplate: template,
     }),
 
+  isAdminCardThemeDesignerOpen: false,
+  editingAdminCardTheme: null,
+  setIsAdminCardThemeDesignerOpen: (isOpen, template = null) =>
+    set({
+      isAdminCardThemeDesignerOpen: isOpen,
+      editingAdminCardTheme: template,
+    }),
+
   fetchSystemTemplates: async () => {
     try {
       const response = await systemTemplatesApi.getAll();

@@ -29,6 +29,7 @@ export const AdminTemplateManager: React.FC = () => {
         openTemplateInVisualEditor,
         setIsAdminHeaderDesignerOpen,
         setIsAdminFooterDesignerOpen,
+        setIsAdminCardThemeDesignerOpen,
         showToast
     } = useStore();
 
@@ -71,6 +72,8 @@ export const AdminTemplateManager: React.FC = () => {
                 return { label: 'Full Catalog', style: 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]/50' };
             case 'cover':
                 return { label: 'Cover Blueprint', style: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' };
+            case 'card_theme':
+                return { label: 'Card Theme', style: 'bg-violet-500/15 text-violet-300 border-violet-500/30' };
             case 'product_grid':
                 return { label: 'Product Grid', style: 'bg-purple-500/15 text-purple-300 border-purple-500/30' };
             default:
@@ -101,6 +104,7 @@ export const AdminTemplateManager: React.FC = () => {
                         { id: 'cover', label: 'Covers' },
                         { id: 'header', label: 'Headers' },
                         { id: 'footer', label: 'Footers' },
+                        { id: 'card_theme', label: 'Card Themes' },
                         { id: 'full_catalog', label: 'Catalogs' }
                     ].map(tab => (
                         <button
@@ -113,8 +117,15 @@ export const AdminTemplateManager: React.FC = () => {
                     ))}
                 </div>
 
-                {/* Action Buttons: Launch Studio */}
+                {/* Action Buttons: Launch Studios */}
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setIsAdminCardThemeDesignerOpen(true, null)}
+                        className="px-3.5 py-2 bg-[#2e1065] hover:bg-[#3b0764] border border-violet-500/30 text-violet-200 rounded-[4px] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-violet-900/20 active:scale-95"
+                    >
+                        <Sparkles size={14} className="text-violet-400" />
+                        <span>Card Theme Studio</span>
+                    </button>
                     <button
                         onClick={() => openTemplateInVisualEditor(null)}
                         className="px-3.5 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-[#0F3D3E]/25 active:scale-95"
@@ -229,6 +240,8 @@ export const AdminTemplateManager: React.FC = () => {
                                                     setIsAdminHeaderDesignerOpen(true, template);
                                                 } else if (template.type === 'footer') {
                                                     setIsAdminFooterDesignerOpen(true, template);
+                                                } else if (template.type === 'card_theme') {
+                                                    setIsAdminCardThemeDesignerOpen(true, template);
                                                 } else {
                                                     openTemplateInVisualEditor(template);
                                                 }
@@ -238,6 +251,8 @@ export const AdminTemplateManager: React.FC = () => {
                                                     ? 'bg-amber-600/30 hover:bg-amber-600/50 border-amber-500/40 text-amber-200'
                                                     : template.type === 'footer'
                                                     ? 'bg-cyan-600/30 hover:bg-cyan-600/50 border-cyan-500/40 text-cyan-200'
+                                                    : template.type === 'card_theme'
+                                                    ? 'bg-violet-600/30 hover:bg-violet-600/50 border-violet-500/40 text-violet-200'
                                                     : 'bg-[#0F3D3E] hover:bg-[#155455] border-[#E2DCC8]/30'
                                             }`}
                                             title="Open studio blueprint designer"
@@ -251,6 +266,11 @@ export const AdminTemplateManager: React.FC = () => {
                                                 <>
                                                     <ArrowDownToLine size={13} />
                                                     Footer Studio
+                                                </>
+                                            ) : template.type === 'card_theme' ? (
+                                                <>
+                                                    <Sparkles size={13} />
+                                                    Theme Studio
                                                 </>
                                             ) : (
                                                 <>

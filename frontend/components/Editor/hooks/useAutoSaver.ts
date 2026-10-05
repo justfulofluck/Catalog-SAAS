@@ -3,55 +3,23 @@ import { useStore } from '../../../store/useStore';
 import { Catalog } from '../../../types';
 
 /**
- * Custom hook providing 1.2s debounced auto-save on any catalog change
- * and emergency synchronous save on window beforeunload.
+ * Tracks catalog changes and sets saveStatus to 'unsaved'.
+ * Background auto-save on every change has been disabled per user request:
+ * The catalog now only persists to the server when the user explicitly clicks the Save button.
  */
 export const useAutoSaver = (catalog: Catalog) => {
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMountRef = useRef(true);
-  const isAutoSavingRef = useRef(false);
 
   useEffect(() => {
-    // Skip auto-save on initial component mount
+    // Skip on initial component mount
     if (isInitialMountRef.current) {
       isInitialMountRef.current = false;
       return;
     }
 
     const store = useStore.getState();
+    // Mark changes as unsaved
     store.setSaveStatus('unsaved');
-
-    // Super Admin Template Builder (Cover, Header, Footer Blueprints):
-    // Never auto-save blueprint templates to backend on keystrokes/drags.
-    // Templates must only be saved when the Super Admin explicitly clicks Save/Update Blueprint.
-    if (store.editingSystemTemplate || store.isAdminAuthenticated) {
-      return;
-    }
-
-    if (autoSaveTimerRef.current) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    autoSaveTimerRef.current = setTimeout(async () => {
-      if (isAutoSavingRef.current) return;
-      isAutoSavingRef.current = true;
-      try {
-        const currentStore = useStore.getState();
-        if (!currentStore.editingSystemTemplate && !currentStore.isAdminAuthenticated) {
-          await currentStore.saveCatalog();
-        }
-      } catch (err) {
-        console.warn('Auto-save encountered an error:', err);
-      } finally {
-        isAutoSavingRef.current = false;
-      }
-    }, 1200);
-
-    return () => {
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current);
-      }
-    };
   }, [
     catalog.updatedAt,
     catalog.pages,
@@ -71,12 +39,13 @@ export const useAutoSaver = (catalog: Catalog) => {
     catalog.marginRight,
   ]);
 
-  // Save immediately on page unload if there are pending unsaved changes (ONLY for regular user catalogs)
+  // Prompt before unload if there are unsaved changes
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       const store = useStore.getState();
       if (store.saveStatus === 'unsaved' && !store.editingSystemTemplate && !store.isAdminAuthenticated) {
-        store.saveCatalog().catch(() => {});
+        e.preventDefault();
+        e.returnValue = '';
       }
     };
     window.addEventListener('beforeunload', handleBeforeUnload);

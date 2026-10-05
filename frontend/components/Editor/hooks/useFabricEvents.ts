@@ -1093,6 +1093,7 @@ export const useFabricEvents = ({
         }
         if (updates.textDecoration !== undefined) {
           obj.set('underline', updates.textDecoration.includes('underline'));
+          obj.set('linethrough', updates.textDecoration.includes('line-through'));
         }
 
         applyTextEffectsToFabricObject(obj, { ...obj, ...updates } as any);

@@ -32,6 +32,7 @@ import TemplatesPanel from './components/Sidebar/TemplatesPanel';
 import HeaderDesignerModal from './components/Editor/HeaderDesignerModal';
 import FooterDesignerModal from './components/Editor/FooterDesignerModal';
 import { AdminHeaderDesignerModal, AdminFooterDesignerModal } from './components/Admin/HeaderFooterStudio';
+import { AdminCardThemeDesignerModal } from './components/Admin/CardThemeStudio/AdminCardThemeDesignerModal';
 import { CreateProductModal } from './components/Products/CreateProductModal';
 import '@fortawesome/fontawesome-free/css/all.min.css';
 import YourWork from './components/Dashboard/YourWork';
@@ -68,7 +69,7 @@ import {
   Type,
   Sliders,
   Package,
-  PenTool,
+  SquareMousePointer,
   Video,
   Palette
 } from 'lucide-react';
@@ -97,6 +98,7 @@ const App: React.FC = () => {
     isFooterDesignerOpen,
     isAdminHeaderDesignerOpen,
     isAdminFooterDesignerOpen,
+    isAdminCardThemeDesignerOpen,
     isCreateProductModalOpen,
     editingSystemTemplate
   } = useStore();
@@ -248,7 +250,7 @@ const App: React.FC = () => {
                       }`}
                       title="Elements, Badges & Shapes"
                     >
-                      <PenTool size={20} />
+                      <SquareMousePointer size={20} />
                     </button>
 
                     <button
@@ -412,7 +414,7 @@ const App: React.FC = () => {
                       }`}
                       title="Elements & Blocks"
                     >
-                      <PenTool size={20} />
+                      <SquareMousePointer size={20} />
                     </button>
 
                     <button
@@ -763,6 +765,8 @@ const App: React.FC = () => {
               <AdminHeaderDesignerModal />
             ) : isAdminFooterDesignerOpen ? (
               <AdminFooterDesignerModal />
+            ) : isAdminCardThemeDesignerOpen ? (
+              <AdminCardThemeDesignerModal />
             ) : (
               <AdminDashboard />
             )

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Sliders, LayoutTemplate, Type, DollarSign, Hash, Palette, Layers, Package, RotateCcw } from 'lucide-react';
+import { X, Sliders, LayoutTemplate, Type, DollarSign, Hash, Palette, Layers, Package, RotateCcw, ArrowLeft } from 'lucide-react';
 import { Product, Category, CardTheme } from '../../../../types';
 import { resolveProductImage } from '../../../../utils/imageUtils';
 import { resolveFieldLabel } from '../../../../utils/fieldUtils';
@@ -122,6 +122,20 @@ export const SingleProductCustomizerModal: React.FC<SingleProductCustomizerModal
           isDark ? 'bg-[#181818] border-[#262626]' : 'bg-slate-50 border-slate-200'
         }`}>
           <div className="flex items-center gap-2.5">
+            <button
+              type="button"
+              onClick={onClose}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-bold transition-all shadow-sm group ${
+                isDark 
+                  ? 'bg-[#1e1e1e] hover:bg-[#282828] text-[#E2DCC8] border-[#333] hover:border-[#E2DCC8]/50' 
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border-slate-300 hover:border-[#0F3D3E]/50'
+              }`}
+              title="Back to Editor"
+            >
+              <ArrowLeft size={14} className="group-hover:-translate-x-0.5 transition-transform" />
+              <span>Back</span>
+            </button>
+            <div className={`h-6 w-px ${isDark ? 'bg-[#28282c]' : 'bg-slate-200'}`} />
             <div className="w-8 h-8 rounded-lg bg-[#0F3D3E] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-sm">
               <Sliders size={16} />
             </div>

@@ -1,5 +1,5 @@
 import { Rect, Textbox, Image as FabricImage, Group, Line, Gradient } from 'fabric';
-import { CanvasElement, Product, Catalog } from '../../../types';
+import { CanvasElement, Product, Catalog, CardThemeConfig } from '../../../types';
 import { useStore } from '../../../store/useStore';
 import { resolveFieldLabel } from '../../../utils/fieldUtils';
 import { normalizeImageUrl } from '../../../utils/imageUtils';
@@ -14,12 +14,25 @@ export async function renderProductBlock(
   const objs: any[] = [];
 
   const theme = (el as any).cardTheme || (el as any).productData?.cardTheme || 'classic-stack';
-  const cardFill = el.fill || (theme === 'editorial-overlay' ? '#0f172a' : '#ffffff');
-  const cardStroke = el.stroke && el.stroke !== 'transparent' ? el.stroke : '#e2e8f0';
+
+  // Dynamic Card Theme lookup from Super Admin System Templates
+  const systemTemplates = useStore.getState().systemTemplates || [];
+  const customThemeTemplate = systemTemplates.find(
+    t => t.type === 'card_theme' && (String(t.id) === String(theme) || t.name === theme || t.uuid === theme)
+  );
+  const themeConfig: Partial<CardThemeConfig> = customThemeTemplate?.grid_data || {};
+  const effectiveLayout = themeConfig.layout || theme;
+
+  const cardFill = el.fill || themeConfig.backgroundColor || (effectiveLayout === 'editorial-overlay' ? '#0f172a' : '#ffffff');
+  const cardStroke = el.stroke && el.stroke !== 'transparent'
+    ? el.stroke
+    : (themeConfig.borderColor || '#e2e8f0');
   const cardStrokeWidth = el.stroke && el.stroke !== 'transparent'
     ? (el.strokeWidth !== undefined ? el.strokeWidth : 1.5)
-    : (el.stroke === 'transparent' ? 0 : 1);
-  const cardRx = (el as any).borderRadius !== undefined ? (el as any).borderRadius : 4;
+    : (themeConfig.borderWidth !== undefined ? themeConfig.borderWidth : (el.stroke === 'transparent' ? 0 : 1));
+  const cardRx = (el as any).borderRadius !== undefined
+    ? (el as any).borderRadius
+    : (themeConfig.borderRadius !== undefined ? themeConfig.borderRadius : 4);
 
   const isDark = isDarkColor(cardFill);
   const defaultTitleColor = isDark ? '#ffffff' : '#0f172a';
@@ -27,21 +40,21 @@ export async function renderProductBlock(
   const defaultTextColor = isDark ? '#cbd5e1' : '#334155';
 
   // Auto-contrast: If text is light on light card or dark on dark card, automatically adapt
-  let titleColor = el.titleColor || defaultTitleColor;
+  let titleColor = el.titleColor || themeConfig.titleColor || defaultTitleColor;
   if (isDark && isDarkColor(titleColor)) {
     titleColor = '#ffffff';
   } else if (!isDark && !isDarkColor(titleColor)) {
     titleColor = '#0f172a';
   }
 
-  let textColor = el.textColor || defaultTextColor;
+  let textColor = el.textColor || themeConfig.specsColor || defaultTextColor;
   if (isDark && isDarkColor(textColor)) {
     textColor = '#cbd5e1';
   } else if (!isDark && !isDarkColor(textColor)) {
     textColor = '#334155';
   }
 
-  let priceColor = el.priceColor || defaultPriceColor;
+  let priceColor = el.priceColor || themeConfig.priceColor || defaultPriceColor;
 
   // Base card background rect
   objs.push(new Rect({
@@ -57,7 +70,7 @@ export async function renderProductBlock(
 
   const product = products.find(p => String(p.id) === String(el.productId)) || (el as any).productData;
   if (product) {
-    const cardPadding = Math.max(10, Math.min(18, Math.round(el.width * 0.045)));
+    const cardPadding = themeConfig.padding || Math.max(10, Math.min(18, Math.round(el.width * 0.045)));
     const contentWidth = el.width - cardPadding * 2;
     const categories = useStore.getState().categories || [];
 
@@ -69,14 +82,14 @@ export async function renderProductBlock(
 
     const showTitle = el.showName !== false && (el.visibleFieldKeys ? (el.visibleFieldKeys.includes('name') || el.visibleFieldKeys.includes('title')) : true);
     const showPrice = el.showPrice !== false && (el.visibleFieldKeys ? el.visibleFieldKeys.includes('price') : true);
-    const showSku = el.showSku !== false && (el.visibleFieldKeys ? el.visibleFieldKeys.includes('sku') : true) && Boolean(displaySku);
+    const showSku = (themeConfig.showSku !== false) && el.showSku !== false && (el.visibleFieldKeys ? el.visibleFieldKeys.includes('sku') : true) && Boolean(displaySku);
 
     const cardFontFamily = (el as any).fontFamily || (catalog as any)?.fontFamily || 'Inter';
     const autoTitleFontSize = Math.max(11, Math.min(18, Math.round(el.width * 0.062)));
-    const titleFontSize = el.titleFontSize || autoTitleFontSize;
+    const titleFontSize = el.titleFontSize || themeConfig.titleFontSize || autoTitleFontSize;
     const autoPriceFontSize = Math.max(11, Math.min(16, Math.round(el.width * 0.055)));
-    const priceFontSize = el.priceFontSize || autoPriceFontSize;
-    const specsFontSize = el.fontSize || 8.5;
+    const priceFontSize = el.priceFontSize || themeConfig.priceFontSize || autoPriceFontSize;
+    const specsFontSize = el.fontSize || themeConfig.specsFontSize || 8.5;
 
     // Extract structured spec items according to user visibleFieldKeys order
     const specItems: { label: string; value: string }[] = [];
@@ -151,7 +164,7 @@ export async function renderProductBlock(
     // ─────────────────────────────────────────────────────────────
     // THEME 1: Clean Badge Layout (Top Badge + Top Price + Centered Image + Title + 2-Column Spec Badges)
     // ─────────────────────────────────────────────────────────────
-    if (theme === 'clean-badge') {
+    if (effectiveLayout === 'clean-badge') {
       let curY = cardPadding;
 
       // Header Row: Category Badge (Left) & Price (Right)
@@ -334,7 +347,7 @@ export async function renderProductBlock(
     // ─────────────────────────────────────────────────────────────
     // THEME 2: Editorial Overlay (Hero Background Image + Dark Gradient + Overlay Details)
     // ─────────────────────────────────────────────────────────────
-    else if (theme === 'editorial-overlay') {
+    else if (effectiveLayout === 'editorial-overlay') {
       // 1. Dark Gradient Background covering exact card bounds
       const gradOverlay = new Rect({
         left: 0,
@@ -529,7 +542,7 @@ export async function renderProductBlock(
     // ─────────────────────────────────────────────────────────────
     // THEME 3: Minimal Row Layout (Thumbnail on Left, Info on Right)
     // ─────────────────────────────────────────────────────────────
-    else if (theme === 'minimal-row') {
+    else if (effectiveLayout === 'minimal-row' || effectiveLayout === 'split-row') {
       const thumbW = Math.max(60, el.width * 0.32);
       const thumbH = el.height - cardPadding * 2;
 
