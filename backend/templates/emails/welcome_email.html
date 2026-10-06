@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to CatalogStudio</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f1115; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0f1115; padding: 40px 16px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+                    <!-- Brand Header -->
+                    <tr>
+                        <td align="center" style="padding: 36px 30px 24px 30px; background: linear-gradient(180deg, #1c1f2a 0%, #16181f 100%); border-bottom: 1px solid #232733;">
+                            <table cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="display: inline-block; width: 44px; height: 44px; line-height: 44px; background: #0F3D3E; border-radius: 10px; font-weight: bold; font-size: 22px; color: #E2DCC8; text-align: center; border: 1px solid #1a5658;">
+                                            C.
+                                        </div>
+                                        <div style="font-size: 20px; font-weight: 700; color: #ffffff; margin-top: 10px; letter-spacing: -0.5px;">
+                                            CatalogStudio
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 36px 36px 28px 36px;">
+                            <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 14px 0; letter-spacing: -0.3px;">
+                                Welcome aboard, {{ user_name }}! 👋
+                            </h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 0 0 18px 0;">
+                                We're thrilled to have you join <strong>CatalogStudio</strong>. Your workspace is ready to help you create stunning, print-ready product catalogs, digital lookbooks, and brochures in minutes.
+                            </p>
+
+                            <!-- Feature Highlight Box -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #111318; border-radius: 10px; border: 1px solid #1e222d; margin: 24px 0; padding: 18px;">
+                                <tr>
+                                    <td>
+                                        <p style="font-size: 13px; font-weight: 600; color: #cbd5e1; margin: 0 0 10px 0;">
+                                            ✨ What you can do next:
+                                        </p>
+                                        <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #94a3b8; line-height: 1.7;">
+                                            <li>Add your products & categories to your inventory.</li>
+                                            <li>Choose from designer-made catalog templates.</li>
+                                            <li>Export high-resolution PDFs or share web catalogs.</li>
+                                        </ul>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- CTA Button -->
+                            <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 32px auto 16px auto;">
+                                <tr>
+                                    <td align="center" style="background-color: #0F3D3E; border-radius: 8px;">
+                                        <a href="{{ dashboard_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; border: 1px solid #1a5658; letter-spacing: 0.3px;">
+                                            Launch Workspace →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px 36px; background-color: #111318; border-top: 1px solid #1e222d; text-align: center;">
+                            <p style="font-size: 12px; color: #64748b; margin: 0 0 6px 0;">
+                                Have questions? Reach out anytime at <a href="mailto:{{ support_email|default:'support@catalogmakerr.com' }}" style="color: #38bdf8; text-decoration: none;">{{ support_email|default:'support@catalogmakerr.com' }}</a>
+                            </p>
+                            <p style="font-size: 11px; color: #475569; margin: 0;">
+                                &copy; {{ year|default:'2026' }} CatalogStudio. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

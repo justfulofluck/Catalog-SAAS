@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify your CatalogStudio Account</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #0f1115; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0f1115; padding: 40px 16px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 520px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+                    <!-- Brand Header -->
+                    <tr>
+                        <td align="center" style="padding: 32px 30px 20px 30px; background: linear-gradient(180deg, #1c1f2a 0%, #16181f 100%); border-bottom: 1px solid #232733;">
+                            <table cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="display: inline-block; width: 44px; height: 44px; line-height: 44px; background: #0F3D3E; border-radius: 10px; font-weight: bold; font-size: 22px; color: #E2DCC8; text-align: center; border: 1px solid #1a5658;">
+                                            C.
+                                        </div>
+                                        <div style="font-size: 18px; font-weight: 700; color: #ffffff; margin-top: 10px; letter-spacing: -0.3px;">
+                                            CatalogStudio
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 32px 36px 28px 36px; text-align: center;">
+                            <h2 style="font-size: 20px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;">
+                                Account Verification Code
+                            </h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 0 0 24px 0;">
+                                Hello <strong style="color: #e2e8f0;">{{ user_name|default:'there' }}</strong>, please use the following 6-digit verification code to complete your registration:
+                            </p>
+
+                            <!-- OTP Box -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 20px auto;">
+                                <tr>
+                                    <td align="center">
+                                        <div style="background-color: #0b0d12; border: 1px solid #0F3D3E; border-radius: 10px; padding: 18px 24px; display: inline-block; min-width: 260px;">
+                                            <span style="font-family: 'SF Mono', Consolas, Monaco, monospace; font-size: 32px; font-weight: 800; letter-spacing: 10px; color: #38bdf8;">
+                                                {{ otp }}
+                                            </span>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="font-size: 12px; color: #64748b; margin: 20px 0 0 0;">
+                                ⏱️ This verification code is valid for <strong>15 minutes</strong>.<br>
+                                If you did not create an account on CatalogStudio, please safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 20px 36px; background-color: #111318; border-top: 1px solid #1e222d; text-align: center;">
+                            <p style="font-size: 11px; color: #475569; margin: 0;">
+                                &copy; {{ year|default:'2026' }} CatalogStudio. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

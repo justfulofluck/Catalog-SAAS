@@ -21,6 +21,12 @@ import logging
 import secrets
 import datetime
 from utils.email_service import send_email
+from utils.email_templates import (
+    get_password_reset_html,
+    get_subscription_purchase_html,
+    get_email_verification_html,
+    get_smtp_test_html,
+)
 from dj_rest_auth.app_settings import api_settings
 
 from dj_rest_auth.registration.views import RegisterView
@@ -116,7 +122,8 @@ class PublicRegisterView(RegisterView):
                     )
                     subject = "Verify your CatalogStudio Account"
                     msg = f"Hello {user.name or 'User'},\n\nYour CatalogStudio verification code is: {code}\n\nThis code expires in 15 minutes."
-                    send_email(user.email, subject, msg)
+                    html_msg = get_email_verification_html(user.name or "User", code)
+                    send_email(user.email, subject, msg, html_message=html_msg)
                 else:
                     user.is_verified = True
                     user.save()
@@ -307,7 +314,8 @@ class RequestEmailVerificationOTP(APIView):
 
         subject = "Verify Your CatalogStudio Email"
         msg = f"Hello {user.name or 'User'},\n\nYour verification code is: {otp_code}\n\nThis code expires in 15 minutes."
-        send_email(user.email, subject, msg)
+        html_msg = get_email_verification_html(user.name or "User", otp_code)
+        send_email(user.email, subject, msg, html_message=html_msg)
 
         return Response(generic_response, status=status.HTTP_200_OK)
 
@@ -595,14 +603,7 @@ class AdminTestEmailView(APIView):
             f"This is a test email sent from CatalogStudio Admin Settings at {now_str}.\n\n"
             f"If you received this message, your mail configuration is operational!"
         )
-        html_message = f"""
-        <div style="font-family: Arial, sans-serif; padding: 24px; background: #0f172a; color: #f8fafc; border-radius: 8px;">
-            <h2 style="color: #38bdf8; margin-top: 0;">CatalogStudio Mail Delivery Test</h2>
-            <p>This is a verification test sent from your <strong>CatalogStudio Admin Settings</strong>.</p>
-            <p style="background: #1e293b; padding: 12px; border-radius: 6px; font-family: monospace;">Server Timestamp: {now_str}</p>
-            <p style="color: #4ade80; font-weight: bold;">&#10004; Your outgoing SMTP email server is working successfully!</p>
-        </div>
-        """
+        html_message = get_smtp_test_html(recipient, now_str)
 
         success = send_email(recipient, subject, message, html_message=html_message)
         if success:
