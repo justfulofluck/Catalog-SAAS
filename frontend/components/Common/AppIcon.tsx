@@ -18,34 +18,27 @@ export const AppIcon: React.FC<AppIconProps> = ({
     >
       {withGlow && (
         <div 
-          className="absolute inset-0 rounded-[25%] bg-[#00A651]/20 blur-[8px] pointer-events-none"
+          className="absolute inset-0 rounded-full bg-[#00E5BF]/25 blur-[10px] pointer-events-none"
         />
       )}
       <svg
-        viewBox="0 0 32 32"
+        viewBox="0 0 48 48"
         width={size}
         height={size}
+        fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full relative z-10"
+        className="w-full h-full relative z-10 drop-shadow-sm"
       >
-        {/* Background Squircle */}
-        <rect width="32" height="32" rx="7" fill="#0F3D3E" />
-        
-        {/* Subtle minimalist border accent */}
-        <rect x="0.5" y="0.5" width="31" height="31" rx="6.5" fill="none" stroke="#1C6B6D" strokeWidth="1" strokeOpacity="0.6" />
-
-        {/* Minimalist 'c' glyph */}
+        {/* Upper Faceted Arch (Muted architectural slate-teal) */}
         <path
-          d="M 19.5 11.2 C 17.8 9.5 14.2 9.2 11.8 11 C 9 13.2 9 18.8 11.8 21 C 14.2 22.8 17.8 22.5 19.5 20.8" 
-          fill="none" 
-          stroke="#E2DCC8" 
-          strokeWidth="3.2" 
-          strokeLinecap="round" 
-          strokeLinejoin="round"
+          d="M24 6L38 14.5V26L32 22.5V18L24 13L16 18V30L20 32.5V38L10 32V14.5L24 6Z"
+          fill="#4B6364"
         />
-
-        {/* Minimalist Brand Accent Dot */}
-        <circle cx="23.5" cy="20.5" r="2" fill="#00A651" />
+        {/* Lower Forward Isometric Wedge (Vibrant electric cyan/teal) */}
+        <path
+          d="M20 32.5L24 35L38 26.5V33L24 41.5L14 35.5L20 32.5Z"
+          fill="#00E5BF"
+        />
       </svg>
     </div>
   );
