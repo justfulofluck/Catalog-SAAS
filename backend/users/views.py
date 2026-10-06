@@ -120,8 +120,8 @@ class PublicRegisterView(RegisterView):
                         otp=code,
                         expires_at=timezone.now() + datetime.timedelta(minutes=15)
                     )
-                    subject = "Verify your CatalogStudio Account"
-                    msg = f"Hello {user.name or 'User'},\n\nYour CatalogStudio verification code is: {code}\n\nThis code expires in 15 minutes."
+                    subject = "Verify your catalogmakerr Account"
+                    msg = f"Hello {user.name or 'User'},\n\nYour catalogmakerr verification code is: {code}\n\nThis code expires in 15 minutes."
                     html_msg = get_email_verification_html(user.name or "User", code)
                     send_email(user.email, subject, msg, html_message=html_msg)
                 else:
@@ -312,7 +312,7 @@ class RequestEmailVerificationOTP(APIView):
         expiry = now + datetime.timedelta(minutes=15)
         EmailVerificationOTP.objects.create(user=user, otp=otp_code, expires_at=expiry)
 
-        subject = "Verify Your CatalogStudio Email"
+        subject = "Verify Your catalogmakerr Email"
         msg = f"Hello {user.name or 'User'},\n\nYour verification code is: {otp_code}\n\nThis code expires in 15 minutes."
         html_msg = get_email_verification_html(user.name or "User", otp_code)
         send_email(user.email, subject, msg, html_message=html_msg)
@@ -597,10 +597,10 @@ class AdminTestEmailView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        subject = "CatalogStudio: SMTP Delivery Test"
+        subject = "catalogmakerr: SMTP Delivery Test"
         now_str = timezone.now().strftime("%Y-%m-%d %H:%M:%S UTC")
         message = (
-            f"This is a test email sent from CatalogStudio Admin Settings at {now_str}.\n\n"
+            f"This is a test email sent from catalogmakerr Admin Settings at {now_str}.\n\n"
             f"If you received this message, your mail configuration is operational!"
         )
         html_message = get_smtp_test_html(recipient, now_str)

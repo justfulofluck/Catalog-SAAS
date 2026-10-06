@@ -11,7 +11,7 @@ def send_welcome_email(request, user, **kwargs):
     """
     Send a welcome email to the user upon successful registration.
     """
-    subject = "Welcome to CatalogStudio!"
+    subject = "Welcome to catalogmakerr!"
     user_name = user.name or user.username
     frontend_url = settings.FRONTEND_URL
     dashboard_url = f"{frontend_url}/dashboard"
@@ -24,11 +24,11 @@ def send_welcome_email(request, user, **kwargs):
     message = f"""
     Hi {user_name},
 
-    Welcome to CatalogStudio! We are thrilled to have you on board.
+    Welcome to catalogmakerr! We are thrilled to have you on board.
     Launch your workspace: {dashboard_url}
 
     Best regards,
-    The CatalogStudio Team
+    The catalogmakerr Team
     """
 
     if user.email:
