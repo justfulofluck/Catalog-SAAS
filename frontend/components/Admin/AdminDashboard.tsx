@@ -213,7 +213,7 @@ const AdminDashboard: React.FC = () => {
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement('a');
         link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `catalogstudio_users_${new Date().toISOString().slice(0, 10)}.csv`);
+        link.setAttribute('download', `catalogmakerr_users_${new Date().toISOString().slice(0, 10)}.csv`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -396,7 +396,7 @@ const AdminDashboard: React.FC = () => {
                             </div>
                             <div className="overflow-hidden">
                                 <p className="text-xs font-bold text-white truncate">{user?.name || 'Administrator'}</p>
-                                <p className="text-[10px] text-[#888888] truncate">{user?.email || 'admin@catalogstudio.com'}</p>
+                                <p className="text-[10px] text-[#888888] truncate">{user?.email || 'admin@catalogmakerr.com'}</p>
                             </div>
                         </div>
                         <button

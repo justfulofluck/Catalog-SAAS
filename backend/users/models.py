@@ -65,7 +65,7 @@ class UserSubscription(models.Model):
 
 class SystemSetting(models.Model):
     platform_name = models.CharField(max_length=100, default="catalogmakerr.")
-    support_email = models.EmailField(default="support@catalogstudio.com")
+    support_email = models.EmailField(default="support@catalogmakerr.com")
     allow_public_signup = models.BooleanField(default=True)
     maintenance_mode = models.BooleanField(default=False)
     maintenance_message = models.TextField(

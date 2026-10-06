@@ -1,5 +1,5 @@
 
-# CatalogStudio SaaS Architecture
+# catalogmakerr SaaS Architecture
 
 ## 1. System Architecture
 - **Multi-tenant Core**: The database schema uses a `tenant_id` on every table. All API requests are scoped to the authenticated tenant.

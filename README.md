@@ -1,8 +1,8 @@
-# CatalogStudio
+# catalogmakerr
 
 **Create stunning product catalogs with ease**
 
-CatalogStudio is a visual catalog design platform that helps businesses transform their product data into professional, print-ready PDF catalogs. Perfect for e-commerce stores, manufacturers, and retailers who need to showcase their products beautifully.
+catalogmakerr is a visual catalog design platform that helps businesses transform their product data into professional, print-ready PDF catalogs. Perfect for e-commerce stores, manufacturers, and retailers who need to showcase their products beautifully.
 
 ## What You Can Do
 

@@ -29,7 +29,7 @@ export const AdminSettings: React.FC = () => {
 
   const [formData, setFormData] = useState<Partial<SystemSetting>>({
     platform_name: 'catalogmakerr.',
-    support_email: 'support@catalogstudio.com',
+    support_email: 'support@catalogmakerr.com',
     allow_public_signup: true,
     maintenance_mode: false,
     maintenance_message: 'System is currently under maintenance. We will be back shortly.',
@@ -72,7 +72,7 @@ export const AdminSettings: React.FC = () => {
     if (systemSettings) {
       setFormData({
         platform_name: systemSettings.platform_name || 'catalogmakerr.',
-        support_email: systemSettings.support_email || 'support@catalogstudio.com',
+        support_email: systemSettings.support_email || 'support@catalogmakerr.com',
         allow_public_signup: systemSettings.allow_public_signup !== undefined ? systemSettings.allow_public_signup : true,
         maintenance_mode: !!systemSettings.maintenance_mode,
         maintenance_message: systemSettings.maintenance_message || 'System is currently under maintenance. We will be back shortly.',
@@ -239,7 +239,7 @@ export const AdminSettings: React.FC = () => {
                     type="email"
                     value={formData.support_email || ''}
                     onChange={(e) => handleInputChange('support_email', e.target.value)}
-                    placeholder="support@catalogstudio.com"
+                    placeholder="support@catalogmakerr.com"
                     className="w-full bg-[#111111] border border-[#262626] rounded-[4px] pl-10 pr-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all"
                   />
                 </div>
@@ -550,7 +550,7 @@ export const AdminSettings: React.FC = () => {
                   type="email"
                   value={formData.smtp_default_from_email || ''}
                   onChange={(e) => handleInputChange('smtp_default_from_email', e.target.value)}
-                  placeholder="CatalogStudio <noreply@yourdomain.com>"
+                  placeholder="catalogmakerr <noreply@yourdomain.com>"
                   className="w-full bg-[#111111] border border-[#262626] rounded-[4px] px-4 py-3 text-xs text-white outline-none focus:border-[#0F3D3E] transition-all"
                 />
               </div>

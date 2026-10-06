@@ -90,7 +90,7 @@ const PricingView: React.FC = () => {
                   Secure Checkout
                 </h4>
                 <p className="font-space font-bold text-sm tracking-tight text-[#F1F1F1]">
-                  Catalog Studio Upgrade
+                  catalogmakerr Upgrade
                 </p>
               </div>
             </div>
@@ -538,7 +538,7 @@ const PricingView: React.FC = () => {
         <div className="mt-16 text-center space-y-3">
           <p className="text-xs text-[#888888]">
             Need high-volume multi-brand catalog setup or custom ERP integration?{' '}
-            <button onClick={() => alert("Please reach out to support@catalogstudio.com for custom enterprise volume pricing.")} className="text-[#E2DCC8] hover:underline font-semibold font-heading">
+            <button onClick={() => alert("Please reach out to support@catalogmakerr.com for custom enterprise volume pricing.")} className="text-[#E2DCC8] hover:underline font-semibold font-heading">
               Talk to Enterprise Solutions
             </button>
           </p>
