@@ -18,26 +18,41 @@ export const AppIcon: React.FC<AppIconProps> = ({
     >
       {withGlow && (
         <div 
-          className="absolute inset-0 rounded-full bg-[#00E5BF]/25 blur-[10px] pointer-events-none"
+          className="absolute inset-0 rounded-full bg-[#00E5BF]/15 blur-[6px] pointer-events-none"
         />
       )}
       <svg
-        viewBox="0 0 48 48"
+        viewBox="0 0 100 100"
         width={size}
         height={size}
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
-        className="w-full h-full relative z-10 drop-shadow-sm"
+        className="w-full h-full relative z-10"
       >
-        {/* Upper Faceted Arch (Muted architectural slate-teal) */}
+        {/* Top facet of the prism */}
         <path
-          d="M24 6L38 14.5V26L32 22.5V18L24 13L16 18V30L20 32.5V38L10 32V14.5L24 6Z"
-          fill="#4B6364"
+          d="M 50 14 L 84 33.5 L 68 43 L 50 32.5 L 32 43 L 16 33.5 Z"
+          fill="#4A6566"
         />
-        {/* Lower Forward Isometric Wedge (Vibrant electric cyan/teal) */}
+        {/* Left vertical facet */}
         <path
-          d="M20 32.5L24 35L38 26.5V33L24 41.5L14 35.5L20 32.5Z"
-          fill="#00E5BF"
+          d="M 16 33.5 L 32 43 L 32 67.5 L 16 58 Z"
+          fill="#3B5253"
+        />
+        {/* Right top facet segment */}
+        <path
+          d="M 84 33.5 L 84 58 L 68 67.5 L 68 43 Z"
+          fill="#527071"
+        />
+        {/* Lower dynamic forward wedge / check (Vivid Cyan Accent) */}
+        <path
+          d="M 32 67.5 L 50 78 L 84 58 L 84 71.5 L 50 91 L 16 71.5 L 32 67.5 Z"
+          fill="#00E5D0"
+        />
+        {/* Inner shadow/depth facet of the wedge for authentic 3D isometric look */}
+        <path
+          d="M 50 78 L 84 58 L 84 71.5 L 50 91 Z"
+          fill="#00C9B6"
         />
       </svg>
     </div>

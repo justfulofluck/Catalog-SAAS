@@ -485,9 +485,9 @@ const Login: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center gap-2.5 mb-8">
-          <AppIcon size={28} withGlow={true} />
-          <span className="font-bold text-xl tracking-tight font-heading text-[#F1F1F1]">catalogmakerr.</span>
+        <div className="flex items-center gap-3 mb-8">
+          <AppIcon size={32} withGlow={false} />
+          <span className="font-bold text-2xl tracking-tight font-heading text-[#F1F1F1]">catalogmakerr<span className="text-[#00E5D0]">.</span></span>
         </div>
           {regStep === 'plan' && !isLoginMode && recoveryStep === 'none' ? renderPlanSelection() : renderFormContent()}
 
