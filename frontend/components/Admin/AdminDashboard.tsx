@@ -19,7 +19,6 @@ import {
     Menu,
     X,
     Edit3,
-    Trash2,
     Shield,
     ShieldAlert,
     UserCheck,
@@ -43,7 +42,6 @@ const AdminDashboard: React.FC = () => {
         user,
         fetchUsers,
         updateUserAdmin,
-        deleteUserAdmin,
         showConfirm,
         showToast,
         error,
@@ -165,19 +163,6 @@ const AdminDashboard: React.FC = () => {
             type: newIsActive ? 'info' : 'danger',
             onConfirm: async () => {
                 await updateUserAdmin(targetUser.id, { is_active: newIsActive });
-            }
-        });
-    };
-
-    const handleDeleteUser = (targetUser: User) => {
-        setActiveActionUserId(null);
-        showConfirm({
-            title: 'Delete User Account',
-            message: `Are you sure you want to permanently delete user "${targetUser.name || targetUser.email}"? This action cannot be undone and will remove all their data.`,
-            confirmText: 'Delete User',
-            type: 'danger',
-            onConfirm: async () => {
-                await deleteUserAdmin(targetUser.id);
             }
         });
     };
@@ -685,16 +670,6 @@ const AdminDashboard: React.FC = () => {
                                                                                             <span>Reactivate Account</span>
                                                                                         </>
                                                                                     )}
-                                                                                </button>
-                                                                            </div>
-
-                                                                            <div className="py-1">
-                                                                                <button
-                                                                                    onClick={() => handleDeleteUser(u)}
-                                                                                    className="w-full px-3.5 py-2 text-xs font-medium text-red-400 hover:bg-red-950/40 hover:text-red-300 flex items-center gap-2.5 transition-colors"
-                                                                                >
-                                                                                    <Trash2 size={14} />
-                                                                                    <span>Delete Account</span>
                                                                                 </button>
                                                                             </div>
                                                                         </div>

@@ -139,6 +139,12 @@ class UserViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         return User.objects.all().order_by("-date_joined")
 
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {"detail": "User deletion functionality has been disabled."},
+            status=status.HTTP_405_METHOD_NOT_ALLOWED,
+        )
+
 
 class RequestPasswordResetOTP(APIView):
     permission_classes = [permissions.AllowAny]
