@@ -140,10 +140,14 @@ class UserViewSet(viewsets.ModelViewSet):
         return User.objects.all().order_by("-date_joined")
 
     def destroy(self, request, *args, **kwargs):
-        return Response(
-            {"detail": "User deletion functionality has been disabled."},
-            status=status.HTTP_405_METHOD_NOT_ALLOWED,
-        )
+        instance = self.get_object()
+        if instance.id == request.user.id:
+            return Response(
+                {"error": "You cannot delete your own admin account while logged in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        self.perform_destroy(instance)
+        return Response({"message": "User deleted successfully."}, status=status.HTTP_200_OK)
 
 
 class RequestPasswordResetOTP(APIView):

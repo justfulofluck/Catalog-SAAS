@@ -19,6 +19,7 @@ import {
     Menu,
     X,
     Edit3,
+    Trash2,
     Shield,
     ShieldAlert,
     UserCheck,
@@ -42,6 +43,7 @@ const AdminDashboard: React.FC = () => {
         user,
         fetchUsers,
         updateUserAdmin,
+        deleteUserAdmin,
         showConfirm,
         showToast,
         error,
@@ -163,6 +165,29 @@ const AdminDashboard: React.FC = () => {
             type: newIsActive ? 'info' : 'danger',
             onConfirm: async () => {
                 await updateUserAdmin(targetUser.id, { is_active: newIsActive });
+            }
+        });
+    };
+
+    const handleDeleteUser = (targetUser: User) => {
+        setActiveActionUserId(null);
+        if (targetUser.id === user?.id) {
+            showToast('You cannot delete your own logged-in admin account.', 'error');
+            return;
+        }
+        showConfirm({
+            title: 'Delete User Account',
+            message: `Are you sure you want to permanently delete user "${targetUser.name || targetUser.email}"? This action cannot be undone and will permanently remove all their catalogs, media, and data.`,
+            confirmText: 'Delete User',
+            type: 'danger',
+            onConfirm: async () => {
+                const res = await deleteUserAdmin(targetUser.id);
+                if (res?.success) {
+                    if (isEditModalOpen && editingUser?.id === targetUser.id) {
+                        setIsEditModalOpen(false);
+                        setEditingUser(null);
+                    }
+                }
             }
         });
     };
@@ -541,7 +566,7 @@ const AdminDashboard: React.FC = () => {
                                         </div>
                                     </div>
 
-                                    <div className="overflow-x-auto min-h-[260px]">
+                                    <div className="overflow-x-auto min-h-[360px] pb-24">
                                         <table className="w-full text-left border-collapse">
                                             <thead>
                                                 <tr className="border-b border-[#262626] bg-[#121212] text-[10px] font-bold uppercase tracking-widest text-[#888888]">
@@ -561,7 +586,7 @@ const AdminDashboard: React.FC = () => {
                                                         </td>
                                                     </tr>
                                                 ) : (
-                                                    filteredUsers.map((u) => (
+                                                    filteredUsers.map((u, idx) => (
                                                         <tr key={u.id} className="hover:bg-[#1c1c1c] transition-colors group">
                                                             <td className="px-8 py-4">
                                                                 <div className="w-10 h-10 rounded-[4px] bg-[#1c1c1c] border border-[#262626] flex items-center justify-center font-bold text-white text-xs">
@@ -624,7 +649,7 @@ const AdminDashboard: React.FC = () => {
                                                                     {activeActionUserId === u.id && (
                                                                         <div
                                                                             ref={actionMenuRef}
-                                                                            className="absolute right-8 top-12 w-52 bg-[#161616] border border-[#2c2c2c] rounded-[6px] shadow-2xl py-1.5 z-50 text-left divide-y divide-[#222222]"
+                                                                            className={`absolute right-8 ${idx >= filteredUsers.length - 2 ? 'bottom-8' : 'top-12'} w-52 bg-[#161616] border border-[#2c2c2c] rounded-[6px] shadow-2xl py-1.5 z-50 text-left divide-y divide-[#222222]`}
                                                                             onClick={(e) => e.stopPropagation()}
                                                                         >
                                                                             <div className="py-1">
@@ -670,6 +695,16 @@ const AdminDashboard: React.FC = () => {
                                                                                             <span>Reactivate Account</span>
                                                                                         </>
                                                                                     )}
+                                                                                </button>
+                                                                            </div>
+
+                                                                            <div className="py-1">
+                                                                                <button
+                                                                                    onClick={() => handleDeleteUser(u)}
+                                                                                    className="w-full px-3.5 py-2 text-xs font-medium text-red-400 hover:bg-red-950/40 hover:text-red-300 flex items-center gap-2.5 transition-colors"
+                                                                                >
+                                                                                    <Trash2 size={14} className="text-red-400" />
+                                                                                    <span>Delete Account</span>
                                                                                 </button>
                                                                             </div>
                                                                         </div>
@@ -796,31 +831,46 @@ const AdminDashboard: React.FC = () => {
                                 </div>
                             </div>
 
-                            <div className="p-4 border-t border-[#262626] flex items-center justify-end gap-3 mt-6 pt-4">
+                            <div className="p-4 border-t border-[#262626] flex items-center justify-between gap-3 mt-6 pt-4">
                                 <button
                                     type="button"
-                                    onClick={() => setIsEditModalOpen(false)}
-                                    className="px-4 py-2 bg-[#202020] hover:bg-[#262626] text-xs font-bold text-[#888888] hover:text-white rounded-[4px] transition-colors"
+                                    onClick={() => {
+                                        if (editingUser) {
+                                            handleDeleteUser(editingUser);
+                                        }
+                                    }}
+                                    className="px-3.5 py-2 bg-red-950/30 hover:bg-red-900/50 text-xs font-bold text-red-400 hover:text-red-300 border border-red-800/40 rounded-[4px] flex items-center gap-2 transition-colors"
                                 >
-                                    Cancel
+                                    <Trash2 size={13} />
+                                    Delete User
                                 </button>
-                                <button
-                                    type="submit"
-                                    disabled={isSavingUser}
-                                    className="px-5 py-2 bg-[#0F3D3E] hover:bg-[#134e4f] text-xs font-bold text-white rounded-[4px] shadow-md shadow-[#0F3D3E]/30 flex items-center gap-2 transition-all disabled:opacity-50"
-                                >
-                                    {isSavingUser ? (
-                                        <>
-                                            <Loader2 size={14} className="animate-spin" />
-                                            Saving...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Check size={14} />
-                                            Save Changes
-                                        </>
-                                    )}
-                                </button>
+
+                                <div className="flex items-center gap-3">
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsEditModalOpen(false)}
+                                        className="px-4 py-2 bg-[#202020] hover:bg-[#262626] text-xs font-bold text-[#888888] hover:text-white rounded-[4px] transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={isSavingUser}
+                                        className="px-5 py-2 bg-[#0F3D3E] hover:bg-[#134e4f] text-xs font-bold text-white rounded-[4px] shadow-md shadow-[#0F3D3E]/30 flex items-center gap-2 transition-all disabled:opacity-50"
+                                    >
+                                        {isSavingUser ? (
+                                            <>
+                                                <Loader2 size={14} className="animate-spin" />
+                                                Saving...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Check size={14} />
+                                                Save Changes
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </form>
                     </div>
