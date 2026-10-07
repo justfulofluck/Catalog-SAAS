@@ -253,10 +253,6 @@ const PricingView: React.FC = () => {
 
       {/* Hero Header */}
       <div className="max-w-7xl mx-auto w-full px-6 md:px-12 pt-14 pb-8 text-center space-y-4 animate-in fade-in duration-500">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#0F3D3E]/30 border border-[#E2DCC8]/20 text-[#E2DCC8] text-[10px] font-bold uppercase tracking-widest font-heading mb-1 shadow-sm">
-          <Sparkles size={12} /> Flexible Plans for Growing Brands
-        </div>
-        
         <h1 className="font-space text-3xl sm:text-5xl font-bold tracking-tight text-[#F1F1F1] max-w-3xl mx-auto leading-tight">
           Scale Your Catalog Production
         </h1>
