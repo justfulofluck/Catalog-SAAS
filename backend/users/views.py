@@ -40,22 +40,45 @@ class CustomLoginView(LoginView):
     authentication_classes = []
 
     def post(self, request, *args, **kwargs):
-        # Auto-populate username with email if missing so both auth backend lookups succeed cleanly
+        email_or_username = None
         if hasattr(request, 'data'):
-            email = request.data.get('email')
-            if email and not request.data.get('username'):
+            email_or_username = request.data.get('email') or request.data.get('username')
+            # Normalize email string
+            if email_or_username:
+                email_or_username = str(email_or_username).strip()
+            password = request.data.get('password')
+
+            if email_or_username:
+                # 1. Check if user exists by email or username
+                existing_user = User.objects.filter(email__iexact=email_or_username).first() or \
+                                User.objects.filter(username__iexact=email_or_username).first()
+
+                if not existing_user:
+                    return Response(
+                        {"error": "This user does not exist. Please create an account or sign up first."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                # 2. If user exists, check if password matches
+                if password and not existing_user.check_password(password):
+                    return Response(
+                        {"error": "Incorrect password. Please verify your password and try again."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+            if email_or_username and not request.data.get('username'):
                 if hasattr(request.data, '_mutable') and not request.data._mutable:
                     request.data._mutable = True
-                    request.data['username'] = email
+                    request.data['username'] = email_or_username
                     request.data._mutable = False
                 elif isinstance(request.data, dict):
-                    request.data['username'] = email
+                    request.data['username'] = email_or_username
 
         response = super().post(request, *args, **kwargs)
         system_settings = SystemSetting.get_settings()
         if response.status_code == 200:
-            email = request.data.get('email') or request.data.get('username')
-            user = User.objects.filter(email=email).first() or User.objects.filter(username=email).first()
+            user = User.objects.filter(email__iexact=email_or_username).first() or \
+                   User.objects.filter(username__iexact=email_or_username).first()
             if user:
                 # Check email verification requirement (superadmins/staff exempt)
                 if system_settings.require_email_verification and not user.is_verified and not (user.is_staff or user.is_superuser):

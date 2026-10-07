@@ -79,13 +79,14 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
       if (userObj.role === 'admin') get().fetchUsers();
     } catch (error: any) {
       let errorMessage =
-        error.response?.data?.non_field_errors?.[0] ||
+        error.response?.data?.error ||
         error.response?.data?.detail ||
+        error.response?.data?.non_field_errors?.[0] ||
         (typeof error.response?.data === 'string' ? error.response.data : null) ||
         error.message ||
         'Login failed';
       if (typeof errorMessage === 'string' && errorMessage.includes('Unable to log in with provided credentials')) {
-        set({ error: 'Invalid email or password. New here? Create an account.', isLoading: false });
+        set({ error: 'This user does not exist or password is incorrect. New here? Create an account.', isLoading: false });
       } else {
         set({ error: String(errorMessage), isLoading: false });
       }
