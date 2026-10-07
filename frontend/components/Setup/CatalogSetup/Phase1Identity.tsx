@@ -12,11 +12,6 @@ export const Phase1Identity: React.FC<CatalogSetupState> = ({
     <div className="flex-1 flex flex-col items-center justify-center p-8 max-w-xl mx-auto w-full">
       <div className="w-full space-y-6 text-center">
         <div className="space-y-2">
-          <span className={`px-3.5 py-1 text-[10px] font-bold uppercase tracking-widest rounded-full border inline-block ${
-            isDark ? 'bg-[#0F3D3E]/20 text-[#E2DCC8] border-[#0F3D3E]/40' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
-          }`}>
-            Phase 01 • Identity
-          </span>
           <h2 className={`font-space text-3xl sm:text-4xl font-bold tracking-tight ${
             isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
           }`}>
