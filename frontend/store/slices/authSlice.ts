@@ -237,6 +237,18 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
   },
 
   checkAuth: async () => {
+    // Only attempt auth check if a stored token exists; don't spam 401 when unauthenticated
+    const token = localStorage.getItem('cs_access_token');
+    const refreshToken = localStorage.getItem('cs_refresh_token');
+    if (!token && !refreshToken) {
+      set({
+        isAuthenticated: false,
+        isAdminAuthenticated: false,
+        user: null,
+      });
+      return;
+    }
+
     try {
       const user: any = await authApi.user();
 
