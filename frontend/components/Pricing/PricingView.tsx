@@ -23,7 +23,6 @@ const PricingView: React.FC = () => {
   const { plans: storePlans, fetchPlans, setView, user, updateSubscription, uiTheme, isLoading } = useStore();
   const isDark = uiTheme === 'dark';
   
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [checkoutStep, setCheckoutStep] = useState<'details' | 'processing' | 'success'>('details');
@@ -116,7 +115,7 @@ const PricingView: React.FC = () => {
                       {selectedPlan?.name}
                     </p>
                     <span className="text-[11px] text-[#E2DCC8]/70">
-                      Billed {billingCycle === 'annual' ? 'Annually (Save 20%)' : 'Monthly'}
+                      Billed Monthly
                     </span>
                   </div>
                   <div className="text-right">
@@ -265,39 +264,6 @@ const PricingView: React.FC = () => {
         <p className="text-sm sm:text-base text-[#888888] max-w-xl mx-auto leading-relaxed">
           Unlock unlimited product catalogs, high-resolution multi-page PDF generation, and custom branding for your team.
         </p>
-
-        {/* Monthly / Annual Toggle Switch */}
-        {displayPlans.length > 0 && (
-          <div className="pt-4 flex items-center justify-center">
-            <div className={`p-1 rounded-[6px] border flex items-center gap-1 shadow-inner ${
-              isDark ? 'bg-[#161616] border-[#262626]' : 'bg-slate-200 border-slate-300'
-            }`}>
-              <button
-                onClick={() => setBillingCycle('monthly')}
-                className={`px-4 py-1.5 rounded-[4px] text-xs font-semibold font-heading uppercase tracking-wider transition-all ${
-                  billingCycle === 'monthly'
-                    ? (isDark ? 'bg-[#0F3D3E] text-white shadow' : 'bg-white text-slate-900 shadow')
-                    : 'text-[#888888] hover:text-white'
-                }`}
-              >
-                Monthly
-              </button>
-              <button
-                onClick={() => setBillingCycle('annual')}
-                className={`px-4 py-1.5 rounded-[4px] text-xs font-semibold font-heading uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                  billingCycle === 'annual'
-                    ? (isDark ? 'bg-[#0F3D3E] text-white shadow' : 'bg-white text-slate-900 shadow')
-                    : 'text-[#888888] hover:text-white'
-                }`}
-              >
-                <span>Annual</span>
-                <span className="px-1.5 py-0.5 bg-amber-500 text-black font-bold text-[9px] rounded uppercase">
-                  Save 20%
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Pricing Cards Grid */}
