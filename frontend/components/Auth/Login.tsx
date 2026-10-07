@@ -145,7 +145,7 @@ const Login: React.FC = () => {
         const from = (location.state as any)?.from?.pathname || '/';
         navigate(from, { replace: true });
       } catch (err) {
-        console.error("Login failed", err);
+        // Handled cleanly by authSlice error state which displays in the red banner
       } finally {
         setIsSubmitting(false);
       }
