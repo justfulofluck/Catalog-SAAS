@@ -116,24 +116,6 @@ export const AdminTemplateManager: React.FC = () => {
                         </button>
                     ))}
                 </div>
-
-                {/* Action Buttons: Launch Studios */}
-                <div className="flex items-center gap-2">
-                    <button
-                        onClick={() => setIsAdminCardThemeDesignerOpen(true, null)}
-                        className="px-3.5 py-2 bg-[#2e1065] hover:bg-[#3b0764] border border-violet-500/30 text-violet-200 rounded-[4px] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-violet-900/20 active:scale-95"
-                    >
-                        <Sparkles size={14} className="text-violet-400" />
-                        <span>Card Theme Studio</span>
-                    </button>
-                    <button
-                        onClick={() => openTemplateInVisualEditor(null)}
-                        className="px-3.5 py-2 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] text-xs font-bold flex items-center gap-2 transition-all shadow-md shadow-[#0F3D3E]/25 active:scale-95"
-                    >
-                        <BookOpen size={14} />
-                        <span>Launch Studio</span>
-                    </button>
-                </div>
             </div>
 
             {/* Templates List View Table */}
