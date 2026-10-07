@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, FolderOpen, Package, Check } from 'lucide-react';
+import { Box, FolderOpen, Package, Check, Plus, FolderPlus } from 'lucide-react';
 import { resolveProductImage } from '../../../utils/imageUtils';
 import { CatalogSetupState } from './useCatalogSetup';
 
@@ -8,8 +8,14 @@ export const Phase2Categories: React.FC<CatalogSetupState> = ({
   selectedCategoryIds,
   products,
   toggleCategory,
-  isDark
+  isDark,
+  categories,
+  setView,
+  categorySearch,
+  setCategorySearch
 }) => {
+  const hasNoCategoriesAtAll = !categories || categories.length === 0;
+
   return (
     <div className="p-8 w-full flex-1">
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
@@ -85,10 +91,53 @@ export const Phase2Categories: React.FC<CatalogSetupState> = ({
       </div>
 
       {filteredCategories.length === 0 && (
-        <div className="py-24 text-center">
-          <Box size={40} className={`mx-auto mb-3 ${isDark ? 'text-[#E2DCC8]/30' : 'text-slate-300'}`} />
-          <h3 className={`font-space text-base font-bold ${isDark ? 'text-[#F1F1F1]' : 'text-slate-800'}`}>No matching categories</h3>
-          <p className={`text-xs mt-1 ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>Try another keyword or clear search.</p>
+        <div className="py-24 text-center max-w-md mx-auto">
+          {hasNoCategoriesAtAll ? (
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <div className={`w-16 h-16 rounded-[6px] border flex items-center justify-center mx-auto ${
+                isDark ? 'bg-[#161616] border-[#262626] text-[#E2DCC8]/40' : 'bg-slate-100 border-slate-200 text-slate-400'
+              }`}>
+                <FolderPlus size={32} />
+              </div>
+              <div>
+                <h3 className={`font-space text-lg font-bold ${isDark ? 'text-[#F1F1F1]' : 'text-slate-900'}`}>
+                  No categories found
+                </h3>
+                <p className={`text-xs mt-1.5 leading-relaxed ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>
+                  You haven't added any product categories to your catalog yet. Create your first category to start organizing your products.
+                </p>
+              </div>
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setView('create-category')}
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] text-white border border-[#E2DCC8]/30 rounded-[4px] font-bold text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/20 transition-all hover:scale-[1.02] active:scale-95"
+                >
+                  <Plus size={15} />
+                  <span>Create Category</span>
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Box size={40} className={`mx-auto ${isDark ? 'text-[#E2DCC8]/30' : 'text-slate-300'}`} />
+              <h3 className={`font-space text-base font-bold ${isDark ? 'text-[#F1F1F1]' : 'text-slate-800'}`}>
+                No matching categories
+              </h3>
+              <p className={`text-xs ${isDark ? 'text-[#E2DCC8]/60' : 'text-slate-500'}`}>
+                No category matches "{categorySearch}". Try another keyword or clear search.
+              </p>
+              {categorySearch && (
+                <button
+                  type="button"
+                  onClick={() => setCategorySearch('')}
+                  className="mt-2 text-xs font-semibold text-[#00E5BF] hover:underline"
+                >
+                  Clear search
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

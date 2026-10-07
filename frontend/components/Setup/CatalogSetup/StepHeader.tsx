@@ -125,6 +125,14 @@ export const StepHeader: React.FC<CatalogSetupState> = ({
           <div className="flex items-center gap-1.5">
             <button
               type="button"
+              onClick={() => setView('create-category')}
+              className="px-3 py-1.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 rounded-[4px] text-[11px] font-bold text-white uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm"
+              title="Add a new category"
+            >
+              <span>+ Category</span>
+            </button>
+            <button
+              type="button"
               onClick={handleSelectAll}
               className={`px-3 py-1.5 border rounded-[4px] text-[11px] font-bold uppercase tracking-wider transition-all ${
                 isDark ? 'bg-[#171616] hover:bg-[#202020] border-[#E2DCC8]/20 text-[#E2DCC8]' : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-700'
