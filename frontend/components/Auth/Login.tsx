@@ -18,22 +18,26 @@ import {
   Package,
   BookOpen,
   Check,
-  Layers
+  Layers,
+  Clock,
+  RotateCcw
 } from 'lucide-react';
-import { authApi } from '../../client';
+import { authApi, subscriptionApi } from '../../client';
 import GradientBlinds from '../Common/GradientBlinds';
 import { AppIcon } from '../Common/AppIcon';
+
+const OTP_TOTAL_SECONDS = 300; // 5 minutes strict
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, setView, error, plans, fetchPlans, systemSettings, fetchSystemSettings } = useStore();
+  const { login, setView, error, plans, fetchPlans, systemSettings, fetchSystemSettings, checkAuth } = useStore();
 
   // Auth Modes: 'signin' | 'signup'
   const [isLoginMode, setIsLoginMode] = useState(true);
 
-  // Registration Steps: 'info' | 'plan'
-  const [regStep, setRegStep] = useState<'info' | 'plan'>('info');
+  // Registration Steps: 'info' | 'otp' | 'plan'
+  const [regStep, setRegStep] = useState<'info' | 'otp' | 'plan'>('info');
   const [selectedPlanSlug, setSelectedPlanSlug] = useState('starter');
 
   // Recovery Modes: 'none' | 'email' | 'otp'
@@ -43,9 +47,15 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Recovery State
-  const [otp, setOtp] = useState('');
+  // OTP States
+  const [signupOtp, setSignupOtp] = useState('');
+  const [recoveryOtp, setRecoveryOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
+
+  // 5-Minute Timers
+  const [signupTimer, setSignupTimer] = useState<number>(OTP_TOTAL_SECONDS);
+  const [recoveryTimer, setRecoveryTimer] = useState<number>(OTP_TOTAL_SECONDS);
+  const [resendCooldown, setResendCooldown] = useState(false);
 
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,6 +63,33 @@ const Login: React.FC = () => {
   React.useEffect(() => {
     fetchSystemSettings();
   }, [fetchSystemSettings]);
+
+  // Signup OTP Countdown (5 minutes)
+  React.useEffect(() => {
+    if (!isLoginMode && regStep === 'otp' && signupTimer > 0) {
+      const timer = setInterval(() => {
+        setSignupTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isLoginMode, regStep, signupTimer]);
+
+  // Password Recovery OTP Countdown (5 minutes)
+  React.useEffect(() => {
+    if (recoveryStep === 'otp' && recoveryTimer > 0) {
+      const timer = setInterval(() => {
+        setRecoveryTimer((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [recoveryStep, recoveryTimer]);
+
+  // Format MM:SS helper
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   // Show error alert if exists
   React.useEffect(() => {
@@ -70,6 +107,44 @@ const Login: React.FC = () => {
   // Business Name field state needed for registration
   const [businessName, setBusinessName] = useState('');
 
+  // Resend Signup OTP
+  const handleResendSignupOtp = async () => {
+    if (signupTimer > 240) {
+      alert("Please wait at least 60 seconds before requesting a new code.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await authApi.requestVerificationOtp(email.trim());
+      setSignupTimer(OTP_TOTAL_SECONDS);
+      setSignupOtp('');
+      alert("A new 6-digit verification code has been sent to your email!");
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to resend verification code. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Resend Password Reset OTP
+  const handleResendRecoveryOtp = async () => {
+    if (recoveryTimer > 240) {
+      alert("Please wait at least 60 seconds before requesting a new code.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await authApi.requestOtp(email.trim());
+      setRecoveryTimer(OTP_TOTAL_SECONDS);
+      setRecoveryOtp('');
+      alert("A new password reset code has been sent to your email!");
+    } catch (err: any) {
+      alert(err.response?.data?.error || "Failed to resend code.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -77,7 +152,7 @@ const Login: React.FC = () => {
     if (!isLoginMode) {
       // REGISTRATION FLOW
 
-      // Step 1: Info -> Plan
+      // Step 1: Info Validation & Registration -> OTP Sent
       if (regStep === 'info') {
         if (!name.trim()) {
           alert("Please enter your full name.");
@@ -99,60 +174,120 @@ const Login: React.FC = () => {
           setIsSubmitting(false);
           return;
         }
-        setRegStep('plan');
-        setIsSubmitting(false);
+
+        try {
+          const cleanEmail = email.trim();
+          const cleanName = name.trim();
+          const cleanBusinessName = businessName.trim();
+
+          await authApi.register({
+            email: cleanEmail,
+            username: cleanEmail,
+            password: password,
+            password1: password,
+            password2: password,
+            name: cleanName,
+            business_name: cleanBusinessName,
+            plan_slug: 'starter'
+          });
+
+          // Registration succeeded; verification OTP has been emailed
+          setRegStep('otp');
+          setSignupTimer(OTP_TOTAL_SECONDS);
+          setSignupOtp('');
+        } catch (error: any) {
+          console.error("Registration failed", error);
+          if (error.response?.status === 401) {
+            await authApi.forceLogout();
+            alert("Previous session state was invalid. Please submit again.");
+            setIsSubmitting(false);
+            return;
+          }
+
+          let errorMsg = "Registration failed.";
+          if (error.response?.data) {
+            const data = error.response.data;
+            if (typeof data === 'string') {
+              errorMsg = data;
+            } else {
+              const messages = Object.keys(data).map(key => {
+                const val = data[key];
+                return `${key}: ${Array.isArray(val) ? val.join(' ') : val}`;
+              });
+              errorMsg = messages.join('\n');
+            }
+          }
+          alert(errorMsg);
+        } finally {
+          setIsSubmitting(false);
+        }
         return;
       }
 
-      // Step 2: Submit Registration
-      try {
-        const cleanEmail = email.trim();
-        const cleanName = name.trim();
-        const cleanBusinessName = businessName.trim();
-
-        await authApi.register({
-          email: cleanEmail,
-          username: cleanEmail,
-          password: password,
-          password1: password,
-          password2: password,
-          name: cleanName,
-          business_name: cleanBusinessName,
-          plan_slug: selectedPlanSlug
-        });
-
-        // Automatically log user in upon successful registration
-        await login(cleanEmail, undefined, password);
-        const from = (location.state as any)?.from?.pathname || '/';
-        navigate(from, { replace: true });
-      } catch (error: any) {
-        console.error("Registration failed", error);
-
-        // Handle Stale Session (User deleted but cookie remains)
-        if (error.response?.status === 401) {
-          await authApi.forceLogout();
-          alert("Previous session state was invalid. We have cleared it. Please submit the form again.");
+      // Step 2: OTP Verification -> Plan Selection
+      if (regStep === 'otp') {
+        if (signupOtp.trim().length !== 6) {
+          alert("Please enter the 6-digit confirmation code.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (signupTimer <= 0) {
+          alert("The verification code has expired (5 minute limit). Please click 'Resend Code'.");
           setIsSubmitting(false);
           return;
         }
 
-        // Helper to format all errors
-        let errorMsg = "Registration failed.";
-        if (error.response?.data) {
-          const data = error.response.data;
-          if (typeof data === 'string') {
-            errorMsg = data;
-          } else {
-            const messages = Object.keys(data).map(key => {
-              const val = data[key];
-              return `${key}: ${Array.isArray(val) ? val.join(' ') : val}`;
-            });
-            errorMsg = messages.join('\n');
+        try {
+          const cleanEmail = email.trim();
+          const res: any = await authApi.verifyEmailOtp({
+            email: cleanEmail,
+            otp: signupOtp.trim()
+          });
+
+          const data = res?.data || res;
+          const token = data?.access || data?.access_token;
+          const refreshToken = data?.refresh || data?.refresh_token;
+
+          if (token) {
+            localStorage.setItem('cs_access_token', token);
           }
+          if (refreshToken) {
+            localStorage.setItem('cs_refresh_token', refreshToken);
+          }
+          sessionStorage.setItem('cs_session', '1');
+
+          // Refresh store with authenticated user data
+          await checkAuth();
+
+          // Move to Step 3: Plan selection
+          setRegStep('plan');
+        } catch (error: any) {
+          console.error("Verification failed", error);
+          const errMsg = error.response?.data?.error || error.response?.data?.detail || "Invalid or expired verification code.";
+          alert(errMsg);
+        } finally {
+          setIsSubmitting(false);
         }
-        alert(errorMsg);
-      } finally {
-        setIsSubmitting(false);
+        return;
+      }
+
+      // Step 3: Plan Selection Finished -> Dashboard
+      if (regStep === 'plan') {
+        try {
+          if (selectedPlanSlug) {
+            await subscriptionApi.updatePlan({ plan_slug: selectedPlanSlug });
+            await checkAuth();
+          }
+          const from = (location.state as any)?.from?.pathname || '/';
+          navigate(from, { replace: true });
+        } catch (error: any) {
+          console.error("Plan update failed", error);
+          // Navigate anyway if default plan exists
+          navigate('/', { replace: true });
+        } finally {
+          setIsSubmitting(false);
+        }
+        return;
       }
     } else {
       // LOGIN FLOW
@@ -204,23 +339,45 @@ const Login: React.FC = () => {
   const renderFormContent = () => {
     // 1. RECOVERY: OTP & NEW PASSWORD
     if (recoveryStep === 'otp') {
+      const isExpired = recoveryTimer <= 0;
       return (
         <form onSubmit={handleRecoverySubmit} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+          <div>
+            <h3 className="font-space font-bold text-lg text-[#F1F1F1] tracking-tight">Enter Reset Code</h3>
+            <p className="text-xs text-[#888888] mt-0.5">We sent a 6-digit password reset code to <span className="text-[#E2DCC8] font-medium">{email}</span></p>
+          </div>
+
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">6-Digit Security Code</label>
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading">6-Digit Security Code</label>
+              <div className={`flex items-center gap-1.5 text-xs font-mono font-bold px-2 py-0.5 rounded-[3px] border ${
+                isExpired 
+                  ? 'bg-red-950/40 border-red-800/60 text-red-400' 
+                  : recoveryTimer < 60 
+                    ? 'bg-amber-950/40 border-amber-800/60 text-amber-400 animate-pulse' 
+                    : 'bg-[#0F3D3E]/40 border-[#0F3D3E] text-[#00E5D0]'
+              }`}>
+                <Clock size={12} />
+                <span>{isExpired ? 'EXPIRED' : formatTimer(recoveryTimer)}</span>
+              </div>
+            </div>
+
             <div className="relative group">
               <KeyRound size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
               <input
                 type="text"
                 required
                 maxLength={6}
-                value={otp}
-                onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                value={recoveryOtp}
+                onChange={(e) => setRecoveryOtp(e.target.value.replace(/[^0-9]/g, ''))}
                 placeholder="000000"
-                className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-xl font-mono font-bold text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555] tracking-[0.5em] text-center"
+                disabled={isExpired}
+                className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-xl font-mono font-bold text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555] tracking-[0.5em] text-center disabled:opacity-50"
               />
             </div>
-            <p className="text-[10px] text-[#E2DCC8]/60 text-center">Enter the code sent to {email}</p>
+            {isExpired && (
+              <p className="text-[11px] text-red-400 text-center font-medium">OTP has expired after 5 minutes. Request a new code below.</p>
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -240,19 +397,119 @@ const Login: React.FC = () => {
 
           <button
             type="submit"
-            disabled={isSubmitting || otp.length !== 6}
+            disabled={isSubmitting || recoveryOtp.length !== 6 || isExpired}
             className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/20 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Reset Credentials'}
           </button>
 
+          <div className="flex items-center justify-between pt-1">
+            <button
+              type="button"
+              onClick={() => setRecoveryStep('email')}
+              className="text-xs text-[#888888] hover:text-[#E2DCC8] transition-colors flex items-center gap-1"
+            >
+              <ArrowLeft size={13} /> Change Email
+            </button>
+            <button
+              type="button"
+              onClick={handleResendRecoveryOtp}
+              disabled={isSubmitting}
+              className="text-xs font-semibold text-[#00E5D0] hover:text-[#5cf8eb] transition-colors flex items-center gap-1.5"
+            >
+              <RotateCcw size={13} /> Resend Code
+            </button>
+          </div>
+        </form>
+      );
+    }
+
+    // 2. SIGNUP: EMAIL VERIFICATION OTP (5 MINUTES STRICT)
+    if (!isLoginMode && regStep === 'otp') {
+      const isExpired = signupTimer <= 0;
+      return (
+        <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0F3D3E]/50 border border-[#00E5D0]/30 text-[#00E5D0] text-[10px] font-bold uppercase tracking-wider mb-2">
+              <Mail size={12} /> Step 2: Email Verification
+            </div>
+            <h3 className="font-space font-bold text-xl text-[#F1F1F1] tracking-tight">Verify Your Account</h3>
+            <p className="text-xs text-[#888888] mt-1">
+              Enter the 6-digit confirmation OTP sent to <span className="text-[#E2DCC8] font-medium">{email}</span> to verify your account.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex justify-between items-center ml-1">
+              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading">Confirmation Code</label>
+              <div className={`flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-[4px] border ${
+                isExpired 
+                  ? 'bg-red-950/40 border-red-800/60 text-red-400' 
+                  : signupTimer < 60 
+                    ? 'bg-amber-950/40 border-amber-800/60 text-amber-400 animate-pulse' 
+                    : 'bg-[#0F3D3E]/40 border-[#0F3D3E] text-[#00E5D0]'
+              }`}>
+                <Clock size={13} />
+                <span>{isExpired ? 'EXPIRED' : formatTimer(signupTimer)}</span>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <KeyRound size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#00E5D0] transition-colors" />
+              <input
+                type="text"
+                required
+                maxLength={6}
+                value={signupOtp}
+                onChange={(e) => setSignupOtp(e.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="000000"
+                disabled={isExpired}
+                className="w-full bg-[#171616] border border-[#262626] rounded-[6px] pl-12 pr-4 py-3.5 text-2xl font-mono font-bold text-[#F1F1F1] focus:border-[#00E5D0] focus:ring-1 focus:ring-[#00E5D0]/30 outline-none transition-all placeholder:text-[#444] tracking-[0.5em] text-center disabled:opacity-50"
+              />
+            </div>
+
+            {isExpired ? (
+              <p className="text-[11px] text-red-400 text-center font-medium">OTP has expired after 5 minutes. Please click 'Resend Code' below.</p>
+            ) : (
+              <p className="text-[11px] text-[#888888] text-center">Code expires strictly in 5 minutes.</p>
+            )}
+          </div>
+
           <button
-            type="button"
-            onClick={() => setRecoveryStep('email')}
-            className="w-full text-center text-xs font-medium text-[#E2DCC8]/70 hover:text-[#E2DCC8] transition-colors"
+            type="submit"
+            disabled={isSubmitting || signupOtp.length !== 6 || isExpired}
+            className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed mt-3"
           >
-            Resend Code
+            {isSubmitting ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Verifying Code...</span>
+              </div>
+            ) : (
+              <>
+                <span>Verify & Choose Plan</span>
+                <ArrowRight size={16} />
+              </>
+            )}
           </button>
+
+          <div className="flex items-center justify-between pt-1">
+            <button
+              type="button"
+              onClick={() => setRegStep('info')}
+              className="text-xs text-[#888888] hover:text-[#E2DCC8] transition-colors flex items-center gap-1"
+            >
+              <ArrowLeft size={13} /> Edit Registration Info
+            </button>
+            <button
+              type="button"
+              onClick={handleResendSignupOtp}
+              disabled={isSubmitting}
+              className="text-xs font-semibold text-[#00E5D0] hover:text-[#5cf8eb] transition-colors flex items-center gap-1.5"
+            >
+              <RotateCcw size={13} /> Resend Code
+            </button>
+          </div>
         </form>
       );
     }
@@ -399,7 +656,7 @@ const Login: React.FC = () => {
             </div>
           ) : (
             <>
-              <span>{isLoginMode ? 'Sign In To Studio' : (regStep === 'info' ? 'Next: Select Plan' : 'Confirm & Register')}</span>
+              <span>{isLoginMode ? 'Sign In To Studio' : 'Next: Verify Email'}</span>
               <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
             </>
           )}
@@ -547,10 +804,10 @@ const Login: React.FC = () => {
             {isSubmitting ? (
               <div className="flex items-center gap-2">
                 <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Creating Account...</span>
+                <span>Activating Subscription...</span>
               </div>
             ) : (
-              <span>Start with {plans.find((p: any) => p.slug === selectedPlanSlug)?.name || 'Selected Plan'}</span>
+              <span>Start with {plans.find((p: any) => p.slug === selectedPlanSlug)?.name || 'Selected Plan'} &rarr;</span>
             )}
           </button>
         </div>

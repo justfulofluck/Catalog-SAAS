@@ -32,6 +32,8 @@ from dj_rest_auth.app_settings import api_settings
 
 from dj_rest_auth.registration.views import RegisterView
 from dj_rest_auth.views import UserDetailsView, LoginView
+from dj_rest_auth.jwt_auth import set_jwt_cookies
+from dj_rest_auth.utils import jwt_encode
 
 logger = logging.getLogger(__name__)
 
@@ -134,23 +136,26 @@ class PublicRegisterView(RegisterView):
             email = request.data.get('email')
             user = User.objects.filter(email=email).first()
             if user:
-                if system_settings.require_email_verification:
-                    user.is_verified = False
-                    user.save()
-                    # Generate verification code
-                    code = "".join([secrets.choice("0123456789") for _ in range(6)])
-                    EmailVerificationOTP.objects.create(
-                        user=user,
-                        otp=code,
-                        expires_at=timezone.now() + datetime.timedelta(minutes=15)
-                    )
-                    subject = "Verify your catalogmakerr Account"
-                    msg = f"Hello {user.name or 'User'},\n\nYour catalogmakerr verification code is: {code}\n\nThis code expires in 15 minutes."
-                    html_msg = get_email_verification_html(user.name or "User", code)
-                    send_email(user.email, subject, msg, html_message=html_msg)
-                else:
-                    user.is_verified = True
-                    user.save()
+                # User account created but requires 6-digit OTP verification before access
+                user.is_verified = False
+                user.save()
+
+                # Generate 6-digit verification code with 5-minute validity
+                code = "".join([secrets.choice("0123456789") for _ in range(6)])
+                EmailVerificationOTP.objects.create(
+                    user=user,
+                    otp=code,
+                    expires_at=timezone.now() + datetime.timedelta(minutes=5)
+                )
+                subject = "Verify your catalogmakerr Account"
+                msg = (
+                    f"Hello {user.name or 'User'},\n\n"
+                    f"Your catalogmakerr verification code is: {code}\n\n"
+                    f"This code expires in 5 minutes.\n"
+                    f"Please enter this code to verify your email and activate your account."
+                )
+                html_msg = get_email_verification_html(user.name or "User", code)
+                send_email(user.email, subject, msg, html_message=html_msg)
 
         return response
 
@@ -333,11 +338,11 @@ class RequestEmailVerificationOTP(APIView):
             return Response({"error": "Please wait 60 seconds before requesting another code."}, status=status.HTTP_429_TOO_MANY_REQUESTS)
 
         otp_code = "".join([secrets.choice("0123456789") for _ in range(6)])
-        expiry = now + datetime.timedelta(minutes=15)
+        expiry = now + datetime.timedelta(minutes=5)
         EmailVerificationOTP.objects.create(user=user, otp=otp_code, expires_at=expiry)
 
         subject = "Verify Your catalogmakerr Email"
-        msg = f"Hello {user.name or 'User'},\n\nYour verification code is: {otp_code}\n\nThis code expires in 15 minutes."
+        msg = f"Hello {user.name or 'User'},\n\nYour verification code is: {otp_code}\n\nThis code expires in 5 minutes."
         html_msg = get_email_verification_html(user.name or "User", otp_code)
         send_email(user.email, subject, msg, html_message=html_msg)
 
@@ -360,17 +365,48 @@ class ConfirmEmailVerificationOTP(APIView):
 
         latest = EmailVerificationOTP.objects.filter(user=user).order_by("-created_at").first()
         if not latest or not latest.is_valid():
-            return Response({"error": "Verification code is invalid or expired."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Verification code is invalid or expired. Please request a new code."}, status=status.HTTP_400_BAD_REQUEST)
 
         if latest.otp != otp:
             latest.attempts += 1
             latest.save()
-            return Response({"error": "Invalid verification code."}, status=status.HTTP_400_BAD_REQUEST)
+            remaining = max(0, 5 - latest.attempts)
+            if remaining == 0:
+                latest.delete()
+                return Response(
+                    {"error": "Maximum invalid attempts exceeded. This code has been invalidated."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response(
+                {"error": f"Invalid verification code. {remaining} attempt(s) remaining."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
         user.is_verified = True
         user.save()
         user.verification_otps.all().delete()
-        return Response({"message": "Email verified successfully! You can now log in."}, status=status.HTTP_200_OK)
+
+        # Generate JWT session tokens so the user is directly authenticated
+        access_token, refresh_token = jwt_encode(user)
+        user_data = UserSerializer(user, context={"request": request}).data
+
+        res = Response(
+            {
+                "message": "Email verified successfully! Welcome to catalogmakerr.",
+                "access": str(access_token),
+                "access_token": str(access_token),
+                "refresh": str(refresh_token),
+                "refresh_token": str(refresh_token),
+                "user": user_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+        # Set auth cookies if enabled
+        if getattr(settings, "REST_USE_JWT", True):
+            set_jwt_cookies(res, access_token, refresh_token)
+
+        return res
 
 class AdminSubscriptionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = UserSubscription.objects.all().select_related('user', 'plan').order_by('-start_date')
