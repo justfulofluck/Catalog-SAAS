@@ -2,7 +2,24 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useStore } from '../../store/useStore';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, CheckCircle2, User as UserIcon, Shield, KeyRound, ArrowLeft } from 'lucide-react';
+import { 
+  Mail, 
+  Lock, 
+  ArrowRight, 
+  Eye, 
+  EyeOff, 
+  CheckCircle2, 
+  User as UserIcon, 
+  Shield, 
+  KeyRound, 
+  ArrowLeft,
+  Sparkles,
+  Crown,
+  Package,
+  BookOpen,
+  Check,
+  Layers
+} from 'lucide-react';
 import { authApi } from '../../client';
 import GradientBlinds from '../Common/GradientBlinds';
 import { AppIcon } from '../Common/AppIcon';
@@ -394,41 +411,120 @@ const Login: React.FC = () => {
   const renderPlanSelection = () => {
     return (
       <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
-        <div className="grid grid-cols-1 gap-3.5 max-h-[340px] overflow-y-auto pr-1">
-          {plans.map((plan: any) => (
-            <div
-              key={plan.id}
-              onClick={() => setSelectedPlanSlug(plan.slug)}
-              className={`p-5 rounded-[4px] border cursor-pointer transition-all ${selectedPlanSlug === plan.slug
-                ? 'border-[#E2DCC8] bg-[#0F3D3E]/40 ring-1 ring-[#E2DCC8]/50'
-                : 'border-[#262626] bg-[#171616] hover:border-[#383838]'
+        <div>
+          <h3 className="font-space font-bold text-xl text-[#F1F1F1] tracking-tight">Select Your Plan</h3>
+          <p className="text-xs text-[#888888] mt-1">Choose a subscription plan to begin your workspace journey.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-stretch">
+          {plans.map((plan: any) => {
+            const isSelected = selectedPlanSlug === plan.slug;
+            const isGrowth = plan.slug === 'growth';
+            const isPro = plan.slug === 'pro';
+            const numPrice = typeof plan.price === 'string' ? parseFloat(plan.price) : Number(plan.price || 0);
+
+            return (
+              <div
+                key={plan.id || plan.slug}
+                onClick={() => setSelectedPlanSlug(plan.slug)}
+                className={`rounded-[6px] p-5 md:p-6 border cursor-pointer transition-all duration-300 flex flex-col justify-between relative group ${
+                  isSelected
+                    ? 'bg-[#151515] border-[#E2DCC8] ring-2 ring-[#E2DCC8]/40 shadow-2xl shadow-[#0F3D3E]/30 scale-[1.02]'
+                    : 'bg-[#161616] border-[#262626] hover:border-[#3a3a3a] hover:bg-[#1a1a1a] shadow-lg'
                 }`}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h4 className="font-medium text-base text-[#F1F1F1] font-heading">{plan.name}</h4>
-                <span className="text-lg font-medium text-[#E2DCC8] font-heading">₹{plan.price}<span className="text-[10px] text-[#E2DCC8]/60">/mo</span></span>
+              >
+                {/* Popular or Selected Badge */}
+                {isGrowth && !isSelected && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/30 px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-1 font-heading">
+                    <Sparkles size={10} /> Popular
+                  </div>
+                )}
+                {isSelected && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8] px-3 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest shadow-lg flex items-center gap-1 font-heading">
+                    <Check size={11} strokeWidth={3} /> Selected
+                  </div>
+                )}
+
+                <div>
+                  {/* Tier Title */}
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-space text-base font-bold text-[#F1F1F1] flex items-center gap-1.5">
+                      {plan.name}
+                      {isPro && <Crown size={14} className="text-amber-400" />}
+                    </h4>
+                    <div className={`w-4 h-4 rounded-full border flex items-center justify-center transition-all ${
+                      isSelected ? 'border-[#E2DCC8] bg-[#E2DCC8]' : 'border-[#444]'
+                    }`}>
+                      {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-[#100F0F]" />}
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[#888888] line-clamp-2 min-h-[32px]">
+                    {plan.description || (numPrice === 0 ? 'Essential starter sandbox and trial capabilities.' : 'Full catalog scale for active teams.')}
+                  </p>
+
+                  {/* Price Tag */}
+                  <div className="my-4 pb-4 border-b border-white/5 flex items-baseline gap-1">
+                    <span className="font-space text-2xl font-bold text-[#F1F1F1]">
+                      ₹{numPrice}
+                    </span>
+                    <span className="text-[11px] font-medium text-[#888888]">
+                      {numPrice === 0 ? '/ 7 days trial' : '/ mo'}
+                    </span>
+                  </div>
+
+                  {/* Feature Highlights */}
+                  <div className="space-y-2.5 mb-4 text-xs text-[#E2DCC8]/90">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-[3px] bg-[#0F3D3E]/40 border border-[#0F3D3E] flex items-center justify-center shrink-0 text-[#E2DCC8]">
+                        <BookOpen size={10} />
+                      </div>
+                      <span className="text-[11px]">
+                        <strong>{plan.features?.max_catalogs || 1}</strong> Catalogs
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-[3px] bg-[#0F3D3E]/40 border border-[#0F3D3E] flex items-center justify-center shrink-0 text-[#E2DCC8]">
+                        <Package size={10} />
+                      </div>
+                      <span className="text-[11px]">
+                        <strong>{plan.features?.max_products || 50}</strong> Products
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-[3px] bg-[#0F3D3E]/40 border border-[#0F3D3E] flex items-center justify-center shrink-0 text-[#E2DCC8]">
+                        <Layers size={10} />
+                      </div>
+                      <span className="text-[11px]">
+                        {plan.features?.custom_watermark ? 'Custom Watermark' : 'Catalog Watermark'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Card Selection Action Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedPlanSlug(plan.slug);
+                  }}
+                  className={`w-full py-2 rounded-[4px] font-heading font-semibold text-[10px] uppercase tracking-wider transition-all mt-2 ${
+                    isSelected
+                      ? 'bg-[#0F3D3E] text-[#E2DCC8] border border-[#E2DCC8]/50 shadow-md'
+                      : 'bg-[#1b1b1b] text-[#888888] border border-[#2e2e2e] hover:text-white hover:border-[#444]'
+                  }`}
+                >
+                  {isSelected ? 'Selected Tier' : 'Choose Plan'}
+                </button>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {plan.features?.max_catalogs && (
-                  <span className="px-2.5 py-1 bg-[#100F0F] border border-[#262626] rounded-[4px] text-[10px] font-medium text-[#E2DCC8]">
-                    {plan.features.max_catalogs} Catalogs
-                  </span>
-                )}
-                {plan.features?.max_products && (
-                  <span className="px-2.5 py-1 bg-[#100F0F] border border-[#262626] rounded-[4px] text-[10px] font-medium text-[#E2DCC8]">
-                    {plan.features.max_products} Products
-                  </span>
-                )}
-                {plan.slug === 'starter' && (
-                  <span className="px-2.5 py-1 bg-[#0F3D3E] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] text-[10px] font-bold uppercase tracking-wider font-heading">
-                    7 Days Free
-                  </span>
-                )}
-              </div>
-            </div>
-          ))}
+            );
+          })}
+
           {plans.length === 0 && (
-            <div className="p-8 text-center text-[#E2DCC8]/60 font-medium border border-dashed border-[#262626] rounded-[4px]">
+            <div className="col-span-3 p-8 text-center text-[#E2DCC8]/60 font-medium border border-dashed border-[#262626] rounded-[4px]">
               Loading pricing plans...
             </div>
           )}
@@ -438,7 +534,7 @@ const Login: React.FC = () => {
           <button
             type="button"
             onClick={() => setRegStep('info')}
-            className="flex-1 py-4 bg-[#171616] text-[#E2DCC8] border border-[#262626] hover:border-[#E2DCC8]/40 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider transition-all"
+            className="px-6 py-4 bg-[#171616] text-[#E2DCC8] border border-[#262626] hover:border-[#E2DCC8]/40 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider transition-all"
           >
             Back
           </button>
@@ -446,9 +542,16 @@ const Login: React.FC = () => {
             type="button"
             onClick={handleLoginSubmit}
             disabled={isSubmitting || plans.length === 0}
-            className="flex-[2] py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
+            className="flex-1 py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-medium text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50"
           >
-            {isSubmitting ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : 'Start Free Trial'}
+            {isSubmitting ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <span>Creating Account...</span>
+              </div>
+            ) : (
+              <span>Start with {plans.find((p: any) => p.slug === selectedPlanSlug)?.name || 'Selected Plan'}</span>
+            )}
           </button>
         </div>
       </div>
@@ -477,7 +580,11 @@ const Login: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-r from-[#100F0F] via-[#100F0F]/65 to-transparent pointer-events-none" />
       </div>
 
-      <div className="w-full max-w-md bg-[#161616]/90 backdrop-blur-xl rounded-[4px] border border-[#262626] shadow-2xl overflow-hidden p-8 md:p-10 relative z-10 login-card-enter">
+      <div className={`w-full ${
+        regStep === 'plan' && !isLoginMode && recoveryStep === 'none'
+          ? 'max-w-4xl' 
+          : 'max-w-md'
+      } bg-[#161616]/95 backdrop-blur-2xl rounded-[8px] border border-[#262626] shadow-2xl overflow-hidden p-6 md:p-9 relative z-10 transition-all duration-300 login-card-enter`}>
         {/* Top Loading Shimmer Bar during submission */}
         {isSubmitting && (
           <div className="absolute top-0 left-0 right-0 h-[2.5px] bg-[#100F0F] overflow-hidden">

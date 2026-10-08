@@ -13,6 +13,7 @@ from .views import (
     AdminTestEmailView,
     RequestEmailVerificationOTP,
     ConfirmEmailVerificationOTP,
+    EnterpriseInquiryView,
 )
 
 router = DefaultRouter()
@@ -27,6 +28,7 @@ urlpatterns = [
     path("users/force-logout/", ForceLogoutView.as_view(), name="force-logout"),
     path("users/change-admin-password/", AdminChangePasswordView.as_view(), name="admin-change-password"),
     path("subscriptions/update/", UpdateSubscriptionView.as_view(), name="update-subscription"),
+    path("enterprise-inquiry/", EnterpriseInquiryView.as_view(), name="enterprise-inquiry"),
     path(
         "auth/password-reset/otp/request/",
         RequestPasswordResetOTP.as_view(),

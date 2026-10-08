@@ -61,3 +61,17 @@ def get_smtp_test_html(recipient, time_str):
         "year": datetime.datetime.now().year,
     }
     return render_to_string("emails/smtp_test_email.html", context)
+
+
+def get_enterprise_inquiry_html(name, email, company="", phone="", message="", support_email="support@catalogmakerr.com"):
+    context = {
+        "name": name,
+        "email": email,
+        "company": company,
+        "phone": phone,
+        "message": message,
+        "support_email": support_email,
+        "year": datetime.datetime.now().year,
+    }
+    return render_to_string("emails/enterprise_inquiry_confirmation.html", context)
+

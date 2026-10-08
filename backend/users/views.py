@@ -26,6 +26,7 @@ from utils.email_templates import (
     get_subscription_purchase_html,
     get_email_verification_html,
     get_smtp_test_html,
+    get_enterprise_inquiry_html,
 )
 from dj_rest_auth.app_settings import api_settings
 
@@ -669,4 +670,56 @@ class AdminChangePasswordView(APIView):
             {"message": "Admin password updated successfully."},
             status=status.HTTP_200_OK,
         )
+
+
+class EnterpriseInquiryView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        data = request.data or {}
+        name = (data.get("name") or "").strip()
+        email = (data.get("email") or "").strip()
+        company = (data.get("company") or "").strip()
+        phone = (data.get("phone") or "").strip()
+        message = (data.get("message") or "").strip()
+
+        if not email:
+            return Response(
+                {"error": "Email address is required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not name:
+            name = email.split("@")[0].title()
+
+        subject = "We received your enterprise request - catalogmakerr"
+        plain_message = (
+            f"Hi {name},\n\n"
+            f"Thank you for contacting catalogmakerr Enterprise Solutions!\n"
+            f"We have received your request and our team will get in touch with you shortly.\n\n"
+            f"Details submitted:\n"
+            f"- Email: {email}\n"
+            f"- Company: {company or 'N/A'}\n"
+            f"- Phone: {phone or 'N/A'}\n"
+            f"- Message: {message or 'N/A'}\n\n"
+            f"Best regards,\n"
+            f"The catalogmakerr Team"
+        )
+        html_message = get_enterprise_inquiry_html(
+            name=name,
+            email=email,
+            company=company,
+            phone=phone,
+            message=message,
+        )
+
+        try:
+            send_email(email, subject, plain_message, html_message=html_message)
+        except Exception as e:
+            logger.error("Failed to send enterprise inquiry email to %s: %s", email, e)
+
+        return Response(
+            {"message": "Your enterprise inquiry has been submitted. A confirmation has been sent to your email."},
+            status=status.HTTP_200_OK,
+        )
+
 

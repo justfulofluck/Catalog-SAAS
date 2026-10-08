@@ -110,6 +110,7 @@ export const subscriptionApi = {
     deletePlan: (id: number | string) => api.delete(`/plans/${id}/`),
     updatePlan: (data: { plan_slug: string }) => api.post('/subscriptions/update/', data),
     adminGetAllSubscriptions: () => api.get('/admin-subscriptions/'),
+    sendEnterpriseInquiry: (data: { name: string; email: string; company?: string; phone?: string; message?: string }) => api.post('/enterprise-inquiry/', data),
 };
 
 // Products API

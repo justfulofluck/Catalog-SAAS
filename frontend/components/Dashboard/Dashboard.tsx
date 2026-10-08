@@ -132,13 +132,6 @@ const Dashboard: React.FC = () => {
           isDark ? 'border-[#E2DCC8]/15' : 'border-slate-200'
         }`}>
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className={`px-2 py-0.5 rounded-[3px] text-[9px] font-bold uppercase tracking-widest border ${
-                isDark ? 'bg-[#0F3D3E]/30 text-[#E2DCC8] border-[#0F3D3E]' : 'bg-[#0F3D3E]/10 text-[#0F3D3E] border-[#0F3D3E]/30'
-              }`}>
-                WORKSPACE OVERVIEW
-              </span>
-            </div>
             <h1 className={`text-2xl md:text-3xl font-bold tracking-tight font-heading leading-tight ${
               isDark ? 'text-[#F1F1F1]' : 'text-slate-900'
             }`}>

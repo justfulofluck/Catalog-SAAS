@@ -15,9 +15,15 @@ import {
   Crown,
   CheckCircle2,
   XCircle,
-  Loader2
+  Loader2,
+  Mail,
+  Building,
+  Phone,
+  Send,
+  X
 } from 'lucide-react';
 import { AppIcon } from '../Common/AppIcon';
+import { subscriptionApi } from '../../client';
 
 const PricingView: React.FC = () => {
   const { plans: storePlans, fetchPlans, setView, user, updateSubscription, uiTheme, isLoading } = useStore();
@@ -26,6 +32,58 @@ const PricingView: React.FC = () => {
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
   const [checkoutStep, setCheckoutStep] = useState<'details' | 'processing' | 'success'>('details');
+
+  // Enterprise modal state
+  const [isEnterpriseOpen, setIsEnterpriseOpen] = useState(false);
+  const [enterpriseForm, setEnterpriseForm] = useState({
+    name: user?.name || user?.username || '',
+    email: user?.email || '',
+    company: '',
+    phone: '',
+    message: '',
+  });
+  const [enterpriseSubmitting, setEnterpriseSubmitting] = useState(false);
+  const [enterpriseSubmitted, setEnterpriseSubmitted] = useState(false);
+  const [enterpriseError, setEnterpriseError] = useState('');
+
+  const handleOpenEnterprise = () => {
+    setEnterpriseForm({
+      name: user?.name || user?.username || '',
+      email: user?.email || '',
+      company: '',
+      phone: '',
+      message: '',
+    });
+    setEnterpriseSubmitted(false);
+    setEnterpriseError('');
+    setIsEnterpriseOpen(true);
+  };
+
+  const handleSubmitEnterprise = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!enterpriseForm.email.trim()) {
+      setEnterpriseError('Please enter a valid email address.');
+      return;
+    }
+
+    setEnterpriseSubmitting(true);
+    setEnterpriseError('');
+
+    try {
+      await subscriptionApi.sendEnterpriseInquiry({
+        name: enterpriseForm.name.trim() || enterpriseForm.email.split('@')[0],
+        email: enterpriseForm.email.trim(),
+        company: enterpriseForm.company.trim(),
+        phone: enterpriseForm.phone.trim(),
+        message: enterpriseForm.message.trim(),
+      });
+      setEnterpriseSubmitted(true);
+    } catch (err: any) {
+      setEnterpriseError(err.response?.data?.error || 'Failed to submit request. Please try again.');
+    } finally {
+      setEnterpriseSubmitting(false);
+    }
+  };
 
   useEffect(() => {
     fetchPlans();
@@ -60,9 +118,7 @@ const PricingView: React.FC = () => {
   };
 
   const renderRazorpayMock = () => {
-    const planPrice = billingCycle === 'annual' && selectedPlan?.annualPrice !== undefined 
-      ? selectedPlan.annualPrice 
-      : selectedPlan?.price;
+    const planPrice = selectedPlan?.price;
 
     return (
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -214,11 +270,181 @@ const PricingView: React.FC = () => {
     );
   };
 
+  const renderEnterpriseModal = () => {
+    return (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        {/* Backdrop */}
+        <div 
+          onClick={() => !enterpriseSubmitting && setIsEnterpriseOpen(false)}
+          className="absolute inset-0 bg-black/85 backdrop-blur-md animate-in fade-in duration-300"
+        />
+
+        {/* Modal Window */}
+        <div className={`relative w-full max-w-[500px] rounded-[6px] shadow-2xl overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-6 duration-300 border ${
+          isDark ? 'bg-[#151515] border-[#2e2e2e]' : 'bg-white border-slate-200'
+        }`}>
+          {/* Header */}
+          <div className={`p-6 flex items-center justify-between border-b ${
+            isDark ? 'border-[#262626] bg-[#181818]' : 'border-slate-100 bg-slate-50'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-[6px] bg-[#0F3D3E] border border-[#E2DCC8]/30 flex items-center justify-center text-[#E2DCC8] shadow-md">
+                <Building size={20} />
+              </div>
+              <div>
+                <h3 className="font-space font-bold text-base text-[#F1F1F1] tracking-tight">Enterprise Solutions</h3>
+                <p className="text-[11px] text-[#888888]">Custom infrastructure, integrations & dedicated SLAs</p>
+              </div>
+            </div>
+            <button 
+              disabled={enterpriseSubmitting}
+              onClick={() => setIsEnterpriseOpen(false)}
+              className="text-[#666666] hover:text-white p-1 rounded transition-colors"
+            >
+              <X size={18} />
+            </button>
+          </div>
+
+          {/* Body */}
+          <div className="p-6">
+            {enterpriseSubmitted ? (
+              <div className="py-8 flex flex-col items-center justify-center text-center space-y-4 animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 rounded-full flex items-center justify-center shadow-xl">
+                  <CheckCircle2 size={34} />
+                </div>
+                <div className="space-y-2 max-w-sm">
+                  <h4 className="font-space text-xl font-bold text-white tracking-tight">Request Received!</h4>
+                  <p className="text-xs text-[#999999] leading-relaxed">
+                    Thank you, <strong className="text-white">{enterpriseForm.name}</strong>. A confirmation has been sent to <span className="text-[#00E5BF] font-mono">{enterpriseForm.email}</span>.
+                  </p>
+                  <p className="text-[11px] text-[#777777] pt-1">
+                    Our Enterprise Solutions team has been notified and will touch base with you shortly.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsEnterpriseOpen(false)}
+                  className="mt-4 px-6 py-2.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider transition-all"
+                >
+                  Close Window
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmitEnterprise} className="space-y-4">
+                {enterpriseError && (
+                  <div className="p-3 bg-red-950/50 border border-red-500/40 rounded-[4px] text-xs text-red-200">
+                    {enterpriseError}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#888888] font-heading mb-1.5">
+                      Your Name
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. John Doe"
+                      value={enterpriseForm.name}
+                      onChange={(e) => setEnterpriseForm({ ...enterpriseForm, name: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-[#1b1b1b] border border-[#2e2e2e] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] rounded-[4px] text-xs text-white placeholder-[#555] outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#888888] font-heading mb-1.5">
+                      Work Email <span className="text-red-400">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="e.g. john@company.com"
+                      value={enterpriseForm.email}
+                      onChange={(e) => setEnterpriseForm({ ...enterpriseForm, email: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-[#1b1b1b] border border-[#2e2e2e] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] rounded-[4px] text-xs text-white placeholder-[#555] outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#888888] font-heading mb-1.5">
+                      Company / Brand Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Acme Corp"
+                      value={enterpriseForm.company}
+                      onChange={(e) => setEnterpriseForm({ ...enterpriseForm, company: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-[#1b1b1b] border border-[#2e2e2e] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] rounded-[4px] text-xs text-white placeholder-[#555] outline-none transition-all"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-[#888888] font-heading mb-1.5">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      placeholder="e.g. +91 98765 43210"
+                      value={enterpriseForm.phone}
+                      onChange={(e) => setEnterpriseForm({ ...enterpriseForm, phone: e.target.value })}
+                      className="w-full px-3 py-2.5 bg-[#1b1b1b] border border-[#2e2e2e] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] rounded-[4px] text-xs text-white placeholder-[#555] outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-[#888888] font-heading mb-1.5">
+                    Requirements & Expected Scale
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="Tell us about your team size, expected catalogs/SKUs, or custom ERP / SAP sync needs..."
+                    value={enterpriseForm.message}
+                    onChange={(e) => setEnterpriseForm({ ...enterpriseForm, message: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-[#1b1b1b] border border-[#2e2e2e] focus:border-[#0F3D3E] focus:ring-1 focus:ring-[#0F3D3E] rounded-[4px] text-xs text-white placeholder-[#555] outline-none resize-none transition-all"
+                  />
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={enterpriseSubmitting}
+                    className="w-full py-3.5 bg-[#0F3D3E] hover:bg-[#155455] border border-[#E2DCC8]/30 text-white rounded-[4px] font-heading font-bold text-xs uppercase tracking-widest shadow-xl shadow-[#0F3D3E]/30 active:scale-98 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {enterpriseSubmitting ? (
+                      <>
+                        <Loader2 size={15} className="animate-spin text-[#E2DCC8]" />
+                        <span>Sending Request...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send size={14} className="text-[#E2DCC8]" />
+                        <span>Submit Enterprise Inquiry</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="flex items-center justify-center gap-1.5 pt-1 text-[10px] text-[#666666]">
+                  <ShieldCheck size={12} className="text-[#E2DCC8]/50" />
+                  <span>An immediate confirmation email will be delivered to your inbox</span>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`min-h-screen flex flex-col font-sans overflow-y-auto transition-colors ${
       isDark ? 'bg-[#100F0F] text-white' : 'bg-slate-50 text-slate-900'
     }`}>
       {isCheckoutOpen && renderRazorpayMock()}
+      {isEnterpriseOpen && renderEnterpriseModal()}
 
       {/* Top Navigation Bar */}
       <div className={`px-6 md:px-12 py-5 flex items-center justify-between border-b shrink-0 sticky top-0 z-20 backdrop-blur-md transition-colors ${
@@ -289,9 +515,7 @@ const PricingView: React.FC = () => {
               const isPro = plan.slug === 'pro';
 
               const numPrice = typeof plan.price === 'string' ? parseFloat(plan.price) : Number(plan.price || 0);
-              const price = billingCycle === 'annual'
-                ? Math.round(numPrice * 0.8)
-                : numPrice;
+              const price = numPrice;
 
               return (
                 <div
@@ -418,89 +642,16 @@ const PricingView: React.FC = () => {
           </div>
         )}
 
-        {/* Feature Comparison Matrix */}
-        {displayPlans.length > 0 && (
-          <div className="mt-20 border border-[#262626] rounded-[6px] bg-[#141414] overflow-hidden shadow-xl">
-            <div className="px-6 py-4.5 border-b border-[#262626] bg-[#181818] flex items-center justify-between">
-              <div>
-                <h4 className="font-space text-base font-bold text-[#F1F1F1]">Detailed Feature Breakdown</h4>
-                <p className="text-xs text-[#888888]">Comprehensive comparison of all available subscription tiers</p>
-              </div>
-              <ShieldCheck size={18} className="text-[#E2DCC8]" />
-            </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-[#262626] text-[10px] font-bold uppercase tracking-wider text-[#888888] font-heading">
-                    <th className="p-4 pl-6">Feature</th>
-                    {displayPlans.map((plan: any) => (
-                      <th key={plan.id} className="p-4 text-center font-bold text-[#E2DCC8]">
-                        {plan.name}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5 font-medium">
-                  <tr>
-                    <td className="p-4 pl-6 text-[#E2DCC8]">Active Catalogs Limit</td>
-                    {displayPlans.map((plan: any) => (
-                      <td key={plan.id} className="p-4 text-center text-[#888888]">
-                        {plan.features?.max_catalogs || 1} Catalogs
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="p-4 pl-6 text-[#E2DCC8]">Max Products in Inventory</td>
-                    {displayPlans.map((plan: any) => (
-                      <td key={plan.id} className="p-4 text-center text-[#888888]">
-                        {plan.features?.max_products || 50} Items
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="p-4 pl-6 text-[#E2DCC8]">Asset Storage Limit</td>
-                    {displayPlans.map((plan: any) => (
-                      <td key={plan.id} className="p-4 text-center text-[#888888]">
-                        {plan.features?.max_storage_mb ? `${plan.features.max_storage_mb} MB` : '500 MB'}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="p-4 pl-6 text-[#E2DCC8]">Remove catalogmakerr Watermark</td>
-                    {displayPlans.map((plan: any) => (
-                      <td key={plan.id} className="p-4 text-center">
-                        {plan.features?.custom_watermark ? (
-                          <CheckCircle2 size={15} className="mx-auto text-emerald-400" />
-                        ) : (
-                          <XCircle size={15} className="mx-auto text-red-500/60" />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                  <tr>
-                    <td className="p-4 pl-6 text-[#E2DCC8]">AI Product Grid Auto-Assembly</td>
-                    {displayPlans.map((plan: any) => (
-                      <td key={plan.id} className="p-4 text-center">
-                        {plan.features?.ai_enabled ? (
-                          <CheckCircle2 size={15} className="mx-auto text-emerald-400" />
-                        ) : (
-                          <XCircle size={15} className="mx-auto text-red-500/60" />
-                        )}
-                      </td>
-                    ))}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
 
         {/* Enterprise Assistance */}
         <div className="mt-16 text-center space-y-3">
           <p className="text-xs text-[#888888]">
             Need high-volume multi-brand catalog setup or custom ERP integration?{' '}
-            <button onClick={() => alert("Please reach out to support@catalogmakerr.com for custom enterprise volume pricing.")} className="text-[#E2DCC8] hover:underline font-semibold font-heading">
+            <button 
+              onClick={handleOpenEnterprise} 
+              className="text-[#E2DCC8] hover:underline font-semibold font-heading hover:text-white transition-colors"
+            >
               Talk to Enterprise Solutions
             </button>
           </p>
