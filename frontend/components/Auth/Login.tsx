@@ -286,13 +286,11 @@ const Login: React.FC = () => {
             await subscriptionApi.updatePlan({ plan_slug: selectedPlanSlug });
             await checkAuth();
           }
-          showToast("Subscription activated! Welcome to your studio.", "success", "Setup Complete");
-          const from = (location.state as any)?.from?.pathname || '/';
-          navigate(from, { replace: true });
+          showToast("Subscription activated! Let's set up your workspace.", "success", "Plan Selected");
+          navigate('/onboarding', { replace: true });
         } catch (error: any) {
           console.error("Plan update failed", error);
-          // Navigate anyway if default plan exists
-          navigate('/', { replace: true });
+          navigate('/onboarding', { replace: true });
         } finally {
           setIsSubmitting(false);
         }
@@ -446,9 +444,6 @@ const Login: React.FC = () => {
       return (
         <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#0F3D3E]/50 border border-[#00E5D0]/30 text-[#00E5D0] text-[10px] font-bold uppercase tracking-wider mb-2">
-              <Mail size={12} /> Step 2: Email Verification
-            </div>
             <h3 className="font-space font-bold text-xl text-[#F1F1F1] tracking-tight">Verify Your Account</h3>
             <p className="text-xs text-[#888888] mt-1">
               Enter the 6-digit confirmation OTP sent to <span className="text-[#E2DCC8] font-medium">{email}</span> to verify your account.

@@ -45,6 +45,7 @@ import { AppIcon } from './components/Common/AppIcon';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { NavigationSync } from './navigation/NavigationSync';
 import BusinessSelection from './components/Onboarding/BusinessSelection';
+import BusinessOnboarding from './components/Onboarding/BusinessOnboarding';
 import { useStore, View } from './store/useStore';
 import {
   LayoutDashboard,
@@ -775,6 +776,16 @@ const App: React.FC = () => {
         <Route path="/viewer" element={<PublicViewer />} />
         <Route path="/viewer/:uuid" element={<PublicViewer />} />
         <Route path="/pricing" element={<PricingView />} />
+        <Route
+          path="/onboarding"
+          element={
+            !isAuthenticated ? (
+              <Navigate to="/login" replace state={{ from: location }} />
+            ) : (
+              <BusinessOnboarding />
+            )
+          }
+        />
         <Route
           path="/editor"
           element={
