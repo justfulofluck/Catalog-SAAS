@@ -309,6 +309,8 @@ const Login: React.FC = () => {
     setIsSubmitting(true);
     try {
       await authApi.requestOtp(email);
+      setRecoveryOtp('');
+      setRecoveryTimer(OTP_TOTAL_SECONDS);
       setRecoveryStep('otp');
     } catch (err: any) {
       console.error(err);
@@ -323,13 +325,14 @@ const Login: React.FC = () => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      await authApi.verifyOtpAndReset({ email, otp, new_password: newPassword });
+      await authApi.verifyOtpAndReset({ email, otp: recoveryOtp.trim(), new_password: newPassword });
       setRecoveryStep('none');
       setIsLoginMode(true);
       alert("Password reset successfully. Please sign in.");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Verification failed. Invalid code or expired.");
+      const msg = err?.response?.data?.error || err?.response?.data?.detail || "Verification failed. Invalid code or expired.";
+      alert(msg);
     } finally {
       setIsSubmitting(false);
     }
