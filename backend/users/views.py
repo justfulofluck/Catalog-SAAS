@@ -5,6 +5,7 @@ from .models import (
     User,
     PasswordResetOTP,
     EmailVerificationOTP,
+    PendingRegistration,
     SubscriptionPlan,
     UserSubscription,
     SystemSetting,
@@ -17,6 +18,7 @@ from .serializers import (
 )
 from django.utils import timezone
 from django.conf import settings
+from django.contrib.auth.hashers import make_password, check_password
 import logging
 import secrets
 import datetime
@@ -25,6 +27,7 @@ from utils.email_templates import (
     get_password_reset_html,
     get_subscription_purchase_html,
     get_email_verification_html,
+    get_registration_magic_link_html,
     get_smtp_test_html,
     get_enterprise_inquiry_html,
 )
@@ -98,7 +101,7 @@ class CustomLoginView(LoginView):
         return response
 
 
-class PublicRegisterView(RegisterView):
+class PublicRegisterView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []
 
@@ -109,55 +112,203 @@ class PublicRegisterView(RegisterView):
                 {"error": "Public registration is currently disabled by administrator."},
                 status=status.HTTP_403_FORBIDDEN,
             )
-        if hasattr(request, 'data'):
-            email = request.data.get('email')
-            if email:
-                if not request.data.get('username'):
-                    if hasattr(request.data, '_mutable') and not request.data._mutable:
-                        request.data._mutable = True
-                        request.data['username'] = email
-                        request.data._mutable = False
-                    elif isinstance(request.data, dict):
-                        request.data['username'] = email
-                password = request.data.get('password')
-                if password:
-                    if not request.data.get('password1'):
-                        if hasattr(request.data, '_mutable') and not request.data._mutable:
-                            request.data._mutable = True
-                            request.data['password1'] = password
-                            request.data['password2'] = password
-                            request.data._mutable = False
-                        elif isinstance(request.data, dict):
-                            request.data['password1'] = password
-                            request.data['password2'] = password
 
-        response = super().post(request, *args, **kwargs)
-        if response.status_code in (200, 201):
-            email = request.data.get('email')
-            user = User.objects.filter(email=email).first()
-            if user:
-                # User account created but requires 6-digit OTP verification before access
-                user.is_verified = False
-                user.save()
+        data = request.data or {}
+        email = (data.get('email') or '').strip().lower()
+        name = (data.get('name') or '').strip()
+        password = data.get('password') or data.get('password1')
 
-                # Generate 6-digit verification code with 5-minute validity
-                code = "".join([secrets.choice("0123456789") for _ in range(6)])
-                EmailVerificationOTP.objects.create(
-                    user=user,
-                    otp=code,
-                    expires_at=timezone.now() + datetime.timedelta(minutes=5)
-                )
-                subject = "Verify your catalogmakerr Account"
-                msg = (
-                    f"Hello {user.name or 'User'},\n\n"
-                    f"Your catalogmakerr verification code is: {code}\n\n"
-                    f"This code expires in 5 minutes.\n"
-                    f"Please enter this code to verify your email and activate your account."
-                )
-                html_msg = get_email_verification_html(user.name or "User", code)
-                send_email(user.email, subject, msg, html_message=html_msg)
+        if not email or '@' not in email:
+            return Response({"error": "A valid email address is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-        return response
+        if not password or len(password) < 6:
+            return Response({"error": "Password must be at least 6 characters long."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if user already exists in DB
+        if User.objects.filter(email__iexact=email).exists() or User.objects.filter(username__iexact=email).exists():
+            return Response(
+                {"error": "An account with this email address already exists. Please sign in instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Invalidate any previous pending registrations for this email
+        PendingRegistration.objects.filter(email=email).delete()
+
+        # Generate secure unique token
+        token = secrets.token_urlsafe(48)
+        hashed_password = make_password(password)
+        expires_at = timezone.now() + datetime.timedelta(minutes=30)
+
+        PendingRegistration.objects.create(
+            token=token,
+            email=email,
+            name=name,
+            password_hash=hashed_password,
+            expires_at=expires_at,
+        )
+
+        frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        magic_link = f"{frontend_base}/onboarding?token={token}"
+
+        subject = "Set up your catalogmakerr Workspace"
+        plain_msg = (
+            f"Hello {name or 'there'},\n\n"
+            f"Welcome to catalogmakerr! Please click the link below to select your plan and complete your workspace setup:\n\n"
+            f"{magic_link}\n\n"
+            f"This link expires in 30 minutes.\n"
+        )
+        html_msg = get_registration_magic_link_html(name or "there", magic_link)
+        email_sent = send_email(email, subject, plain_msg, html_message=html_msg)
+
+        logger.info("Sent registration magic link to %s (success=%s)", email, email_sent)
+
+        return Response(
+            {
+                "message": "Verification link sent! Please check your email inbox to complete workspace setup.",
+                "email": email,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class VerifyRegistrationTokenView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        token = request.query_params.get('token', '').strip()
+        if not token:
+            return Response({"error": "Verification token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        pending = PendingRegistration.objects.filter(token=token).first()
+        if not pending or not pending.is_valid():
+            return Response(
+                {"error": "This onboarding link is invalid or has expired. Please sign up again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response(
+            {
+                "valid": True,
+                "email": pending.email,
+                "name": pending.name,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class CompleteRegistrationAndOnboardingView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request):
+        data = request.data or {}
+        token = (data.get('token') or '').strip()
+
+        if not token:
+            return Response({"error": "Verification token is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        pending = PendingRegistration.objects.filter(token=token).first()
+        if not pending or not pending.is_valid():
+            return Response(
+                {"error": "This setup session is invalid or has expired. Please sign up again."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Onboarding inputs
+        company_name = (data.get('company_name') or data.get('business_name') or '').strip()
+        plan_slug = (data.get('plan_slug') or 'starter').strip().lower()
+        currency = (data.get('currency') or 'INR').strip()
+        industry = (data.get('industry') or '').strip()
+        website = (data.get('website') or '').strip()
+        whatsapp = (data.get('whatsapp') or '').strip()
+        contact_email = (data.get('contact_email') or pending.email).strip()
+        address = (data.get('address') or '').strip()
+        accent_color = (data.get('accent_color') or '#0F3D3E').strip()
+        product_fields = data.get('product_fields') or []
+
+        if not company_name:
+            return Response({"error": "Company / Business Name is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verify no race condition user exists
+        if User.objects.filter(email__iexact=pending.email).exists():
+            return Response(
+                {"error": "An account with this email has already completed registration. Please sign in."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # 1. ATOMIC USER CREATION
+        user = User(
+            email=pending.email,
+            username=pending.email,
+            name=pending.name or company_name,
+            business_name=company_name,
+            is_verified=True,
+            is_active=True,
+        )
+        user.password = pending.password_hash
+        user.save()
+
+        # 2. ATOMIC SUBSCRIPTION CREATION
+        plan = SubscriptionPlan.objects.filter(slug=plan_slug, is_active=True).first()
+        if not plan:
+            plan = SubscriptionPlan.objects.filter(is_active=True).first()
+
+        if plan:
+            end_date = None
+            if plan.slug == 'starter':
+                end_date = timezone.now() + datetime.timedelta(days=7)
+            UserSubscription.objects.create(
+                user=user,
+                plan=plan,
+                end_date=end_date,
+                is_active=True,
+            )
+
+        # 3. MARK PENDING REGISTRATION AS COMPLETED
+        pending.is_completed = True
+        pending.save()
+
+        # 4. SEND WELCOME EMAIL
+        try:
+            from utils.email_templates import get_welcome_email_html
+            dashboard_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+            welcome_html = get_welcome_email_html(user.name, dashboard_url)
+            send_email(user.email, f"Welcome to catalogmakerr, {user.name}!", "Your workspace is ready.", html_message=welcome_html)
+        except Exception as e:
+            logger.warning("Could not send welcome email: %s", e)
+
+        # 5. GENERATE JWT TOKENS FOR AUTOMATIC SIGNIN
+        access_token, refresh_token = jwt_encode(user)
+        user_data = UserSerializer(user, context={"request": request}).data
+
+        res = Response(
+            {
+                "message": "Workspace created successfully! Welcome to catalogmakerr.",
+                "access": str(access_token),
+                "access_token": str(access_token),
+                "refresh": str(refresh_token),
+                "refresh_token": str(refresh_token),
+                "user": user_data,
+                "workspace_config": {
+                    "companyName": company_name,
+                    "currency": currency,
+                    "industry": industry,
+                    "website": website,
+                    "whatsapp": whatsapp,
+                    "contactEmail": contact_email,
+                    "address": address,
+                    "accentColor": accent_color,
+                    "productFields": product_fields,
+                }
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+        if getattr(settings, "REST_USE_JWT", True):
+            set_jwt_cookies(res, access_token, refresh_token)
+
+        return res
 
 
 class PublicUserDetailsView(UserDetailsView):

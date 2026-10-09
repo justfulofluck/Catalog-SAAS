@@ -21,6 +21,15 @@ def get_email_verification_html(user_name, otp):
     return render_to_string("emails/email_verification_otp.html", context)
 
 
+def get_registration_magic_link_html(user_name, magic_link):
+    context = {
+        "user_name": user_name,
+        "magic_link": magic_link,
+        "year": datetime.datetime.now().year,
+    }
+    return render_to_string("emails/registration_magic_link.html", context)
+
+
 def get_password_reset_html(name, otp, time):
     context = {
         "user_name": name,

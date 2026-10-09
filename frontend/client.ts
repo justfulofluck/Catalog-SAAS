@@ -93,6 +93,8 @@ export const authApi = {
     forceLogout: () => api.post('/users/force-logout/'),
     user: () => api.get('/auth/user/'),
     register: (data: any) => api.post('/auth/registration/', data),
+    verifyRegistrationToken: (token: string) => api.get(`/auth/registration/verify-token/?token=${encodeURIComponent(token)}`),
+    completeOnboarding: (data: any) => api.post('/auth/registration/complete-onboarding/', data),
     requestOtp: (email: string) => api.post('/auth/password-reset/otp/request/', { email }),
     verifyOtpAndReset: (data: any) => api.post('/auth/password-reset/otp/confirm/', data),
     requestVerificationOtp: (email: string) => api.post('/auth/email-verification/request/', { email }),

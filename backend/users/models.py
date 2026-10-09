@@ -35,6 +35,22 @@ class EmailVerificationOTP(models.Model):
         return timezone.now() < self.expires_at and self.attempts < 5
 
 
+class PendingRegistration(models.Model):
+    token = models.CharField(max_length=128, unique=True, db_index=True)
+    email = models.EmailField(db_index=True)
+    name = models.CharField(max_length=255, blank=True)
+    password_hash = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_completed = models.BooleanField(default=False)
+
+    def is_valid(self):
+        return not self.is_completed and timezone.now() < self.expires_at
+
+    def __str__(self):
+        return f"PendingRegistration: {self.email} (valid={self.is_valid()})"
+
+
 class SubscriptionPlan(models.Model):
     TIER_CHOICES = (
         ('starter', 'Starter'),

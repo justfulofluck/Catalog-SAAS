@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Set up your catalogmakerr Workspace</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; padding: 48px 16px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 540px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);">
+                    <!-- Brand Header -->
+                    <tr>
+                        <td align="center" style="padding: 34px 30px 22px 30px; background: linear-gradient(180deg, #1c1f2a 0%, #16181f 100%); border-bottom: 1px solid #232733;">
+                            <table cellpadding="0" cellspacing="0" border="0">
+                                <tr>
+                                    <td align="center">
+                                        <div style="font-size: 24px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
+                                            catalogmakerr<span style="color: #00E5BF;">.</span>
+                                        </div>
+                                        <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 2px; color: #94a3b8; margin-top: 4px;">
+                                            Digital Catalog & B2B Publishing Studio
+                                        </div>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td style="padding: 36px 40px 30px 40px; text-align: left;">
+                            <h2 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 14px 0; text-align: center;">
+                                Welcome aboard, {{ user_name|default:'there' }}! 👋
+                            </h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 0 0 24px 0; text-align: center;">
+                                You're one step away from launching your digital catalog workspace. Click the button below to verify your email, select your plan, and configure your company brand.
+                            </p>
+
+                            <!-- CTA Button -->
+                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 30px 0;">
+                                <tr>
+                                    <td align="center">
+                                        <a href="{{ magic_link }}" target="_blank" style="display: inline-block; background-color: #0F3D3E; color: #ffffff; font-size: 14px; font-weight: 700; text-decoration: none; padding: 16px 36px; border-radius: 6px; border: 1px solid rgba(226, 220, 200, 0.4); text-transform: uppercase; letter-spacing: 1px; box-shadow: 0 6px 20px rgba(15, 61, 62, 0.45);">
+                                            Complete Workspace Setup &rarr;
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <p style="font-size: 12px; line-height: 1.6; color: #64748b; margin: 24px 0 0 0; text-align: center;">
+                                Or copy and paste this link in your browser:<br>
+                                <a href="{{ magic_link }}" target="_blank" style="color: #00E5BF; word-break: break-all; font-size: 11px;">
+                                    {{ magic_link }}
+                                </a>
+                            </p>
+
+                            <div style="margin-top: 32px; padding-top: 20px; border-top: 1px solid #232733; text-align: center;">
+                                <p style="font-size: 12px; color: #64748b; margin: 0;">
+                                    ⏱️ This link is securely encrypted and valid for <strong>30 minutes</strong>.<br>
+                                    If you didn't initiate this signup, you can safely ignore this email.
+                                </p>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td align="center" style="padding: 20px; background-color: #0d0f14; border-top: 1px solid #1a1d26;">
+                            <p style="font-size: 11px; color: #475569; margin: 0;">
+                                &copy; {{ year }} catalogmakerr. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

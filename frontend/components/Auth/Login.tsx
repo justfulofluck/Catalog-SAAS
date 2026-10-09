@@ -36,8 +36,8 @@ const Login: React.FC = () => {
   // Auth Modes: 'signin' | 'signup'
   const [isLoginMode, setIsLoginMode] = useState(true);
 
-  // Registration Steps: 'info' | 'otp' | 'plan'
-  const [regStep, setRegStep] = useState<'info' | 'otp' | 'plan'>('info');
+  // Registration Steps: 'info' | 'sent'
+  const [regStep, setRegStep] = useState<'info' | 'sent'>('info');
   const [selectedPlanSlug, setSelectedPlanSlug] = useState('starter');
 
   // Recovery Modes: 'none' | 'email' | 'otp'
@@ -104,9 +104,6 @@ const Login: React.FC = () => {
     }
   }, [isLoginMode, regStep]);
 
-  // Business Name field state needed for registration
-  const [businessName, setBusinessName] = useState('');
-
   // Resend Signup OTP
   const handleResendSignupOtp = async () => {
     if (signupTimer > 240) {
@@ -157,15 +154,10 @@ const Login: React.FC = () => {
     if (!isLoginMode) {
       // REGISTRATION FLOW
 
-      // Step 1: Info Validation & Registration -> OTP Sent
+      // Step 1: Info Validation & Registration -> Magic Link Sent
       if (regStep === 'info') {
         if (!name.trim()) {
           showToast("Please enter your full name.", "warning", "Required Field");
-          setIsSubmitting(false);
-          return;
-        }
-        if (!businessName.trim()) {
-          showToast("Please enter your business or company name.", "warning", "Required Field");
           setIsSubmitting(false);
           return;
         }
@@ -183,26 +175,21 @@ const Login: React.FC = () => {
         try {
           const cleanEmail = email.trim();
           const cleanName = name.trim();
-          const cleanBusinessName = businessName.trim();
 
-          await authApi.register({
+          const res: any = await authApi.register({
             email: cleanEmail,
             username: cleanEmail,
             password: password,
             password1: password,
             password2: password,
             name: cleanName,
-            business_name: cleanBusinessName,
-            plan_slug: 'starter'
           });
 
-          // Registration succeeded; verification OTP has been emailed
-          setRegStep('otp');
-          setSignupTimer(OTP_TOTAL_SECONDS);
-          setSignupOtp('');
-          showToast(`Verification code sent to ${cleanEmail}. Please enter the 6-digit code.`, "success", "Verification Code Sent");
+          // Registration staging succeeded; magic link sent
+          setRegStep('sent');
+          showToast(res?.data?.message || `Onboarding link sent to ${cleanEmail}. Please check your inbox.`, "success", "Setup Link Sent");
         } catch (error: any) {
-          console.error("Registration failed", error);
+          console.error("Registration request failed", error);
           if (error.response?.status === 401) {
             await authApi.forceLogout();
             showToast("Previous session state was invalid. Please submit again.", "error", "Session Cleared");
@@ -215,6 +202,8 @@ const Login: React.FC = () => {
             const data = error.response.data;
             if (typeof data === 'string') {
               errorMsg = data;
+            } else if (data.error) {
+              errorMsg = data.error;
             } else {
               const messages = Object.keys(data).map(key => {
                 const val = data[key];
@@ -224,73 +213,6 @@ const Login: React.FC = () => {
             }
           }
           showToast(errorMsg, "error", "Registration Error");
-        } finally {
-          setIsSubmitting(false);
-        }
-        return;
-      }
-
-      // Step 2: OTP Verification -> Plan Selection
-      if (regStep === 'otp') {
-        if (signupOtp.trim().length !== 6) {
-          showToast("Please enter the 6-digit confirmation code.", "warning", "Code Required");
-          setIsSubmitting(false);
-          return;
-        }
-        if (signupTimer <= 0) {
-          showToast("The verification code has expired (5 minute limit). Please click 'Resend Code'.", "error", "Code Expired");
-          setIsSubmitting(false);
-          return;
-        }
-
-        try {
-          const cleanEmail = email.trim();
-          const res: any = await authApi.verifyEmailOtp({
-            email: cleanEmail,
-            otp: signupOtp.trim()
-          });
-
-          const data = res?.data || res;
-          const token = data?.access || data?.access_token;
-          const refreshToken = data?.refresh || data?.refresh_token;
-
-          if (token) {
-            localStorage.setItem('cs_access_token', token);
-          }
-          if (refreshToken) {
-            localStorage.setItem('cs_refresh_token', refreshToken);
-          }
-          sessionStorage.setItem('cs_session', '1');
-
-          // Refresh store with authenticated user data
-          await checkAuth();
-
-          showToast("Email verified successfully! Please choose your subscription plan.", "success", "Account Verified");
-
-          // Move to Step 3: Plan selection
-          setRegStep('plan');
-        } catch (error: any) {
-          console.error("Verification failed", error);
-          const errMsg = error.response?.data?.error || error.response?.data?.detail || "Invalid or expired verification code.";
-          showToast(errMsg, "error", "Verification Failed");
-        } finally {
-          setIsSubmitting(false);
-        }
-        return;
-      }
-
-      // Step 3: Plan Selection Finished -> Dashboard
-      if (regStep === 'plan') {
-        try {
-          if (selectedPlanSlug) {
-            await subscriptionApi.updatePlan({ plan_slug: selectedPlanSlug });
-            await checkAuth();
-          }
-          showToast("Subscription activated! Let's set up your workspace.", "success", "Plan Selected");
-          navigate('/onboarding', { replace: true });
-        } catch (error: any) {
-          console.error("Plan update failed", error);
-          navigate('/onboarding', { replace: true });
         } finally {
           setIsSubmitting(false);
         }
@@ -438,90 +360,52 @@ const Login: React.FC = () => {
       );
     }
 
-    // 2. SIGNUP: EMAIL VERIFICATION OTP (5 MINUTES STRICT)
-    if (!isLoginMode && regStep === 'otp') {
-      const isExpired = signupTimer <= 0;
+    // 2. SIGNUP: MAGIC LINK SENT TO EMAIL CONFIRMATION SCREEN
+    if (!isLoginMode && regStep === 'sent') {
       return (
-        <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in slide-in-from-right-8 duration-300">
-          <div>
-            <h3 className="font-space font-bold text-xl text-[#F1F1F1] tracking-tight">Verify Your Account</h3>
-            <p className="text-xs text-[#888888] mt-1">
-              Enter the 6-digit confirmation OTP sent to <span className="text-[#E2DCC8] font-medium">{email}</span> to verify your account.
-            </p>
+        <div className="space-y-6 animate-in slide-in-from-right-8 duration-300 text-center py-2">
+          <div className="w-16 h-16 rounded-full bg-[#0F3D3E]/40 border border-[#00E5BF]/40 mx-auto flex items-center justify-center text-[#00E5BF] shadow-lg shadow-[#0F3D3E]/30 animate-pulse">
+            <Mail size={30} />
           </div>
 
           <div className="space-y-2">
-            <div className="flex justify-between items-center ml-1">
-              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading">Confirmation Code</label>
-              <div className={`flex items-center gap-1.5 text-xs font-mono font-bold px-2.5 py-1 rounded-[4px] border ${
-                isExpired 
-                  ? 'bg-red-950/40 border-red-800/60 text-red-400' 
-                  : signupTimer < 60 
-                    ? 'bg-amber-950/40 border-amber-800/60 text-amber-400 animate-pulse' 
-                    : 'bg-[#0F3D3E]/40 border-[#0F3D3E] text-[#00E5D0]'
-              }`}>
-                <Clock size={13} />
-                <span>{isExpired ? 'EXPIRED' : formatTimer(signupTimer)}</span>
-              </div>
-            </div>
-
-            <div className="relative group">
-              <KeyRound size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#00E5D0] transition-colors" />
-              <input
-                type="text"
-                required
-                maxLength={6}
-                value={signupOtp}
-                onChange={(e) => setSignupOtp(e.target.value.replace(/[^0-9]/g, ''))}
-                placeholder="000000"
-                disabled={isExpired}
-                className="w-full bg-[#171616] border border-[#262626] rounded-[6px] pl-12 pr-4 py-3.5 text-2xl font-mono font-bold text-[#F1F1F1] focus:border-[#00E5D0] focus:ring-1 focus:ring-[#00E5D0]/30 outline-none transition-all placeholder:text-[#444] tracking-[0.5em] text-center disabled:opacity-50"
-              />
-            </div>
-
-            {isExpired ? (
-              <p className="text-[11px] text-red-400 text-center font-medium">OTP has expired after 5 minutes. Please click 'Resend Code' below.</p>
-            ) : (
-              <p className="text-[11px] text-[#888888] text-center">Code expires strictly in 5 minutes.</p>
-            )}
+            <h3 className="font-space font-bold text-2xl text-[#F1F1F1] tracking-tight">Check Your Inbox</h3>
+            <p className="text-xs text-[#999999] leading-relaxed max-w-sm mx-auto">
+              We've dispatched a secure workspace setup link to <br/>
+              <span className="text-[#E2DCC8] font-semibold text-sm underline decoration-[#00E5BF]/50">{email}</span>
+            </p>
           </div>
 
-          <button
-            type="submit"
-            disabled={isSubmitting || signupOtp.length !== 6 || isExpired}
-            className="w-full py-4 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/25 rounded-[4px] font-heading font-semibold text-xs uppercase tracking-wider shadow-lg shadow-[#0F3D3E]/30 transition-all flex items-center justify-center gap-2.5 disabled:opacity-50 disabled:cursor-not-allowed mt-3"
-          >
-            {isSubmitting ? (
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>Verifying Code...</span>
-              </div>
-            ) : (
-              <>
-                <span>Verify & Choose Plan</span>
-                <ArrowRight size={16} />
-              </>
-            )}
-          </button>
+          <div className="bg-[#121212] border border-[#262626] rounded-[6px] p-4 text-left space-y-2.5">
+            <div className="flex items-start gap-2.5">
+              <Sparkles size={16} className="text-[#00E5BF] shrink-0 mt-0.5" />
+              <p className="text-[11px] text-[#cccccc] leading-snug">
+                Click the <strong>Complete Workspace Setup</strong> link in your email to choose your plan, configure your company profile, and launch your studio.
+              </p>
+            </div>
+            <p className="text-[10px] text-[#777777] border-t border-[#222] pt-2">
+              ⏱️ Link valid for 30 minutes. If not in Inbox, check your Promotions or Spam folder.
+            </p>
+          </div>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-2">
             <button
               type="button"
               onClick={() => setRegStep('info')}
-              className="text-xs text-[#888888] hover:text-[#E2DCC8] transition-colors flex items-center gap-1"
+              className="text-xs text-[#888888] hover:text-[#E2DCC8] transition-colors flex items-center gap-1.5 cursor-pointer"
             >
-              <ArrowLeft size={13} /> Edit Registration Info
+              <ArrowLeft size={13} /> Edit details
             </button>
             <button
               type="button"
-              onClick={handleResendSignupOtp}
+              onClick={handleLoginSubmit}
               disabled={isSubmitting}
-              className="text-xs font-semibold text-[#00E5D0] hover:text-[#5cf8eb] transition-colors flex items-center gap-1.5"
+              className="text-xs font-semibold text-[#00E5BF] hover:text-[#5cf8eb] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <RotateCcw size={13} /> Resend Code
+              <RotateCcw size={13} /> Resend Link
             </button>
           </div>
-        </form>
+        </div>
       );
     }
 
@@ -567,37 +451,20 @@ const Login: React.FC = () => {
     return (
       <form onSubmit={handleLoginSubmit} className="space-y-5 animate-in fade-in duration-300">
         {!isLoginMode && (
-          <>
-            <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
-              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Full Legal Name</label>
-              <div className="relative group">
-                <UserIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Johnathon Doe"
-                  className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
-                />
-              </div>
+          <div className="space-y-1.5 animate-in slide-in-from-top-2 duration-300">
+            <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Full Legal Name</label>
+            <div className="relative group">
+              <UserIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Johnathon Doe"
+                className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
+              />
             </div>
-
-            <div className="space-y-1.5 animate-in slide-in-from-top-3 duration-300">
-              <label className="text-[10px] font-bold text-[#E2DCC8]/70 uppercase tracking-widest font-heading ml-1">Business Name</label>
-              <div className="relative group">
-                <Shield size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#E2DCC8]/50 group-focus-within:text-[#E2DCC8] transition-colors" />
-                <input
-                  type="text"
-                  required
-                  value={businessName}
-                  onChange={(e) => setBusinessName(e.target.value)}
-                  placeholder="Acme Corp"
-                  className="w-full bg-[#171616] border border-[#262626] rounded-[4px] pl-12 pr-4 py-3.5 text-sm font-medium text-[#F1F1F1] focus:border-[#E2DCC8] focus:ring-1 focus:ring-[#E2DCC8]/30 outline-none transition-all placeholder:text-[#555555]"
-                />
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
         <div className="space-y-1.5">

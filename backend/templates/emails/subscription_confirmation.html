@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Subscription Confirmation - catalogmakerr</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0f1115; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0f1115; padding: 40px 16px;">
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; padding: 44px 16px;">
         <tr>
             <td align="center">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);">
                     <!-- Brand Header -->
                     <tr>
                         <td align="center" style="padding: 32px 30px 20px 30px; background: linear-gradient(180deg, #1c1f2a 0%, #16181f 100%); border-bottom: 1px solid #232733;">
@@ -59,20 +59,19 @@
                             <p style="font-size: 13px; font-weight: 600; color: #cbd5e1; margin: 0 0 10px 0;">
                                 Included in your plan:
                             </p>
-                            <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0b0d12; border-radius: 10px; border: 1px solid #1a1e28; padding: 16px 20px;">
-                                <tr>
-                                    <td style="font-size: 13px; color: #94a3b8; line-height: 1.9;">
-                                        {{ feature_items_html|safe }}
-                                    </td>
-                                </tr>
-                            </table>
+                            <ul style="margin: 0 0 24px 0; padding-left: 20px; font-size: 13px; color: #94a3b8; line-height: 1.8;">
+                                <li>{{ max_catalogs }} Active Catalogs</li>
+                                <li>{{ max_products }} Products per Catalog</li>
+                                <li>High-Res PDF Export & WhatsApp Share</li>
+                                <li>Cloud Storage Quota: {{ max_storage_mb }}MB</li>
+                            </ul>
 
                             <!-- CTA Button -->
-                            <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 30px auto 10px auto;">
+                            <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 24px auto 12px auto;">
                                 <tr>
                                     <td align="center" style="background-color: #0F3D3E; border-radius: 8px;">
-                                        <a href="{{ dashboard_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; border: 1px solid #1a5658;">
-                                            Go to Workspace →
+                                        <a href="{{ dashboard_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; border: 1px solid #1a5658; letter-spacing: 0.3px;">
+                                            Go to Studio Dashboard →
                                         </a>
                                     </td>
                                 </tr>
@@ -84,7 +83,6 @@
                     <tr>
                         <td style="padding: 20px 36px; background-color: #111318; border-top: 1px solid #1e222d; text-align: center;">
                             <p style="font-size: 11px; color: #475569; margin: 0;">
-                                Need an invoice or support? Contact us at <a href="mailto:{{ support_email|default:'support@catalogmakerr.com' }}" style="color: #38bdf8; text-decoration: none;">{{ support_email|default:'support@catalogmakerr.com' }}</a><br>
                                 &copy; {{ year|default:'2026' }} catalogmakerr. All rights reserved.
                             </p>
                         </td>

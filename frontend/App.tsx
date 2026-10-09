@@ -723,7 +723,8 @@ const App: React.FC = () => {
               <Route path="/your-work" element={<YourWork />} />
               <Route path="/publish" element={<PublishView />} />
               <Route path="/settings" element={<SettingsView />} />
-              <Route path="/onboarding" element={<BusinessSelection />} />
+              <Route path="/onboarding" element={<BusinessOnboarding />} />
+              <Route path="/business-templates" element={<BusinessSelection />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </div>
@@ -740,8 +741,10 @@ const App: React.FC = () => {
         <Route
           path="/login"
           element={
-            isAuthenticated ? (
+            isAuthenticated && localStorage.getItem('catalogmakerr_workspace_config') ? (
               <Navigate to="/" replace />
+            ) : isAuthenticated && !sessionStorage.getItem('cs_signup_in_progress') ? (
+              <Navigate to="/onboarding" replace />
             ) : (
               <Login />
             )
@@ -779,7 +782,7 @@ const App: React.FC = () => {
         <Route
           path="/onboarding"
           element={
-            !isAuthenticated ? (
+            !isAuthenticated && !new URLSearchParams(location.search).has('token') ? (
               <Navigate to="/login" replace state={{ from: location }} />
             ) : (
               <BusinessOnboarding />

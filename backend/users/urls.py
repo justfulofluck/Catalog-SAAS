@@ -13,6 +13,8 @@ from .views import (
     AdminTestEmailView,
     RequestEmailVerificationOTP,
     ConfirmEmailVerificationOTP,
+    VerifyRegistrationTokenView,
+    CompleteRegistrationAndOnboardingView,
     EnterpriseInquiryView,
 )
 
@@ -48,6 +50,16 @@ urlpatterns = [
         "auth/email-verification/confirm/",
         ConfirmEmailVerificationOTP.as_view(),
         name="email-verification-confirm",
+    ),
+    path(
+        "auth/registration/verify-token/",
+        VerifyRegistrationTokenView.as_view(),
+        name="registration-verify-token",
+    ),
+    path(
+        "auth/registration/complete-onboarding/",
+        CompleteRegistrationAndOnboardingView.as_view(),
+        name="registration-complete-onboarding",
     ),
     path("", include(router.urls)),
 ]

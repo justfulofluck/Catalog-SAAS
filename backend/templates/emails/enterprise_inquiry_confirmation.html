@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Enterprise Inquiry Received - catalogmakerr</title>
 </head>
-<body style="margin: 0; padding: 0; background-color: #0f1115; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #e2e8f0;">
-    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #0f1115; padding: 40px 16px;">
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; padding: 44px 16px;">
         <tr>
             <td align="center">
-                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.4);">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);">
                     <!-- Brand Header -->
                     <tr>
                         <td align="center" style="padding: 32px 30px 24px 30px; background: linear-gradient(180deg, #1c1f2a 0%, #16181f 100%); border-bottom: 1px solid #232733;">
                             <div style="font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.5px;">
                                 catalogmakerr<span style="color: #00E5BF;">.</span>
                             </div>
-                            <div style="font-size: 11px; text-transform: uppercase; tracking-wider: 1px; color: #E2DCC8; margin-top: 4px; font-weight: 600; letter-spacing: 1.5px;">
+                            <div style="font-size: 11px; text-transform: uppercase; color: #E2DCC8; margin-top: 4px; font-weight: 600; letter-spacing: 1.5px;">
                                 Enterprise Solutions
                             </div>
                         </td>
@@ -49,7 +49,7 @@
                                                 <td style="color: #f1f5f9; font-weight: 600;">{{ email }}</td>
                                             </tr>
                                             {% if company %}
-                                            <tr>
+                                             <tr>
                                                 <td style="color: #64748b;">Company:</td>
                                                 <td style="color: #f1f5f9;">{{ company }}</td>
                                             </tr>
@@ -60,27 +60,30 @@
                                                 <td style="color: #f1f5f9;">{{ phone }}</td>
                                             </tr>
                                             {% endif %}
-                                            {% if message %}
-                                            <tr>
-                                                <td style="color: #64748b; vertical-align: top;">Requirements:</td>
-                                                <td style="color: #cbd5e1; white-space: pre-wrap;">{{ message }}</td>
-                                            </tr>
-                                            {% endif %}
                                         </table>
                                     </td>
                                 </tr>
                             </table>
 
-                            <p style="font-size: 13px; line-height: 1.6; color: #94a3b8; margin: 20px 0 0 0;">
-                                If you need immediate assistance or have urgent timelines, feel free to reply directly to this email or reach us at <a href="mailto:{{ support_email }}" style="color: #00E5BF; text-decoration: none;">{{ support_email }}</a>.
+                            {% if message %}
+                            <div style="margin: 18px 0; padding: 14px 18px; background-color: #111318; border-left: 3px solid #00E5BF; border-radius: 4px;">
+                                <p style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; margin: 0 0 6px 0;">Message / Requirements:</p>
+                                <p style="font-size: 13px; color: #cbd5e1; margin: 0; line-height: 1.6; white-space: pre-wrap;">{{ message }}</p>
+                            </div>
+                            {% endif %}
+
+                            <p style="font-size: 13px; color: #94a3b8; line-height: 1.6; margin: 24px 0 0 0;">
+                                If you need immediate assistance, you can also reach out to our enterprise desk directly at <a href="mailto:support@catalogmakerr.com" style="color: #00E5BF; text-decoration: none;">support@catalogmakerr.com</a>.
                             </p>
                         </td>
                     </tr>
 
                     <!-- Footer -->
                     <tr>
-                        <td align="center" style="padding: 20px 30px; background-color: #12141a; border-top: 1px solid #1f232e; font-size: 12px; color: #64748b;">
-                            &copy; {{ year }} catalogmakerr. All rights reserved.
+                        <td style="padding: 24px 36px; background-color: #111318; border-top: 1px solid #1e222d; text-align: center;">
+                            <p style="font-size: 11px; color: #475569; margin: 0;">
+                                &copy; {{ year|default:'2026' }} catalogmakerr. All rights reserved.
+                            </p>
                         </td>
                     </tr>
                 </table>
