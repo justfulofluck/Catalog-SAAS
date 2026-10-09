@@ -31,7 +31,7 @@ const OTP_TOTAL_SECONDS = 300; // 5 minutes strict
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, setView, error, plans, fetchPlans, systemSettings, fetchSystemSettings, checkAuth } = useStore();
+  const { login, setView, error, clearError, showToast, plans, fetchPlans, systemSettings, fetchSystemSettings, checkAuth } = useStore();
 
   // Auth Modes: 'signin' | 'signup'
   const [isLoginMode, setIsLoginMode] = useState(true);
@@ -110,17 +110,19 @@ const Login: React.FC = () => {
   // Resend Signup OTP
   const handleResendSignupOtp = async () => {
     if (signupTimer > 240) {
-      alert("Please wait at least 60 seconds before requesting a new code.");
+      showToast("Please wait at least 60 seconds before requesting a new code.", "warning", "Cooldown Active");
       return;
     }
     setIsSubmitting(true);
+    clearError();
     try {
       await authApi.requestVerificationOtp(email.trim());
       setSignupTimer(OTP_TOTAL_SECONDS);
       setSignupOtp('');
-      alert("A new 6-digit verification code has been sent to your email!");
+      showToast("A new 6-digit verification code has been sent to your email!", "success", "Code Sent");
     } catch (err: any) {
-      alert(err.response?.data?.error || "Failed to resend verification code. Please try again.");
+      const errMsg = err.response?.data?.error || "Failed to resend verification code. Please try again.";
+      showToast(errMsg, "error", "Verification Error");
     } finally {
       setIsSubmitting(false);
     }
@@ -129,17 +131,19 @@ const Login: React.FC = () => {
   // Resend Password Reset OTP
   const handleResendRecoveryOtp = async () => {
     if (recoveryTimer > 240) {
-      alert("Please wait at least 60 seconds before requesting a new code.");
+      showToast("Please wait at least 60 seconds before requesting a new code.", "warning", "Cooldown Active");
       return;
     }
     setIsSubmitting(true);
+    clearError();
     try {
       await authApi.requestOtp(email.trim());
       setRecoveryTimer(OTP_TOTAL_SECONDS);
       setRecoveryOtp('');
-      alert("A new password reset code has been sent to your email!");
+      showToast("A new password reset code has been sent to your email!", "success", "Code Sent");
     } catch (err: any) {
-      alert(err.response?.data?.error || "Failed to resend code.");
+      const errMsg = err.response?.data?.error || "Failed to resend code.";
+      showToast(errMsg, "error", "Reset Error");
     } finally {
       setIsSubmitting(false);
     }
@@ -148,6 +152,7 @@ const Login: React.FC = () => {
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    clearError();
 
     if (!isLoginMode) {
       // REGISTRATION FLOW
@@ -155,22 +160,22 @@ const Login: React.FC = () => {
       // Step 1: Info Validation & Registration -> OTP Sent
       if (regStep === 'info') {
         if (!name.trim()) {
-          alert("Please enter your full name.");
+          showToast("Please enter your full name.", "warning", "Required Field");
           setIsSubmitting(false);
           return;
         }
         if (!businessName.trim()) {
-          alert("Please enter your business or company name.");
+          showToast("Please enter your business or company name.", "warning", "Required Field");
           setIsSubmitting(false);
           return;
         }
         if (!email.trim() || !email.includes('@')) {
-          alert("Please enter a valid email address.");
+          showToast("Please enter a valid email address.", "warning", "Invalid Email");
           setIsSubmitting(false);
           return;
         }
         if (!password || password.length < 6) {
-          alert("Password must be at least 6 characters long.");
+          showToast("Password must be at least 6 characters long.", "warning", "Password Length");
           setIsSubmitting(false);
           return;
         }
@@ -195,11 +200,12 @@ const Login: React.FC = () => {
           setRegStep('otp');
           setSignupTimer(OTP_TOTAL_SECONDS);
           setSignupOtp('');
+          showToast(`Verification code sent to ${cleanEmail}. Please enter the 6-digit code.`, "success", "Verification Code Sent");
         } catch (error: any) {
           console.error("Registration failed", error);
           if (error.response?.status === 401) {
             await authApi.forceLogout();
-            alert("Previous session state was invalid. Please submit again.");
+            showToast("Previous session state was invalid. Please submit again.", "error", "Session Cleared");
             setIsSubmitting(false);
             return;
           }
@@ -217,7 +223,7 @@ const Login: React.FC = () => {
               errorMsg = messages.join('\n');
             }
           }
-          alert(errorMsg);
+          showToast(errorMsg, "error", "Registration Error");
         } finally {
           setIsSubmitting(false);
         }
@@ -227,12 +233,12 @@ const Login: React.FC = () => {
       // Step 2: OTP Verification -> Plan Selection
       if (regStep === 'otp') {
         if (signupOtp.trim().length !== 6) {
-          alert("Please enter the 6-digit confirmation code.");
+          showToast("Please enter the 6-digit confirmation code.", "warning", "Code Required");
           setIsSubmitting(false);
           return;
         }
         if (signupTimer <= 0) {
-          alert("The verification code has expired (5 minute limit). Please click 'Resend Code'.");
+          showToast("The verification code has expired (5 minute limit). Please click 'Resend Code'.", "error", "Code Expired");
           setIsSubmitting(false);
           return;
         }
@@ -259,12 +265,14 @@ const Login: React.FC = () => {
           // Refresh store with authenticated user data
           await checkAuth();
 
+          showToast("Email verified successfully! Please choose your subscription plan.", "success", "Account Verified");
+
           // Move to Step 3: Plan selection
           setRegStep('plan');
         } catch (error: any) {
           console.error("Verification failed", error);
           const errMsg = error.response?.data?.error || error.response?.data?.detail || "Invalid or expired verification code.";
-          alert(errMsg);
+          showToast(errMsg, "error", "Verification Failed");
         } finally {
           setIsSubmitting(false);
         }
@@ -278,6 +286,7 @@ const Login: React.FC = () => {
             await subscriptionApi.updatePlan({ plan_slug: selectedPlanSlug });
             await checkAuth();
           }
+          showToast("Subscription activated! Welcome to your studio.", "success", "Setup Complete");
           const from = (location.state as any)?.from?.pathname || '/';
           navigate(from, { replace: true });
         } catch (error: any) {
@@ -294,6 +303,7 @@ const Login: React.FC = () => {
       try {
         const cleanEmail = email.trim();
         await login(cleanEmail, undefined, password);
+        showToast("Signed in successfully!", "success", "Welcome Back");
         const from = (location.state as any)?.from?.pathname || '/';
         navigate(from, { replace: true });
       } catch (err) {
@@ -307,13 +317,17 @@ const Login: React.FC = () => {
   const handleRecoveryRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    clearError();
     try {
-      await authApi.requestOtp(email);
+      await authApi.requestOtp(email.trim());
+      setRecoveryTimer(OTP_TOTAL_SECONDS);
+      setRecoveryOtp('');
       setRecoveryStep('otp');
+      showToast(`A 6-digit recovery code has been sent to ${email.trim()}`, "success", "Recovery Code Sent");
     } catch (err: any) {
       console.error(err);
-      // Show actual backend error if available
-      alert(err.response?.data?.error || "Failed to send code. Please check your email address.");
+      const errMsg = err.response?.data?.error || "Failed to send code. Please check your email address.";
+      showToast(errMsg, "error", "Request Failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -322,14 +336,16 @@ const Login: React.FC = () => {
   const handleRecoverySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
+    clearError();
     try {
-      await authApi.verifyOtpAndReset({ email, otp, new_password: newPassword });
+      await authApi.verifyOtpAndReset({ email: email.trim(), otp: recoveryOtp.trim(), new_password: newPassword });
       setRecoveryStep('none');
       setIsLoginMode(true);
-      alert("Password reset successfully. Please sign in.");
-    } catch (err) {
+      showToast("Password reset successfully! Please sign in with your new password.", "success", "Password Reset", 6000);
+    } catch (err: any) {
       console.error(err);
-      alert("Verification failed. Invalid code or expired.");
+      const errMsg = err.response?.data?.error || err.response?.data?.detail || "Verification failed. Invalid code or expired.";
+      showToast(errMsg, "error", "Reset Failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -612,7 +628,7 @@ const Login: React.FC = () => {
             {isLoginMode && (
               <button
                 type="button"
-                onClick={() => setRecoveryStep('email')}
+                onClick={() => { clearError(); setRecoveryStep('email'); }}
                 className="text-[10px] font-bold text-[#E2DCC8] hover:underline transition-colors font-heading"
               >
                 Forgot Password?
@@ -881,7 +897,7 @@ const Login: React.FC = () => {
               ) : (
                 <p className="text-xs text-[#E2DCC8]/70">
                   {isLoginMode ? "New here?" : "Already a user?"}
-                  <button onClick={() => setIsLoginMode(!isLoginMode)} className="text-[#E2DCC8] hover:text-[#F1F1F1] font-semibold ml-2 hover:underline font-heading transition-colors">
+                  <button onClick={() => { clearError(); setIsLoginMode(!isLoginMode); }} className="text-[#E2DCC8] hover:text-[#F1F1F1] font-semibold ml-2 hover:underline font-heading transition-colors">
                     {isLoginMode ? "Sign Up" : "Sign In"}
                   </button>
                 </p>

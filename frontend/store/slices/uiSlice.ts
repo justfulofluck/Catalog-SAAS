@@ -81,6 +81,8 @@ export const createUiSlice: AppSlice<UiSlice> = (set, get) => ({
       toasts: state.toasts.filter((t) => t.id !== id),
     })),
 
+  clearError: () => set({ error: null }),
+
   showConfirm: (options) =>
     set({
       confirmModal: {

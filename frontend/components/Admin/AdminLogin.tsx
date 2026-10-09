@@ -6,7 +6,7 @@ import { authApi } from '../../client';
 import { AppIcon } from '../Common/AppIcon';
 
 const AdminLogin: React.FC = () => {
-    const { adminLogin, setView, error, isLoading } = useStore();
+    const { adminLogin, setView, error, isLoading, showToast, clearError } = useStore();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
 
@@ -21,6 +21,7 @@ const AdminLogin: React.FC = () => {
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        clearError();
         try {
             const isEmail = email.includes('@');
             await adminLogin(isEmail ? email : undefined, isEmail ? undefined : email, password);
@@ -34,12 +35,14 @@ const AdminLogin: React.FC = () => {
     const handleRecoveryRequest = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        clearError();
         try {
-            await authApi.requestOtp(email);
+            await authApi.requestOtp(email.trim());
             setRecoveryStep('otp');
+            showToast("A 6-digit admin token has been dispatched to your email.", "success", "Token Dispatched");
         } catch (err) {
             console.error(err);
-            alert("Failed to send token reset email.");
+            showToast("Failed to send token reset email.", "error", "Dispatch Failed");
         } finally {
             setIsSubmitting(false);
         }
@@ -48,13 +51,14 @@ const AdminLogin: React.FC = () => {
     const handleRecoverySubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
+        clearError();
         try {
-            await authApi.verifyOtpAndReset({ email, otp, new_password: newPassword });
+            await authApi.verifyOtpAndReset({ email: email.trim(), otp: otp.trim(), new_password: newPassword });
             setRecoveryStep('none');
-            alert("Admin credentials rotated successfully.");
+            showToast("Admin credentials rotated successfully. Please authenticate.", "success", "Credentials Updated");
         } catch (err) {
             console.error(err);
-            alert("Token verification failed.");
+            showToast("Token verification failed or token expired.", "error", "Verification Error");
         } finally {
             setIsSubmitting(false);
         }

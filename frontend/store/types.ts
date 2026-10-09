@@ -217,6 +217,7 @@ export interface UiSlice {
 
   showToast: (message: string | { message?: string; type?: 'success' | 'error' | 'info' | 'warning'; title?: string; duration?: number }, type?: 'success' | 'error' | 'info' | 'warning', title?: string, duration?: number) => void;
   dismissToast: (id: string) => void;
+  clearError: () => void;
   showConfirm: (options: {
     title: string;
     message: string;
