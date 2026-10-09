@@ -320,8 +320,8 @@ const Login: React.FC = () => {
     clearError();
     try {
       await authApi.requestOtp(email.trim());
-      setRecoveryTimer(OTP_TOTAL_SECONDS);
       setRecoveryOtp('');
+      setRecoveryTimer(OTP_TOTAL_SECONDS);
       setRecoveryStep('otp');
       showToast(`A 6-digit recovery code has been sent to ${email.trim()}`, "success", "Recovery Code Sent");
     } catch (err: any) {
@@ -344,7 +344,7 @@ const Login: React.FC = () => {
       showToast("Password reset successfully! Please sign in with your new password.", "success", "Password Reset", 6000);
     } catch (err: any) {
       console.error(err);
-      const errMsg = err.response?.data?.error || err.response?.data?.detail || "Verification failed. Invalid code or expired.";
+      const errMsg = err?.response?.data?.error || err?.response?.data?.detail || "Verification failed. Invalid code or expired.";
       showToast(errMsg, "error", "Reset Failed");
     } finally {
       setIsSubmitting(false);
