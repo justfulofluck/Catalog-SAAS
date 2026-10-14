@@ -87,6 +87,10 @@ backend/logs/
 backend/venv/
 backend/.venv/
 
+# Stray npm artifacts in the Python backend
+backend/package-lock.json
+backend/package.json
+
 # ──────────────────────── Database (local dev) ───────────────────
 *.sqlite3
 *.sqlite3-journal
