@@ -20,7 +20,8 @@ import {
   Check,
   Layers,
   Clock,
-  RotateCcw
+  RotateCcw,
+  Loader2
 } from 'lucide-react';
 import { authApi, subscriptionApi } from '../../client';
 import GradientBlinds from '../Common/GradientBlinds';
@@ -141,6 +142,48 @@ const Login: React.FC = () => {
     } catch (err: any) {
       const errMsg = err.response?.data?.error || "Failed to resend code.";
       showToast(errMsg, "error", "Reset Error");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Resend Registration Magic Link
+  const handleResendRegistrationLink = async () => {
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      showToast("Please provide a valid email address.", "warning", "Invalid Email");
+      return;
+    }
+    setIsSubmitting(true);
+    clearError();
+    try {
+      // 1. Try dedicated resend endpoint for pending registration
+      let res: any;
+      try {
+        res = await authApi.resendRegistrationLink(cleanEmail);
+      } catch (err: any) {
+        // 2. If no pending registration exists (e.g. state was reset) or 404, fall back to register
+        if (err.response?.status === 404 && password) {
+          res = await authApi.register({
+            email: cleanEmail,
+            username: cleanEmail,
+            password: password,
+            password1: password,
+            password2: password,
+            name: name.trim(),
+          });
+        } else {
+          throw err;
+        }
+      }
+      showToast(
+        res?.data?.message || `A new workspace setup link has been sent to ${cleanEmail}. Please check your inbox.`,
+        "success",
+        "Link Sent"
+      );
+    } catch (err: any) {
+      const errMsg = err.response?.data?.error || "Failed to resend setup link. Please try again or edit details.";
+      showToast(errMsg, "error", "Resend Failed");
     } finally {
       setIsSubmitting(false);
     }
@@ -398,11 +441,16 @@ const Login: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={handleLoginSubmit}
+              onClick={handleResendRegistrationLink}
               disabled={isSubmitting}
               className="text-xs font-semibold text-[#00E5BF] hover:text-[#5cf8eb] transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
-              <RotateCcw size={13} /> Resend Link
+              {isSubmitting ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <RotateCcw size={13} />
+              )}
+              {isSubmitting ? "Sending..." : "Resend Link"}
             </button>
           </div>
         </div>

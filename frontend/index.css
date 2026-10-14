@@ -38,6 +38,14 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+/* Disable browser-native password reveal & clear icons (e.g. Edge, IE) so only custom eye icon renders */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
 /* Global rule: Zero border radius on all images and photos */
 img,
 picture,

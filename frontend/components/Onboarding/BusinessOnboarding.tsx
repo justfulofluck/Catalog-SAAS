@@ -431,11 +431,11 @@ export const BusinessOnboarding: React.FC = () => {
   // Render 3-Second Launching Transition Animation Screen
   if (isLaunching) {
     return (
-      <div className="fixed inset-0 z-[200] bg-[#100F0F] text-[#F1F1F1] flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden select-none">
+      <div className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-[9999] w-screen h-screen min-h-screen bg-[#100F0F] text-[#F1F1F1] flex flex-col items-center justify-center p-6 font-sans overflow-hidden select-none m-0">
         {/* Ambient Glow & Blur in background */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0F3D3E]/60 via-[#100F0F]/80 to-[#100F0F] pointer-events-none" />
 
-        <div className="relative z-10 flex flex-col items-center text-center space-y-7 max-w-sm">
+        <div className="relative z-10 flex flex-col items-center justify-center text-center space-y-7 max-w-sm m-auto">
           {/* Pulsing & Glowing Logo Animation */}
           <div className="relative flex items-center justify-center">
             {/* Outer Glowing Ring */}

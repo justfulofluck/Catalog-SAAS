@@ -171,6 +171,71 @@ class PublicRegisterView(APIView):
         )
 
 
+class ResendRegistrationLinkView(APIView):
+    permission_classes = [permissions.AllowAny]
+    authentication_classes = []
+
+    def post(self, request, *args, **kwargs):
+        system_settings = SystemSetting.get_settings()
+        if not system_settings.allow_public_signup:
+            return Response(
+                {"error": "Public registration is currently disabled by administrator."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        data = request.data or {}
+        email = (data.get('email') or '').strip().lower()
+
+        if not email or '@' not in email:
+            return Response({"error": "A valid email address is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if user already exists
+        if User.objects.filter(email__iexact=email).exists() or User.objects.filter(username__iexact=email).exists():
+            return Response(
+                {"error": "An account with this email address already exists. Please sign in instead."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Look for pending registration
+        pending = PendingRegistration.objects.filter(email=email).order_by('-created_at').first()
+        if not pending:
+            return Response(
+                {"error": "No pending registration found for this email address. Please register again."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Refresh token and expiry
+        token = secrets.token_urlsafe(48)
+        pending.token = token
+        pending.expires_at = timezone.now() + datetime.timedelta(minutes=30)
+        pending.is_completed = False
+        pending.save()
+
+        name = pending.name
+        frontend_base = getattr(settings, "FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        magic_link = f"{frontend_base}/onboarding?token={token}"
+
+        subject = "Set up your catalogmakerr Workspace"
+        plain_msg = (
+            f"Hello {name or 'there'},\n\n"
+            f"Welcome to catalogmakerr! Please click the link below to select your plan and complete your workspace setup:\n\n"
+            f"{magic_link}\n\n"
+            f"This link expires in 30 minutes.\n"
+        )
+        html_msg = get_registration_magic_link_html(name or "there", magic_link)
+        email_sent = send_email(email, subject, plain_msg, html_message=html_msg)
+
+        logger.info("Resent registration magic link to %s (success=%s)", email, email_sent)
+
+        return Response(
+            {
+                "message": "A new workspace setup link has been sent to your email!",
+                "email": email,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
 class VerifyRegistrationTokenView(APIView):
     permission_classes = [permissions.AllowAny]
     authentication_classes = []

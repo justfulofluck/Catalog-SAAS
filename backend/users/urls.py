@@ -13,6 +13,7 @@ from .views import (
     AdminTestEmailView,
     RequestEmailVerificationOTP,
     ConfirmEmailVerificationOTP,
+    ResendRegistrationLinkView,
     VerifyRegistrationTokenView,
     CompleteRegistrationAndOnboardingView,
     EnterpriseInquiryView,
@@ -50,6 +51,11 @@ urlpatterns = [
         "auth/email-verification/confirm/",
         ConfirmEmailVerificationOTP.as_view(),
         name="email-verification-confirm",
+    ),
+    path(
+        "auth/registration/resend-link/",
+        ResendRegistrationLinkView.as_view(),
+        name="registration-resend-link",
     ),
     path(
         "auth/registration/verify-token/",
