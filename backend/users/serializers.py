@@ -58,21 +58,56 @@ class UserSerializer(serializers.ModelSerializer):
     subscription_plan = serializers.CharField(source='subscription.plan.name', read_only=True)
     subscription_end_date = serializers.DateTimeField(source='subscription.end_date', read_only=True)
     subscription_features = serializers.JSONField(source='subscription.plan.features', read_only=True)
+    subscription_active = serializers.SerializerMethodField()
+    subscription_expired = serializers.SerializerMethodField()
+    subscription_status = serializers.SerializerMethodField()
+    subscription_days_remaining = serializers.SerializerMethodField()
 
     class Meta:
         model = User
         fields = ('id', 'email', 'name', 'avatar', 'is_verified', 'business_name', 'is_staff', 'is_superuser', 
-                  'date_joined', 'is_active', 'subscription_plan', 'subscription_end_date', 'subscription_features')
+                  'date_joined', 'is_active', 'subscription_plan', 'subscription_end_date', 'subscription_features',
+                  'subscription_active', 'subscription_expired', 'subscription_status', 'subscription_days_remaining')
         read_only_fields = ('email', 'is_verified', 'date_joined')
+
+    def get_subscription_active(self, obj):
+        if obj.is_staff or obj.is_superuser:
+            return True
+        sub = getattr(obj, 'subscription', None)
+        if sub is None:
+            return True
+        return sub.is_currently_active
+
+    def get_subscription_expired(self, obj):
+        sub = getattr(obj, 'subscription', None)
+        return bool(sub and sub.is_expired)
+
+    def get_subscription_status(self, obj):
+        if obj.is_staff or obj.is_superuser:
+            return 'active'
+        sub = getattr(obj, 'subscription', None)
+        if sub is None:
+            return 'active'
+        return sub.status
+
+    def get_subscription_days_remaining(self, obj):
+        sub = getattr(obj, 'subscription', None)
+        if sub is None:
+            return None
+        return sub.days_remaining
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):
     user_email = serializers.EmailField(source='user.email', read_only=True)
     user_name = serializers.CharField(source='user.name', read_only=True)
     plan_name = serializers.CharField(source='plan.name', read_only=True)
-    
+    status = serializers.CharField(read_only=True)
+    is_expired = serializers.BooleanField(read_only=True)
+    days_remaining = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = UserSubscription
-        fields = ('id', 'user', 'user_email', 'user_name', 'plan', 'plan_name', 'start_date', 'end_date', 'is_active')
+        fields = ('id', 'user', 'user_email', 'user_name', 'plan', 'plan_name', 'start_date', 'end_date',
+                  'is_active', 'status', 'is_expired', 'days_remaining')
         read_only_fields = ('start_date',)
 
 from .models import User, SubscriptionPlan, UserSubscription, SystemSetting

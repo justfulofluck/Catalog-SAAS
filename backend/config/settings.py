@@ -294,3 +294,31 @@ JWT_AUTH_SAMESITE = "Lax"
 JWT_AUTH_SECURE = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
+
+# Logging: make email dispatch (and other app) logs visible in the process
+# output so SMTP send success/failure is observable instead of silent.
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "[{asctime}] {levelname} {name}: {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "utils": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "users": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../../store/useStore';
+import { isSubscriptionReadOnly } from '../../utils/subscription';
 import { exportCatalogToPDF } from './pdfExporter';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { elementToFabricObject } from './fabricRenderer';
@@ -31,8 +32,12 @@ export const ExportModal: React.FC<ExportModalProps> = ({
     categories,
     currentPageIndex,
     uiTheme,
-    showToast
+    showToast,
+    user,
+    setView
   } = useStore();
+
+  const readOnly = isSubscriptionReadOnly(user);
 
   const [activeTab, setActiveTab] = useState<'download' | 'share' | 'embed' | 'publish'>(defaultTab);
   
@@ -146,6 +151,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDownloadQrImage = async () => {
+    if (readOnly) {
+      if (showToast) showToast('Your trial has expired. Upgrade to download.', 'error', 'Upgrade Required');
+      setView('pricing');
+      return;
+    }
     try {
       const response = await fetch(qrCodeImageUrl);
       const blob = await response.blob();
@@ -162,6 +172,11 @@ export const ExportModal: React.FC<ExportModalProps> = ({
   };
 
   const handleDownload = async () => {
+    if (readOnly) {
+      if (showToast) showToast('Your trial has expired. Upgrade to download.', 'error', 'Upgrade Required');
+      setView('pricing');
+      return;
+    }
     if (isExporting) return;
     setIsExporting(true);
 

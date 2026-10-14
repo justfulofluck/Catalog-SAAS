@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your trial ends soon - catalogmakerr</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #f1f5f9; padding: 44px 16px;">
+        <tr>
+            <td align="center">
+                <table width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 560px; background-color: #16181f; border-radius: 14px; border: 1px solid #232733; overflow: hidden; box-shadow: 0 16px 36px rgba(15, 23, 42, 0.18);">
+                    <tr>
+                        <td align="center" style="padding: 32px 30px 20px 30px; background: linear-gradient(180deg, #1c1f2a 0%, #16181f 100%); border-bottom: 1px solid #232733;">
+                            <div style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: -0.3px;">
+                                catalogmakerr<span style="color: #00E5BF;">.</span>
+                            </div>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 32px 36px 28px 36px;">
+                            <div style="display: inline-block; padding: 4px 12px; background: rgba(120, 53, 15, 0.35); border: 1px solid #78350f; border-radius: 20px; font-size: 11px; font-weight: 700; color: #fbbf24; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px;">
+                                Ending Soon
+                            </div>
+                            <h2 style="font-size: 22px; font-weight: 700; color: #ffffff; margin: 0 0 12px 0;">
+                                Your {{ plan_name }} ends in {{ days_left }} day(s)
+                            </h2>
+                            <p style="font-size: 14px; line-height: 1.6; color: #94a3b8; margin: 0 0 20px 0;">
+                                Hello <strong style="color: #ffffff;">{{ user_name }}</strong>, your plan expires on <strong style="color: #cbd5e1;">{{ end_date }}</strong>.
+                                Upgrade now to avoid any interruption and keep full editing, publishing, and download access.
+                            </p>
+
+                            <table cellpadding="0" cellspacing="0" border="0" align="center" style="margin: 24px auto 12px auto;">
+                                <tr>
+                                    <td align="center" style="background-color: #0F3D3E; border-radius: 8px;">
+                                        <a href="{{ upgrade_url }}" target="_blank" style="display: inline-block; padding: 14px 32px; font-size: 14px; font-weight: 600; color: #ffffff; text-decoration: none; border-radius: 8px; border: 1px solid #1a5658; letter-spacing: 0.3px;">
+                                            Upgrade My Plan →
+                                        </a>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <tr>
+                        <td style="padding: 20px 36px; background-color: #111318; border-top: 1px solid #1e222d; text-align: center;">
+                            <p style="font-size: 11px; color: #475569; margin: 0;">
+                                &copy; {{ year|default:'2026' }} catalogmakerr. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>

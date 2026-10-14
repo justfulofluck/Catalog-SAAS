@@ -266,6 +266,10 @@ export const createAuthSlice: AppSlice<AuthSlice> = (set, get) => ({
         subscription_plan: user.subscription_plan,
         subscription_end_date: user.subscription_end_date,
         subscription_features: user.subscription_features,
+        subscription_active: user.subscription_active,
+        subscription_expired: user.subscription_expired,
+        subscription_status: user.subscription_status,
+        subscription_days_remaining: user.subscription_days_remaining,
       };
 
       if (isStaff) {

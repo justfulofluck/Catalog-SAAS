@@ -48,6 +48,7 @@ import { ShapeType } from '../../types';
 import { normalizeTemplateFromJSON } from '../../utils/templateJsonParser';
 import SceneTreePanel from './SceneTreePanel';
 import ExportModal from '../Editor/ExportModal';
+import { isSubscriptionReadOnly } from '../../utils/subscription';
 
 const EditorToolbar: React.FC = () => {
   const {
@@ -57,6 +58,7 @@ const EditorToolbar: React.FC = () => {
     editingSystemTemplate, isAdminAuthenticated,
     saveActiveTemplateFromEditor, saveStatus, lastSavedAt
   } = useStore();
+  const readOnly = isSubscriptionReadOnly(user);
   const [isCommiting, setIsCommiting] = useState(false);
   const [isSavingTemplate, setIsSavingTemplate] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -197,6 +199,10 @@ const EditorToolbar: React.FC = () => {
   };
 
   const handleSave = async () => {
+    if (readOnly) {
+      setView('pricing');
+      return;
+    }
     setIsCommiting(true);
     try {
       const savedId = await saveCatalog();
@@ -511,11 +517,13 @@ const EditorToolbar: React.FC = () => {
         {!editingSystemTemplate && (
           <button
             onClick={() => {
+              if (readOnly) { setView('pricing'); return; }
               setExportDefaultTab('download');
               setIsExportModalOpen(true);
             }}
-            className="p-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer"
-            title="Download PDF or Images"
+            disabled={readOnly}
+            className="p-2 bg-[#0F3D3E] hover:bg-[#155455] text-[#F1F1F1] border border-[#E2DCC8]/30 rounded-[4px] flex items-center justify-center shadow-sm transition-all active:scale-95 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+            title={readOnly ? 'Upgrade to download' : 'Download PDF or Images'}
           >
             <FileDown size={16} />
           </button>
@@ -613,13 +621,13 @@ const EditorToolbar: React.FC = () => {
         ) : (
           <button
             onClick={handleSave}
-            disabled={isCommiting}
+            disabled={isCommiting || readOnly}
             className={`px-4 py-2 border rounded-[4px] text-[10px] font-bold uppercase tracking-wider flex items-center gap-2 shadow-sm transition-all active:scale-95 disabled:opacity-50 cursor-pointer ${
               saveStatus === 'unsaved'
                 ? 'bg-[#0F3D3E] hover:bg-[#155455] text-white border-[#E2DCC8]/50 ring-1 ring-[#E2DCC8]/30'
                 : 'bg-[#181818] hover:bg-[#222222] text-zinc-300 border-[#333333]'
             }`}
-            title="Save all catalog changes to database"
+            title={readOnly ? 'Upgrade to save changes' : 'Save all catalog changes to database'}
           >
             <Save size={14} className={saveStatus === 'unsaved' ? 'text-amber-300' : 'text-zinc-400'} />
             <span>{isCommiting ? 'Saving...' : 'Save'}</span>

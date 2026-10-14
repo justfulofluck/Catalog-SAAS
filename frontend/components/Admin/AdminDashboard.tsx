@@ -35,6 +35,7 @@ import SubscriptionManagement from './SubscriptionManagement';
 import { AdminSettings } from './AdminSettings';
 import { AdminTemplateManager } from './AdminTemplateManager';
 import { User } from '../../store/types';
+import { subscriptionStatusLabel } from '../../utils/subscription';
 
 const AdminDashboard: React.FC = () => {
     const {
@@ -574,6 +575,7 @@ const AdminDashboard: React.FC = () => {
                                                     <th className="px-8 py-4">Identity</th>
                                                     <th className="px-8 py-4">Role</th>
                                                     <th className="px-8 py-4">Status</th>
+                                                    <th className="px-8 py-4">Subscription</th>
                                                     <th className="px-8 py-4">Joined Date</th>
                                                     <th className="px-8 py-4 text-right">Actions</th>
                                                 </tr>
@@ -622,6 +624,27 @@ const AdminDashboard: React.FC = () => {
                                                                         {u.status === 'active' ? 'Active' : 'Suspended'}
                                                                     </span>
                                                                 </div>
+                                                            </td>
+                                                            <td className="px-8 py-4">
+                                                                {(() => {
+                                                                    const s = subscriptionStatusLabel(u.subscription_status);
+                                                                    const toneCls = {
+                                                                        green: 'bg-emerald-500/10 text-emerald-300 border-emerald-500/30',
+                                                                        amber: 'bg-amber-500/10 text-amber-300 border-amber-500/30',
+                                                                        red: 'bg-red-500/10 text-red-300 border-red-500/30',
+                                                                        slate: 'bg-[#1c1c1c] text-[#888888] border-[#262626]',
+                                                                    }[s.tone];
+                                                                    return (
+                                                                        <div className="flex flex-col gap-0.5">
+                                                                            <span className={`inline-block px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider border ${toneCls}`}>
+                                                                                {s.label}
+                                                                            </span>
+                                                                            {typeof u.subscription_days_remaining === 'number' && u.subscription_status !== 'expired' && u.subscription_status !== 'suspended' && (
+                                                                                <span className="text-[10px] text-[#888888]">{u.subscription_days_remaining}d left</span>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })()}
                                                             </td>
                                                             <td className="px-8 py-4">
                                                                 <span className="text-xs font-mono text-[#888888]">

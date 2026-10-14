@@ -2,11 +2,12 @@ from rest_framework import viewsets, permissions, parsers
 import os
 from .models import MediaItem, AdminAsset
 from .serializers import MediaItemSerializer, AdminAssetSerializer
+from users.permissions import IsSubscriptionActiveForWrite
 
 class MediaViewSet(viewsets.ModelViewSet):
     queryset = MediaItem.objects.none()
     serializer_class = MediaItemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsSubscriptionActiveForWrite]
     parser_classes = [parsers.MultiPartParser, parsers.FormParser]
 
     def get_queryset(self):

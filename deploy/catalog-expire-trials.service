@@ -1,0 +1,10 @@
+[Unit]
+Description=catalogmakerr - expire subscriptions/trials and send notifications
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/root/Catalog-SAAS/backend
+ExecStart=/root/Catalog-SAAS/backend/venv/bin/python manage.py expire_trials
+ExecStart=/root/Catalog-SAAS/backend/venv/bin/python manage.py notify_expiring --days 1

@@ -1,0 +1,10 @@
+[Unit]
+Description=Run catalogmakerr subscription expiration job hourly
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=catalog-expire-trials.service
+
+[Install]
+WantedBy=timers.target

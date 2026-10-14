@@ -63,6 +63,33 @@ def get_subscription_purchase_html(name, plan_name, purchase_date, end_date, fea
     return render_to_string("emails/subscription_confirmation.html", context)
 
 
+def get_subscription_expired_html(name, plan_name, end_date, upgrade_url="/pricing", support_email="support@catalogmakerr.com"):
+    end_date_str = end_date.strftime("%B %d, %Y") if hasattr(end_date, "strftime") and end_date else "today"
+    context = {
+        "user_name": name,
+        "plan_name": plan_name,
+        "end_date": end_date_str,
+        "upgrade_url": upgrade_url,
+        "support_email": support_email,
+        "year": datetime.datetime.now().year,
+    }
+    return render_to_string("emails/subscription_expired.html", context)
+
+
+def get_subscription_expiring_html(name, plan_name, end_date, days_left, upgrade_url="/pricing", support_email="support@catalogmakerr.com"):
+    end_date_str = end_date.strftime("%B %d, %Y") if hasattr(end_date, "strftime") and end_date else "soon"
+    context = {
+        "user_name": name,
+        "plan_name": plan_name,
+        "end_date": end_date_str,
+        "days_left": days_left,
+        "upgrade_url": upgrade_url,
+        "support_email": support_email,
+        "year": datetime.datetime.now().year,
+    }
+    return render_to_string("emails/subscription_expiring.html", context)
+
+
 def get_smtp_test_html(recipient, time_str):
     context = {
         "recipient": recipient,

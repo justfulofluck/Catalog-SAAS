@@ -16,6 +16,7 @@ import {
   FileDown
 } from 'lucide-react';
 import { useStore } from '../../store/useStore';
+import { isSubscriptionReadOnly } from '../../utils/subscription';
 import { PAGE_WIDTH, PAGE_HEIGHT } from '../../constants';
 import { normalizeImageUrl, colorToRgba } from '../../utils/imageUtils';
 import { resolveDynamicText, getPageCategoryName } from '../../utils/dynamicTags';
@@ -359,8 +360,9 @@ const CatalogThumbnailPreview: React.FC<{
 });
 
 const PublishView: React.FC = () => {
-  const { savedCatalogs, loadCatalog, setView, updateSavedCatalog, publishCatalog, deleteCatalog, openPublicViewer, products, uiTheme, showConfirm, showToast } = useStore();
+  const { savedCatalogs, loadCatalog, setView, updateSavedCatalog, publishCatalog, deleteCatalog, openPublicViewer, products, uiTheme, showConfirm, showToast, user } = useStore();
   const isDark = uiTheme === 'dark';
+  const readOnly = isSubscriptionReadOnly(user);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [tempName, setTempName] = useState('');
   const [publishingId, setPublishingId] = useState<string | null>(null);
@@ -385,6 +387,11 @@ const PublishView: React.FC = () => {
   };
 
   const handlePublish = async (catalog: any) => {
+    if (readOnly) {
+      showToast('Your trial has expired. Upgrade to publish.', 'error', 'Upgrade Required', 5000);
+      setView('pricing');
+      return;
+    }
     setPublishingId(catalog.id);
     try {
       const result = await publishCatalog(catalog.id);
@@ -419,6 +426,11 @@ const PublishView: React.FC = () => {
   };
 
   const handleDownloadPDF = async (targetCatalog: any) => {
+    if (readOnly) {
+      showToast('Your trial has expired. Upgrade to download.', 'error', 'Upgrade Required', 5000);
+      setView('pricing');
+      return;
+    }
     setDownloadingId(targetCatalog.id);
     try {
       await exportCatalogToPDF(targetCatalog, products);

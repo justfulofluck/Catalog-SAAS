@@ -8,6 +8,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Catalog, CatalogPage, Theme, SystemTemplate
 from .serializers import CatalogSerializer, CatalogCreateSerializer, CatalogPageSerializer, ThemeSerializer, SystemTemplateSerializer
+from users.permissions import IsSubscriptionActiveForWrite
 
 class SystemTemplateViewSet(viewsets.ModelViewSet):
     queryset = SystemTemplate.objects.all()
@@ -27,7 +28,7 @@ class ThemeViewSet(viewsets.ReadOnlyModelViewSet):
 class CatalogViewSet(viewsets.ModelViewSet):
     queryset = Catalog.objects.none()
     serializer_class = CatalogSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated, IsSubscriptionActiveForWrite]
 
     def get_queryset(self):
         if self.request.user.is_staff or self.request.user.is_superuser:

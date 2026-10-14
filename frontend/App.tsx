@@ -14,6 +14,7 @@ import MediaLibraryView from './components/Inventory/MediaLibraryView';
 import CatalogSetup from './components/Setup/CatalogSetup';
 import EditorToolbar from './components/Toolbar/EditorToolbar';
 import EditorCanvas from './components/Editor/EditorCanvas';
+import { isSubscriptionReadOnly } from './utils/subscription';
 import MediaAssetLibrary from './components/Sidebar/MediaAssetLibrary';
 import StockImagesPanel from './components/Sidebar/StockImagesPanel';
 import PagesPanel from './components/Sidebar/PagesPanel';
@@ -183,10 +184,22 @@ const App: React.FC = () => {
   const renderEditor = () => {
     const isDark = uiTheme === 'dark';
     const isCoverStudioMode = Boolean(editingSystemTemplate);
+    const readOnly = isSubscriptionReadOnly(user);
 
     return (
       <div className={`flex flex-col h-screen w-screen overflow-hidden font-sans transition-colors duration-200 ${isDark ? 'bg-[#100F0F] text-[#F1F1F1]' : 'bg-[#f1f5f9] text-slate-800'}`}>
         <EditorToolbar />
+        {readOnly && (
+          <div className="flex items-center justify-center gap-3 px-4 py-2.5 bg-amber-950/60 border-b border-amber-500/40 text-amber-200 text-xs font-semibold shrink-0 z-[60]">
+            <span>Your free trial has expired — read-only mode. Editing, publishing and downloads are disabled.</span>
+            <button
+              onClick={() => setView('pricing')}
+              className="px-3 py-1 rounded-[4px] bg-amber-500 text-black font-bold hover:bg-amber-400 transition-colors"
+            >
+              Upgrade
+            </button>
+          </div>
+        )}
         <div className="flex flex-1 overflow-hidden relative">
           {/* Icon rail + Sidebar Content container for click-outside detection */}
           <div ref={leftPanelRef} className="flex h-full z-40 relative">
@@ -484,9 +497,23 @@ const App: React.FC = () => {
           {/* Main Content Area */}
           <div className="flex-1 flex overflow-hidden relative">
             <EditorCanvas />
-
-
-
+            {readOnly && (
+              <div
+                className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-black/50 backdrop-blur-[1px] text-center px-6"
+                onClick={() => setView('pricing')}
+              >
+                <p className="text-[#F1F1F1] font-space font-bold text-lg">Read-only mode</p>
+                <p className="text-[#cfcfcf] text-sm max-w-sm">
+                  Your trial has expired. You can view your catalog, but editing and downloads are disabled until you upgrade.
+                </p>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setView('pricing'); }}
+                  className="mt-1 px-5 py-2 rounded-[4px] bg-[#0F3D3E] border border-[#E2DCC8]/40 text-white font-bold text-sm hover:bg-[#134e4f] transition-colors"
+                >
+                  Upgrade Plan
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

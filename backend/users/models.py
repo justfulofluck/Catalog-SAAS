@@ -74,9 +74,38 @@ class UserSubscription(models.Model):
     start_date = models.DateTimeField(auto_now_add=True)
     end_date = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
+    expired_notified_at = models.DateTimeField(null=True, blank=True)
+    expiring_notified_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.user.email} - {self.plan.name}"
+
+    @property
+    def is_expired(self):
+        return self.end_date is not None and timezone.now() > self.end_date
+
+    @property
+    def days_remaining(self):
+        if self.end_date is None:
+            return None
+        delta = self.end_date - timezone.now()
+        return max(0, delta.days if delta.total_seconds() > 0 else 0)
+
+    @property
+    def is_currently_active(self):
+        return self.is_active and not self.is_expired
+
+    @property
+    def status(self):
+        if self.is_expired:
+            return 'expired'
+        if not self.is_active:
+            return 'suspended'
+        if self.plan and self.plan.slug == 'starter':
+            return 'trial'
+        if self.end_date is not None and self.days_remaining is not None and self.days_remaining <= 3:
+            return 'expiring'
+        return 'active'
 
 
 class SystemSetting(models.Model):

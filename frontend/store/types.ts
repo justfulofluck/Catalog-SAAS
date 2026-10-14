@@ -32,6 +32,10 @@ export interface User {
   subscription_plan?: string;
   subscription_end_date?: string;
   subscription_features?: any;
+  subscription_active?: boolean;
+  subscription_expired?: boolean;
+  subscription_status?: 'trial' | 'active' | 'expiring' | 'expired' | 'suspended';
+  subscription_days_remaining?: number | null;
 }
 
 export type View =
