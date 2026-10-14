@@ -37,6 +37,29 @@ api.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
+        // Subscription/trial expired: surface a toast and route the user to pricing.
+        if (
+            error.response?.status === 403 &&
+            error.response?.data?.code === 'subscription_expired'
+        ) {
+            try {
+                const { useStore } = await import('./store/useStore');
+                const state: any = useStore.getState();
+                const now = Date.now();
+                if (!(globalThis as any).__subExpiredToastAt || now - (globalThis as any).__subExpiredToastAt > 4000) {
+                    (globalThis as any).__subExpiredToastAt = now;
+                    state.showToast?.(
+                        'Your subscription or free trial has expired. Please upgrade to continue.',
+                        'error',
+                        'Upgrade Required'
+                    );
+                    state.setView?.('pricing');
+                }
+            } catch (e) {
+                // ignore
+            }
+        }
+
         if (error.response?.status === 401 && !originalRequest._retry) {
             if (
                 originalRequest.url?.includes('/auth/login/') ||
@@ -54,13 +77,14 @@ api.interceptors.response.use(
 
             try {
                 const refreshToken = localStorage.getItem('cs_refresh_token');
-                if (!refreshToken) {
-                    throw new Error('No refresh token available');
-                }
 
+                // The server delivers the refresh token as an httpOnly cookie
+                // (JWT_AUTH_HTTPONLY=True), so it is NOT in the login response body
+                // and not in localStorage. Send it in the body only when we actually
+                // have one; otherwise rely on the cookie (withCredentials).
                 const refreshRes: any = await axios.post(
                     '/api/auth/token/refresh/', 
-                    { refresh: refreshToken }, 
+                    refreshToken ? { refresh: refreshToken } : {}, 
                     { withCredentials: true }
                 );
                 const newToken = refreshRes.data?.access || refreshRes.data?.access_token || refreshRes?.access;
